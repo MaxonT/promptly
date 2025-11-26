@@ -1,0 +1,25 @@
+openapi: 3.0.3
+info:
+  title: Promptly Cloud API
+  version: "0.6.0"
+servers:
+  - url: https://your-backend.example
+paths:
+  /api/health:
+    get:
+      summary: Health check
+      responses: { '200': { description: OK } }
+  /api/auth/login:
+    post:
+      summary: Demo email login (returns JWT)
+      responses: { '200': { description: Token } }
+  /api/docs:
+    get: { summary: List docs, responses: { '200': { description: OK } } }
+    post: { summary: Create doc, responses: { '201': { description: Created } } }
+  /api/docs/{id}:
+    put: { summary: Update, responses: { '200': { description: OK }, '409': { description: Conflict } } }
+    delete: { summary: Delete, responses: { '200': { description: Deleted } } }
+  /api/share/{docId}:
+    post: { summary: Create share, responses: { '200': { description: URL } } }
+  /api/share/resolve/{token}:
+    get: { summary: Resolve share, responses: { '200': { description: OK } } }

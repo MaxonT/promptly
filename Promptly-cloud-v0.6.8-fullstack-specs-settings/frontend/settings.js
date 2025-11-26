@@ -1,3 +1,5 @@
+const API_BASE = window.PROMPTLY_API_BASE || "https://promptly-v0-6-cloudtest.onrender.com";
+
 (() => {
   const envSummaryEl = document.getElementById("envSummary");
   const modelListEl = document.getElementById("modelList");
@@ -14,7 +16,7 @@
   async function loadSettings() {
     try {
       log("GET /api/settings ...");
-      const res = await fetch("/api/settings");
+      const res = await fetch(`${API_BASE}/api/settings`);
       const data = await res.json().catch(() => ({}));
       if (!res.ok || !data.ok) {
         log("Settings error: HTTP " + res.status + " " + JSON.stringify(data));

@@ -1,3 +1,5 @@
+const API_BASE = window.PROMPTLY_API_BASE || "https://promptly-v0-6-cloudtest.onrender.com";
+
 (() => {
   const ideaInput = document.getElementById("ideaInput");
   const kindSelect = document.getElementById("kindSelect");
@@ -177,7 +179,7 @@
 
     try {
       log("Starting new question session...");
-      const res = await fetch("/api/question-sessions", {
+      const res = await fetch(`${API_BASE}/api/question-sessions`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -209,7 +211,7 @@
 
     try {
       log("Submitting current batch of answers...");
-      const res = await fetch(`/api/question-sessions/${encodeURIComponent(currentSessionId)}/answer`, {
+      const res = await fetch(`${API_BASE}/api/question-sessions/${encodeURIComponent(currentSessionId)}/answer`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ answers: answersPayload })
@@ -238,7 +240,7 @@
     if (!currentSessionId) return;
     try {
       log("Finalizing session and generating spec + compiled prompt...");
-      const res = await fetch(`/api/question-sessions/${encodeURIComponent(currentSessionId)}/finalize`, {
+      const res = await fetch(`${API_BASE}/api/question-sessions/${encodeURIComponent(currentSessionId)}/finalize`, {
         method: "POST"
       });
       if (!res.ok) {

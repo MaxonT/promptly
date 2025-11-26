@@ -1,3 +1,5 @@
+const API_BASE = window.PROMPTLY_API_BASE || "https://promptly-v0-6-cloudtest.onrender.com";
+
 (() => {
   const taskEl = document.getElementById("taskInput");
   const inputEl = document.getElementById("inputInput");
@@ -128,7 +130,7 @@
     try {
       const body = buildRequest();
       log("POST /api/outcome-runs ...");
-      const res = await fetch("/api/outcome-runs", {
+      const res = await fetch(`${API_BASE}/api/outcome-runs`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body)

@@ -1,0 +1,816 @@
+
+<!doctype html>
+<html lang="en" data-theme="auto">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Promptly v0.5.3-fusion PRO — Demo</title>
+  <link rel="icon" href="assets/promptly-icon.svg" type="image/svg+xml"/>
+  <link rel="apple-touch-icon" href="assets/promptly-icon.svg"/>
+
+
+<link rel="stylesheet" href="style.css" />
+<style>
+/* === v0.5.3 UI Patch: gradients, titles, numbers, footer === */
+:root{
+  --brand-1:#7C3AED; /* violet-600 */
+  --brand-2:#06B6D4; /* cyan-500 */
+  --brand-3:#22D3EE; /* cyan-400 */
+  --brand-4:#4ADE80; /* green-400 */
+  --brand-5:#F59E0B; /* amber-500 */
+  --cool-grey-1:#E5E7EB; /* gray-200 */
+  --cool-grey-2:#9CA3AF; /* gray-400 */
+  --cool-grey-3:#6B7280; /* gray-500 */
+}
+.gradient-animated{
+  background: linear-gradient(90deg,var(--brand-1),var(--brand-2),var(--brand-3),var(--brand-4),var(--brand-5));
+  background-size: 300% 300%;
+  -webkit-background-clip: text;
+  background-clip:text;
+  color: transparent !important;
+  animation: hueShift 8s ease-in-out infinite;
+}
+.gradient-animated-subtle{
+  background: linear-gradient(90deg,var(--brand-2),var(--brand-3));
+  background-size: 200% 200%;
+  -webkit-background-clip: text;
+  background-clip:text;
+  color: transparent !important;
+  animation: hueShift 10s linear infinite;
+  opacity: .95;
+}
+.grey-gradient-text{
+  background: linear-gradient(180deg,var(--cool-grey-1),var(--cool-grey-3));
+  -webkit-background-clip: text;
+  background-clip:text;
+  color: transparent !important;
+}
+.metric-title{
+  font-weight: 700;
+  letter-spacing: .2px;
+}
+.metric-value, .kpi-value, .stat-number, .stat-value{
+  font-weight: 800;
+}
+.copyright-symbol{
+  color: var(--brand-2);
+  font-weight: 800;
+}
+.footer-split{ line-height: 1.4; display:block; }
+@keyframes hueShift{
+  0%{background-position:0% 50%}
+  50%{background-position:100% 50%}
+  100%{background-position:0% 50%}
+}
+/* Heuristics: make large numbers in cards grey-gradient even if no class is present */
+.kpi-card h1, .kpi-card h2, .kpi-card .value, .card .value, .stat h2, .stat .value{
+  background: linear-gradient(180deg,var(--cool-grey-1),var(--cool-grey-3));
+  -webkit-background-clip:text;
+  background-clip:text;
+  color:transparent;
+  font-weight:800;
+}
+
+/* === TigerFix1: UI Hotfixes === */
+/* Prevent 'Last updated' badge from covering text; make it lighter and non-interactive */
+.kpi-card{ padding-top:28px; position:relative; }
+.badge-updated{ font-size:.64rem !important; pointer-events:none; }
+.kpi-card .badge-updated{ left:auto !important; right:8px !important; top:6px !important; }
+
+/* Hide all 'Instances' blocks globally when marked */
+h3[data-title='instances'],
+h3[data-title='instances'] + pre{ display:none !important; }
+
+/* Glossary typography improvements */
+.glossary-list{ line-height:1.8; padding-left:1.1rem; margin-top:8px; }
+.glossary-list li{ margin:6px 0; }
+.glossary-list strong{ display:inline-block; min-width:120px; }
+
+
+/* === TigerFix2: Glossary layout polish (grid, no bullets, clean spacing) === */
+.glossary-list{ list-style:none; padding:0; margin:14px 0; display:grid; gap:12px; }
+.glossary-list li{
+  display:grid; grid-template-columns:220px 1fr; align-items:center;
+  border:1px solid transparent; border-radius:18px; padding:14px 16px;
+  background: linear-gradient(var(--surface-2),var(--surface-2)) padding-box,
+              linear-gradient(90deg,var(--brand-a),var(--brand-b),var(--brand-c)) border-box;
+}
+.glossary-term{ font-weight:800; font-size:1.05rem; }
+.glossary-def{ color:var(--text-med); }
+html[data-theme="light"] .glossary-def{ color:#334155; }
+@media (max-width:640px){
+  .glossary-list li{ grid-template-columns:1fr; row-gap:6px; }
+}
+
+</style>
+<style>
+/* === v0.5.5 UI+ Patch: KPI borders, sparklines, badges, states, drawer, tokens === */
+:root{
+  --surface:#0b0f14;
+  --surface-2:#0f141b;
+  --text-high:#E7EAF0;
+  --text-med:#A0A8B5;
+  --text-low:#6B7280;
+  --ok:#22C55E;
+  --warn:#F59E0B;
+  --danger:#EF4444;
+  --brand-a:#7C3AED;
+  --brand-b:#06B6D4;
+  --brand-c:#22D3EE;
+}
+.kpi-card, .card, .metric, .stat, .tile, .panel{
+  border:1px solid transparent;
+  background: linear-gradient(var(--surface-2),var(--surface-2)) padding-box,
+              linear-gradient(90deg,var(--brand-a),var(--brand-b),var(--brand-c)) border-box;
+  border-radius:20px;
+  box-shadow: 0 4px 18px rgba(0,0,0,.25);
+  position:relative;
+}
+.kpi-delta{
+  display:inline-flex; align-items:center; gap:.3rem;
+  font-weight:700; font-size:.9rem; padding:.18rem .5rem;
+  border-radius:999px; background:rgba(255,255,255,.06);
+}
+.kpi-delta.up{ color: var(--ok); }
+.kpi-delta.down{ color: var(--danger); }
+.kpi-target{ color: var(--text-low); font-size:.8rem; margin-left:.5rem; }
+.kpi-sparkline{ width:100%; height:26px; display:block; }
+.kpi-spark-wrap{ position:absolute; left:12px; right:12px; bottom:10px; }
+.badge-updated{
+  position:absolute; top:10px; left:10px; font-size:.72rem; padding:.18rem .45rem;
+  border-radius:8px; background:rgba(255,255,255,.06); color:var(--text-med);
+  backdrop-filter: blur(4px);
+}
+.topbar{
+  position:fixed; right:12px; top:12px; z-index:1001;
+  display:flex; gap:8px; align-items:center;
+}
+.topbar .btn, .drawer .btn, .panel .btn, .util-buttons .btn{
+  padding:.45rem .7rem; border-radius:10px; border:1px solid rgba(255,255,255,.08);
+  background:linear-gradient(#111,#0d1117); color:#e5e7eb; cursor:pointer;
+}
+/* v0.5.7: Top-right nav accent (subtle) */
+.topbar .navlinks a{ color:var(--text-med); text-decoration:none; transition: color .15s ease, text-shadow .25s ease; }
+.topbar .navlinks a:hover{ color:var(--brand-b); text-shadow:0 0 10px rgba(6,182,212,.35); }
+.topbar label.control span{ color:var(--text-high); transition: all .2s ease; }
+.topbar label.control:hover span{ background:linear-gradient(90deg,var(--brand-a),var(--brand-b)); -webkit-background-clip:text; background-clip:text; color:transparent; }
+.topbar select{ background:linear-gradient(#0e1117,#0b0f17); border:1px solid rgba(255,255,255,.12); border-radius:12px; color:var(--text-high); padding:.36rem .6rem; }
+.topbar select:focus{ outline:none; box-shadow:0 0 0 3px rgba(6,182,212,.25); border-color:rgba(6,182,212,.5); }
+.drawer{
+  position:fixed; right:0; top:0; bottom:0; width:360px; transform:translateX(100%);
+  transition:transform .18s ease; background:#0d1117; border-left:1px solid rgba(255,255,255,.08);
+  z-index:1000; padding:14px 14px 60px; overflow:auto; box-shadow: -8px 0 30px rgba(0,0,0,.35);
+}
+.drawer.open{ transform:translateX(0); }
+.drawer h3{ margin:6px 0 10px; }
+.log-item{ font-size:.9rem; color:var(--text-med); border-bottom:1px dashed rgba(255,255,255,.08); padding:6px 0; }
+.state-banner{ position:relative; }
+.state-empty, .state-error, .state-skeleton{
+  border:1px dashed rgba(255,255,255,.12); border-radius:14px; padding:18px; margin:8px 0;
+  color:var(--text-med); display:none;
+}
+.state-skeleton .row{ height:18px; margin:10px 0; background:linear-gradient(90deg,#1f2937,#111827,#1f2937);
+  background-size:200% 100%; animation:skeleton 1.2s linear infinite; border-radius:8px;}
+@keyframes skeleton{0%{background-position:0% 50%}100%{background-position:100% 50%}}
+.util-panel{ max-width:960px; margin:24px auto; padding:16px; border-radius:16px; background:rgba(255,255,255,.03); }
+.util-buttons{ display:flex; gap:10px; flex-wrap:wrap; margin-top:10px; }
+.help{ color:var(--text-low); font-size:.85rem; }
+</style>
+<style>
+/* === v0.5.5 Hotfix: badge position, light theme, glossary guard, hide Instances === */
+.badge-updated{
+  right:12px; left:auto; top:10px; pointer-events:none;
+}
+/* Light theme variables */
+html[data-theme="light"]{
+  --surface:#F5F7FB;
+  --surface-2:#FFFFFF;
+  --text-high:#0B0F14;
+  --text-med:#293042;
+  --text-low:#6B7280;
+}
+/* Light theme card adjustments */
+html[data-theme="light"] .kpi-card, 
+html[data-theme="light"] .card, 
+html[data-theme="light"] .metric, 
+html[data-theme="light"] .stat, 
+html[data-theme="light"] .tile, 
+html[data-theme="light"] .panel{
+  background: linear-gradient(var(--surface-2),var(--surface-2)) padding-box,
+              linear-gradient(90deg,var(--brand-a),var(--brand-b),var(--brand-c)) border-box;
+  box-shadow: 0 6px 22px rgba(20,23,35,.08);
+  color: var(--text-high);
+}
+/* Light theme text gradients stronger */
+html[data-theme="light"] .grey-gradient-text{
+  background: linear-gradient(180deg,#475569,#1f2937);
+  -webkit-background-clip:text; background-clip:text; color:transparent !important;
+}
+/* Guide images badge: keep within image area (already), ensure not on list items */
+#user-guide .badge-updated{ top:8px; right:8px; left:auto; }
+/* Hide Instances block by default */
+#user-guide h3[data-title='instances'], 
+#user-guide h3[data-title='instances'] + pre{ display:none !important; }
+</style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand brand-logo"><img src="assets/promptly-logo.svg" alt="Promptly" class="logo-glow"/></div>
+    <nav class="controls">
+      <div class="navlinks">
+        <a href="index.html" data-i18n="nav_home">Dashboard</a>
+        <a href="privacy.html" data-i18n="nav_privacy">Privacy</a>
+        <a href="terms.html" data-i18n="nav_terms">Terms</a>
+        <a href="cookies.html" data-i18n="nav_cookies">Cookies</a>
+      </div>
+      <label class="control"><span data-i18n="appearance">Appearance</span>
+        <select id="themeSelect"><option value="auto" data-i18n="auto">System</option><option value="light" data-i18n="light">Light</option><option value="dark" data-i18n="dark">Dark</option></select>
+      </label>
+      <label class="control"><span data-i18n="language">Language</span>
+        <select id="langSelect"></select>
+      </label>
+    </nav>
+  </header>
+
+  <main class="container">
+    <div class="hero">
+      <div>
+        <div class="title gradient-text" data-i18n="hero_title">Promptly — Prompt Optimizer Studio</div>
+        <div class="subtitle" data-i18n="hero_subtitle">Visualization-first workflow. See every gain, every cost, every version.</div>
+      </div>
+    </div>
+
+    <section class="grid grid-2">
+      <div class="card">
+        <h3 data-i18n="task_label">Task</h3>
+        <textarea id="task" rows="4" placeholder="e.g., Classify sentiment of a sentence; output POS or NEG only."></textarea>
+        <h3 style="margin-top:12px" data-i18n="examples_label">Examples (optional)</h3>
+        <textarea id="examples" rows="4">POS || I love this!
+NEG || This is terrible.</textarea>
+        <button id="runBtn" class="btn" style="margin-top:12px" data-i18n="run_btn">Run Optimization</button>
+      </div>
+
+      <div class="card">
+        <h3 class="gradient-text" data-i18n="best_prompt">Best Prompt</h3>
+        <textarea id="bestPrompt" class="codeblock" rows="10"></textarea>
+      </div>
+    </section>
+
+    <section class="grid grid-4" style="margin-top:16px">
+      <div class="card kpi" id="kAcc">
+        <span class="label" data-i18n="kpi_accuracy">Accuracy</span>
+        <span class="value" id="valAcc">—</span>
+        <span class="delta" id="deltaAcc">+0.00%</span>
+      </div>
+      <div class="card kpi">
+        <span class="label" data-i18n="kpi_f1">F1</span>
+        <span class="value" id="valF1">—</span>
+        <span class="delta">&nbsp;</span>
+      </div>
+      <div class="card kpi">
+        <span class="label" data-i18n="kpi_pass">Pass Rate</span>
+        <span class="value" id="valPass">—</span>
+        <span class="delta">&nbsp;</span>
+      </div>
+      <div class="card kpi">
+        <span class="label" data-i18n="kpi_cost">Token Cost</span>
+        <span class="value" id="valCost">—</span>
+        <span class="delta">&nbsp;</span>
+      </div>
+      <div class="card kpi">
+        <span class="label" data-i18n="kpi_prog">Progress %</span>
+        <span class="value" id="valProg">—</span>
+        <span class="delta">&nbsp;</span>
+      </div>
+    </section>
+
+    <section class="grid grid-2" style="margin-top:16px">
+      <div class="card">
+        <h3 class="gradient-text" data-i18n="growth_chart">Growth Over Iterations</h3>
+        <canvas id="lineGrowth" class="canvas"></canvas>
+      </div>
+      <div class="card">
+        <h3 class="gradient-text" data-i18n="contrib_chart">Change Contribution</h3>
+        <canvas id="barContrib" class="canvas"></canvas>
+      </div>
+      <div class="card">
+        <h3 class="gradient-text" data-i18n="pass_pie">Pass vs Fail (%)</h3>
+        <canvas id="piePass" class="canvas"></canvas>
+      </div>
+      <div class="card">
+        <h3 class="gradient-text" data-i18n="gauge">Progress Meter (%)</h3>
+        <canvas id="gaugeProg" class="canvas"></canvas>
+      </div>
+    </section>
+
+    <section class="card" style="margin-top:16px">
+      <h3 class="gradient-text" data-i18n="versions">Prompt Versions</h3>
+      <div id="verList" class="list"></div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <p>© Promptly v0.5.3-fusion PRO · <span data-i18n="footer_rights">No trackers. Preferences saved only after consent.</span> · <span data-i18n="footer_contact">Support</span>:
+      <a href="mailto:ming.t.yang@vanderbilt.edu">ming.t.yang@vanderbilt.edu</a></p>
+  </footer>
+
+  <script src="core.js"></script>
+<script>
+// === v0.5.3 UI Patch (non-invasive) ===
+(function(){
+  const TITLES = [
+    {key:'accuracy', labels:['Accuracy']},
+    {key:'f1', labels:['F1']},
+    {key:'pass_rate', labels:['Pass Rate','PassRate']},
+    {key:'token_cost', labels:['Token Cost','Token']},
+    {key:'progress', labels:['Progress %','Progress%','Progress']}
+  ];
+
+  function wrapMetricTitlesAndValues(){
+    const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_ELEMENT, null);
+    const nodes = [];
+    while(walker.nextNode()){ nodes.push(walker.currentNode); }
+    nodes.forEach(node => {
+      const txt = (node.textContent || '').trim();
+      TITLES.forEach(t => {
+        t.labels.forEach(label => {
+          if(txt === label){
+            node.classList.add('metric-title','gradient-animated-subtle');
+            node.setAttribute('data-i18n-key', t.key);
+            // find a sibling/child numeric value to style
+            let valueEl = null;
+            // Search next siblings first
+            let sib = node.parentElement && node.parentElement.querySelector('*');
+            // broader search within same card/container
+            const container = node.closest('.card, .kpi-card, .metric, .stat, .tile, .panel') || node.parentElement;
+            if(container){
+              const candidates = Array.from(container.querySelectorAll('h1,h2,h3,div,span,strong,em'))
+                .filter(el=>/^(\d+(\.\d+)?%?|\$?\d[\d\.,]*)$/.test((el.textContent||'').trim()));
+              if(candidates.length){
+                // pick the one with largest font-size (heuristic)
+                candidates.sort((a,b)=>parseFloat(getComputedStyle(b).fontSize)-parseFloat(getComputedStyle(a).fontSize));
+                valueEl = candidates[0];
+              }
+            }
+            if(valueEl){
+              valueEl.classList.add('metric-value','grey-gradient-text');
+              valueEl.setAttribute('data-i18n-key', t.key+'_value'); // values usually numbers; keep for completeness
+            }
+          }
+        });
+      });
+    });
+  }
+
+  function patchFooter(){
+    const footers = Array.from(document.querySelectorAll('footer, .footer, #footer, [role="contentinfo"]'));
+    let target = footers[0];
+    if(!target){
+      // try to find an element containing "Promptly v0.5.3"
+      target = Array.from(document.querySelectorAll('div,section,p,small')).find(el=>/Promptly\s*v0\.5\.3/i.test(el.textContent||''));
+    }
+    if(!target) return;
+    const text = target.textContent || '';
+    // Build split footer
+    const supportEmail = (text.match(/[\w.+-]+@[\w.-]+\.[A-Za-z]{2,}/) || [null,''])[0] || 'support@example.com';
+    const html = [
+      '<span class="footer-split"><span class="copyright-symbol">©</span> <span class="gradient-animated" id="promptly-brand">Promptly</span> v0.5.3-fusion PRO</span>',
+      '<span class="footer-split">No trackers. Preferences saved only after consent.</span>',
+      '<span class="footer-split">Support: <a href="mailto:'+supportEmail+'">'+supportEmail+'</a></span>'
+    ].join('');
+    target.innerHTML = html;
+  }
+
+  // Lightweight i18n for key labels (fallback to English)
+  const i18n = {
+    en:{ 'accuracy':'Accuracy','f1':'F1','pass_rate':'Pass Rate','token_cost':'Token Cost','progress':'Progress %','user_guide':'User Guide','language':'Language'},
+    zh:{ 'accuracy':'准确率','f1':'F1','pass_rate':'通过率','token_cost':'Token 费用','progress':'进度 %','user_guide':'使用说明','language':'语言'},
+    es:{ 'accuracy':'Precisión','f1':'F1','pass_rate':'Tasa de éxito','token_cost':'Costo de tokens','progress':'Progreso %','user_guide':'Guía de uso','language':'Idioma'},
+    fr:{ 'accuracy':'Précision','f1':'F1','pass_rate':'Taux de réussite','token_cost':'Coût des jetons','progress':'Progression %','user_guide':'Guide d’utilisation','language':'Langue'},
+    hi:{ 'accuracy':'शुद्धता','f1':'F1','pass_rate':'पास दर','token_cost':'टोकन लागत','progress':'प्रगति %','user_guide':'उपयोग गाइड','language':'भाषा'},
+    ar:{ 'accuracy':'الدقة','f1':'F1','pass_rate':'معدل النجاح','token_cost':'تكلفة الرموز','progress':'التقدم %','user_guide':'دليل الاستخدام','language':'اللغة'},
+    pt:{ 'accuracy':'Acurácia','f1':'F1','pass_rate':'Taxa de aprovação','token_cost':'Custo de tokens','progress':'Progresso %','user_guide':'Guia do usuário','language':'Idioma'},
+    ja:{ 'accuracy':'正確度','f1':'F1','pass_rate':'合格率','token_cost':'トークン費用','progress':'進捗 %','user_guide':'ユーザーガイド','language':'言語'},
+    ko:{ 'accuracy':'정확도','f1':'F1','pass_rate':'통과율','token_cost':'토큰 비용','progress':'진행률 %','user_guide':'사용자 가이드','language':'언어'}
+  };
+
+  function applyLang(lang){
+    const dict = i18n[lang] || i18n.en;
+    document.querySelectorAll('[data-i18n-key]').forEach(el=>{
+      const key = el.getAttribute('data-i18n-key');
+      if(dict[key]){
+        el.textContent = dict[key];
+      }
+    });
+    document.documentElement.setAttribute('lang', lang);
+  }
+
+  function hookLanguageSelector(){
+    const selects = Array.from(document.querySelectorAll('#language, #lang, select[name="language"], select#langSelect, select[data-role="language"]'));
+    if(!selects.length){
+      // build a simple selector if not present
+      const header = document.querySelector('header') || document.body;
+      const wrapper = document.createElement('div');
+      wrapper.style.position='fixed'; wrapper.style.top='12px'; wrapper.style.right='12px'; wrapper.style.zIndex=1000;
+      wrapper.innerHTML = '<select id="langSelectPatched" style="padding:.4rem .6rem;border-radius:8px;outline:none;">'
+        +'<option value="en">English</option>'
+        +'<option value="zh">中文</option>'
+        +'<option value="es">Español</option>'
+        +'<option value="fr">Français</option>'
+        +'<option value="hi">हिन्दी</option>'
+        +'<option value="ar">العربية</option>'
+        +'<option value="pt">Português</option>'
+        +'<option value="ja">日本語</option>'
+        +'<option value="ko">한국어</option>'
+        +'</select>';
+      header.appendChild(wrapper);
+      const sel = wrapper.querySelector('select');
+      sel.addEventListener('change', e=>applyLang(e.target.value));
+      applyLang('en');
+    }else{
+      selects.forEach(sel=>{
+        sel.addEventListener('change', e=>applyLang(e.target.value));
+      });
+      // initialize to current value or 'en'
+      const cur = selects[0].value || 'en';
+      applyLang(cur);
+    }
+  }
+
+  function ensureUserGuide(){
+    if(document.querySelector('#user-guide')) return;
+    const section = document.createElement('section');
+    section.id = 'user-guide';
+    section.style.margin='48px auto';
+    section.style.maxWidth='960px';
+    section.innerHTML = `
+      <h2 class="gradient-animated" data-i18n-key="user_guide" style="font-size:1.6rem;margin-bottom:12px;">User Guide</h2>
+      <ol style="line-height:1.7;margin-left:18px;margin-bottom:16px;">
+        <li><strong>Write your task</strong>: define <em>Instruction</em> + <em>Constraints</em> + <em>Expected style</em>.</li>
+        <li><strong>Add test cases</strong>: for each input, provide <em>ideal output</em>.</li>
+        <li><strong>Run</strong>: the system auto-searches, tests, and tunes prompts.</li>
+        <li><strong>Review KPIs</strong>: Accuracy / F1 / Pass Rate / Token Cost / Progress% update after each run.</li>
+      </ol>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px;">
+        <div><img src="assets/placeholder_line.png" alt="Accuracy trend" style="width:100%;border-radius:12px;box-shadow:0 4px 24px rgba(0,0,0,.25)"><p style="opacity:.7;margin-top:6px">Accuracy Trend</p></div>
+        <div><img src="assets/placeholder_pie.png" alt="Error breakdown" style="width:100%;border-radius:12px;box-shadow:0 4px 24px rgba(0,0,0,.25)"><p style="opacity:.7;margin-top:6px">Error Breakdown</p></div>
+        <div><img src="assets/placeholder_gauge.png" alt="Progress gauge" style="width:100%;border-radius:12px;box-shadow:0 4px 24px rgba(0,0,0,.25)"><p style="opacity:.7;margin-top:6px">Progress Gauge</p></div>
+      </div>
+      <h3 style="margin-top:16px" class="gradient-animated">Instances</h3>
+      <pre style="white-space:pre-wrap;background:rgba(255,255,255,.04);padding:12px;border-radius:12px">
+1) Summarization
+   Instruction: "Summarize the article in 3 bullet points. Tone: neutral."
+   Test: input: {url: "..."} → ideal: "- point A\n- point B\n- point C"
+
+2) Email draft
+   Instruction: "Write a warm reply confirming availability on Tuesday 3pm."
+   Test: input: {thread:"..."} → ideal: "Warm, polite confirmation with time."
+      </pre>
+      <h3 style="margin-top:16px" class="gradient-animated">Glossary</h3>
+<ul class="glossary-list glossy">
+  <li><span class="glossary-term" data-i18n-key="accuracy">Accuracy</span><span class="glossary-def">correct outputs / all tests.</span></li>
+  <li><span class="glossary-term" data-i18n-key="f1">F1</span><span class="glossary-def">harmonic mean of precision & recall (0–1).</span></li>
+  <li><span class="glossary-term" data-i18n-key="pass_rate">Pass Rate</span><span class="glossary-def">tests passed with a threshold.</span></li>
+  <li><span class="glossary-term" data-i18n-key="token_cost">Token Cost</span><span class="glossary-def">total tokens used (proxy for $$).</span></li>
+  <li><span class="glossary-term" data-i18n-key="progress">Progress %</span><span class="glossary-def">optimization completion estimate.</span></li>
+</ul>
+    `;
+    document.body.appendChild(section);
+  }
+
+  function init(){
+    try{ wrapMetricTitlesAndValues(); }catch(e){}
+    try{ patchFooter(); }catch(e){}
+    try{ ensureUserGuide(); }catch(e){}
+    try{ hookLanguageSelector(); }catch(e){}
+  }
+
+  if(document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', init);
+  }else{
+    init();
+  }
+})();
+</script>
+<script>
+// === v0.5.5 UI+ Patch ===
+(function(){
+  // Helpers
+  const $ = s => document.querySelector(s);
+  const $$ = s => Array.from(document.querySelectorAll(s));
+  const nowStr = () => new Date().toLocaleString();
+
+  // 1) Mark KPI containers & add sparkline + gradient border already via CSS
+  function enhanceKpiCards(){
+    const titleEls = $$('[data-i18n-key="accuracy"],[data-i18n-key="f1"],[data-i18n-key="pass_rate"],[data-i18n-key="token_cost"],[data-i18n-key="progress"]');
+    titleEls.forEach(t => {
+      const card = t.closest('.card, .kpi-card, .metric, .stat, .tile, .panel') || t.parentElement;
+      if(!card) return;
+      card.classList.add('kpi-card');
+      // Last updated badge (top-left)
+      if(!card.querySelector('.badge-updated')){
+        const b = document.createElement('div');
+        b.className = 'badge-updated';
+        b.textContent = 'Last updated ' + nowStr();
+        card.appendChild(b);
+      }
+      // Sparkline area
+      if(!card.querySelector('.kpi-spark-wrap')){
+        const wrap = document.createElement('div');
+        wrap.className = 'kpi-spark-wrap';
+        const canvas = document.createElement('canvas');
+        canvas.className = 'kpi-sparkline';
+        wrap.appendChild(canvas);
+        card.appendChild(wrap);
+        // draw spark
+        drawSparkline(canvas, getHistoryFor(t.getAttribute('data-i18n-key')));
+      }
+      // Delta badge (compare with prev stored value)
+      const valEl = card.querySelector('.metric-value, .kpi-value, .stat-number, .stat-value, h1, h2');
+      if(valEl){
+        const key = t.getAttribute('data-i18n-key');
+        const cur = parseFloat((valEl.textContent||'').replace(/[^\d.-]/g,'')) || 0;
+        const prevKey = 'kpi_prev_'+key;
+        const prev = parseFloat(localStorage.getItem(prevKey) || '0');
+        let diff = cur - prev;
+        // if prev is 0 (first time), set diff to 0 to avoid fake ↑
+        if(!prev) diff = 0;
+        localStorage.setItem(prevKey, String(cur));
+        // create badge
+        if(!card.querySelector('.kpi-delta')){
+          const badge = document.createElement('span');
+          badge.className = 'kpi-delta ' + (diff>=0 ? 'up' : 'down');
+          badge.textContent = (diff>=0?'↑ ':'↓ ') + (Math.abs(diff)).toFixed(2) + (/%$/.test(valEl.textContent.trim())?'%':'');
+          // place near title
+          t.parentElement.insertBefore(badge, t.nextSibling);
+          // optional target display (demo fixed target = cur+3% for % metrics)
+          if(/%$/.test(valEl.textContent.trim())){
+            const tg = document.createElement('span');
+            const goal = (cur+3).toFixed(1);
+            tg.className = 'kpi-target'; tg.textContent = 'Target ' + goal + '%';
+            t.parentElement.insertBefore(tg, badge.nextSibling);
+          }
+        }
+      }
+    });
+  }
+
+  function getHistoryFor(key){
+    // fabricate demo history if none
+    const storeKey = 'kpi_hist_'+key;
+    let arr = null;
+    try{ arr = JSON.parse(localStorage.getItem(storeKey)||'null'); }catch{}
+    if(!Array.isArray(arr)){
+      // 12 points random-ish baseline
+      const base = key==='accuracy'?0.58: key==='f1'?0.52: key==='pass_rate'?0.5: 0.4;
+      arr = Array.from({length:12}, (_,i)=> +(base + i*0.008 + (Math.random()-0.5)*0.02).toFixed(3));
+      localStorage.setItem(storeKey, JSON.stringify(arr));
+    }
+    return arr;
+  }
+
+  function drawSparkline(canvas, data){
+    const w = canvas.clientWidth || 280, h = canvas.clientHeight || 26;
+    canvas.width = w; canvas.height = h;
+    const ctx = canvas.getContext('2d');
+    // bg grid faint
+    ctx.globalAlpha = 0.15; ctx.fillStyle = '#FFFFFF'; ctx.fillRect(0, h-1, w, 1); ctx.globalAlpha = 1;
+    const min = Math.min(...data), max = Math.max(...data);
+    const sx = w/(data.length-1 || 1);
+    ctx.lineWidth = 2.25; ctx.beginPath();
+    data.forEach((v,i)=>{
+      const x = i*sx;
+      const y = h - ( (v-min) / (max-min || 1) ) * (h-4) - 2;
+      if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+    });
+    const grad = ctx.createLinearGradient(0,0,w,0);
+    grad.addColorStop(0,'#7C3AED'); grad.addColorStop(1,'#06B6D4');
+    ctx.strokeStyle = grad; ctx.stroke();
+  }
+
+  // 2) Chart theme: add a small "Last updated" badge on images in guide
+  function badgeGuideImages(){
+    $$('#user-guide img').forEach(img=>{
+      if(img.parentElement && !img.parentElement.style.position) img.parentElement.style.position='relative';
+      if(!img.parentElement.querySelector('.badge-updated')){
+        const b = document.createElement('div');
+        b.className='badge-updated';
+        b.textContent='Last updated ' + nowStr();
+        img.parentElement.appendChild(b);
+      }
+    });
+  }
+
+  // 3) Import/Export/Reset demo data
+  function buildUtilPanel(){
+    if($('#util-panel')) return;
+    const wrap = document.createElement('section');
+    wrap.id='util-panel'; wrap.className='util-panel';
+    wrap.innerHTML = `
+      <h3 class="gradient-animated" style="margin:0 0 8px">Data Utilities</h3>
+      <div class="help">Import/Export your test cases JSON. Reset fills demo data that matches the UI.</div>
+      <div class="util-buttons">
+        <button class="btn" id="btn-export">Export JSON</button>
+        <button class="btn" id="btn-import">Import JSON</button>
+        <button class="btn" id="btn-reset">Reset to Demo Data</button>
+        <input type="file" id="file-import" accept="application/json" style="display:none" />
+      </div>`;
+    document.body.appendChild(wrap);
+    $('#btn-export').addEventListener('click', ()=>{
+      const data = localStorage.getItem('lbpo_test_cases') || JSON.stringify(demoCases(),null,2);
+      const blob = new Blob([data], {type:'application/json'});
+      const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+      a.download = 'lbpo_test_cases.json'; a.click();
+      setTimeout(()=>URL.revokeObjectURL(a.href),5000);
+    });
+    $('#btn-import').addEventListener('click', ()=>$('#file-import').click());
+    $('#file-import').addEventListener('change', e=>{
+      const f = e.target.files[0]; if(!f) return;
+      const reader = new FileReader(); reader.onload = ev=>{
+        try{ JSON.parse(ev.target.result); localStorage.setItem('lbpo_test_cases', ev.target.result); alert('Imported ✓'); }
+        catch{ alert('Invalid JSON'); }
+      }; reader.readAsText(f);
+    });
+    $('#btn-reset').addEventListener('click', ()=>{
+      localStorage.setItem('lbpo_test_cases', JSON.stringify(demoCases()));
+      alert('Demo data restored ✓');
+    });
+  }
+
+  function demoCases(){
+    return [
+      {name:'Summarization-3bullet', input:{url:'https://example.com/a'}, ideal:'- A\\n- B\\n- C'},
+      {name:'Email-confirm', input:{thread:'t-112'}, ideal:'Confirm Tue 3pm'},
+      {name:'Translate-ZH→EN', input:{text:'你好'}, ideal:'Hello'}
+    ];
+  }
+
+  // 4) Last run & activity drawer
+  function buildTopbarAndDrawer(){
+    if($('.topbar')) return;
+    const top = document.createElement('div');
+    top.className='topbar';
+    top.innerHTML = `<span id="last-run" class="help">Last run: —</span>
+      <button class="btn" id="btn-run">Run Demo</button>
+      <button class="btn" id="btn-logs">Logs</button>`;
+    document.body.appendChild(top);
+    const drawer = document.createElement('aside');
+    drawer.className='drawer'; drawer.innerHTML = `<h3>Activity Log</h3><div id="log-list"></div>`;
+    document.body.appendChild(drawer);
+    $('#btn-logs').addEventListener('click', ()=>drawer.classList.toggle('open'));
+    $('#btn-run').addEventListener('click', ()=>simulateRun());
+    // Keyboard shortcuts
+    document.addEventListener('keydown', (e)=>{
+      if(e.key.toLowerCase()==='r'){ simulateRun(); }
+      if(e.key==='?'){ alert('Shortcuts:\\nR: Run Demo\\nG: User Guide\\n/: Search (if available)'); }
+      if(e.key.toLowerCase()==='g'){ const u=$('#user-guide'); if(u) u.scrollIntoView({behavior:'smooth'}); }
+    });
+  }
+
+  function log(msg){
+    const list = $('#log-list'); if(!list) return;
+    const div = document.createElement('div');
+    div.className='log-item'; div.textContent = `[${nowStr()}] ` + msg;
+    list.prepend(div);
+  }
+
+  function simulateRun(){
+    $('#last-run').textContent = 'Last run: ' + nowStr();
+    log('Run started with '+ (JSON.parse(localStorage.getItem('lbpo_test_cases')||'[]').length || demoCases().length) +' cases.');
+    // Fake progress into KPI histories
+    ['accuracy','f1','pass_rate'].forEach(k=>{
+      const key='kpi_hist_'+k; let arr = JSON.parse(localStorage.getItem(key) || '[]');
+      if(!arr.length) arr = getHistoryFor(k);
+      const last = arr[arr.length-1] || 0.5;
+      const next = +(last + (Math.random()*0.02)).toFixed(3);
+      arr.push(next); if(arr.length>24) arr.shift();
+      localStorage.setItem(key, JSON.stringify(arr));
+    });
+    enhanceKpiCards(); // redraw sparklines with new history
+    badgeGuideImages();
+    log('Evaluation finished. KPIs updated.');
+  }
+
+  // 5) Empty / Error / Skeleton states (demo toggles)
+  function buildStatePanel(){
+    const container = document.createElement('div'); container.className='state-banner';
+    container.innerHTML = `
+       <div class="state-empty"><strong>Empty state:</strong> No test cases yet. <button class="btn" id="cta-import">Import</button> or <button class="btn" id="cta-reset">Use Demo</button></div>
+       <div class="state-error"><strong>Error:</strong> Model API key missing or rate-limited. <button class="btn" id="cta-retry">Retry</button></div>
+       <div class="state-skeleton"><div class="row"></div><div class="row"></div><div class="row"></div></div>
+       <div class="util-buttons"><button class="btn" id="toggle-empty">Show Empty</button><button class="btn" id="toggle-error">Show Error</button><button class="btn" id="toggle-skeleton">Show Skeleton</button><span class="help">Click toggles again to hide.</span></div>
+    `;
+    document.body.appendChild(container);
+    const showHide = (cls)=>{
+      const el = $('.'+cls); if(!el) return;
+      el.style.display = (el.style.display==='block') ? 'none':'block';
+    };
+    $('#toggle-empty').addEventListener('click', ()=>showHide('state-empty'));
+    $('#toggle-error').addEventListener('click', ()=>showHide('state-error'));
+    $('#toggle-skeleton').addEventListener('click', ()=>showHide('state-skeleton'));
+    $('#cta-import').addEventListener('click', ()=>$('#btn-import')?.click());
+    $('#cta-reset').addEventListener('click', ()=>$('#btn-reset')?.click());
+    $('#cta-retry').addEventListener('click', ()=>log('Retry pressed.'));
+  }
+
+  function updateFooterVersion(){
+    // Upgrade version display to v0.5.5
+    $$('footer, .footer, #footer, [role="contentinfo"]').forEach(f=>{
+      f.innerHTML = f.innerHTML.replace(/v0\.5\.3/gi,'v0.5.5');
+      const brand = f.querySelector('#promptly-brand'); if(brand) brand.textContent = 'Promptly';
+    });
+  }
+
+  function initPlus(){
+    enhanceKpiCards();
+    badgeGuideImages();
+    buildUtilPanel();
+    buildTopbarAndDrawer();
+    buildStatePanel();
+    updateFooterVersion();
+  }
+
+  if(document.readyState==='loading'){ document.addEventListener('DOMContentLoaded', initPlus); }
+  else{ initPlus(); }
+})();
+</script>
+<script>
+// === v0.5.5 Hotfix JS ===
+(function(){
+  const $$ = s => Array.from(document.querySelectorAll(s));
+
+  // 1) Guard: don't enhance KPI inside #user-guide (Glossary list uses same i18n keys)
+  const guardCss = document.createElement('style');
+  guardCss.textContent = '#user-guide [data-i18n-key]{ pointer-events:auto }';
+  document.head.appendChild(guardCss);
+
+  // Monkey-patch enhanceKpiCards if present on window scope (defined in v0.5.5 script)
+  // Since it's encapsulated, we instead add a mutation filter: remove sparks/badges added under #user-guide
+  function cleanGuideArtifacts(){
+    const guide = document.querySelector('#user-guide'); if(!guide) return;
+    guide.querySelectorAll('.kpi-spark-wrap,.kpi-delta,.badge-updated,.kpi-target').forEach(el=>el.remove());
+  }
+  cleanGuideArtifacts();
+  const mo = new MutationObserver(()=>cleanGuideArtifacts());
+  mo.observe(document.body, {childList:true, subtree:true});
+
+  // 2) Theme detection: hook any select that looks like theme control
+  function applyTheme(theme){
+    const t = (theme||'').toLowerCase();
+    if(t==='light'){ document.documentElement.setAttribute('data-theme','light'); }
+    else if(t==='dark'){ document.documentElement.setAttribute('data-theme','dark'); }
+    else{
+      // system
+      document.documentElement.removeAttribute('data-theme');
+      // Optional: follow prefers-color-scheme
+      if(window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches){
+        document.documentElement.setAttribute('data-theme','light');
+      }
+    }
+  }
+  function hookThemeSelector(){
+    const selects = $$('select, [role="combobox"]');
+    const themeSelects = selects.filter(sel=>{
+      const txt = (sel.textContent||'') + ' ' + (sel.getAttribute('aria-label')||'') + ' ' + (sel.id||'') + ' ' + (sel.name||'');
+      return /theme|mode|light|dark|system/i.test(txt);
+    });
+    const optionsMatch = s=>/light/i.test(s) && /dark/i.test(s);
+    const finalSelects = themeSelects.length? themeSelects : selects.filter(s=>optionsMatch(s.textContent||''));
+    finalSelects.forEach(sel=> sel.addEventListener('change',()=>applyTheme(sel.value || sel.textContent)));
+    // Initial guess: try to read first select with Light/Dark text
+    const first = finalSelects[0];
+    if(first){
+      const val = (first.value||first.textContent||'').match(/light|dark|system/i);
+      applyTheme(val?val[0]:'system');
+    }else{
+      applyTheme('system');
+    }
+    // Watch system changes
+    if(window.matchMedia){
+      const mq = window.matchMedia('(prefers-color-scheme: light)');
+      mq.addEventListener('change', ()=>applyTheme('system'));
+    }
+  }
+  hookThemeSelector();
+
+  // 3) Hide Instances block created earlier
+  const instTitle = Array.from(document.querySelectorAll('#user-guide h3')).find(h=>/^\s*instances\s*$/i.test(h.textContent||''));
+  if(instTitle){
+    instTitle.setAttribute('data-title','instances');
+    const next = instTitle.nextElementSibling;
+    if(next && next.tagName==='PRE'){ next.style.display='none'; }
+    instTitle.style.display='none';
+  }
+
+  // 4) Move KPI badges to top-right explicitly after layout
+  function fixBadgePositions(){
+    document.querySelectorAll('.kpi-card .badge-updated').forEach(b=>{
+      b.style.left='auto'; b.style.right='12px'; b.style.top='10px';
+    });
+  }
+  fixBadgePositions();
+  window.addEventListener('load', fixBadgePositions);
+})();
+</script>
+</body>
+</html>

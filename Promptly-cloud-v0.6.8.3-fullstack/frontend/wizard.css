@@ -334,7 +334,11 @@
   opacity:1;
 }
 .wizard-panel--idea.is-starting{
-  animation:fadeOutLeft 0.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  opacity: 0.35;
+  transform: scale(0.97);
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  pointer-events: none;
+  filter: blur(1px);
 }
 .wizard-panel--qa.is-appearing{
   animation:fadeInRight 0.6s cubic-bezier(0.4, 0, 0.2, 1) forwards;
@@ -787,6 +791,225 @@
   transform:translateY(-1px);
   box-shadow:0 2px 8px rgba(124,58,237,0.2);
 }
+/* Loading spinner in question panel */
+.wizard-loading-overlay{
+  position:absolute;
+  top:0;
+  left:0;
+  right:0;
+  bottom:0;
+  background:rgba(15,23,42,0.95);
+  backdrop-filter:blur(8px);
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:1rem;
+  border-radius:0.75rem;
+  z-index:100;
+  animation:fadeIn 0.2s ease;
+}
+.wizard-loading-spinner{
+  width:48px;
+  height:48px;
+  border:4px solid rgba(124,58,237,0.2);
+  border-top-color:#7C3AED;
+  border-radius:50%;
+  animation:spin 0.8s linear infinite;
+}
+.wizard-loading-text{
+  font-size:0.875rem;
+  color:rgba(148,163,184,0.9);
+  font-weight:500;
+}
+@keyframes spin{
+  to{transform:rotate(360deg);}
+}
+@keyframes fadeIn{
+  from{opacity:0;}
+  to{opacity:1;}
+}
+
+/* Modern regenerate icon with SVG */
+.wizard-regenerate-icon{
+  display:inline-flex;
+  align-items:center;
+  gap:0.5rem;
+  font-size:0.8rem;
+  padding:0.5rem 0.9rem;
+  border-radius:8px;
+  border:1px solid rgba(148,163,184,0.3);
+  background:rgba(15,23,42,0.6);
+  color:rgba(148,163,184,0.9);
+  cursor:pointer;
+  transition:all 0.2s ease;
+  font-weight:500;
+}
+.wizard-regenerate-icon svg{
+  width:14px;
+  height:14px;
+  transition:transform 0.3s ease;
+}
+.wizard-regenerate-icon:hover{
+  background:rgba(124,58,237,0.12);
+  border-color:rgba(124,58,237,0.5);
+  color:#A78BFA;
+  transform:scale(1.05);
+}
+.wizard-regenerate-icon:hover svg{
+  transform:rotate(180deg);
+}
+
+/* Other input field */
+.wizard-other-input-container{
+  margin-top:0.75rem;
+  padding-top:0.75rem;
+  border-top:1px solid rgba(148,163,184,0.2);
+  animation:slideDown 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.wizard-other-input{
+  width:100%;
+  padding:0.625rem 0.875rem;
+  border-radius:8px;
+  border:1px solid rgba(148,163,184,0.4);
+  background:rgba(15,23,42,0.8);
+  color:#eaf0fb;
+  font-size:0.875rem;
+  transition:all 0.2s ease;
+}
+.wizard-other-input:focus{
+  outline:none;
+  border-color:#7C3AED;
+  box-shadow:0 0 0 3px rgba(124,58,237,0.15);
+}
+.wizard-other-input::placeholder{
+  color:rgba(148,163,184,0.5);
+}
+@keyframes slideDown{
+  from{
+    opacity:0;
+    max-height:0;
+    transform:translateY(-10px);
+  }
+  to{
+    opacity:1;
+    max-height:100px;
+    transform:translateY(0);
+  }
+}
+
+/* Missing options fallback UI */
+.wizard-missing-options{
+  padding:1rem 1.25rem;
+  border-radius:8px;
+  background:rgba(251,146,60,0.1);
+  border:1px solid rgba(251,146,60,0.3);
+  color:rgba(251,146,60,0.9);
+  font-size:0.875rem;
+  margin-top:0.75rem;
+  display:flex;
+  align-items:center;
+  gap:0.75rem;
+}
+.wizard-missing-options-icon{
+  font-size:1.25rem;
+  flex-shrink:0;
+}
+
+/* Enhanced page indicators */
+.wizard-page-indicator{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:0.5rem;
+  padding:0.625rem 1rem;
+  background:rgba(15,23,42,0.6);
+  border-radius:8px;
+  border:1px solid rgba(148,163,184,0.2);
+  margin-bottom:0.75rem;
+  font-size:0.875rem;
+  font-weight:600;
+  color:rgba(148,163,184,0.9);
+}
+.wizard-page-indicator-number{
+  color:#7C3AED;
+  font-weight:700;
+}
+
+/* Colored question numbers */
+.wizard-question-number{
+  font-weight:700;
+  font-size:0.875rem;
+  color:#7C3AED;
+  margin-bottom:0.75rem;
+  display:inline-block;
+  padding:0.25rem 0.75rem;
+  background:linear-gradient(135deg, rgba(124,58,237,0.15), rgba(6,182,212,0.1));
+  border-radius:999px;
+  border:1px solid rgba(124,58,237,0.3);
+  position:relative;
+}
+.wizard-question-number::before{
+  content:"";
+  position:absolute;
+  left:0;
+  top:50%;
+  transform:translateY(-50%);
+  width:3px;
+  height:60%;
+  background:linear-gradient(180deg, #7C3AED, #06B6D4);
+  border-radius:999px;
+}
+
+/* Card minimum height for regeneration stability */
+.wizard-question-card{
+  min-height:180px;
+  position:relative;
+}
+.wizard-question-card.is-regenerating{
+  opacity:0.6;
+  pointer-events:none;
+}
+.wizard-question-card.is-regenerating::after{
+  content:"";
+  position:absolute;
+  top:50%;
+  left:50%;
+  transform:translate(-50%, -50%);
+  width:32px;
+  height:32px;
+  border:3px solid rgba(124,58,237,0.2);
+  border-top-color:#7C3AED;
+  border-radius:50%;
+  animation:spin 0.6s linear infinite;
+}
+
+/* Ensure consistent top padding */
+.wizard-questions{
+  padding-top:0.5rem;
+}
+
+/* Smooth skeleton loader */
+.wizard-skeleton{
+  animation:pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+.wizard-skeleton-card{
+  height:200px;
+  border-radius:12px;
+  background:linear-gradient(90deg, rgba(15,23,42,0.6) 0%, rgba(124,58,237,0.1) 50%, rgba(15,23,42,0.6) 100%);
+  background-size:200% 100%;
+  animation:shimmer 2s infinite;
+  margin-bottom:1.25rem;
+}
+@keyframes shimmer{
+  0%{background-position:200% 0;}
+  100%{background-position:-200% 0;}
+}
+@keyframes pulse{
+  0%, 100%{opacity:1;}
+  50%{opacity:0.5;}
+}
+
 @media (max-width: 960px){
   .wizard-main{
     grid-template-columns:minmax(0,1fr);

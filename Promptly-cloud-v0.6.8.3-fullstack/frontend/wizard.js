@@ -9,7 +9,7 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
   const startBtn = document.getElementById("startWizardBtn");
   const restoreSnapshotBtn = document.getElementById("restoreSnapshotBtn");
   const ideaError = document.getElementById("ideaError");
-  
+
   const ideaPanel = document.querySelector(".wizard-panel--idea");
   const qaPanel = document.querySelector(".wizard-panel--qa");
   
@@ -56,6 +56,33 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
     const ts = new Date().toISOString().slice(11, 19);
     logOutput.textContent += `[${ts}] ${line}\n`;
     logOutput.scrollTop = logOutput.scrollHeight;
+  }
+  
+  // Loading overlay helpers (FIX 2)
+  let loadingOverlay = null;
+  
+  function showLoadingInQuestionPanel(message = "Loading...") {
+    if (loadingOverlay) return; // Already showing
+    
+    loadingOverlay = document.createElement("div");
+    loadingOverlay.className = "wizard-loading-overlay";
+    loadingOverlay.innerHTML = `
+      <div class="wizard-loading-spinner"></div>
+      <div class="wizard-loading-text">${message}</div>
+    `;
+    
+    // Insert into question panel
+    if (qaPanel) {
+      qaPanel.style.position = "relative";
+      qaPanel.appendChild(loadingOverlay);
+    }
+  }
+  
+  function hideLoadingInQuestionPanel() {
+    if (loadingOverlay && loadingOverlay.parentNode) {
+      loadingOverlay.remove();
+      loadingOverlay = null;
+    }
   }
   
   // Update wizard stepper (top-level progress)
@@ -227,6 +254,19 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
     finalizeBtn.classList.remove("hidden");
     saveSnapshotBtn.classList.remove("hidden");
     
+    // Add page indicator (FIX 6)
+    const pageIndicator = document.createElement("div");
+    pageIndicator.className = "wizard-page-indicator";
+    const totalPages = getTotalPages();
+    const startQ = currentPageIndex * PAGE_SIZE + 1;
+    const endQ = Math.min((currentPageIndex + 1) * PAGE_SIZE, allQuestions.length);
+    pageIndicator.innerHTML = `
+      <span>Page <span class="wizard-page-indicator-number">${currentPageIndex + 1}</span> of ${totalPages}</span>
+      <span style="color:rgba(148,163,184,0.5);">•</span>
+      <span>Questions ${startQ}–${endQ} of ${allQuestions.length}</span>
+    `;
+    questionsContainer.appendChild(pageIndicator);
+    
     const pageQuestions = getCurrentPageQuestions();
     
     pageQuestions.forEach((q, idx) => {
@@ -258,13 +298,18 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
       card.appendChild(typeSpan);
       card.appendChild(textDiv);
 
-      // Add regenerate button for each question
+      // Add regenerate button for each question (FIX 3)
       const regenerateBtn = document.createElement("button");
       regenerateBtn.type = "button";
-      regenerateBtn.className = "wizard-button-mini";
-      regenerateBtn.textContent = "🔄 Regenerate";
+      regenerateBtn.className = "wizard-regenerate-icon";
+      regenerateBtn.innerHTML = `
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
+        </svg>
+        <span>Regenerate</span>
+      `;
       regenerateBtn.style.marginTop = "8px";
-      regenerateBtn.addEventListener("click", () => regenerateQuestion(q.id));
+      regenerateBtn.addEventListener("click", () => regenerateQuestion(q.id, card));
       card.appendChild(regenerateBtn);
 
       if (q.type === "short_text") {
@@ -314,13 +359,27 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
         const options = q.options || [];
         const isMulti = q.type === "multi_choice";
 
+        // FIX 5: Handle missing options
+        if (options.length === 0) {
+          const missingDiv = document.createElement("div");
+          missingDiv.className = "wizard-missing-options";
+          missingDiv.innerHTML = `
+            <span class="wizard-missing-options-icon">⚠️</span>
+            <span>No options available. Click "Regenerate" to try again.</span>
+          `;
+          card.appendChild(missingDiv);
+          questionsContainer.appendChild(card);
+          return; // Skip this question
+        }
+
         const existing = currentAnswers.get(q.id);
         const selected = new Set(
           Array.isArray(existing) ? existing : existing ? [existing] : []
         );
 
         const pills = [];
-        
+        let otherInputContainer = null;
+
         options.forEach((opt) => {
           const pill = document.createElement("button");
           pill.type = "button";
@@ -328,15 +387,27 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
           pill.textContent = opt.label || opt.value || "";
           pill.setAttribute("data-value", opt.value);
 
+          // FIX 4: Check if this is "Other" option
+          const isOther = opt.is_other === true || (opt.label && opt.label.toLowerCase().includes("other"));
+
           function updateSelection() {
             if (isMulti) {
               // Multi-choice: toggle selection
               if (selected.has(opt.value)) {
                 selected.delete(opt.value);
                 pill.classList.remove("is-selected");
+                // Hide other input if unselecting "Other"
+                if (isOther && otherInputContainer) {
+                  otherInputContainer.remove();
+                  otherInputContainer = null;
+                }
               } else {
                 selected.add(opt.value);
                 pill.classList.add("is-selected");
+                // Show other input if selecting "Other"
+                if (isOther && !otherInputContainer) {
+                  showOtherInput();
+                }
               }
               currentAnswers.set(q.id, Array.from(selected));
             } else {
@@ -348,13 +419,58 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
               // Update all pills in this row
               pills.forEach(p => p.classList.remove("is-selected"));
               pill.classList.add("is-selected");
+              
+              // Handle "Other" input field
+              if (isOther) {
+                if (!otherInputContainer) {
+                  showOtherInput();
+                }
+              } else {
+                // Remove other input if switching to different option
+                if (otherInputContainer) {
+                  otherInputContainer.remove();
+                  otherInputContainer = null;
+                }
+              }
             }
+          }
+
+          function showOtherInput() {
+            if (otherInputContainer) return; // Already showing
+            
+            otherInputContainer = document.createElement("div");
+            otherInputContainer.className = "wizard-other-input-container";
+            
+            const input = document.createElement("input");
+            input.type = "text";
+            input.className = "wizard-other-input";
+            input.placeholder = "Please specify...";
+            input.addEventListener("input", () => {
+              // Store custom text with the answer
+              const customValue = `${opt.value}:${input.value}`;
+              if (isMulti) {
+                selected.delete(opt.value);
+                selected.add(customValue);
+                currentAnswers.set(q.id, Array.from(selected));
+              } else {
+                currentAnswers.set(q.id, customValue);
+              }
+            });
+            
+            otherInputContainer.appendChild(input);
+            card.appendChild(otherInputContainer);
+            
+            // Auto-focus
+            setTimeout(() => input.focus(), 100);
           }
 
           pill.addEventListener("click", updateSelection);
 
           if (isMulti ? selected.has(opt.value) : currentAnswers.get(q.id) === opt.value) {
             pill.classList.add("is-selected");
+            if (isOther) {
+              setTimeout(() => showOtherInput(), 100);
+            }
           }
 
           pills.push(pill);
@@ -400,6 +516,10 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
 
     try {
       log("Starting new question session...");
+      
+      // Show loading overlay in question panel
+      showLoadingInQuestionPanel("Preparing questions...");
+      
       qaPanel?.classList.add("is-appearing");
       
       const res = await fetch(`${API_BASE}/api/question-sessions`, {
@@ -423,6 +543,9 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
       const data = await res.json();
       currentSessionId = data.session_id;
       log(`Session created: ${currentSessionId}`);
+      
+      // Hide loading overlay
+      hideLoadingInQuestionPanel();
       
       // Add questions and render first page
       addQuestions(data.questions || []);
@@ -653,7 +776,7 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
       setTimeout(() => {
         questionsContainer.classList.remove('wizard-questions--slide-in-left');
       }, 250);
-    } else {
+      } else {
       log("Already on first page");
     }
   }
@@ -696,10 +819,16 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
   }
 
   // Q3: Regenerate a specific question
-  async function regenerateQuestion(questionId) {
+  async function regenerateQuestion(questionId, cardElement) {
     if (!currentSessionId) return;
     try {
       log(`Regenerating question ${questionId}...`);
+      
+      // FIX 10: Add loading state to card
+      if (cardElement) {
+        cardElement.classList.add("is-regenerating");
+      }
+      
       const res = await fetch(
         `${API_BASE}/api/question-sessions/${encodeURIComponent(currentSessionId)}/questions/${encodeURIComponent(questionId)}/regenerate`,
         { method: "POST" }
@@ -707,6 +836,9 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
       if (!res.ok) {
         const txt = await res.text();
         log(`Failed to regenerate: HTTP ${res.status} ${txt}`);
+        if (cardElement) {
+          cardElement.classList.remove("is-regenerating");
+        }
         return;
       }
       const data = await res.json();
@@ -720,11 +852,17 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
           ...data.question,
           questionNumber: oldQuestionNumber
         };
+        
+        // Wait a moment before re-rendering for smooth transition
+        await new Promise(resolve => setTimeout(resolve, 300));
         renderCurrentPage();
       }
     } catch (err) {
       console.error(err);
       log("Error while regenerating question: " + err.message);
+      if (cardElement) {
+        cardElement.classList.remove("is-regenerating");
+      }
     }
   }
 
@@ -755,6 +893,6 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
 
   // Initialize wizard stepper to Describe step
   updateWizardStepper('describe');
-  
+
   log("Wizard page loaded. Describe your idea on the left to begin.");
 })();

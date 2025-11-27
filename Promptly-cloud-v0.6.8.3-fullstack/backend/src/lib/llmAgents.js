@@ -32,7 +32,7 @@ const AgentBOutputSchema = z.object({
 });
 
 const AgentCOutputSchema = z.object({
-  intent: z.record(z.any()).optional(),
+  intent: z.record(z.any()).nullish(),  // Allow null, undefined, or object
   spec: z.record(z.any()),
   explanation: z.string()
 });
@@ -185,11 +185,34 @@ export async function generateRawSpec({ initialDescription, kind, qaPairs }) {
   const system = [
     "You are Agent C in Promptly's Question Engine.",
     "You receive all questions and answers from a wizard.",
-    "You must build a structured high-level Spec JSON with keys such as:",
-    "project_goal, objectives, actors, flows, requirements, constraints, data, evaluation_criteria, ui_ux.",
-    "Return JSON with keys: intent (optional), spec, explanation.",
-    "Do not output anything except JSON."
-  ].join(" ");
+    "Your job: synthesize them into a structured specification.",
+    "IMPORTANT: Return ONLY valid JSON, no other text.",
+    "",
+    "Required JSON format example:",
+    "{",
+    '  "spec": {',
+    '    "project_goal": "Build a task management app for small teams",',
+    '    "objectives": ["Enable task creation and assignment", "Track progress", "Send notifications"],',
+    '    "target_users": "Small teams (5-20 people) in tech companies",',
+    '    "platform": "Web application (responsive)",',
+    '    "key_features": ["Task CRUD", "User authentication", "Real-time updates", "Email notifications"],',
+    '    "technical_stack": "React frontend, Node.js backend, PostgreSQL database",',
+    '    "constraints": ["Must work on mobile browsers", "Max 500ms response time"],',
+    '    "data_model": "Users, Teams, Tasks, Comments",',
+    '    "security": "JWT authentication, role-based access control",',
+    '    "ui_ux": "Clean, minimal interface with drag-and-drop"',
+    '  },',
+    '  "explanation": "This spec synthesizes the user\'s requirements into a cohesive plan. The focus is on simplicity and team collaboration."',
+    "}",
+    "",
+    "RULES:",
+    "1. 'spec' field is REQUIRED and must be an object with relevant project details.",
+    "2. 'explanation' field is REQUIRED and should summarize your reasoning.",
+    "3. 'intent' field is OPTIONAL - omit it or set to null if not needed.",
+    "4. Include keys like: project_goal, objectives, target_users, platform, key_features, technical_stack, constraints, etc.",
+    "5. Be specific and actionable based on the Q&A responses.",
+    "6. Structure the spec logically for a developer to implement."
+  ].join("\n");
   const user = JSON.stringify({
     initial_description: initialDescription,
     kind: kind || null,
@@ -202,12 +225,19 @@ export async function generateRawSpec({ initialDescription, kind, qaPairs }) {
     inputBlocks: { agent: "C", initial_description: initialDescription, kind, qa_pairs: qaPairs }
   });
 
+  let raw;
   try {
-    const raw = await chatJson({ system, user });
+    raw = await chatJson({ system, user });
     completeRunSuccess(runId, raw);
     const parsed = AgentCOutputSchema.parse(raw);
     return parsed;
   } catch (err) {
+    console.error("[promptly] generateRawSpec failed");
+    console.error("Error:", err.message);
+    if (err.name === 'ZodError' && raw) {
+      console.error("Validation errors:", JSON.stringify(err.errors, null, 2));
+      console.error("Raw LLM response:", JSON.stringify(raw, null, 2));
+    }
     completeRunFailure(runId, "runtime_exception", err.message || err.toString(), "system");
     throw err;
   }

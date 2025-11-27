@@ -70,12 +70,19 @@ questionSessionRouter.post("/", async (req, res) => {
 
     choiceQuestions.forEach((q, index) => {
       const qid = q.id || `q_${nanoid(12)}`;
+      // Store complete question data including depth structure
+      const questionData = {
+        depth_enabled: q.depth_enabled,
+        options: q.options || null,
+        depth_question: q.depth_question || null,
+        depth_levels: q.depth_levels || null
+      };
       insertQuestion.run(
         qid,
         sessionId,
         q.type,
         q.content,
-        q.options ? JSON.stringify(q.options) : null,
+        JSON.stringify(questionData),
         index
       );
       q.id = qid;
@@ -85,7 +92,10 @@ questionSessionRouter.post("/", async (req, res) => {
       id: q.id,
       type: q.type,
       content: q.content,
-      options: q.options || null
+      depth_enabled: q.depth_enabled,
+      options: q.options || null,
+      depth_question: q.depth_question || null,
+      depth_levels: q.depth_levels || null
     }));
 
     return res.json({ ok: true, session_id: sessionId, questions: firstBatch });
@@ -204,12 +214,18 @@ questionSessionRouter.post("/:sessionId/answer", (req, res) => {
   const remaining = questions.filter((q) => !answeredSet.has(q.id));
 
   if (remaining.length > 0) {
-    const nextBatch = remaining.slice(0, 5).map((q) => ({
-      id: q.id,
-      type: q.type,
-      content: q.content,
-      options: q.options_json ? JSON.parse(q.options_json) : null
-    }));
+    const nextBatch = remaining.slice(0, 5).map((q) => {
+      const questionData = q.options_json ? JSON.parse(q.options_json) : {};
+      return {
+        id: q.id,
+        type: q.type,
+        content: q.content,
+        depth_enabled: questionData.depth_enabled || false,
+        options: questionData.options || null,
+        depth_question: questionData.depth_question || null,
+        depth_levels: questionData.depth_levels || null
+      };
+    });
     return res.json({ ok: true, done: false, questions: nextBatch });
   }
 
@@ -251,11 +267,15 @@ questionSessionRouter.post("/:sessionId/finalize", async (req, res) => {
 
   const qaPairs = questions.map((q) => {
     const a = answerByQuestion.get(q.id) || null;
+    const questionData = q.options_json ? JSON.parse(q.options_json) : {};
     return {
       id: q.id,
       type: q.type,
       content: q.content,
-      options: q.options_json ? JSON.parse(q.options_json) : null,
+      depth_enabled: questionData.depth_enabled || false,
+      options: questionData.options || null,
+      depth_question: questionData.depth_question || null,
+      depth_levels: questionData.depth_levels || null,
       answer: a ? JSON.parse(a.answer_json) : null
     };
   });

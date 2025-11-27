@@ -18,7 +18,8 @@ npm start
 Check: `curl http://localhost:8080/api/health`
 
 ### Frontend
-Deploy `frontend/` to Vercel. Set env `VITE_API_BASE` to the backend URL.
+Deploy `frontend/` to Vercel/Netlify. Edit `frontend/config.js` with your backend URL.
+See [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md) or [UPDATE_CONFIG.md](UPDATE_CONFIG.md) for details.
 
 ## API
 - `POST /api/auth/login` → `{ token }`
@@ -44,7 +45,20 @@ See `others/openapi.yaml`.
 10. Frontend→Backend requests succeed
 
 ## Deployment
-- **Render** (backend): build `npm install && npm run migrate`; start `npm start`; env: `JWT_SECRET`, `CORS_ORIGIN`, `SQLITE_PATH=/var/data/app.db`, `LINK_BASE`.
-- **Vercel** (frontend): env `VITE_API_BASE`.
+
+### Quick Deploy (3 minutes)
+1. **Backend to Render**: Set env vars: `OPENAI_API_KEY`, `CORS_ORIGIN=*`, `NODE_ENV=production`
+2. **Update Frontend Config**: Edit `frontend/config.js` with your Render backend URL
+3. **Frontend to Vercel**: Deploy `frontend/` folder
+4. **Update CORS**: Change `CORS_ORIGIN` in Render to your Vercel URL
+
+📖 **详细指南**:
+- [完整部署指南](DEPLOYMENT_GUIDE.md) - 包含 Render + Vercel 详细步骤
+- [快速修复 404 错误](UPDATE_CONFIG.md) - 如果遇到连接问题
+- [连接测试页面](frontend/test-connection.html) - 自动验证配置
+
+### Environment Variables
+- **Render (Backend)**: `OPENAI_API_KEY`, `CORS_ORIGIN`, `NODE_ENV`, `PORT` (optional)
+- **Vercel (Frontend)**: 直接编辑 `frontend/config.js`（无需环境变量）
 
 License: MIT

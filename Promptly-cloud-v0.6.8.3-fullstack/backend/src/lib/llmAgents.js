@@ -122,11 +122,15 @@ export async function generateChoiceQuestions({ initialDescription, kind, broadQ
     "Goal: convert broad axes into concrete, user-friendly questions with depth levels.",
     "IMPORTANT: Return ONLY valid JSON, no other text.",
     "",
+    "⚠️ CRITICAL RULES - MUST FOLLOW:",
+    "1. EVERY question MUST provide multiple-choice options (3-6 options minimum) ⚠️",
+    "2. NO questions without options - this will cause errors! ⚠️",
+    "3. ALWAYS include an 'Other (please specify)' option with 'is_other': true ⚠️",
+    "4. If depth_enabled is false: 'options' array is REQUIRED",
+    "5. If depth_enabled is true: all 3 depth levels MUST have options arrays",
+    "",
     "CORE PRINCIPLES:",
-    "1. EVERY question MUST provide multiple-choice options (3-6 options minimum)",
-    "2. NO open-ended questions without choices",
-    "3. ALWAYS include an 'Other' option for custom input",
-    "4. Make professional/technical questions accessible with depth levels",
+    "- Make professional/technical questions accessible with depth levels",
     "",
     "DEPTH SYSTEM:",
     "For complex/professional topics, offer 3 depth levels:",
@@ -209,17 +213,19 @@ export async function generateChoiceQuestions({ initialDescription, kind, broadQ
     "",
     "RULES:",
     "1. Every question MUST have: 'id', 'type', 'content', 'depth_enabled' (all required).",
-    "2. If depth_enabled is false: provide 'options' array (3-6 options + 'Other').",
-    "3. If depth_enabled is true: provide 'depth_question' and 'depth_levels' object.",
+    "2. ⚠️ CRITICAL: If depth_enabled is false, 'options' array is MANDATORY (3-6 options + 'Other').",
+    "3. ⚠️ CRITICAL: If depth_enabled is true, ALL 3 depth levels MUST have options arrays.",
     "4. depth_levels must have 'instant', 'standard', 'deep' keys, each with 'label' and 'options'.",
-    "5. Each depth level must have 3-6 options + 'Other' option.",
-    "6. 'Other' option must have 'is_other': true.",
-    "7. Use depth_enabled for: monetization, technical architecture, user segments, compliance, scaling strategies.",
-    "8. Use regular options for: platform choice, basic yes/no, feature selection.",
-    "9. Question types: 'single_choice' (pick one), 'multi_choice' (pick many), 'yes_no' (special case).",
-    "10. Generate 5-8 diverse questions. About 30-40% should be depth_enabled.",
-    "11. Make options specific, actionable, and mutually exclusive.",
-    "12. Use simple, clear language in question content."
+    "5. Each option list must have 3-6 options + mandatory 'Other' option.",
+    "6. 'Other' option format: {\"label\": \"Other (please specify)\", \"value\": \"other\", \"is_other\": true}.",
+    "7. ⚠️ NEVER generate a question without options - system will reject it!",
+    "8. Use depth_enabled for: monetization, technical architecture, user segments, compliance, scaling.",
+    "9. Use regular options for: platform choice, basic yes/no, feature selection.",
+    "10. Question types: 'single_choice' (pick one), 'multi_choice' (pick many).",
+    "11. Generate 5-8 diverse questions. About 30-40% should be depth_enabled.",
+    "12. Make options specific, actionable, and mutually exclusive.",
+    "13. Use simple, clear language in question content.",
+    "14. ⚠️ VALIDATE: Before returning, ensure EVERY question has options!"
   ].join("\n");
   const user = JSON.stringify({
     initial_description: initialDescription,
@@ -238,17 +244,89 @@ export async function generateChoiceQuestions({ initialDescription, kind, broadQ
     raw = await chatJson({ system, user });
     completeRunSuccess(runId, raw);
     const parsed = AgentBOutputSchema.parse(raw);
-    return parsed.choice_questions.map((q, index) => ({
-      id: q.id || `q_${index + 1}`,
+    
+    // Post-validation: ENFORCE that every question has options
+    const validatedQuestions = parsed.choice_questions.map((q, index) => {
+      const qid = q.id || `q_${index + 1}`;
+      
+      // Check if question has valid options
+      const hasValidOptions = q.depth_enabled 
+        ? (q.depth_levels?.instant?.options?.length > 0 &&
+           q.depth_levels?.standard?.options?.length > 0 &&
+           q.depth_levels?.deep?.options?.length > 0)
+        : (q.options && q.options.length > 0);
+      
+      if (!hasValidOptions) {
+        console.warn(`[promptly] Question ${qid} has no options! Adding default options.`);
+        
+        // Add default options based on question type
+        if (q.depth_enabled) {
+          // For depth-enabled questions, add generic depth levels
+          q.depth_question = q.depth_question || "Choose your answer depth:";
+          q.depth_levels = {
+            instant: {
+              label: "⚡ Instant (Simple & Quick)",
+              options: [
+                {label: "Option A (simple)", value: "a_instant"},
+                {label: "Option B (simple)", value: "b_instant"},
+                {label: "Option C (simple)", value: "c_instant"},
+                {label: "Other (please specify)", value: "other", is_other: true}
+              ]
+            },
+            standard: {
+              label: "🔍 Standard (Balanced)",
+              options: [
+                {label: "Option A (standard)", value: "a_standard"},
+                {label: "Option B (standard)", value: "b_standard"},
+                {label: "Option C (standard)", value: "c_standard"},
+                {label: "Other (please specify)", value: "other", is_other: true}
+              ]
+            },
+            deep: {
+              label: "🧠 Deep Thinking (Advanced)",
+              options: [
+                {label: "Option A (advanced)", value: "a_deep"},
+                {label: "Option B (advanced)", value: "b_deep"},
+                {label: "Option C (advanced)", value: "c_deep"},
+                {label: "Other (please specify)", value: "other", is_other: true}
+              ]
+            }
+          };
+        } else {
+          // For regular questions, add default options
+          q.options = [
+            {label: "Yes", value: "yes"},
+            {label: "No", value: "no"},
+            {label: "Maybe / Not sure", value: "maybe"},
+            {label: "Other (please specify)", value: "other", is_other: true}
+          ];
+        }
+      }
+      
+      // Ensure "Other" option exists
+      if (!q.depth_enabled && q.options) {
+        const hasOther = q.options.some(opt => opt.is_other === true);
+        if (!hasOther) {
+          q.options.push({
+            label: "Other (please specify)", 
+            value: "other", 
+            is_other: true
+          });
+        }
+      }
+      
+      return {
+        id: qid,
       type: q.type,
       content: q.content,
-      depth_enabled: q.depth_enabled,
-      // For regular questions
-      options: q.options || null,
-      // For depth-enabled questions
-      depth_question: q.depth_question || null,
-      depth_levels: q.depth_levels || null
-    }));
+        depth_enabled: q.depth_enabled,
+        options: q.options || null,
+        depth_question: q.depth_question || null,
+        depth_levels: q.depth_levels || null
+      };
+    });
+    
+    return validatedQuestions;
   } catch (err) {
     console.error("[promptly] generateChoiceQuestions failed");
     console.error("Error:", err.message);

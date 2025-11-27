@@ -9,6 +9,9 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
   const startBtn = document.getElementById("startWizardBtn");
   const restoreSnapshotBtn = document.getElementById("restoreSnapshotBtn");
   const ideaError = document.getElementById("ideaError");
+  
+  const ideaPanel = document.querySelector(".wizard-panel--idea");
+  const qaPanel = document.querySelector(".wizard-panel--qa");
 
   const qaEmptyState = document.getElementById("qaEmptyState");
   const questionsContainer = document.getElementById("questionsContainer");
@@ -27,7 +30,9 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
   const logOutput = document.getElementById("logOutput");
 
   let currentSessionId = null;
-  let currentQuestions = [];
+  let allQuestions = []; // Store ALL questions with sequential numbering
+  let currentPageIndex = 0; // Current page (0-based)
+  const PAGE_SIZE = 5; // Questions per page
   let currentSpecId = null;
   const resultPageLink = document.getElementById("resultPageLink");
 
@@ -45,7 +50,8 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
 
   function clearQuestions() {
     questionsContainer.innerHTML = "";
-    currentQuestions = [];
+    allQuestions = [];
+    currentPageIndex = 0;
     currentAnswers.clear();
     qaEmptyState.classList.remove("hidden");
     questionsContainer.classList.add("hidden");
@@ -55,30 +61,109 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
     skipBtn.classList.add("hidden");
     saveSnapshotBtn.classList.add("hidden");
   }
+  
+  // Add questions to the global list (with sequential numbering)
+  function addQuestions(newQuestions) {
+    const startIndex = allQuestions.length;
+    newQuestions.forEach((q, idx) => {
+      allQuestions.push({
+        ...q,
+        questionNumber: startIndex + idx + 1 // 1-based numbering
+      });
+    });
+  }
+  
+  // Get current page of questions
+  function getCurrentPageQuestions() {
+    const startIdx = currentPageIndex * PAGE_SIZE;
+    const endIdx = startIdx + PAGE_SIZE;
+    return allQuestions.slice(startIdx, endIdx);
+  }
+  
+  // Get total number of pages
+  function getTotalPages() {
+    return Math.ceil(allQuestions.length / PAGE_SIZE);
+  }
+  
+  // Update pagination button states
+  function updatePaginationButtons() {
+    const totalPages = getTotalPages();
+    
+    // Back button
+    if (totalPages <= 1 || currentPageIndex === 0) {
+      backBtn.disabled = true;
+    } else {
+      backBtn.disabled = false;
+    }
+    
+    // Update Back button text (find the text span, not the icon)
+    const backTextSpan = backBtn.querySelector("span:not(.wizard-button-icon)");
+    if (backTextSpan) {
+      if (totalPages > 1 && currentPageIndex > 0) {
+        backTextSpan.textContent = `Back (${currentPageIndex}/${totalPages})`;
+      } else {
+        backTextSpan.textContent = "Back";
+      }
+    }
+    
+    // Update Next button text
+    const nextTextSpan = nextBatchBtn.querySelector("span:not(.wizard-button-icon)");
+    if (nextTextSpan) {
+      if (totalPages <= 1 || currentPageIndex >= totalPages - 1) {
+        nextTextSpan.textContent = "Submit & Continue";
+      } else {
+        nextTextSpan.textContent = `Next (Page ${currentPageIndex + 2}/${totalPages})`;
+      }
+    }
+  }
 
-  function renderQuestions(questions) {
-    currentQuestions = questions;
+  // Render current page of questions
+  function renderCurrentPage() {
     questionsContainer.innerHTML = "";
-    if (!questions || questions.length === 0) {
+    
+    if (allQuestions.length === 0) {
       qaEmptyState.classList.remove("hidden");
       questionsContainer.classList.add("hidden");
+      nextBatchBtn.classList.add("hidden");
+      backBtn.classList.add("hidden");
       return;
     }
+    
     qaEmptyState.classList.add("hidden");
     questionsContainer.classList.remove("hidden");
-
-    questions.forEach((q) => {
+    nextBatchBtn.classList.remove("hidden");
+    backBtn.classList.remove("hidden");
+    finalizeBtn.classList.remove("hidden");
+    saveSnapshotBtn.classList.remove("hidden");
+    
+    const pageQuestions = getCurrentPageQuestions();
+    
+    pageQuestions.forEach((q, idx) => {
       const card = document.createElement("div");
       card.className = "wizard-question-card";
+      // Stagger animation: 0ms, 80ms, 160ms, 240ms, 320ms
+      card.style.animationDelay = `${idx * 80}ms`;
+      
+      // Question number (fixed, permanent)
+      const numberDiv = document.createElement("div");
+      numberDiv.className = "wizard-question-number";
+      numberDiv.textContent = `Question ${q.questionNumber}`;
 
       const typeSpan = document.createElement("div");
       typeSpan.className = "wizard-question-type";
-      typeSpan.textContent = q.type || "question";
+      const typeLabels = {
+        "single_choice": "Single Choice (Pick one)",
+        "multi_choice": "Multiple Choice (Pick any)",
+        "yes_no": "Yes/No",
+        "short_text": "Short Text"
+      };
+      typeSpan.textContent = typeLabels[q.type] || q.type || "question";
 
       const textDiv = document.createElement("div");
       textDiv.className = "wizard-question-text";
       textDiv.textContent = q.content || "";
 
+      card.appendChild(numberDiv);
       card.appendChild(typeSpan);
       card.appendChild(textDiv);
 
@@ -143,29 +228,36 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
           Array.isArray(existing) ? existing : existing ? [existing] : []
         );
 
+        const pills = [];
+        
         options.forEach((opt) => {
           const pill = document.createElement("button");
           pill.type = "button";
-          pill.className = "wizard-pill";
+          pill.className = isMulti ? "wizard-pill wizard-pill--multi" : "wizard-pill";
           pill.textContent = opt.label || opt.value || "";
+          pill.setAttribute("data-value", opt.value);
 
           function updateSelection() {
             if (isMulti) {
+              // Multi-choice: toggle selection
               if (selected.has(opt.value)) {
                 selected.delete(opt.value);
+                pill.classList.remove("is-selected");
               } else {
                 selected.add(opt.value);
+                pill.classList.add("is-selected");
               }
               currentAnswers.set(q.id, Array.from(selected));
             } else {
+              // Single-choice: deselect all others, select this one
               selected.clear();
               selected.add(opt.value);
               currentAnswers.set(q.id, opt.value);
+              
+              // Update all pills in this row
+              pills.forEach(p => p.classList.remove("is-selected"));
+              pill.classList.add("is-selected");
             }
-            pill.classList.toggle(
-              "is-selected",
-              isMulti ? selected.has(opt.value) : currentAnswers.get(q.id) === opt.value
-            );
           }
 
           pill.addEventListener("click", updateSelection);
@@ -174,6 +266,7 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
             pill.classList.add("is-selected");
           }
 
+          pills.push(pill);
           row.appendChild(pill);
         });
 
@@ -183,11 +276,11 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
       questionsContainer.appendChild(card);
     });
 
-    nextBatchBtn.classList.remove("hidden");
-    finalizeBtn.classList.remove("hidden");
-    backBtn.classList.remove("hidden");
+    // Update pagination buttons
+    updatePaginationButtons();
+    
+    // Show all buttons
     skipBtn.classList.remove("hidden");
-    saveSnapshotBtn.classList.remove("hidden");
   }
 
   async function startWizard() {
@@ -206,8 +299,18 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
     promptOutput.textContent = "";
     explanationOutput.textContent = "";
 
+    // Start transition animation
+    ideaPanel?.classList.add("is-starting");
+    startBtn.disabled = true;
+    startBtn.textContent = "Starting...";
+    
+    // Wait for fade-out animation before starting API call
+    await new Promise(resolve => setTimeout(resolve, 300));
+
     try {
       log("Starting new question session...");
+      qaPanel?.classList.add("is-appearing");
+      
       const res = await fetch(`${API_BASE}/api/question-sessions`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -219,27 +322,58 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
       if (!res.ok) {
         const txt = await res.text();
         log(`Failed to start session: HTTP ${res.status} ${txt}`);
+        // Revert animations on error
+        ideaPanel?.classList.remove("is-starting");
+        qaPanel?.classList.remove("is-appearing");
+        startBtn.disabled = false;
+        startBtn.textContent = "Start wizard";
         return;
       }
       const data = await res.json();
       currentSessionId = data.session_id;
       log(`Session created: ${currentSessionId}`);
-      renderQuestions(data.questions || []);
+      
+      // Add questions and render first page
+      addQuestions(data.questions || []);
+      currentPageIndex = 0;
+      renderCurrentPage();
+      log(`Loaded ${allQuestions.length} questions (showing page 1/${getTotalPages()})`);
+      
+      // Keep button disabled after successful start
+      startBtn.textContent = "Session started";
     } catch (err) {
       console.error(err);
       log("Error while starting wizard: " + err.message);
+      // Revert animations on error
+      ideaPanel?.classList.remove("is-starting");
+      qaPanel?.classList.remove("is-appearing");
+      startBtn.disabled = false;
+      startBtn.textContent = "Start wizard";
     }
   }
 
-  async function submitBatch() {
-    if (!currentSessionId || currentQuestions.length === 0) return;
-    const answersPayload = currentQuestions.map((q) => ({
+  // Handle Next button: move to next page or submit answers
+  async function handleNext() {
+    if (!currentSessionId || allQuestions.length === 0) return;
+    
+    const totalPages = getTotalPages();
+    
+    // If not on last page, just move to next page (client-side pagination)
+    if (currentPageIndex < totalPages - 1) {
+      currentPageIndex++;
+      renderCurrentPage();
+      log(`Moved to page ${currentPageIndex + 1}/${totalPages}`);
+      return;
+    }
+    
+    // On last page: submit all answers to backend
+    const answersPayload = allQuestions.map((q) => ({
       question_id: q.id,
       value: currentAnswers.get(q.id) ?? null
     }));
 
     try {
-      log("Submitting current batch of answers...");
+      log("Submitting all answers...");
       const res = await fetch(`${API_BASE}/api/question-sessions/${encodeURIComponent(currentSessionId)}/answer`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -251,13 +385,17 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
         return;
       }
       const data = await res.json();
+      
       if (data.done) {
         log("All questions answered. You can now finalize the spec.");
-        renderQuestions([]);
-        nextBatchBtn.classList.add("hidden");
-      } else {
-        renderQuestions(data.questions || []);
-        log(`Loaded next batch of ${data.questions?.length || 0} questions.`);
+        clearQuestions();
+      } else if (data.questions && data.questions.length > 0) {
+        // More questions arrived from backend
+        log(`Received ${data.questions.length} new questions from backend.`);
+        clearQuestions();
+        addQuestions(data.questions);
+        currentPageIndex = 0;
+        renderCurrentPage();
       }
     } catch (err) {
       console.error(err);
@@ -357,54 +495,40 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
       // Render questions from snapshot
       const snapshotQuestions = data.snapshot.questions || [];
       const answeredIds = new Set((data.snapshot.answers || []).map(a => a.question_id));
-      const unanswered = snapshotQuestions.filter(q => !answeredIds.has(q.id)).slice(0, 5);
-      renderQuestions(unanswered.map(q => ({
+      const unanswered = snapshotQuestions.filter(q => !answeredIds.has(q.id));
+      
+      clearQuestions();
+      addQuestions(unanswered.map(q => ({
         id: q.id,
         type: q.type,
         content: q.content,
         options: q.options_json ? JSON.parse(q.options_json) : null
       })));
+      currentPageIndex = 0;
+      renderCurrentPage();
     } catch (err) {
       console.error(err);
       log("Error while restoring snapshot: " + err.message);
     }
   }
 
-  // Q2: Go back to previous question
-  async function goBack() {
-    if (!currentSessionId) return;
-    try {
-      log("Going back to previous question...");
-      const res = await fetch(`${API_BASE}/api/question-sessions/${encodeURIComponent(currentSessionId)}/answer`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
-          answers: [{ question_id: "dummy", value: null }],
-          control: "back"
-        })
-      });
-      if (!res.ok) {
-        const txt = await res.text();
-        log(`Failed to go back: HTTP ${res.status} ${txt}`);
-        return;
-      }
-      const data = await res.json();
-      if (data.questions && data.questions.length > 0) {
-        renderQuestions(data.questions);
-        log(data.message || "Moved to previous question");
-      } else {
-        log("No previous question available");
-      }
-    } catch (err) {
-      console.error(err);
-      log("Error while going back: " + err.message);
+  // Go back to previous page
+  function goBack() {
+    if (currentPageIndex > 0) {
+      currentPageIndex--;
+      renderCurrentPage();
+      log(`Moved to page ${currentPageIndex + 1}/${getTotalPages()}`);
+    } else {
+      log("Already on first page");
     }
   }
 
-  // Q2: Skip current question
+  // Q2: Skip current page of questions
   async function skipCurrent() {
-    if (!currentSessionId || currentQuestions.length === 0) return;
-    const firstQuestionId = currentQuestions[0].id;
+    if (!currentSessionId || allQuestions.length === 0) return;
+    const pageQuestions = getCurrentPageQuestions();
+    if (pageQuestions.length === 0) return;
+    const firstQuestionId = pageQuestions[0].id;
     try {
       log("Skipping current question...");
       const res = await fetch(`${API_BASE}/api/question-sessions/${encodeURIComponent(currentSessionId)}/answer`, {
@@ -423,10 +547,12 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
       const data = await res.json();
       log(data.message || "Question skipped");
       if (data.done) {
-        renderQuestions([]);
-        nextBatchBtn.classList.add("hidden");
-      } else {
-        renderQuestions(data.questions || []);
+        clearQuestions();
+      } else if (data.questions && data.questions.length > 0) {
+        clearQuestions();
+        addQuestions(data.questions);
+        currentPageIndex = 0;
+        renderCurrentPage();
       }
     } catch (err) {
       console.error(err);
@@ -451,11 +577,15 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
       const data = await res.json();
       log(data.message || "Question regenerated");
       
-      // Replace the old question with the new one in the current list
-      const index = currentQuestions.findIndex(q => q.id === questionId);
+      // Replace the old question with the new one in allQuestions (preserve question number)
+      const index = allQuestions.findIndex(q => q.id === questionId);
       if (index !== -1) {
-        currentQuestions[index] = data.question;
-        renderQuestions(currentQuestions);
+        const oldQuestionNumber = allQuestions[index].questionNumber;
+        allQuestions[index] = {
+          ...data.question,
+          questionNumber: oldQuestionNumber
+        };
+        renderCurrentPage();
       }
     } catch (err) {
       console.error(err);
@@ -463,8 +593,25 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
     }
   }
 
+  // Input focus animations
+  ideaInput?.addEventListener("focus", () => {
+    ideaPanel?.classList.add("is-focused");
+  });
+  
+  ideaInput?.addEventListener("blur", () => {
+    ideaPanel?.classList.remove("is-focused");
+  });
+  
+  kindSelect?.addEventListener("focus", () => {
+    ideaPanel?.classList.add("is-focused");
+  });
+  
+  kindSelect?.addEventListener("blur", () => {
+    ideaPanel?.classList.remove("is-focused");
+  });
+
   startBtn?.addEventListener("click", startWizard);
-  nextBatchBtn?.addEventListener("click", submitBatch);
+  nextBatchBtn?.addEventListener("click", handleNext);
   finalizeBtn?.addEventListener("click", finalizeSession);
   backBtn?.addEventListener("click", goBack);
   skipBtn?.addEventListener("click", skipCurrent);

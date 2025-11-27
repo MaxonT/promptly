@@ -63,11 +63,23 @@
       </div>
       <div id="questionsContainer" class="wizard-questions hidden"></div>
       <div class="wizard-qa-actions">
-        <button id="backBtn" class="wizard-button-secondary hidden">← Back</button>
-        <button id="skipBtn" class="wizard-button-secondary hidden">Skip →</button>
-        <button id="saveSnapshotBtn" class="wizard-button-secondary hidden">💾 Save snapshot</button>
-        <button id="nextBatchBtn" class="wizard-button-primary hidden">Next questions</button>
-        <button id="finalizeBtn" class="wizard-button-secondary hidden">Finalize spec &amp; prompt</button>
+        <div class="wizard-qa-actions-left">
+          <button id="backBtn" class="wizard-button-nav wizard-button-nav--back hidden">
+            <span class="wizard-button-icon">←</span>
+            <span>Back</span>
+          </button>
+          <button id="saveSnapshotBtn" class="wizard-button-secondary hidden">💾 Save snapshot</button>
+        </div>
+        <div class="wizard-qa-actions-right">
+          <button id="skipBtn" class="wizard-button-secondary hidden">Skip</button>
+          <button id="nextBatchBtn" class="wizard-button-nav wizard-button-nav--next hidden">
+            <span>Next questions</span>
+            <span class="wizard-button-icon">→</span>
+          </button>
+          <button id="finalizeBtn" class="wizard-button-primary wizard-button-finalize hidden">
+            <span>✓ Finalize spec</span>
+          </button>
+        </div>
       </div>
     </section>
 

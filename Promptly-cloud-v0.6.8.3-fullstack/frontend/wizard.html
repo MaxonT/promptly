@@ -10,6 +10,19 @@
   <script src="config.js"></script>
 </head>
 <body class="app-shell">
+  <!-- Animated AI-style background -->
+  <div class="wizard-background">
+    <div class="wizard-gradient-orb wizard-gradient-orb--1"></div>
+    <div class="wizard-gradient-orb wizard-gradient-orb--2"></div>
+    <div class="wizard-gradient-orb wizard-gradient-orb--3"></div>
+    <div class="wizard-geometric-pattern">
+      <div class="wizard-geometric-shape wizard-geometric-shape--1"></div>
+      <div class="wizard-geometric-shape wizard-geometric-shape--2"></div>
+      <div class="wizard-geometric-shape wizard-geometric-shape--3"></div>
+      <div class="wizard-geometric-shape wizard-geometric-shape--4"></div>
+    </div>
+  </div>
+  
   <header class="wizard-header">
     <div class="wizard-header-main">
       <img src="assets/promptly-icon.svg" alt="Promptly" class="wizard-logo" />
@@ -22,6 +35,24 @@
       <span class="wizard-tag">v0.6.5 · backend-powered</span>
     </div>
   </header>
+
+  <!-- Top-level wizard progress stepper -->
+  <div class="wizard-stepper">
+    <div class="wizard-stepper-step wizard-stepper-step--active" id="step-describe">
+      <div class="wizard-stepper-circle">1</div>
+      <div class="wizard-stepper-label">Describe</div>
+    </div>
+    <div class="wizard-stepper-connector"></div>
+    <div class="wizard-stepper-step" id="step-questions">
+      <div class="wizard-stepper-circle">2</div>
+      <div class="wizard-stepper-label">Questions</div>
+    </div>
+    <div class="wizard-stepper-connector"></div>
+    <div class="wizard-stepper-step" id="step-finalize">
+      <div class="wizard-stepper-circle">3</div>
+      <div class="wizard-stepper-label">Finalize</div>
+    </div>
+  </div>
 
   <main class="wizard-main">
     <section class="wizard-panel wizard-panel--idea">
@@ -63,22 +94,35 @@
       </div>
       <div id="questionsContainer" class="wizard-questions hidden"></div>
       <div class="wizard-qa-actions">
-        <div class="wizard-qa-actions-left">
-          <button id="backBtn" class="wizard-button-nav wizard-button-nav--back hidden">
-            <span class="wizard-button-icon">←</span>
-            <span>Back</span>
-          </button>
-          <button id="saveSnapshotBtn" class="wizard-button-secondary hidden">💾 Save snapshot</button>
+        <!-- Progress indicator at top of navigation bar -->
+        <div id="progressIndicator" class="wizard-progress-indicator hidden">
+          <div class="wizard-progress-bar-container">
+            <div id="progressBar" class="wizard-progress-bar"></div>
+          </div>
+          <div class="wizard-progress-info">
+            <span id="progressText" class="wizard-progress-text">Questions 1–5 of 20</span>
+            <span id="progressDots" class="wizard-progress-dots">●○○○</span>
+          </div>
         </div>
-        <div class="wizard-qa-actions-right">
-          <button id="skipBtn" class="wizard-button-secondary hidden">Skip</button>
-          <button id="nextBatchBtn" class="wizard-button-nav wizard-button-nav--next hidden">
-            <span>Next questions</span>
-            <span class="wizard-button-icon">→</span>
-          </button>
-          <button id="finalizeBtn" class="wizard-button-primary wizard-button-finalize hidden">
-            <span>✓ Finalize spec</span>
-          </button>
+        
+        <div class="wizard-qa-actions-buttons">
+          <div class="wizard-qa-actions-left">
+            <button id="backBtn" class="wizard-button-nav wizard-button-nav--back hidden">
+              <span class="wizard-button-icon">←</span>
+              <span>Back</span>
+            </button>
+            <button id="saveSnapshotBtn" class="wizard-button-secondary hidden">💾 Save snapshot</button>
+          </div>
+          <div class="wizard-qa-actions-right">
+            <button id="skipBtn" class="wizard-button-secondary hidden">Skip</button>
+            <button id="nextBatchBtn" class="wizard-button-nav wizard-button-nav--next hidden">
+              <span>Next questions</span>
+              <span class="wizard-button-icon">→</span>
+            </button>
+            <button id="finalizeBtn" class="wizard-button-primary wizard-button-finalize hidden">
+              <span>✓ Finalize spec</span>
+            </button>
+          </div>
         </div>
       </div>
     </section>

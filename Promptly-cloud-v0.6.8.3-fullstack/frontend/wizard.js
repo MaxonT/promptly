@@ -12,6 +12,16 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
   
   const ideaPanel = document.querySelector(".wizard-panel--idea");
   const qaPanel = document.querySelector(".wizard-panel--qa");
+  
+  const progressIndicator = document.getElementById("progressIndicator");
+  const progressBar = document.getElementById("progressBar");
+  const progressText = document.getElementById("progressText");
+  const progressDots = document.getElementById("progressDots");
+  
+  const stepDescribe = document.getElementById("step-describe");
+  const stepQuestions = document.getElementById("step-questions");
+  const stepFinalize = document.getElementById("step-finalize");
+  const stepConnectors = document.querySelectorAll(".wizard-stepper-connector");
 
   const qaEmptyState = document.getElementById("qaEmptyState");
   const questionsContainer = document.getElementById("questionsContainer");
@@ -47,6 +57,37 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
     logOutput.textContent += `[${ts}] ${line}\n`;
     logOutput.scrollTop = logOutput.scrollHeight;
   }
+  
+  // Update wizard stepper (top-level progress)
+  function updateWizardStepper(currentStep) {
+    const steps = [stepDescribe, stepQuestions, stepFinalize];
+    const stepNames = ['describe', 'questions', 'finalize'];
+    const currentIndex = stepNames.indexOf(currentStep);
+    
+    steps.forEach((step, index) => {
+      if (!step) return;
+      
+      // Remove all state classes
+      step.classList.remove('wizard-stepper-step--active', 'wizard-stepper-step--completed');
+      
+      if (index < currentIndex) {
+        // Completed steps
+        step.classList.add('wizard-stepper-step--completed');
+      } else if (index === currentIndex) {
+        // Current active step
+        step.classList.add('wizard-stepper-step--active');
+      }
+    });
+    
+    // Update connectors
+    stepConnectors.forEach((connector, index) => {
+      if (index < currentIndex) {
+        connector.classList.add('wizard-stepper-connector--completed');
+      } else {
+        connector.classList.remove('wizard-stepper-connector--completed');
+      }
+    });
+  }
 
   function clearQuestions() {
     questionsContainer.innerHTML = "";
@@ -60,6 +101,7 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
     backBtn.classList.add("hidden");
     skipBtn.classList.add("hidden");
     saveSnapshotBtn.classList.add("hidden");
+    progressIndicator?.classList.add("hidden");
   }
   
   // Add questions to the global list (with sequential numbering)
@@ -83,6 +125,52 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
   // Get total number of pages
   function getTotalPages() {
     return Math.ceil(allQuestions.length / PAGE_SIZE);
+  }
+  
+  // Update progress indicator
+  function updateProgressIndicator() {
+    if (!progressIndicator || allQuestions.length === 0) return;
+    
+    const totalPages = getTotalPages();
+    const totalQuestions = allQuestions.length;
+    const startQuestion = currentPageIndex * PAGE_SIZE + 1;
+    const endQuestion = Math.min((currentPageIndex + 1) * PAGE_SIZE, totalQuestions);
+    
+    // Show progress indicator
+    progressIndicator.classList.remove("hidden");
+    
+    // Update progress text
+    if (progressText) {
+      progressText.textContent = `Questions ${startQuestion}–${endQuestion} of ${totalQuestions}`;
+    }
+    
+    // Update progress bar width
+    if (progressBar) {
+      const progress = ((currentPageIndex + 1) / totalPages) * 100;
+      progressBar.style.width = `${progress}%`;
+    }
+    
+    // Update progress dots
+    if (progressDots) {
+      const dots = [];
+      for (let i = 0; i < totalPages; i++) {
+        if (i === currentPageIndex) {
+          dots.push('●'); // Filled dot for current page
+        } else if (i < currentPageIndex) {
+          dots.push('●'); // Filled dot for completed pages
+        } else {
+          dots.push('○'); // Empty dot for future pages
+        }
+      }
+      progressDots.textContent = dots.join('');
+      
+      // Hide dots if too many pages (more than 10)
+      if (totalPages > 10) {
+        progressDots.style.display = 'none';
+      } else {
+        progressDots.style.display = 'inline';
+      }
+    }
   }
   
   // Update pagination button states
@@ -115,6 +203,9 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
         nextTextSpan.textContent = `Next (Page ${currentPageIndex + 2}/${totalPages})`;
       }
     }
+    
+    // Update progress indicator
+    updateProgressIndicator();
   }
 
   // Render current page of questions
@@ -339,6 +430,9 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
       renderCurrentPage();
       log(`Loaded ${allQuestions.length} questions (showing page 1/${getTotalPages()})`);
       
+      // Update wizard stepper to Questions step
+      updateWizardStepper('questions');
+      
       // Keep button disabled after successful start
       startBtn.textContent = "Session started";
     } catch (err) {
@@ -360,9 +454,28 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
     
     // If not on last page, just move to next page (client-side pagination)
     if (currentPageIndex < totalPages - 1) {
+      // Play slide-out-left animation
+      questionsContainer.classList.add('wizard-questions--slide-out-left');
+      
+      // Wait for animation to complete
+      await new Promise(resolve => setTimeout(resolve, 200));
+      
+      // Update page
       currentPageIndex++;
+      
+      // Remove animation class and add slide-in-right
+      questionsContainer.classList.remove('wizard-questions--slide-out-left');
+      questionsContainer.classList.add('wizard-questions--slide-in-right');
+      
+      // Render new content
       renderCurrentPage();
       log(`Moved to page ${currentPageIndex + 1}/${totalPages}`);
+      
+      // Clean up animation class after it completes
+      setTimeout(() => {
+        questionsContainer.classList.remove('wizard-questions--slide-in-right');
+      }, 250);
+      
       return;
     }
     
@@ -417,6 +530,10 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
       }
       const data = await res.json();
       log("Finalize completed successfully.");
+      
+      // Update wizard stepper to Finalize step
+      updateWizardStepper('finalize');
+      
       resultEmptyState.classList.add("hidden");
       resultContainer.classList.remove("hidden");
       specOutput.textContent = JSON.stringify(data.spec, null, 2);
@@ -513,11 +630,29 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
   }
 
   // Go back to previous page
-  function goBack() {
+  async function goBack() {
     if (currentPageIndex > 0) {
+      // Play slide-out-right animation
+      questionsContainer.classList.add('wizard-questions--slide-out-right');
+      
+      // Wait for animation to complete
+      await new Promise(resolve => setTimeout(resolve, 200));
+      
+      // Update page
       currentPageIndex--;
+      
+      // Remove animation class and add slide-in-left
+      questionsContainer.classList.remove('wizard-questions--slide-out-right');
+      questionsContainer.classList.add('wizard-questions--slide-in-left');
+      
+      // Render new content
       renderCurrentPage();
       log(`Moved to page ${currentPageIndex + 1}/${getTotalPages()}`);
+      
+      // Clean up animation class after it completes
+      setTimeout(() => {
+        questionsContainer.classList.remove('wizard-questions--slide-in-left');
+      }, 250);
     } else {
       log("Already on first page");
     }
@@ -618,5 +753,8 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
   saveSnapshotBtn?.addEventListener("click", saveSnapshot);
   restoreSnapshotBtn?.addEventListener("click", restoreSnapshot);
 
+  // Initialize wizard stepper to Describe step
+  updateWizardStepper('describe');
+  
   log("Wizard page loaded. Describe your idea on the left to begin.");
 })();

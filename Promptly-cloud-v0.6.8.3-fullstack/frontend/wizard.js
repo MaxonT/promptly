@@ -692,23 +692,67 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
     if (!currentSessionId) return;
     try {
       log("Saving session snapshot...");
+      
+      // Disable button during save
+      const originalText = saveSnapshotBtn.textContent;
+      saveSnapshotBtn.disabled = true;
+      saveSnapshotBtn.textContent = "💾 Saving...";
+      
       const res = await fetch(`${API_BASE}/api/question-sessions/${encodeURIComponent(currentSessionId)}/snapshot`, {
         method: "POST"
       });
       if (!res.ok) {
         const txt = await res.text();
         log(`Failed to save snapshot: HTTP ${res.status} ${txt}`);
+        saveSnapshotBtn.disabled = false;
+        saveSnapshotBtn.textContent = originalText;
         return;
       }
       const data = await res.json();
       log(`Snapshot saved: ${data.snapshot_id}`);
+      
+      // Gentle success feedback
+      showSnapshotSuccess();
+      
       // Show restore button for future use
       if (restoreSnapshotBtn) {
         restoreSnapshotBtn.classList.remove("hidden");
       }
+      
+      // Re-enable button
+      saveSnapshotBtn.disabled = false;
+      saveSnapshotBtn.textContent = originalText;
     } catch (err) {
       console.error(err);
       log("Error while saving snapshot: " + err.message);
+      saveSnapshotBtn.disabled = false;
+      saveSnapshotBtn.textContent = "💾 Save snapshot";
+    }
+  }
+  
+  // Gentle success feedback for snapshot save
+  function showSnapshotSuccess() {
+    if (!saveSnapshotBtn) return;
+    
+    // Add success state to button
+    saveSnapshotBtn.classList.add("snapshot-saved");
+    
+    // Create gentle tooltip
+    const tooltip = document.createElement("div");
+    tooltip.className = "wizard-snapshot-tooltip";
+    tooltip.textContent = "✓ Saved";
+    
+    // Position relative to button
+    const btnParent = saveSnapshotBtn.parentElement;
+    if (btnParent) {
+      btnParent.style.position = "relative";
+      btnParent.appendChild(tooltip);
+      
+      // Auto-remove after animation
+      setTimeout(() => {
+        tooltip.remove();
+        saveSnapshotBtn.classList.remove("snapshot-saved");
+      }, 1200);
     }
   }
 
@@ -821,12 +865,26 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
   // Q3: Regenerate a specific question
   async function regenerateQuestion(questionId, cardElement) {
     if (!currentSessionId) return;
+    
+    let loadingOverlay = null;
+    
     try {
       log(`Regenerating question ${questionId}...`);
       
-      // FIX 10: Add loading state to card
+      // FIX: Create stable loading overlay
       if (cardElement) {
+        // Add regenerating class
         cardElement.classList.add("is-regenerating");
+        
+        // Create loading overlay DOM element (stable positioning)
+        loadingOverlay = document.createElement("div");
+        loadingOverlay.className = "wizard-regenerating-overlay";
+        
+        const spinner = document.createElement("div");
+        spinner.className = "wizard-regenerating-spinner";
+        
+        loadingOverlay.appendChild(spinner);
+        cardElement.appendChild(loadingOverlay);
       }
       
       const res = await fetch(
@@ -838,6 +896,7 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
         log(`Failed to regenerate: HTTP ${res.status} ${txt}`);
         if (cardElement) {
           cardElement.classList.remove("is-regenerating");
+          if (loadingOverlay) loadingOverlay.remove();
         }
         return;
       }
@@ -862,6 +921,7 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
       log("Error while regenerating question: " + err.message);
       if (cardElement) {
         cardElement.classList.remove("is-regenerating");
+        if (loadingOverlay) loadingOverlay.remove();
       }
     }
   }
@@ -895,4 +955,39 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
   updateWizardStepper('describe');
 
   log("Wizard page loaded. Describe your idea on the left to begin.");
+})();
+
+// Global theme support (consistent with dashboard)
+(function initThemeSupport() {
+  // Apply theme based on system preference or saved preference
+  function applyTheme(theme) {
+    const themeValue = (theme || '').toLowerCase();
+    if (themeValue === 'light') {
+      document.documentElement.setAttribute('data-theme', 'light');
+    } else if (themeValue === 'dark') {
+      document.documentElement.setAttribute('data-theme', 'dark');
+    } else {
+      // Auto/system mode
+      document.documentElement.removeAttribute('data-theme');
+      // Follow system preference
+      if (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) {
+        document.documentElement.setAttribute('data-theme', 'light');
+      }
+    }
+  }
+
+  // Initialize theme from localStorage or system
+  const savedTheme = localStorage.getItem('promptly-theme') || 'auto';
+  applyTheme(savedTheme);
+
+  // Listen for system theme changes
+  if (window.matchMedia) {
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: light)');
+    mediaQuery.addEventListener('change', () => {
+      const currentTheme = localStorage.getItem('promptly-theme') || 'auto';
+      if (currentTheme === 'auto') {
+        applyTheme('auto');
+      }
+    });
+  }
 })();

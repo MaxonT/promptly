@@ -94,26 +94,99 @@ export async function generateBroadQuestions({ initialDescription, kind }) {
   });
 
   let raw;
-  try {
-    raw = await chatJson({ system, user });
-    completeRunSuccess(runId, raw);
-    const parsed = AgentAOutputSchema.parse(raw);
-    return parsed.broad_questions.map((q, index) => ({
-      id: q.id || `axis_${index + 1}`,
-      axis: q.axis,
-      question: q.question,
-      rationale: q.rationale || ""
-    }));
-  } catch (err) {
-    console.error("[promptly] generateBroadQuestions failed");
-    console.error("Error:", err.message);
-    if (err.name === 'ZodError' && raw) {
-      console.error("Validation errors:", JSON.stringify(err.errors, null, 2));
-      console.error("Raw LLM response:", JSON.stringify(raw, null, 2));
+  let parsed;
+  let retryCount = 0;
+  const MAX_RETRIES = 2;
+  
+  // Retry loop for stability
+  while (retryCount <= MAX_RETRIES) {
+    try {
+      raw = await chatJson({ system, user });
+      
+      // Auto-fix: Clean and normalize the response
+      if (raw && raw.broad_questions && Array.isArray(raw.broad_questions)) {
+        raw.broad_questions = raw.broad_questions.map(q => ({
+          id: q.id ? q.id.toString().trim() : undefined,
+          axis: q.axis ? q.axis.toString().trim() : '',
+          question: q.question ? q.question.toString().trim() : '',
+          rationale: q.rationale ? q.rationale.toString().trim() : undefined
+        }));
+      }
+      
+      completeRunSuccess(runId, raw);
+      parsed = AgentAOutputSchema.parse(raw);
+      break; // Success, exit retry loop
+    } catch (err) {
+      retryCount++;
+      console.warn(`[promptly] Agent A attempt ${retryCount}/${MAX_RETRIES + 1} failed:`, err.message);
+      
+      if (retryCount > MAX_RETRIES) {
+        console.error("[promptly] generateBroadQuestions failed after retries");
+        console.error("Error:", err.message);
+        if (err.name === 'ZodError' && raw) {
+          console.error("Validation errors:", JSON.stringify(err.errors, null, 2));
+          console.error("Raw LLM response:", JSON.stringify(raw, null, 2));
+        }
+        completeRunFailure(runId, "runtime_exception", err.message || err.toString(), "system");
+        throw err;
+      }
+      
+      // Wait before retry
+      await new Promise(resolve => setTimeout(resolve, 500));
     }
-    completeRunFailure(runId, "runtime_exception", err.message || err.toString(), "system");
-    throw err;
   }
+  
+  if (!parsed) {
+    throw new Error("Failed to generate broad questions after retries");
+  }
+  
+  console.log(`[promptly] Agent A generated ${parsed.broad_questions.length} questions successfully`);
+  return parsed.broad_questions.map((q, index) => ({
+    id: q.id || `axis_${index + 1}`,
+    axis: q.axis,
+    question: q.question,
+    rationale: q.rationale || ""
+  }));
+}
+
+// Helper: Clean and normalize option data
+function cleanOption(opt) {
+  if (typeof opt === 'string') {
+    // Convert string to proper option object
+    return {
+      label: opt.trim(),
+      value: opt.toLowerCase().replace(/\s+/g, '_').trim()
+    };
+  }
+  if (typeof opt === 'object' && opt !== null) {
+    return {
+      label: (opt.label || opt.value || '').toString().trim(),
+      value: (opt.value || opt.label || '').toString().trim(),
+      is_other: opt.is_other === true
+    };
+  }
+  return null;
+}
+
+// Helper: Clean and validate options array
+function cleanOptionsArray(options) {
+  if (!Array.isArray(options)) return [];
+  
+  const cleaned = options
+    .map(cleanOption)
+    .filter(opt => opt !== null && opt.label && opt.value);
+  
+  // Ensure "Other" option exists
+  const hasOther = cleaned.some(opt => opt.is_other === true);
+  if (!hasOther) {
+    cleaned.push({
+      label: "Other (please specify)",
+      value: "other",
+      is_other: true
+    });
+  }
+  
+  return cleaned;
 }
 
 export async function generateChoiceQuestions({ initialDescription, kind, broadQuestions }) {
@@ -240,71 +313,188 @@ export async function generateChoiceQuestions({ initialDescription, kind, broadQ
   });
 
   let raw;
-  try {
-    raw = await chatJson({ system, user });
-    completeRunSuccess(runId, raw);
-    const parsed = AgentBOutputSchema.parse(raw);
+  let parsed;
+  let retryCount = 0;
+  const MAX_RETRIES = 2;
+  
+  // Retry loop for stability
+  while (retryCount <= MAX_RETRIES) {
+    try {
+      raw = await chatJson({ system, user });
+      
+      // Auto-fix: Clean and normalize the response
+      if (raw && raw.choice_questions && Array.isArray(raw.choice_questions)) {
+        raw.choice_questions = raw.choice_questions.map(q => {
+          // Clean content field
+          if (q.content) {
+            q.content = q.content.toString().trim();
+          }
+          
+          // Clean regular options
+          if (q.options && Array.isArray(q.options)) {
+            q.options = cleanOptionsArray(q.options);
+          }
+          
+          // Clean depth level options
+          if (q.depth_levels) {
+            ['instant', 'standard', 'deep'].forEach(level => {
+              if (q.depth_levels[level] && q.depth_levels[level].options) {
+                q.depth_levels[level].options = cleanOptionsArray(q.depth_levels[level].options);
+              }
+            });
+          }
+          
+          return q;
+        });
+      }
+      
+      completeRunSuccess(runId, raw);
+      parsed = AgentBOutputSchema.parse(raw);
+      break; // Success, exit retry loop
+    } catch (err) {
+      retryCount++;
+      console.warn(`[promptly] Agent B attempt ${retryCount}/${MAX_RETRIES + 1} failed:`, err.message);
+      
+      if (retryCount > MAX_RETRIES) {
+        // All retries exhausted
+        console.error("[promptly] generateChoiceQuestions failed after retries");
+        console.error("Error:", err.message);
+        if (err.name === 'ZodError' && raw) {
+          console.error("Validation errors:", JSON.stringify(err.errors, null, 2));
+          console.error("Raw LLM response:", JSON.stringify(raw, null, 2));
+        }
+        completeRunFailure(runId, "runtime_exception", err.message || err.toString(), "system");
+        throw err;
+      }
+      
+      // Wait before retry
+      await new Promise(resolve => setTimeout(resolve, 500));
+    }
+  }
+  
+  if (!parsed) {
+    throw new Error("Failed to generate choice questions after retries");
+  }
     
-    // Post-validation: ENFORCE that every question has options
+    // Post-validation: ENFORCE that every question has options (enhanced stability)
     const validatedQuestions = parsed.choice_questions.map((q, index) => {
       const qid = q.id || `q_${index + 1}`;
       
+      // Clean and trim content
+      if (q.content) {
+        q.content = q.content.toString().trim();
+      }
+      
+      // Additional format fixes
+      if (!q.content || q.content.length === 0) {
+        q.content = `Question ${index + 1}`;
+        console.warn(`[promptly] Question ${qid} has empty content, using fallback`);
+      }
+      
       // Check if question has valid options
       const hasValidOptions = q.depth_enabled 
-        ? (q.depth_levels?.instant?.options?.length > 0 &&
-           q.depth_levels?.standard?.options?.length > 0 &&
-           q.depth_levels?.deep?.options?.length > 0)
-        : (q.options && q.options.length > 0);
+        ? (q.depth_levels?.instant?.options?.length >= 3 &&
+           q.depth_levels?.standard?.options?.length >= 3 &&
+           q.depth_levels?.deep?.options?.length >= 3)
+        : (q.options && q.options.length >= 3);
       
       if (!hasValidOptions) {
-        console.warn(`[promptly] Question ${qid} has no options! Adding default options.`);
+        console.warn(`[promptly] Question ${qid} has insufficient options! Adding enhanced defaults.`);
         
-        // Add default options based on question type
+        // Add contextual default options based on question content and type
         if (q.depth_enabled) {
-          // For depth-enabled questions, add generic depth levels
+          // For depth-enabled questions, add contextual depth levels
           q.depth_question = q.depth_question || "Choose your answer depth:";
+          
+          // Try to infer better defaults from question content
+          const contentLower = q.content.toLowerCase();
+          let baseOptions;
+          
+          if (contentLower.includes('platform') || contentLower.includes('device')) {
+            baseOptions = {
+              instant: ["Web", "Mobile", "Desktop"],
+              standard: ["Responsive web app", "Native mobile (iOS/Android)", "Desktop application"],
+              deep: ["Progressive web app (PWA)", "Hybrid mobile (React Native/Flutter)", "Cross-platform desktop (Electron)"]
+            };
+          } else if (contentLower.includes('user') || contentLower.includes('audience')) {
+            baseOptions = {
+              instant: ["General public", "Professionals", "Students"],
+              standard: ["Consumers (18-35)", "Business professionals", "Academic researchers"],
+              deep: ["Early adopters in tech", "Enterprise decision-makers", "Subject matter experts"]
+            };
+          } else if (contentLower.includes('feature') || contentLower.includes('function')) {
+            baseOptions = {
+              instant: ["Basic features", "Standard features", "Advanced features"],
+              standard: ["Core functionality only", "Standard feature set", "Extended capabilities"],
+              deep: ["MVP feature set", "Full-featured product", "Enterprise-grade suite"]
+            };
+          } else {
+            // Generic fallback
+            baseOptions = {
+              instant: ["Simple approach", "Standard approach", "Advanced approach"],
+              standard: ["Minimal implementation", "Balanced implementation", "Comprehensive implementation"],
+              deep: ["Basic architecture", "Scalable architecture", "Enterprise-grade architecture"]
+            };
+          }
+          
           q.depth_levels = {
             instant: {
               label: "⚡ Instant (Simple & Quick)",
-              options: [
-                {label: "Option A (simple)", value: "a_instant"},
-                {label: "Option B (simple)", value: "b_instant"},
-                {label: "Option C (simple)", value: "c_instant"},
-                {label: "Other (please specify)", value: "other", is_other: true}
-              ]
+              options: baseOptions.instant.map((label, i) => ({
+                label,
+                value: `instant_${i + 1}`
+              })).concat([{label: "Other (please specify)", value: "other", is_other: true}])
             },
             standard: {
               label: "🔍 Standard (Balanced)",
-              options: [
-                {label: "Option A (standard)", value: "a_standard"},
-                {label: "Option B (standard)", value: "b_standard"},
-                {label: "Option C (standard)", value: "c_standard"},
-                {label: "Other (please specify)", value: "other", is_other: true}
-              ]
+              options: baseOptions.standard.map((label, i) => ({
+                label,
+                value: `standard_${i + 1}`
+              })).concat([{label: "Other (please specify)", value: "other", is_other: true}])
             },
             deep: {
               label: "🧠 Deep Thinking (Advanced)",
-              options: [
-                {label: "Option A (advanced)", value: "a_deep"},
-                {label: "Option B (advanced)", value: "b_deep"},
-                {label: "Option C (advanced)", value: "c_deep"},
-                {label: "Other (please specify)", value: "other", is_other: true}
-              ]
+              options: baseOptions.deep.map((label, i) => ({
+                label,
+                value: `deep_${i + 1}`
+              })).concat([{label: "Other (please specify)", value: "other", is_other: true}])
             }
           };
         } else {
-          // For regular questions, add default options
-          q.options = [
-            {label: "Yes", value: "yes"},
-            {label: "No", value: "no"},
-            {label: "Maybe / Not sure", value: "maybe"},
-            {label: "Other (please specify)", value: "other", is_other: true}
-          ];
+          // For regular questions, infer better defaults from content
+          const contentLower = q.content.toLowerCase();
+          
+          if (contentLower.includes('how many') || contentLower.includes('size') || contentLower.includes('scale')) {
+            q.options = [
+              {label: "Small (1-10)", value: "small"},
+              {label: "Medium (10-100)", value: "medium"},
+              {label: "Large (100+)", value: "large"},
+              {label: "Other (please specify)", value: "other", is_other: true}
+            ];
+          } else if (contentLower.includes('when') || contentLower.includes('timeline') || contentLower.includes('deadline')) {
+            q.options = [
+              {label: "ASAP (within 1 month)", value: "asap"},
+              {label: "Short-term (1-3 months)", value: "short"},
+              {label: "Medium-term (3-6 months)", value: "medium"},
+              {label: "Long-term (6+ months)", value: "long"},
+              {label: "Other (please specify)", value: "other", is_other: true}
+            ];
+          } else if (q.type === 'yes_no') {
+            // Yes/No doesn't need options, skip
+          } else {
+            // Generic meaningful defaults
+            q.options = [
+              {label: "Yes", value: "yes"},
+              {label: "No", value: "no"},
+              {label: "Not sure / Need to decide", value: "undecided"},
+              {label: "Other (please specify)", value: "other", is_other: true}
+            ];
+          }
         }
       }
       
-      // Ensure "Other" option exists
-      if (!q.depth_enabled && q.options) {
+      // Ensure "Other" option exists in all option arrays
+      if (!q.depth_enabled && q.options && Array.isArray(q.options)) {
         const hasOther = q.options.some(opt => opt.is_other === true);
         if (!hasOther) {
           q.options.push({
@@ -313,12 +503,34 @@ export async function generateChoiceQuestions({ initialDescription, kind, broadQ
             is_other: true
           });
         }
+        // Filter out any invalid options
+        q.options = q.options.filter(opt => opt && opt.label && opt.value);
+      }
+      
+      // Ensure depth level options are clean
+      if (q.depth_enabled && q.depth_levels) {
+        ['instant', 'standard', 'deep'].forEach(level => {
+          if (q.depth_levels[level] && q.depth_levels[level].options) {
+            const opts = q.depth_levels[level].options;
+            // Ensure "Other" exists
+            const hasOther = opts.some(opt => opt.is_other === true);
+            if (!hasOther) {
+              opts.push({
+                label: "Other (please specify)",
+                value: "other",
+                is_other: true
+              });
+            }
+            // Filter out invalid options
+            q.depth_levels[level].options = opts.filter(opt => opt && opt.label && opt.value);
+          }
+        });
       }
       
       return {
         id: qid,
-      type: q.type,
-      content: q.content,
+        type: q.type,
+        content: q.content,
         depth_enabled: q.depth_enabled,
         options: q.options || null,
         depth_question: q.depth_question || null,
@@ -326,14 +538,12 @@ export async function generateChoiceQuestions({ initialDescription, kind, broadQ
       };
     });
     
+    console.log(`[promptly] Agent B generated ${validatedQuestions.length} questions successfully`);
     return validatedQuestions;
   } catch (err) {
-    console.error("[promptly] generateChoiceQuestions failed");
+    // This should not be reached due to retry loop, but keep as final safety net
+    console.error("[promptly] generateChoiceQuestions fatal error");
     console.error("Error:", err.message);
-    if (err.name === 'ZodError' && raw) {
-      console.error("Validation errors:", JSON.stringify(err.errors, null, 2));
-      console.error("Raw LLM response:", JSON.stringify(raw, null, 2));
-    }
     completeRunFailure(runId, "runtime_exception", err.message || err.toString(), "system");
     throw err;
   }
@@ -384,19 +594,62 @@ export async function generateRawSpec({ initialDescription, kind, qaPairs }) {
   });
 
   let raw;
-  try {
-    raw = await chatJson({ system, user });
-    completeRunSuccess(runId, raw);
-    const parsed = AgentCOutputSchema.parse(raw);
-    return parsed;
-  } catch (err) {
-    console.error("[promptly] generateRawSpec failed");
-    console.error("Error:", err.message);
-    if (err.name === 'ZodError' && raw) {
-      console.error("Validation errors:", JSON.stringify(err.errors, null, 2));
-      console.error("Raw LLM response:", JSON.stringify(raw, null, 2));
+  let parsed;
+  let retryCount = 0;
+  const MAX_RETRIES = 2;
+  
+  // Retry loop for stability
+  while (retryCount <= MAX_RETRIES) {
+    try {
+      raw = await chatJson({ system, user });
+      
+      // Auto-fix: Clean and normalize the response
+      if (raw) {
+        // Ensure spec exists
+        if (!raw.spec || typeof raw.spec !== 'object') {
+          raw.spec = {};
+        }
+        
+        // Ensure explanation exists
+        if (!raw.explanation || typeof raw.explanation !== 'string') {
+          raw.explanation = "Generated specification based on user requirements.";
+        } else {
+          raw.explanation = raw.explanation.trim();
+        }
+        
+        // Clean intent field (can be null, undefined, or object)
+        if (raw.intent === undefined) {
+          delete raw.intent;
+        }
+      }
+      
+      completeRunSuccess(runId, raw);
+      parsed = AgentCOutputSchema.parse(raw);
+      break; // Success, exit retry loop
+    } catch (err) {
+      retryCount++;
+      console.warn(`[promptly] Agent C attempt ${retryCount}/${MAX_RETRIES + 1} failed:`, err.message);
+      
+      if (retryCount > MAX_RETRIES) {
+        console.error("[promptly] generateRawSpec failed after retries");
+        console.error("Error:", err.message);
+        if (err.name === 'ZodError' && raw) {
+          console.error("Validation errors:", JSON.stringify(err.errors, null, 2));
+          console.error("Raw LLM response:", JSON.stringify(raw, null, 2));
+        }
+        completeRunFailure(runId, "runtime_exception", err.message || err.toString(), "system");
+        throw err;
+      }
+      
+      // Wait before retry
+      await new Promise(resolve => setTimeout(resolve, 500));
     }
-    completeRunFailure(runId, "runtime_exception", err.message || err.toString(), "system");
-    throw err;
   }
+  
+  if (!parsed) {
+    throw new Error("Failed to generate spec after retries");
+  }
+  
+  console.log(`[promptly] Agent C generated spec successfully`);
+  return parsed;
 }

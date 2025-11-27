@@ -190,4 +190,8 @@ CREATE TABLE IF NOT EXISTS outcome_candidates (
   created_at TEXT NOT NULL,
   CONSTRAINT fk_cand_outcome FOREIGN KEY (outcome_run_id) REFERENCES outcome_runs(id)
 );
+
+-- Insert demo user if not exists (for question sessions without authentication)
+INSERT OR IGNORE INTO users (id, email, created_at)
+VALUES ('demo-user', 'demo@promptly.local', datetime('now'));
 `);

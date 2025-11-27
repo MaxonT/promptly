@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en" data-theme="auto">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Promptly Result — Spec & Prompt View</title>
+  <link rel="icon" href="assets/promptly-icon.svg" type="image/svg+xml"/>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="wizard.css" />
+</head>
+<body class="app-shell">
+  <header class="wizard-header">
+    <div class="wizard-header-main">
+      <img src="assets/promptly-icon.svg" alt="Promptly" class="wizard-logo" />
+      <div>
+        <h1 class="wizard-title">Promptly Result View</h1>
+        <p class="wizard-subtitle">Inspect a saved spec and regenerate compiled prompt blocks by spec ID.</p>
+      </div>
+    </div>
+  </header>
+
+  <main class="wizard-main">
+    <section class="wizard-panel wizard-panel--result">
+      <div class="wizard-panel-header">
+        <h2>Spec &amp; compiled prompt</h2>
+        <p class="wizard-panel-desc">
+          This view loads the spec by <code>specId</code> from the URL and compiles prompt blocks on demand.
+        </p>
+      </div>
+      <div id="resultEmptyState" class="wizard-empty">
+        <p>Loading result...</p>
+      </div>
+      <div id="resultError" class="wizard-empty hidden">
+        <p id="resultErrorMessage"></p>
+      </div>
+      <div id="resultContainer" class="wizard-result hidden">
+        <div class="wizard-result-section">
+          <h3>High-level spec</h3>
+          <pre id="specOutput" class="wizard-code"></pre>
+        </div>
+        <div class="wizard-result-section">
+          <h3>Compiled prompt blocks</h3>
+          <pre id="promptOutput" class="wizard-code"></pre>
+        </div>
+        <div class="wizard-result-section">
+          <h3>Explanation</h3>
+          <pre id="explanationOutput" class="wizard-code wizard-code--plain"></pre>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script src="result.js"></script>
+</body>
+</html>

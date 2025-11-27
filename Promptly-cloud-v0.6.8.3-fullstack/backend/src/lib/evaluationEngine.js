@@ -75,7 +75,7 @@ export async function evaluatePrompt({ spec, compiledPrompt, model }) {
     }
   });
 
-  const evalModel = model || process.env.OPENAI_MODEL || "gpt-4.1-mini";
+  const evalModel = model || process.env.OPENAI_MODEL || "gpt-4o-mini";
   const runId = createRun({
     model: evalModel,
     inputBlocks: {

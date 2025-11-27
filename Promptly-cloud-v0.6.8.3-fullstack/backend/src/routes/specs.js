@@ -328,7 +328,7 @@ specsRouter.post("/:id/evaluate", async (req, res) => {
     }
 
     // Evaluate the prompt
-    const model = req.body.model || process.env.OPENAI_MODEL || "gpt-4.1-mini";
+    const model = req.body.model || process.env.OPENAI_MODEL || "gpt-4o-mini";
     const evaluation = await evaluatePrompt({ spec, compiledPrompt, model });
 
     // Store evaluation
@@ -396,7 +396,7 @@ specsRouter.post("/:id/compile-and-evaluate", async (req, res) => {
     `).run(cpId, row.id, JSON.stringify(compiled.blocks), compiled.explanation, now);
 
     // Evaluate the compiled prompt
-    const model = req.body.model || process.env.OPENAI_MODEL || "gpt-4.1-mini";
+    const model = req.body.model || process.env.OPENAI_MODEL || "gpt-4o-mini";
     const evaluation = await evaluatePrompt({ spec, compiledPrompt: compiled, model });
 
     // Store evaluation

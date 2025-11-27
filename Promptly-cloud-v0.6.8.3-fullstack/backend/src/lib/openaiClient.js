@@ -22,7 +22,7 @@ export async function chatJson({ system, user, model }) {
   if (!client) {
     throw new LlmDisabledError();
   }
-  const usedModel = model || process.env.OPENAI_MODEL || "gpt-4.1-mini";
+  const usedModel = model || process.env.OPENAI_MODEL || "gpt-4o-mini";
   const completion = await client.chat.completions.create({
     model: usedModel,
     response_format: { type: "json_object" },

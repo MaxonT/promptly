@@ -50,7 +50,7 @@ export async function generateBroadQuestions({ initialDescription, kind }) {
     kind: kind || null
   });
   
-  const model = process.env.OPENAI_MODEL || "gpt-4.1-mini";
+  const model = process.env.OPENAI_MODEL || "gpt-4o-mini";
   const runId = createRun({
     model,
     inputBlocks: { agent: "A", initial_description: initialDescription, kind }
@@ -87,7 +87,7 @@ export async function generateChoiceQuestions({ initialDescription, kind, broadQ
     broad_questions: broadQuestions
   });
 
-  const model = process.env.OPENAI_MODEL || "gpt-4.1-mini";
+  const model = process.env.OPENAI_MODEL || "gpt-4o-mini";
   const runId = createRun({
     model,
     inputBlocks: { agent: "B", initial_description: initialDescription, kind, broad_questions: broadQuestions }
@@ -124,7 +124,7 @@ export async function generateRawSpec({ initialDescription, kind, qaPairs }) {
     qa_pairs: qaPairs
   });
 
-  const model = process.env.OPENAI_MODEL || "gpt-4.1-mini";
+  const model = process.env.OPENAI_MODEL || "gpt-4o-mini";
   const runId = createRun({
     model,
     inputBlocks: { agent: "C", initial_description: initialDescription, kind, qa_pairs: qaPairs }

@@ -29,7 +29,7 @@ app.get("/api/health", (req, res) => {
 app.get("/api/settings", (req, res) => {
   const env = process.env.NODE_ENV || "development";
   const llmEnabled = !!process.env.OPENAI_API_KEY;
-  const defaultModel = process.env.OPENAI_DEFAULT_MODEL || "gpt-4.1-mini";
+  const defaultModel = process.env.OPENAI_DEFAULT_MODEL || "gpt-4o-mini";
   const outcomeModel = process.env.OUTCOME_MODEL || null;
   const maxCandidates = Number(process.env.MAX_CANDIDATES || 8);
 

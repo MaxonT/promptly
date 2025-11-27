@@ -94,10 +94,33 @@ questionSessionRouter.post("/", async (req, res) => {
     db.prepare(
       "UPDATE question_sessions SET status = ?, updated_at = ? WHERE id = ?"
     ).run("error", new Date().toISOString(), sessionId);
+    
+    // Check for specific error types
     if (err instanceof LlmDisabledError || err.code === "LLM_DISABLED") {
-      return res.status(503).json({ ok: false, error: "LLM disabled" });
+      return res.status(503).json({ ok: false, error: "LLM disabled: OPENAI_API_KEY not set" });
     }
-    return res.status(502).json({ ok: false, error: "Question engine failed" });
+    
+    // Check for OpenAI API authentication errors
+    if (err.status === 401 || err.code === "invalid_api_key") {
+      return res.status(502).json({ 
+        ok: false, 
+        error: "Invalid OpenAI API Key. Please check your OPENAI_API_KEY environment variable." 
+      });
+    }
+    
+    // Check for other OpenAI API errors
+    if (err.status) {
+      return res.status(502).json({ 
+        ok: false, 
+        error: `OpenAI API error (${err.status}): ${err.message || "Unknown error"}` 
+      });
+    }
+    
+    // Generic error
+    return res.status(502).json({ 
+      ok: false, 
+      error: `Question engine failed: ${err.message || "Unknown error"}` 
+    });
   }
 });
 

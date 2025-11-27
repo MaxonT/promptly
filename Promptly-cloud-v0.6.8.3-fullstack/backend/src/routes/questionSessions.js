@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { nanoid } from "nanoid";
 import { z } from "zod";
-import { db } from "../lib/db.js";
+import { db, ensureUser } from "../lib/db.js";
 import { generateBroadQuestions, generateChoiceQuestions, generateRawSpec } from "../lib/llmAgents.js";
 import { compileSpecToPrompt } from "../lib/specCompiler.js";
 import { LlmDisabledError } from "../lib/openaiClient.js";
@@ -38,6 +38,10 @@ questionSessionRouter.post("/", async (req, res) => {
   }
   const { initial_description, kind } = parsed.data;
   const userId = getUserId(req);
+  
+  // Ensure the user exists before creating a session
+  ensureUser(userId);
+  
   const now = new Date().toISOString();
   const sessionId = `sess_${nanoid(16)}`;
 

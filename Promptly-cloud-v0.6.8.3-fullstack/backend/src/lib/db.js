@@ -190,8 +190,33 @@ CREATE TABLE IF NOT EXISTS outcome_candidates (
   created_at TEXT NOT NULL,
   CONSTRAINT fk_cand_outcome FOREIGN KEY (outcome_run_id) REFERENCES outcome_runs(id)
 );
-
--- Insert demo user if not exists (for question sessions without authentication)
-INSERT OR IGNORE INTO users (id, email, created_at)
-VALUES ('demo-user', 'demo@promptly.local', datetime('now'));
 `);
+
+// Ensure demo user exists (for question sessions without authentication)
+// This runs every time the server starts
+try {
+  db.prepare(`
+    INSERT OR IGNORE INTO users (id, email, created_at)
+    VALUES ('demo-user', 'demo@promptly.local', datetime('now'))
+  `).run();
+  console.log("[promptly] Demo user ensured");
+} catch (err) {
+  console.error("[promptly] Failed to ensure demo user:", err);
+}
+
+/**
+ * Ensure a user exists in the database
+ * @param {string} userId - The user ID to ensure exists
+ * @param {string} email - The user's email (optional, defaults to userId@promptly.local)
+ */
+export function ensureUser(userId, email = null) {
+  try {
+    const userEmail = email || `${userId}@promptly.local`;
+    db.prepare(`
+      INSERT OR IGNORE INTO users (id, email, created_at)
+      VALUES (?, ?, datetime('now'))
+    `).run(userId, userEmail);
+  } catch (err) {
+    console.error(`[promptly] Failed to ensure user ${userId}:`, err);
+  }
+}

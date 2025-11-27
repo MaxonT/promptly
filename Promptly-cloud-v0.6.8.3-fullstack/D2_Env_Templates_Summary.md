@@ -275,8 +275,8 @@ npm run dev
 ```bash
 JWT_SECRET=promptlyninja-super-secret-2025-maxont-32chars
 NODE_ENV=production
-SQLITE_PATH=./data/app-v0-7.db
-OPENAI_API_KEY=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
+SQLITE_PATH=xxx
+OPENAI_API_KEY=xxx
 ```
 
 ### Vercel 前端

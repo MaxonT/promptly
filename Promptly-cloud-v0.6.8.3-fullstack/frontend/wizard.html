@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en" data-theme="auto">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Promptly Wizard — Question Engine Demo</title>
+  <link rel="icon" href="assets/promptly-icon.svg" type="image/svg+xml"/>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="wizard.css" />
+</head>
+<body class="app-shell">
+  <header class="wizard-header">
+    <div class="wizard-header-main">
+      <img src="assets/promptly-icon.svg" alt="Promptly" class="wizard-logo" />
+      <div>
+        <h1 class="wizard-title">Promptly Question Wizard</h1>
+        <p class="wizard-subtitle">From fuzzy idea → structured spec → compiled prompt blocks.</p>
+      </div>
+    </div>
+    <div class="wizard-header-meta">
+      <span class="wizard-tag">v0.6.5 · backend-powered</span>
+    </div>
+  </header>
+
+  <main class="wizard-main">
+    <section class="wizard-panel wizard-panel--idea">
+      <h2>1. Describe your project</h2>
+      <p class="wizard-panel-desc">
+        Write a short description of what you want the model to build or help you with.
+        The Question Engine will turn this into a guided Q&amp;A wizard.
+      </p>
+      <label class="wizard-label">
+        Project idea
+        <textarea id="ideaInput" rows="4" placeholder="Example: Help me design a full-stack web app that lets users save and refine prompts with tags, version history, and collaboration."></textarea>
+      </label>
+      <label class="wizard-label">
+        Project type
+        <select id="kindSelect">
+          <option value="">Auto-detect</option>
+          <option value="coding">Coding / engineering</option>
+          <option value="writing">Writing / content</option>
+          <option value="analysis">Analysis / research</option>
+          <option value="product">Product / UX design</option>
+          <option value="custom">Custom / other</option>
+        </select>
+      </label>
+      <button id="startWizardBtn" class="wizard-button-primary">Start wizard</button>
+      <button id="restoreSnapshotBtn" class="wizard-button-secondary hidden">Restore last session</button>
+      <p id="ideaError" class="wizard-error hidden"></p>
+    </section>
+
+    <section class="wizard-panel wizard-panel--qa">
+      <div class="wizard-panel-header">
+        <h2>2. Answer guided questions</h2>
+        <p class="wizard-panel-desc">
+          The engine will ask 3–5 questions at a time. Your answers will be stored in the backend and
+          used to assemble a high-level spec.
+        </p>
+      </div>
+      <div id="qaEmptyState" class="wizard-empty">
+        <p>No questions yet. Start the wizard by describing your project on the left.</p>
+      </div>
+      <div id="questionsContainer" class="wizard-questions hidden"></div>
+      <div class="wizard-qa-actions">
+        <button id="backBtn" class="wizard-button-secondary hidden">← Back</button>
+        <button id="skipBtn" class="wizard-button-secondary hidden">Skip →</button>
+        <button id="saveSnapshotBtn" class="wizard-button-secondary hidden">💾 Save snapshot</button>
+        <button id="nextBatchBtn" class="wizard-button-primary hidden">Next questions</button>
+        <button id="finalizeBtn" class="wizard-button-secondary hidden">Finalize spec &amp; prompt</button>
+      </div>
+    </section>
+
+    <section class="wizard-panel wizard-panel--result">
+      <div class="wizard-panel-header">
+        <h2>3. Spec &amp; compiled prompt</h2>
+        <p class="wizard-panel-desc">
+          Once finalized, you&apos;ll see both the structured spec JSON and the compiled prompt blocks you can use with LLMs.
+        </p>
+      </div>
+      <div id="resultEmptyState" class="wizard-empty">
+        <p>Finish at least one wizard run to see results here.</p>
+      </div>
+      <div id="resultContainer" class="wizard-result hidden">
+        <div class="wizard-result-section">
+          <h3>High-level spec</h3>
+          <pre id="specOutput" class="wizard-code"></pre>
+        </div>
+        <div class="wizard-result-section">
+          <h3>Compiled prompt blocks</h3>
+          <pre id="promptOutput" class="wizard-code"></pre>
+        </div>
+    <div class="wizard-result-section">
+      <h3>Explanation</h3>
+      <pre id="explanationOutput" class="wizard-code wizard-code--plain"></pre>
+    </div>
+    <div class="wizard-result-section">
+      <h3>Result page</h3>
+      <p class="wizard-panel-desc">
+        Open this result in a dedicated view you can share or bookmark.
+      </p>
+      <button id="resultPageLink" class="wizard-button-secondary hidden" type="button">
+        Open result page
+      </button>
+    </div>
+  </div>
+</section>
+
+    <section class="wizard-panel wizard-panel--log">
+      <div class="wizard-panel-header">
+        <h2>Engine log</h2>
+        <p class="wizard-panel-desc">
+          Lightweight console to help debug the Question Engine end-to-end.
+        </p>
+      </div>
+      <pre id="logOutput" class="wizard-log"></pre>
+    </section>
+  </main>
+
+  <script src="wizard.js"></script>
+</body>
+</html>

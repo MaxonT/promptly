@@ -594,7 +594,7 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
       
       // Render new content
       renderCurrentPage();
-      log(`Moved to page ${currentPageIndex + 1}/${getTotalPages()}`);
+      log(`Moved to page ${currentPageIndex + 1}/${totalPages}`);
       
       // Clean up animation class after it completes
       setTimeout(() => {

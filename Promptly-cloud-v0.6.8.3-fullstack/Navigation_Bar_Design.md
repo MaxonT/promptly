@@ -223,7 +223,7 @@ Animation: slideRight 0.4s
 #### Last Page
 ```
 ╭──────────────────────╮
-│ Submit & Continue →  │  ← Text changes
+│ Next Page →  │  ← Text changes
 ╰──────────────────────╯
 ```
 
@@ -329,13 +329,13 @@ Hover:    0 4px 16px rgba(124,58,237,0.25)
 #### Page 3 of 3 (Last)
 ```
 [← Back (2/3)]  enabled
-[Submit & Continue →]  text changes
+[Next Page →]  text changes
 ```
 
 #### Single Page (1 of 1)
 ```
 [← Back]  disabled
-[Submit & Continue →]  enabled
+[Next Page →]  enabled
 ```
 
 ---
@@ -449,7 +449,7 @@ function updatePaginationButtons() {
   const nextTextSpan = nextBatchBtn.querySelector("span:not(.wizard-button-icon)");
   if (nextTextSpan) {
     if (currentPageIndex >= totalPages - 1) {
-      nextTextSpan.textContent = "Submit & Continue";
+      nextTextSpan.textContent = "Next Page";
     } else {
       nextTextSpan.textContent = `Next (Page ${currentPageIndex + 2}/${totalPages})`;
     }
@@ -487,7 +487,7 @@ Icon size: 1.1rem
 - [ ] Back button disabled on first page
 - [ ] Back button shows page numbers (1/3, 2/3)
 - [ ] Next button shows page numbers (Page 2/3, Page 3/3)
-- [ ] Next button text changes to "Submit & Continue" on last page
+- [ ] Next button text changes to "Next Page" on last page
 - [ ] Hover on Back: arrow slides left, border turns purple
 - [ ] Hover on Next: arrow slides right, shadow appears
 - [ ] Click Next: button slides right briefly

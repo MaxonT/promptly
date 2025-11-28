@@ -17,7 +17,8 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
   const progressBar = document.getElementById("progressBar");
   const progressText = document.getElementById("progressText");
   const progressDots = document.getElementById("progressDots");
-  
+  const autosaveNotice = document.getElementById("autosaveNotice");
+
   const stepDescribe = document.getElementById("step-describe");
   const stepQuestions = document.getElementById("step-questions");
   const stepFinalize = document.getElementById("step-finalize");
@@ -28,8 +29,10 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
   const nextBatchBtn = document.getElementById("nextBatchBtn");
   const finalizeBtn = document.getElementById("finalizeBtn");
   const backBtn = document.getElementById("backBtn");
-  const skipBtn = document.getElementById("skipBtn");
-  const saveSnapshotBtn = document.getElementById("saveSnapshotBtn");
+  const saveSnapshotBtnTop = document.getElementById("saveSnapshotBtnTop");
+  const saveSnapshotBtnBottom = document.getElementById("saveSnapshotBtn");
+  const finalizeStatus = document.getElementById("finalizeStatus");
+  const snapshotButtons = [saveSnapshotBtnTop, saveSnapshotBtnBottom].filter(Boolean);
 
   const resultEmptyState = document.getElementById("resultEmptyState");
   const resultContainer = document.getElementById("resultContainer");
@@ -126,9 +129,14 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
     nextBatchBtn.classList.add("hidden");
     finalizeBtn.classList.add("hidden");
     backBtn.classList.add("hidden");
-    skipBtn.classList.add("hidden");
-    saveSnapshotBtn.classList.add("hidden");
+    saveSnapshotBtnTop?.classList.add("hidden");
+    saveSnapshotBtnBottom?.classList.add("hidden");
     progressIndicator?.classList.add("hidden");
+    autosaveNotice?.classList.add("hidden");
+    if (finalizeStatus) {
+      finalizeStatus.classList.add("hidden");
+      finalizeStatus.classList.remove("is-visible", "is-fading");
+    }
   }
   
   // Add questions to the global list (with sequential numbering)
@@ -157,11 +165,12 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
   // Update progress indicator
   function updateProgressIndicator() {
     if (!progressIndicator || allQuestions.length === 0) return;
-    
+
     const totalPages = getTotalPages();
     const totalQuestions = allQuestions.length;
-    const startQuestion = currentPageIndex * PAGE_SIZE + 1;
-    const endQuestion = Math.min((currentPageIndex + 1) * PAGE_SIZE, totalQuestions);
+    const pageQuestions = getCurrentPageQuestions();
+    const startQuestion = pageQuestions[0]?.questionNumber || (currentPageIndex * PAGE_SIZE + 1);
+    const endQuestion = pageQuestions[pageQuestions.length - 1]?.questionNumber || Math.min((currentPageIndex + 1) * PAGE_SIZE, totalQuestions);
     
     // Show progress indicator
     progressIndicator.classList.remove("hidden");
@@ -225,7 +234,7 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
     const nextTextSpan = nextBatchBtn.querySelector("span:not(.wizard-button-icon)");
     if (nextTextSpan) {
       if (totalPages <= 1 || currentPageIndex >= totalPages - 1) {
-        nextTextSpan.textContent = "Submit & Continue";
+        nextTextSpan.textContent = "Next Page";
       } else {
         nextTextSpan.textContent = `Next (Page ${currentPageIndex + 2}/${totalPages})`;
       }
@@ -252,22 +261,23 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
     nextBatchBtn.classList.remove("hidden");
     backBtn.classList.remove("hidden");
     finalizeBtn.classList.remove("hidden");
-    saveSnapshotBtn.classList.remove("hidden");
-    
+    autosaveNotice?.classList.remove("hidden");
+    saveSnapshotBtnTop?.classList.remove("hidden");
+    saveSnapshotBtnBottom?.classList.remove("hidden");
+
     // Add page indicator (FIX 6)
     const pageIndicator = document.createElement("div");
     pageIndicator.className = "wizard-page-indicator";
     const totalPages = getTotalPages();
-    const startQ = currentPageIndex * PAGE_SIZE + 1;
-    const endQ = Math.min((currentPageIndex + 1) * PAGE_SIZE, allQuestions.length);
+    const pageQuestions = getCurrentPageQuestions();
+    const startQ = pageQuestions[0]?.questionNumber || (currentPageIndex * PAGE_SIZE + 1);
+    const endQ = pageQuestions[pageQuestions.length - 1]?.questionNumber || Math.min((currentPageIndex + 1) * PAGE_SIZE, allQuestions.length);
     pageIndicator.innerHTML = `
       <span>Page <span class="wizard-page-indicator-number">${currentPageIndex + 1}</span> of ${totalPages}</span>
       <span style="color:rgba(148,163,184,0.5);">•</span>
       <span>Questions ${startQ}–${endQ} of ${allQuestions.length}</span>
     `;
     questionsContainer.appendChild(pageIndicator);
-    
-    const pageQuestions = getCurrentPageQuestions();
     
     pageQuestions.forEach((q, idx) => {
       const card = document.createElement("div");
@@ -487,7 +497,6 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
     updatePaginationButtons();
     
     // Show all buttons
-    skipBtn.classList.remove("hidden");
   }
 
   async function startWizard() {
@@ -643,12 +652,28 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
     if (!currentSessionId) return;
     try {
       log("Finalizing session and generating spec + compiled prompt...");
+      if (finalizeStatus) {
+        finalizeStatus.classList.remove("hidden");
+        finalizeStatus.classList.add("is-visible");
+      }
+      if (finalizeBtn) {
+        finalizeBtn.disabled = true;
+        finalizeBtn.classList.add("is-loading");
+      }
       const res = await fetch(`${API_BASE}/api/question-sessions/${encodeURIComponent(currentSessionId)}/finalize`, {
         method: "POST"
       });
       if (!res.ok) {
         const txt = await res.text();
         log(`Failed to finalize session: HTTP ${res.status} ${txt}`);
+        if (finalizeBtn) {
+          finalizeBtn.disabled = false;
+          finalizeBtn.classList.remove("is-loading");
+        }
+        if (finalizeStatus) {
+          finalizeStatus.classList.add("hidden");
+          finalizeStatus.classList.remove("is-visible", "is-fading");
+        }
         return;
       }
       const data = await res.json();
@@ -681,22 +706,43 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
       } else if (resultPageLink) {
         resultPageLink.classList.add("hidden");
       }
+      if (finalizeBtn) {
+        finalizeBtn.disabled = false;
+        setTimeout(() => finalizeBtn.classList.remove("is-loading"), 200);
+      }
+      if (finalizeStatus) {
+        finalizeStatus.classList.add("is-fading");
+        setTimeout(() => {
+          finalizeStatus.classList.add("hidden");
+          finalizeStatus.classList.remove("is-visible", "is-fading");
+        }, 600);
+      }
     } catch (err) {
       console.error(err);
       log("Error while finalizing session: " + err.message);
+      if (finalizeBtn) {
+        finalizeBtn.disabled = false;
+        finalizeBtn.classList.remove("is-loading");
+      }
+      if (finalizeStatus) {
+        finalizeStatus.classList.add("hidden");
+        finalizeStatus.classList.remove("is-visible", "is-fading");
+      }
     }
   }
 
   // Q1: Save snapshot
   async function saveSnapshot() {
-    if (!currentSessionId) return;
+    if (!currentSessionId || snapshotButtons.length === 0) return;
+    const originalTexts = snapshotButtons.map(btn => btn.textContent);
     try {
       log("Saving session snapshot...");
-      
+
       // Disable button during save
-      const originalText = saveSnapshotBtn.textContent;
-      saveSnapshotBtn.disabled = true;
-      saveSnapshotBtn.textContent = "💾 Saving...";
+      snapshotButtons.forEach((btn) => {
+        btn.disabled = true;
+        btn.textContent = "💾 Saving...";
+      });
       
       const res = await fetch(`${API_BASE}/api/question-sessions/${encodeURIComponent(currentSessionId)}/snapshot`, {
         method: "POST"
@@ -704,8 +750,10 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
       if (!res.ok) {
         const txt = await res.text();
         log(`Failed to save snapshot: HTTP ${res.status} ${txt}`);
-        saveSnapshotBtn.disabled = false;
-        saveSnapshotBtn.textContent = originalText;
+        snapshotButtons.forEach((btn, idx) => {
+          btn.disabled = false;
+          btn.textContent = originalTexts[idx] || "💾 Save snapshot";
+        });
         return;
       }
       const data = await res.json();
@@ -718,24 +766,29 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
       if (restoreSnapshotBtn) {
         restoreSnapshotBtn.classList.remove("hidden");
       }
-      
+
       // Re-enable button
-      saveSnapshotBtn.disabled = false;
-      saveSnapshotBtn.textContent = originalText;
+      snapshotButtons.forEach((btn, idx) => {
+        btn.disabled = false;
+        btn.textContent = originalTexts[idx] || "💾 Save snapshot";
+      });
     } catch (err) {
       console.error(err);
       log("Error while saving snapshot: " + err.message);
-      saveSnapshotBtn.disabled = false;
-      saveSnapshotBtn.textContent = "💾 Save snapshot";
+      snapshotButtons.forEach((btn) => {
+        btn.disabled = false;
+        btn.textContent = "💾 Save snapshot";
+      });
     }
   }
-  
+
   // Gentle success feedback for snapshot save
   function showSnapshotSuccess() {
-    if (!saveSnapshotBtn) return;
-    
+    const anchorBtn = saveSnapshotBtnBottom || saveSnapshotBtnTop;
+    if (!anchorBtn) return;
+
     // Add success state to button
-    saveSnapshotBtn.classList.add("snapshot-saved");
+    anchorBtn.classList.add("snapshot-saved");
     
     // Create gentle tooltip
     const tooltip = document.createElement("div");
@@ -743,15 +796,15 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
     tooltip.textContent = "✓ Saved";
     
     // Position relative to button
-    const btnParent = saveSnapshotBtn.parentElement;
+    const btnParent = anchorBtn.parentElement;
     if (btnParent) {
       btnParent.style.position = "relative";
       btnParent.appendChild(tooltip);
-      
+
       // Auto-remove after animation
       setTimeout(() => {
         tooltip.remove();
-        saveSnapshotBtn.classList.remove("snapshot-saved");
+        anchorBtn.classList.remove("snapshot-saved");
       }, 1200);
     }
   }
@@ -822,43 +875,6 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
       }, 250);
       } else {
       log("Already on first page");
-    }
-  }
-
-  // Q2: Skip current page of questions
-  async function skipCurrent() {
-    if (!currentSessionId || allQuestions.length === 0) return;
-    const pageQuestions = getCurrentPageQuestions();
-    if (pageQuestions.length === 0) return;
-    const firstQuestionId = pageQuestions[0].id;
-    try {
-      log("Skipping current question...");
-      const res = await fetch(`${API_BASE}/api/question-sessions/${encodeURIComponent(currentSessionId)}/answer`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          answers: [{ question_id: firstQuestionId, value: null }],
-          control: "skip"
-        })
-      });
-      if (!res.ok) {
-        const txt = await res.text();
-        log(`Failed to skip: HTTP ${res.status} ${txt}`);
-        return;
-      }
-      const data = await res.json();
-      log(data.message || "Question skipped");
-      if (data.done) {
-        clearQuestions();
-      } else if (data.questions && data.questions.length > 0) {
-        clearQuestions();
-        addQuestions(data.questions);
-        currentPageIndex = 0;
-        renderCurrentPage();
-      }
-    } catch (err) {
-      console.error(err);
-      log("Error while skipping: " + err.message);
     }
   }
 
@@ -947,8 +963,8 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
   nextBatchBtn?.addEventListener("click", handleNext);
   finalizeBtn?.addEventListener("click", finalizeSession);
   backBtn?.addEventListener("click", goBack);
-  skipBtn?.addEventListener("click", skipCurrent);
-  saveSnapshotBtn?.addEventListener("click", saveSnapshot);
+  saveSnapshotBtnTop?.addEventListener("click", saveSnapshot);
+  saveSnapshotBtnBottom?.addEventListener("click", saveSnapshot);
   restoreSnapshotBtn?.addEventListener("click", restoreSnapshot);
 
   // Initialize wizard stepper to Describe step

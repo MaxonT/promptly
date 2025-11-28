@@ -192,6 +192,10 @@
           used to assemble a high-level spec.
         </p>
       </div>
+      <div class="wizard-qa-top-actions">
+        <p id="autosaveNotice" class="wizard-autosave-note hidden">Auto-save enabled. Snapshot is optional for extra safety.</p>
+        <button id="saveSnapshotBtnTop" class="wizard-button-secondary hidden">💾 Save snapshot</button>
+      </div>
       <div id="qaEmptyState" class="wizard-empty">
         <p>No questions yet. Start the wizard by describing your project on the left.</p>
       </div>
@@ -217,7 +221,6 @@
             <button id="saveSnapshotBtn" class="wizard-button-secondary hidden">💾 Save snapshot</button>
           </div>
           <div class="wizard-qa-actions-right">
-            <button id="skipBtn" class="wizard-button-secondary hidden">Skip</button>
             <button id="nextBatchBtn" class="wizard-button-nav wizard-button-nav--next hidden">
               <span>Next questions</span>
               <span class="wizard-button-icon">→</span>
@@ -225,6 +228,10 @@
             <button id="finalizeBtn" class="wizard-button-primary wizard-button-finalize hidden">
               <span>✓ Finalize spec</span>
             </button>
+            <div id="finalizeStatus" class="wizard-finalize-status hidden">
+              <div class="wizard-finalize-spinner"></div>
+              <span>Compiling your Spec...</span>
+            </div>
           </div>
         </div>
       </div>

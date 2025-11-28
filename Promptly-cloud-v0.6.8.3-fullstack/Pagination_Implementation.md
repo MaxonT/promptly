@@ -104,7 +104,7 @@ function updatePaginationButtons() {
   
   // Next 按钮文案
   if (totalPages <= 1 || currentPageIndex >= totalPages - 1) {
-    nextBatchBtn.textContent = "Submit & Continue";
+    nextBatchBtn.textContent = "Next Page";
   } else {
     nextBatchBtn.textContent = `Next (Page ${currentPageIndex + 2}/${totalPages})`;
   }
@@ -211,10 +211,10 @@ async function startWizard() {
 #### 场景：10个问题
 
 1. **启动** → 显示 Q1-Q5，Back禁用，Next显示"Next (Page 2/2)"
-2. **点击 Next** → 显示 Q6-Q10，Back显示"◄ Back (Page 1/2)"，Next显示"Submit & Continue"
+2. **点击 Next** → 显示 Q6-Q10，Back显示"◄ Back (Page 1/2)"，Next显示"Next Page"
 3. **点击 Back** → 显示 Q1-Q5，Back禁用，Next显示"Next (Page 2/2)"
 4. **点击 Next** → 显示 Q6-Q10
-5. **点击 Submit & Continue** → 提交所有答案到后端
+5. **点击 Next Page** → 提交所有答案到后端
 
 ## 答案保存机制
 
@@ -262,7 +262,7 @@ card.style.animationDelay = `${idx * 80}ms`;
 
 ### ✅ 按钮智能状态
 - 第一页：Back 禁用
-- 最后一页：Next 变为 "Submit & Continue"
+- 最后一页：Next 变为 "Next Page"
 - 单页：两个按钮都禁用/只有Submit可用
 
 ## 测试清单

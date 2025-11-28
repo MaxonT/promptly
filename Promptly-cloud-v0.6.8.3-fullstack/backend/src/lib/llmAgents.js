@@ -375,7 +375,8 @@ export async function generateChoiceQuestions({ initialDescription, kind, broadQ
   if (!parsed) {
     throw new Error("Failed to generate choice questions after retries");
   }
-    
+
+  try {
     // Post-validation: ENFORCE that every question has options (enhanced stability)
     const validatedQuestions = parsed.choice_questions.map((q, index) => {
       const qid = q.id || `q_${index + 1}`;

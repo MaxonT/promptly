@@ -212,22 +212,24 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
     }
     
     // Update Back button text (find the text span, not the icon)
+    // Show current page info: "Back (Page X of Y)" where X is current page number
     const backTextSpan = backBtn.querySelector("span:not(.wizard-button-icon)");
     if (backTextSpan) {
       if (totalPages > 1 && currentPageIndex > 0) {
-        backTextSpan.textContent = `Back (${currentPageIndex}/${totalPages})`;
+        backTextSpan.textContent = `Back (Page ${currentPageIndex + 1} of ${totalPages})`;
       } else {
         backTextSpan.textContent = "Back";
       }
     }
     
     // Update Next button text
+    // Show current page info: "Next (Page X of Y)" where X is current page number
     const nextTextSpan = nextBatchBtn.querySelector("span:not(.wizard-button-icon)");
     if (nextTextSpan) {
       if (totalPages <= 1 || currentPageIndex >= totalPages - 1) {
         nextTextSpan.textContent = "Submit & Continue";
       } else {
-        nextTextSpan.textContent = `Next (Page ${currentPageIndex + 2}/${totalPages})`;
+        nextTextSpan.textContent = `Next (Page ${currentPageIndex + 1} of ${totalPages})`;
       }
     }
     
@@ -592,7 +594,7 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
       
       // Render new content
       renderCurrentPage();
-      log(`Moved to page ${currentPageIndex + 1}/${totalPages}`);
+      log(`Moved to page ${currentPageIndex + 1}/${getTotalPages()}`);
       
       // Clean up animation class after it completes
       setTimeout(() => {

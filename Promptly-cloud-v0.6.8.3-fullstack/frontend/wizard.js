@@ -168,9 +168,7 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
 
     const totalPages = getTotalPages();
     const totalQuestions = allQuestions.length;
-    const pageQuestions = getCurrentPageQuestions();
-    const startQuestion = pageQuestions[0]?.questionNumber || (currentPageIndex * PAGE_SIZE + 1);
-    const endQuestion = pageQuestions[pageQuestions.length - 1]?.questionNumber || Math.min((currentPageIndex + 1) * PAGE_SIZE, totalQuestions);
+    const { startQuestion, endQuestion } = getVisibleQuestionRange();
     
     // Show progress indicator
     progressIndicator.classList.remove("hidden");
@@ -207,6 +205,21 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
         progressDots.style.display = 'inline';
       }
     }
+  }
+
+  function getVisibleQuestionRange() {
+    const pageQuestions = getCurrentPageQuestions();
+    if (pageQuestions.length === 0) {
+      const fallbackStart = currentPageIndex * PAGE_SIZE + 1;
+      const fallbackEnd = Math.min((currentPageIndex + 1) * PAGE_SIZE, allQuestions.length);
+      return { startQuestion: fallbackStart, endQuestion: fallbackEnd };
+    }
+
+    const startQuestion = pageQuestions[0].questionNumber ?? currentPageIndex * PAGE_SIZE + 1;
+    const endQuestion = pageQuestions[pageQuestions.length - 1].questionNumber
+      ?? startQuestion + pageQuestions.length - 1;
+
+    return { startQuestion, endQuestion };
   }
   
   // Update pagination button states
@@ -269,9 +282,7 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
     const pageIndicator = document.createElement("div");
     pageIndicator.className = "wizard-page-indicator";
     const totalPages = getTotalPages();
-    const pageQuestions = getCurrentPageQuestions();
-    const startQ = pageQuestions[0]?.questionNumber || (currentPageIndex * PAGE_SIZE + 1);
-    const endQ = pageQuestions[pageQuestions.length - 1]?.questionNumber || Math.min((currentPageIndex + 1) * PAGE_SIZE, allQuestions.length);
+    const { startQuestion: startQ, endQuestion: endQ } = getVisibleQuestionRange();
     pageIndicator.innerHTML = `
       <span>Page <span class="wizard-page-indicator-number">${currentPageIndex + 1}</span> of ${totalPages}</span>
       <span style="color:rgba(148,163,184,0.5);">•</span>

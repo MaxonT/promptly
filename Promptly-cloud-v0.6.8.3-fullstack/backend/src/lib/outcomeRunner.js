@@ -23,15 +23,29 @@ const OutcomeResultSchema = z.object({
   details: z.any().optional()
 }).passthrough();
 
+// Cache prepared statements for better performance
+const stmtCache = {
+  getRun: db.prepare(`SELECT * FROM runs WHERE id = ?`),
+  getSpec: db.prepare(`SELECT * FROM specs WHERE id = ?`),
+  insertOutcomeRun: db.prepare(
+    `INSERT INTO outcome_runs 
+     (id, spec_id, run_id, task, status, model, best_candidate_id, request_json, result_json, created_at, input, style, constraints, n)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+  ),
+  insertCandidate: db.prepare(
+    `INSERT INTO outcome_candidates
+     (id, outcome_run_id, candidate_index, content, llm_score, final_score, tests_passed, tests_json, created_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+  )
+};
+
 /**
  * Load a run from the database
  * @param {string} runId - The run ID
  * @returns {Object|null} The run record
  */
 function loadRun(runId) {
-  return db.prepare(
-    `SELECT * FROM runs WHERE id = ?`
-  ).get(runId);
+  return stmtCache.getRun.get(runId);
 }
 
 /**
@@ -40,9 +54,7 @@ function loadRun(runId) {
  * @returns {Object|null} The spec record
  */
 function loadSpec(specId) {
-  return db.prepare(
-    `SELECT * FROM specs WHERE id = ?`
-  ).get(specId);
+  return stmtCache.getSpec.get(specId);
 }
 
 /**
@@ -209,11 +221,7 @@ export async function runOutcomeCheck({ runId, outcomeSpecId, modelOverride }) {
   };
 
   try {
-    db.prepare(
-      `INSERT INTO outcome_runs 
-       (id, spec_id, run_id, task, status, model, best_candidate_id, request_json, result_json, created_at, input, style, constraints, n)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-    ).run(
+    stmtCache.insertOutcomeRun.run(
       outcomeRunId,
       outcomeSpecId,
       runId,
@@ -252,11 +260,7 @@ export async function runOutcomeCheck({ runId, outcomeSpecId, modelOverride }) {
     candidateIds.push(candidateId);
 
     try {
-      db.prepare(
-        `INSERT INTO outcome_candidates
-         (id, outcome_run_id, candidate_index, content, llm_score, final_score, tests_passed, tests_json, created_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
-      ).run(
+      stmtCache.insertCandidate.run(
         candidateId,
         outcomeRunId,
         i,

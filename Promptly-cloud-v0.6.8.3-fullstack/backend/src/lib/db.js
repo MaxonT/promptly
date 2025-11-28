@@ -190,6 +190,32 @@ CREATE TABLE IF NOT EXISTS outcome_candidates (
   created_at TEXT NOT NULL,
   CONSTRAINT fk_cand_outcome FOREIGN KEY (outcome_run_id) REFERENCES outcome_runs(id)
 );
+
+-- Performance indexes for frequently queried columns
+CREATE INDEX IF NOT EXISTS idx_docs_owner ON docs(owner_id);
+CREATE INDEX IF NOT EXISTS idx_docs_updated ON docs(updated_at DESC);
+CREATE INDEX IF NOT EXISTS idx_shares_token ON shares(token);
+CREATE INDEX IF NOT EXISTS idx_shares_doc ON shares(doc_id);
+CREATE INDEX IF NOT EXISTS idx_specs_owner ON specs(owner_id);
+CREATE INDEX IF NOT EXISTS idx_specs_status ON specs(status);
+CREATE INDEX IF NOT EXISTS idx_specs_updated ON specs(updated_at DESC);
+CREATE INDEX IF NOT EXISTS idx_compiled_prompts_spec ON compiled_prompts(spec_id);
+CREATE INDEX IF NOT EXISTS idx_question_sessions_owner ON question_sessions(owner_id);
+CREATE INDEX IF NOT EXISTS idx_question_sessions_status ON question_sessions(status);
+CREATE INDEX IF NOT EXISTS idx_question_questions_session ON question_questions(session_id);
+CREATE INDEX IF NOT EXISTS idx_question_answers_session ON question_answers(session_id);
+CREATE INDEX IF NOT EXISTS idx_question_answers_question ON question_answers(question_id);
+CREATE INDEX IF NOT EXISTS idx_runs_spec ON runs(spec_id);
+CREATE INDEX IF NOT EXISTS idx_runs_status ON runs(status);
+CREATE INDEX IF NOT EXISTS idx_runs_created ON runs(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_run_errors_run ON run_errors(run_id);
+CREATE INDEX IF NOT EXISTS idx_evaluations_spec ON evaluations(spec_id);
+CREATE INDEX IF NOT EXISTS idx_evaluations_compiled_prompt ON evaluations(compiled_prompt_id);
+CREATE INDEX IF NOT EXISTS idx_question_snapshots_session ON question_snapshots(session_id);
+CREATE INDEX IF NOT EXISTS idx_question_actions_session ON question_actions(session_id);
+CREATE INDEX IF NOT EXISTS idx_outcome_runs_spec ON outcome_runs(spec_id);
+CREATE INDEX IF NOT EXISTS idx_outcome_runs_run ON outcome_runs(run_id);
+CREATE INDEX IF NOT EXISTS idx_outcome_candidates_outcome_run ON outcome_candidates(outcome_run_id);
 `);
 
 // Ensure demo user exists (for question sessions without authentication)

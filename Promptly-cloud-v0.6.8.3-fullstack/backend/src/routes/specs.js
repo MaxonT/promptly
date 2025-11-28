@@ -31,6 +31,39 @@ const CreateSpecSchema = z.object({
   spec: z.record(z.any())
 });
 
+// Cache prepared statements for better performance
+const stmtCache = {
+  getSpecById: db.prepare("SELECT * FROM specs WHERE id = ?"),
+  insertSpec: db.prepare(`
+    INSERT INTO specs (id, owner_id, kind, title, summary, tech_stack, pages, data_model, constraints, spec_json, status, version, created_at, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `),
+  updateSpec: db.prepare(`
+    UPDATE specs
+    SET title = ?, kind = ?, summary = ?, tech_stack = ?, pages = ?, data_model = ?, constraints = ?, spec_json = ?, status = ?, version = ?, updated_at = ?
+    WHERE id = ?
+  `),
+  getCompiledPromptBySpec: db.prepare("SELECT * FROM compiled_prompts WHERE spec_id = ? ORDER BY created_at DESC LIMIT 1"),
+  insertCompiledPrompt: db.prepare(`
+    INSERT INTO compiled_prompts (id, spec_id, compiled_json, explanation, created_at)
+    VALUES (?, ?, ?, ?, ?)
+  `),
+  insertEvaluation: db.prepare(`
+    INSERT INTO evaluations 
+    (id, spec_id, compiled_prompt_id, run_id, model, score, verdict, summary, details, created_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `),
+  getEvaluationsBySpec: db.prepare(`
+    SELECT 
+      e.*,
+      cp.explanation as compiled_prompt_explanation
+    FROM evaluations e
+    LEFT JOIN compiled_prompts cp ON e.compiled_prompt_id = cp.id
+    WHERE e.spec_id = ?
+    ORDER BY e.created_at DESC
+  `)
+};
+
 function requireOwner(row, userId) {
   if (!row) return false;
   if (row.owner_id && row.owner_id !== userId) return false;
@@ -43,7 +76,7 @@ function getUserId(req) {
   return "demo-user";
 }
 
-// Helper to safely parse JSON fields
+// Helper to safely parse JSON fields (cached result pattern - only parse once per row)
 function safeParseJSON(value) {
   if (!value) return null;
   try {
@@ -51,6 +84,32 @@ function safeParseJSON(value) {
   } catch {
     return null;
   }
+}
+
+/**
+ * Parse all JSON fields from a spec row at once to avoid repeated parsing
+ * @param {Object} row - Database row
+ * @returns {Object} Row with parsed JSON fields
+ */
+function parseSpecRow(row) {
+  if (!row) return null;
+  return {
+    id: row.id,
+    owner_id: row.owner_id,
+    project_id: row.project_id,
+    kind: row.kind,
+    title: row.title,
+    summary: row.summary,
+    status: row.status,
+    version: row.version,
+    tech_stack: safeParseJSON(row.tech_stack) || {},
+    pages: safeParseJSON(row.pages) || [],
+    data_model: safeParseJSON(row.data_model) || [],
+    constraints: safeParseJSON(row.constraints),
+    spec: safeParseJSON(row.spec_json) || {},
+    created_at: row.created_at,
+    updated_at: row.updated_at
+  };
 }
 
 // S2: Enhanced spec listing with filters and pagination
@@ -182,10 +241,7 @@ specsRouter.post("/", (req, res) => {
   const { title, kind, summary, tech_stack, pages, data_model, constraints, status, spec } = parsed.data;
   const now = new Date().toISOString();
   const id = `spec_${nanoid(12)}`;
-  db.prepare(`
-    INSERT INTO specs (id, owner_id, kind, title, summary, tech_stack, pages, data_model, constraints, spec_json, status, version, created_at, updated_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `).run(
+  stmtCache.insertSpec.run(
     id,
     userId,
     kind || null,
@@ -206,32 +262,29 @@ specsRouter.post("/", (req, res) => {
 
 specsRouter.get("/:id", (req, res) => {
   const userId = getUserId(req);
-  const row = db.prepare("SELECT * FROM specs WHERE id = ?").get(req.params.id);
+  const row = stmtCache.getSpecById.get(req.params.id);
   if (!requireOwner(row, userId)) {
     return res.status(404).json({ ok: false, error: "Not found" });
   }
   
-  // Parse structured JSON fields
-  const tech_stack = row.tech_stack ? JSON.parse(row.tech_stack) : null;
-  const pages = row.pages ? JSON.parse(row.pages) : [];
-  const data_model = row.data_model ? JSON.parse(row.data_model) : [];
-  const constraints = row.constraints ? JSON.parse(row.constraints) : null;
+  // Parse all JSON fields at once using helper
+  const parsed = parseSpecRow(row);
   
   res.json({
     ok: true,
-    id: row.id,
-    kind: row.kind,
-    title: row.title,
-    summary: row.summary,
-    tech_stack,
-    pages,
-    data_model,
-    constraints,
-    status: row.status,
-    version: row.version,
-    spec: JSON.parse(row.spec_json),
-    created_at: row.created_at,
-    updated_at: row.updated_at
+    id: parsed.id,
+    kind: parsed.kind,
+    title: parsed.title,
+    summary: parsed.summary,
+    tech_stack: parsed.tech_stack,
+    pages: parsed.pages,
+    data_model: parsed.data_model,
+    constraints: parsed.constraints,
+    status: parsed.status,
+    version: parsed.version,
+    spec: parsed.spec,
+    created_at: parsed.created_at,
+    updated_at: parsed.updated_at
   });
 });
 
@@ -242,17 +295,13 @@ specsRouter.patch("/:id", (req, res) => {
     return res.status(400).json({ ok: false, error: parsed.error.flatten() });
   }
   const { title, kind, summary, tech_stack, pages, data_model, constraints, status, spec } = parsed.data;
-  const row = db.prepare("SELECT * FROM specs WHERE id = ?").get(req.params.id);
+  const row = stmtCache.getSpecById.get(req.params.id);
   if (!requireOwner(row, userId)) {
     return res.status(404).json({ ok: false, error: "Not found" });
   }
   const now = new Date().toISOString();
   const version = row.version + 1;
-  db.prepare(`
-    UPDATE specs
-    SET title = ?, kind = ?, summary = ?, tech_stack = ?, pages = ?, data_model = ?, constraints = ?, spec_json = ?, status = ?, version = ?, updated_at = ?
-    WHERE id = ?
-  `).run(
+  stmtCache.updateSpec.run(
     title,
     kind || row.kind,
     summary || row.summary,
@@ -271,7 +320,7 @@ specsRouter.patch("/:id", (req, res) => {
 
 specsRouter.post("/:id/compile", (req, res) => {
   const userId = getUserId(req);
-  const row = db.prepare("SELECT * FROM specs WHERE id = ?").get(req.params.id);
+  const row = stmtCache.getSpecById.get(req.params.id);
   if (!requireOwner(row, userId)) {
     return res.status(404).json({ ok: false, error: "Not found" });
   }
@@ -279,10 +328,7 @@ specsRouter.post("/:id/compile", (req, res) => {
   const compiled = compileSpecToPrompt(spec);
   const now = new Date().toISOString();
   const cpId = `cp_${nanoid(12)}`;
-  db.prepare(`
-    INSERT INTO compiled_prompts (id, spec_id, compiled_json, explanation, created_at)
-    VALUES (?, ?, ?, ?, ?)
-  `).run(cpId, row.id, JSON.stringify(compiled.blocks), compiled.explanation, now);
+  stmtCache.insertCompiledPrompt.run(cpId, row.id, JSON.stringify(compiled.blocks), compiled.explanation, now);
   res.json({
     ok: true,
     id: cpId,
@@ -293,7 +339,7 @@ specsRouter.post("/:id/compile", (req, res) => {
 // POST /api/specs/:id/evaluate - Evaluate an existing compiled prompt
 specsRouter.post("/:id/evaluate", async (req, res) => {
   const userId = getUserId(req);
-  const row = db.prepare("SELECT * FROM specs WHERE id = ?").get(req.params.id);
+  const row = stmtCache.getSpecById.get(req.params.id);
   if (!requireOwner(row, userId)) {
     return res.status(404).json({ ok: false, error: "Not found" });
   }
@@ -302,9 +348,7 @@ specsRouter.post("/:id/evaluate", async (req, res) => {
     const spec = JSON.parse(row.spec_json);
     
     // Get the most recent compiled prompt for this spec, or compile it now
-    let cpRow = db
-      .prepare("SELECT * FROM compiled_prompts WHERE spec_id = ? ORDER BY created_at DESC LIMIT 1")
-      .get(req.params.id);
+    let cpRow = stmtCache.getCompiledPromptBySpec.get(req.params.id);
     
     let compiledPrompt;
     let cpId;
@@ -321,10 +365,7 @@ specsRouter.post("/:id/evaluate", async (req, res) => {
       compiledPrompt = compileSpecToPrompt(spec);
       const now = new Date().toISOString();
       cpId = `cp_${nanoid(12)}`;
-      db.prepare(`
-        INSERT INTO compiled_prompts (id, spec_id, compiled_json, explanation, created_at)
-        VALUES (?, ?, ?, ?, ?)
-      `).run(cpId, row.id, JSON.stringify(compiledPrompt.blocks), compiledPrompt.explanation, now);
+      stmtCache.insertCompiledPrompt.run(cpId, row.id, JSON.stringify(compiledPrompt.blocks), compiledPrompt.explanation, now);
     }
 
     // Evaluate the prompt
@@ -334,11 +375,7 @@ specsRouter.post("/:id/evaluate", async (req, res) => {
     // Store evaluation
     const now = new Date().toISOString();
     const evalId = `eval_${nanoid(12)}`;
-    db.prepare(`
-      INSERT INTO evaluations 
-      (id, spec_id, compiled_prompt_id, run_id, model, score, verdict, summary, details, created_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(
+    stmtCache.insertEvaluation.run(
       evalId,
       row.id,
       cpId,
@@ -378,7 +415,7 @@ specsRouter.post("/:id/evaluate", async (req, res) => {
 // POST /api/specs/:id/compile-and-evaluate - Compile and evaluate in one call
 specsRouter.post("/:id/compile-and-evaluate", async (req, res) => {
   const userId = getUserId(req);
-  const row = db.prepare("SELECT * FROM specs WHERE id = ?").get(req.params.id);
+  const row = stmtCache.getSpecById.get(req.params.id);
   if (!requireOwner(row, userId)) {
     return res.status(404).json({ ok: false, error: "Not found" });
   }
@@ -390,10 +427,7 @@ specsRouter.post("/:id/compile-and-evaluate", async (req, res) => {
     const compiled = compileSpecToPrompt(spec);
     const now = new Date().toISOString();
     const cpId = `cp_${nanoid(12)}`;
-    db.prepare(`
-      INSERT INTO compiled_prompts (id, spec_id, compiled_json, explanation, created_at)
-      VALUES (?, ?, ?, ?, ?)
-    `).run(cpId, row.id, JSON.stringify(compiled.blocks), compiled.explanation, now);
+    stmtCache.insertCompiledPrompt.run(cpId, row.id, JSON.stringify(compiled.blocks), compiled.explanation, now);
 
     // Evaluate the compiled prompt
     const model = req.body.model || process.env.OPENAI_MODEL || "gpt-4o-mini";
@@ -402,11 +436,7 @@ specsRouter.post("/:id/compile-and-evaluate", async (req, res) => {
     // Store evaluation
     const evalId = `eval_${nanoid(12)}`;
     const evalNow = new Date().toISOString();
-    db.prepare(`
-      INSERT INTO evaluations 
-      (id, spec_id, compiled_prompt_id, run_id, model, score, verdict, summary, details, created_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(
+    stmtCache.insertEvaluation.run(
       evalId,
       row.id,
       cpId,
@@ -451,22 +481,12 @@ specsRouter.post("/:id/compile-and-evaluate", async (req, res) => {
 // GET /api/specs/:id/evaluations - List all evaluations for a spec
 specsRouter.get("/:id/evaluations", (req, res) => {
   const userId = getUserId(req);
-  const row = db.prepare("SELECT * FROM specs WHERE id = ?").get(req.params.id);
+  const row = stmtCache.getSpecById.get(req.params.id);
   if (!requireOwner(row, userId)) {
     return res.status(404).json({ ok: false, error: "Not found" });
   }
 
-  const evaluations = db
-    .prepare(`
-      SELECT 
-        e.*,
-        cp.explanation as compiled_prompt_explanation
-      FROM evaluations e
-      LEFT JOIN compiled_prompts cp ON e.compiled_prompt_id = cp.id
-      WHERE e.spec_id = ?
-      ORDER BY e.created_at DESC
-    `)
-    .all(req.params.id);
+  const evaluations = stmtCache.getEvaluationsBySpec.all(req.params.id);
 
   const formattedEvaluations = evaluations.map(ev => ({
     id: ev.id,

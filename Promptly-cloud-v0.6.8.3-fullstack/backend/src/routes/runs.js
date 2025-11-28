@@ -26,6 +26,26 @@ const OutcomeRunRequestSchema = z.object({
   model: z.string().min(1).optional()
 });
 
+// Cache prepared statements for better performance
+const stmtCache = {
+  insertRun: db.prepare(
+    `INSERT INTO runs 
+     (id, spec_id, spec_version, model, status, input_blocks, created_at) 
+     VALUES (?, ?, ?, ?, ?, ?, ?)`
+  ),
+  getRunById: db.prepare("SELECT * FROM runs WHERE id = ?"),
+  insertError: db.prepare(
+    `INSERT INTO run_errors 
+     (id, run_id, error_type, details, detected_by, created_at) 
+     VALUES (?, ?, ?, ?, ?, ?)`
+  ),
+  updateRunFailed: db.prepare("UPDATE runs SET status = ? WHERE id = ?"),
+  getErrorById: db.prepare("SELECT * FROM run_errors WHERE id = ?"),
+  getErrorsByRunId: db.prepare("SELECT * FROM run_errors WHERE run_id = ? ORDER BY created_at ASC"),
+  getSpecById: db.prepare("SELECT * FROM specs WHERE id = ?"),
+  getCompiledPromptBySpec: db.prepare("SELECT * FROM compiled_prompts WHERE spec_id = ? ORDER BY created_at DESC LIMIT 1")
+};
+
 // POST /api/runs - Create a new run
 runsRouter.post("/", (req, res) => {
   const parsed = CreateRunSchema.safeParse(req.body);
@@ -37,11 +57,7 @@ runsRouter.post("/", (req, res) => {
   const runId = `run_${nanoid(16)}`;
   const now = new Date().toISOString();
 
-  db.prepare(
-    `INSERT INTO runs 
-     (id, spec_id, spec_version, model, status, input_blocks, created_at) 
-     VALUES (?, ?, ?, ?, ?, ?, ?)`
-  ).run(
+  stmtCache.insertRun.run(
     runId,
     spec_id || null,
     spec_version || null,
@@ -51,7 +67,7 @@ runsRouter.post("/", (req, res) => {
     now
   );
 
-  const run = db.prepare("SELECT * FROM runs WHERE id = ?").get(runId);
+  const run = stmtCache.getRunById.get(runId);
 
   return res.json({ ok: true, run });
 });
@@ -59,7 +75,7 @@ runsRouter.post("/", (req, res) => {
 // GET /api/runs/:id - Get a specific run
 runsRouter.get("/:id", (req, res) => {
   const { id } = req.params;
-  const run = db.prepare("SELECT * FROM runs WHERE id = ?").get(id);
+  const run = stmtCache.getRunById.get(id);
 
   if (!run) {
     return res.status(404).json({ ok: false, error: "Run not found" });
@@ -102,7 +118,7 @@ runsRouter.post("/:id/errors", (req, res) => {
     return res.status(400).json({ ok: false, error: parsed.error.flatten() });
   }
 
-  const run = db.prepare("SELECT * FROM runs WHERE id = ?").get(id);
+  const run = stmtCache.getRunById.get(id);
   if (!run) {
     return res.status(404).json({ ok: false, error: "Run not found" });
   }
@@ -119,11 +135,7 @@ runsRouter.post("/:id/errors", (req, res) => {
   const errorId = `err_${nanoid(16)}`;
   const now = new Date().toISOString();
 
-  db.prepare(
-    `INSERT INTO run_errors 
-     (id, run_id, error_type, details, detected_by, created_at) 
-     VALUES (?, ?, ?, ?, ?, ?)`
-  ).run(
+  stmtCache.insertError.run(
     errorId,
     id,
     error_type,
@@ -134,10 +146,10 @@ runsRouter.post("/:id/errors", (req, res) => {
 
   // Update run status to failed if not already
   if (run.status !== "failed") {
-    db.prepare("UPDATE runs SET status = ? WHERE id = ?").run("failed", id);
+    stmtCache.updateRunFailed.run("failed", id);
   }
 
-  const error = db.prepare("SELECT * FROM run_errors WHERE id = ?").get(errorId);
+  const error = stmtCache.getErrorById.get(errorId);
 
   return res.json({ ok: true, error });
 });
@@ -146,14 +158,12 @@ runsRouter.post("/:id/errors", (req, res) => {
 runsRouter.get("/:id/errors", (req, res) => {
   const { id } = req.params;
   
-  const run = db.prepare("SELECT * FROM runs WHERE id = ?").get(id);
+  const run = stmtCache.getRunById.get(id);
   if (!run) {
     return res.status(404).json({ ok: false, error: "Run not found" });
   }
 
-  const errors = db
-    .prepare("SELECT * FROM run_errors WHERE run_id = ? ORDER BY created_at ASC")
-    .all(id);
+  const errors = stmtCache.getErrorsByRunId.all(id);
 
   return res.json({ ok: true, errors });
 });
@@ -162,21 +172,19 @@ runsRouter.get("/:id/errors", (req, res) => {
 runsRouter.post("/:id/repair", async (req, res) => {
   const { id } = req.params;
 
-  const run = db.prepare("SELECT * FROM runs WHERE id = ?").get(id);
+  const run = stmtCache.getRunById.get(id);
   if (!run) {
     return res.status(404).json({ ok: false, error: "Run not found" });
   }
 
-  const errors = db
-    .prepare("SELECT * FROM run_errors WHERE run_id = ? ORDER BY created_at ASC")
-    .all(id);
+  const errors = stmtCache.getErrorsByRunId.all(id);
 
   // Try to load related spec and compiled prompt if spec_id is available
   let spec = null;
   let compiledPrompt = null;
 
   if (run.spec_id) {
-    const specRow = db.prepare("SELECT * FROM specs WHERE id = ?").get(run.spec_id);
+    const specRow = stmtCache.getSpecById.get(run.spec_id);
     if (specRow) {
       try {
         spec = JSON.parse(specRow.spec_json);
@@ -185,9 +193,7 @@ runsRouter.post("/:id/repair", async (req, res) => {
       }
     }
 
-    const cpRow = db
-      .prepare("SELECT * FROM compiled_prompts WHERE spec_id = ? ORDER BY created_at DESC LIMIT 1")
-      .get(run.spec_id);
+    const cpRow = stmtCache.getCompiledPromptBySpec.get(run.spec_id);
     if (cpRow) {
       try {
         compiledPrompt = {
@@ -232,7 +238,7 @@ runsRouter.post("/:id/outcomes", async (req, res) => {
   const { outcome_spec_id, model } = parsed.data;
 
   // 2) Ensure run exists
-  const run = db.prepare("SELECT * FROM runs WHERE id = ?").get(id);
+  const run = stmtCache.getRunById.get(id);
   if (!run) {
     return res.status(404).json({ ok: false, error: "Run not found" });
   }

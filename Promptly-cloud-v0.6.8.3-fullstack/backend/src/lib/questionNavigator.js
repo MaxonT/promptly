@@ -5,26 +5,43 @@ import { db } from "./db.js";
  * Question navigation helper for Back/Skip controls
  */
 
+// Cache prepared statements for better performance
+const stmtCache = {
+  getQuestions: db.prepare("SELECT * FROM question_questions WHERE session_id = ? ORDER BY order_index ASC"),
+  getAnswered: db.prepare("SELECT DISTINCT question_id FROM question_answers WHERE session_id = ?"),
+  getSkipped: db.prepare("SELECT payload as question_id FROM question_actions WHERE session_id = ? AND action = 'skip'"),
+  deleteAnswer: db.prepare("DELETE FROM question_answers WHERE session_id = ? AND question_id = ?"),
+  insertAction: db.prepare("INSERT INTO question_actions (id, session_id, action, payload, created_at) VALUES (?, ?, ?, ?, ?)")
+};
+
+/**
+ * Parse question options JSON once and cache the result
+ * @param {Object} q - Question object with options_json field
+ * @returns {Object|null} Parsed options or null
+ */
+function parseQuestionOptions(q) {
+  if (!q.options_json) return null;
+  try {
+    return JSON.parse(q.options_json);
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Get the current progress of a session
  * @param {string} sessionId
  * @returns {{ questions: Array, answered: Set, skipped: Set, currentIndex: number }}
  */
 export function getSessionProgress(sessionId) {
-  const questions = db
-    .prepare("SELECT * FROM question_questions WHERE session_id = ? ORDER BY order_index ASC")
-    .all(sessionId);
+  const questions = stmtCache.getQuestions.all(sessionId);
 
-  const answeredRows = db
-    .prepare("SELECT DISTINCT question_id FROM question_answers WHERE session_id = ?")
-    .all(sessionId);
+  const answeredRows = stmtCache.getAnswered.all(sessionId);
   const answered = new Set(answeredRows.map((r) => r.question_id));
 
   let skippedRows = [];
   try {
-    skippedRows = db
-      .prepare("SELECT payload as question_id FROM question_actions WHERE session_id = ? AND action = 'skip'")
-      .all(sessionId);
+    skippedRows = stmtCache.getSkipped.all(sessionId);
   } catch (err) {
     // Table might not exist yet or query error
     skippedRows = [];
@@ -68,15 +85,15 @@ export function goBack(sessionId) {
     const q = questions[targetIndex];
     if (!skipped.has(q.id)) {
       // Remove answer if it exists, so user can re-answer
-      db.prepare("DELETE FROM question_answers WHERE session_id = ? AND question_id = ?")
-        .run(sessionId, q.id);
+      stmtCache.deleteAnswer.run(sessionId, q.id);
       
       // Return questions from targetIndex onwards (up to 5)
+      // Parse options once per question
       const batch = questions.slice(targetIndex, targetIndex + 5).map((q) => ({
         id: q.id,
         type: q.type,
         content: q.content,
-        options: q.options_json ? JSON.parse(q.options_json) : null
+        options: parseQuestionOptions(q)
       }));
 
       return {
@@ -124,9 +141,7 @@ export function skipQuestion(sessionId, questionId) {
 
   // Mark as skipped
   const now = new Date().toISOString();
-  db.prepare(
-    "INSERT INTO question_actions (id, session_id, action, payload, created_at) VALUES (?, ?, ?, ?, ?)"
-  ).run(`act_${nanoid(12)}`, sessionId, "skip", questionId, now);
+  stmtCache.insertAction.run(`act_${nanoid(12)}`, sessionId, "skip", questionId, now);
 
   // Find next unanswered, non-skipped questions
   const remaining = [];
@@ -137,7 +152,7 @@ export function skipQuestion(sessionId, questionId) {
         id: q.id,
         type: q.type,
         content: q.content,
-        options: q.options_json ? JSON.parse(q.options_json) : null
+        options: parseQuestionOptions(q)
       });
     }
     if (remaining.length >= 5) break;
@@ -168,7 +183,7 @@ export function getUnansweredQuestions(sessionId, startIndex = 0, limit = 5) {
         id: q.id,
         type: q.type,
         content: q.content,
-        options: q.options_json ? JSON.parse(q.options_json) : null
+        options: parseQuestionOptions(q)
       });
     }
   }

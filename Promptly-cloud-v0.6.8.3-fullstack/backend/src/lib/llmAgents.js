@@ -375,178 +375,171 @@ export async function generateChoiceQuestions({ initialDescription, kind, broadQ
   if (!parsed) {
     throw new Error("Failed to generate choice questions after retries");
   }
+  
+  // Post-validation: ENFORCE that every question has options (enhanced stability)
+  const validatedQuestions = parsed.choice_questions.map((q, index) => {
+    const qid = q.id || `q_${index + 1}`;
     
-    // Post-validation: ENFORCE that every question has options (enhanced stability)
-    const validatedQuestions = parsed.choice_questions.map((q, index) => {
-      const qid = q.id || `q_${index + 1}`;
+    // Clean and trim content
+    if (q.content) {
+      q.content = q.content.toString().trim();
+    }
+    
+    // Additional format fixes
+    if (!q.content || q.content.length === 0) {
+      q.content = `Question ${index + 1}`;
+      console.warn(`[promptly] Question ${qid} has empty content, using fallback`);
+    }
+    
+    // Check if question has valid options
+    const hasValidOptions = q.depth_enabled 
+      ? (q.depth_levels?.instant?.options?.length >= 3 &&
+         q.depth_levels?.standard?.options?.length >= 3 &&
+         q.depth_levels?.deep?.options?.length >= 3)
+      : (q.options && q.options.length >= 3);
+    
+    if (!hasValidOptions) {
+      console.warn(`[promptly] Question ${qid} has insufficient options! Adding enhanced defaults.`);
       
-      // Clean and trim content
-      if (q.content) {
-        q.content = q.content.toString().trim();
-      }
-      
-      // Additional format fixes
-      if (!q.content || q.content.length === 0) {
-        q.content = `Question ${index + 1}`;
-        console.warn(`[promptly] Question ${qid} has empty content, using fallback`);
-      }
-      
-      // Check if question has valid options
-      const hasValidOptions = q.depth_enabled 
-        ? (q.depth_levels?.instant?.options?.length >= 3 &&
-           q.depth_levels?.standard?.options?.length >= 3 &&
-           q.depth_levels?.deep?.options?.length >= 3)
-        : (q.options && q.options.length >= 3);
-      
-      if (!hasValidOptions) {
-        console.warn(`[promptly] Question ${qid} has insufficient options! Adding enhanced defaults.`);
+      // Add contextual default options based on question content and type
+      if (q.depth_enabled) {
+        // For depth-enabled questions, add contextual depth levels
+        q.depth_question = q.depth_question || "Choose your answer depth:";
         
-        // Add contextual default options based on question content and type
-        if (q.depth_enabled) {
-          // For depth-enabled questions, add contextual depth levels
-          q.depth_question = q.depth_question || "Choose your answer depth:";
-          
-          // Try to infer better defaults from question content
-          const contentLower = q.content.toLowerCase();
-          let baseOptions;
-          
-          if (contentLower.includes('platform') || contentLower.includes('device')) {
-            baseOptions = {
-              instant: ["Web", "Mobile", "Desktop"],
-              standard: ["Responsive web app", "Native mobile (iOS/Android)", "Desktop application"],
-              deep: ["Progressive web app (PWA)", "Hybrid mobile (React Native/Flutter)", "Cross-platform desktop (Electron)"]
-            };
-          } else if (contentLower.includes('user') || contentLower.includes('audience')) {
-            baseOptions = {
-              instant: ["General public", "Professionals", "Students"],
-              standard: ["Consumers (18-35)", "Business professionals", "Academic researchers"],
-              deep: ["Early adopters in tech", "Enterprise decision-makers", "Subject matter experts"]
-            };
-          } else if (contentLower.includes('feature') || contentLower.includes('function')) {
-            baseOptions = {
-              instant: ["Basic features", "Standard features", "Advanced features"],
-              standard: ["Core functionality only", "Standard feature set", "Extended capabilities"],
-              deep: ["MVP feature set", "Full-featured product", "Enterprise-grade suite"]
-            };
-          } else {
-            // Generic fallback
-            baseOptions = {
-              instant: ["Simple approach", "Standard approach", "Advanced approach"],
-              standard: ["Minimal implementation", "Balanced implementation", "Comprehensive implementation"],
-              deep: ["Basic architecture", "Scalable architecture", "Enterprise-grade architecture"]
-            };
-          }
-          
-          q.depth_levels = {
-            instant: {
-              label: "⚡ Instant (Simple & Quick)",
-              options: baseOptions.instant.map((label, i) => ({
-                label,
-                value: `instant_${i + 1}`
-              })).concat([{label: "Other (please specify)", value: "other", is_other: true}])
-            },
-            standard: {
-              label: "🔍 Standard (Balanced)",
-              options: baseOptions.standard.map((label, i) => ({
-                label,
-                value: `standard_${i + 1}`
-              })).concat([{label: "Other (please specify)", value: "other", is_other: true}])
-            },
-            deep: {
-              label: "🧠 Deep Thinking (Advanced)",
-              options: baseOptions.deep.map((label, i) => ({
-                label,
-                value: `deep_${i + 1}`
-              })).concat([{label: "Other (please specify)", value: "other", is_other: true}])
-            }
+        // Try to infer better defaults from question content
+        const contentLower = q.content.toLowerCase();
+        let baseOptions;
+        
+        if (contentLower.includes('platform') || contentLower.includes('device')) {
+          baseOptions = {
+            instant: ["Web", "Mobile", "Desktop"],
+            standard: ["Responsive web app", "Native mobile (iOS/Android)", "Desktop application"],
+            deep: ["Progressive web app (PWA)", "Hybrid mobile (React Native/Flutter)", "Cross-platform desktop (Electron)"]
+          };
+        } else if (contentLower.includes('user') || contentLower.includes('audience')) {
+          baseOptions = {
+            instant: ["General public", "Professionals", "Students"],
+            standard: ["Consumers (18-35)", "Business professionals", "Academic researchers"],
+            deep: ["Early adopters in tech", "Enterprise decision-makers", "Subject matter experts"]
+          };
+        } else if (contentLower.includes('feature') || contentLower.includes('function')) {
+          baseOptions = {
+            instant: ["Basic features", "Standard features", "Advanced features"],
+            standard: ["Core functionality only", "Standard feature set", "Extended capabilities"],
+            deep: ["MVP feature set", "Full-featured product", "Enterprise-grade suite"]
           };
         } else {
-          // For regular questions, infer better defaults from content
-          const contentLower = q.content.toLowerCase();
-          
-          if (contentLower.includes('how many') || contentLower.includes('size') || contentLower.includes('scale')) {
-            q.options = [
-              {label: "Small (1-10)", value: "small"},
-              {label: "Medium (10-100)", value: "medium"},
-              {label: "Large (100+)", value: "large"},
-              {label: "Other (please specify)", value: "other", is_other: true}
-            ];
-          } else if (contentLower.includes('when') || contentLower.includes('timeline') || contentLower.includes('deadline')) {
-            q.options = [
-              {label: "ASAP (within 1 month)", value: "asap"},
-              {label: "Short-term (1-3 months)", value: "short"},
-              {label: "Medium-term (3-6 months)", value: "medium"},
-              {label: "Long-term (6+ months)", value: "long"},
-              {label: "Other (please specify)", value: "other", is_other: true}
-            ];
-          } else if (q.type === 'yes_no') {
-            // Yes/No doesn't need options, skip
-          } else {
-            // Generic meaningful defaults
-            q.options = [
-              {label: "Yes", value: "yes"},
-              {label: "No", value: "no"},
-              {label: "Not sure / Need to decide", value: "undecided"},
-              {label: "Other (please specify)", value: "other", is_other: true}
-            ];
+          // Generic fallback
+          baseOptions = {
+            instant: ["Simple approach", "Standard approach", "Advanced approach"],
+            standard: ["Minimal implementation", "Balanced implementation", "Comprehensive implementation"],
+            deep: ["Basic architecture", "Scalable architecture", "Enterprise-grade architecture"]
+          };
+        }
+        
+        q.depth_levels = {
+          instant: {
+            label: "⚡ Instant (Simple & Quick)",
+            options: baseOptions.instant.map((label, i) => ({
+              label,
+              value: `instant_${i + 1}`
+            })).concat([{label: "Other (please specify)", value: "other", is_other: true}])
+          },
+          standard: {
+            label: "🔍 Standard (Balanced)",
+            options: baseOptions.standard.map((label, i) => ({
+              label,
+              value: `standard_${i + 1}`
+            })).concat([{label: "Other (please specify)", value: "other", is_other: true}])
+          },
+          deep: {
+            label: "🧠 Deep Thinking (Advanced)",
+            options: baseOptions.deep.map((label, i) => ({
+              label,
+              value: `deep_${i + 1}`
+            })).concat([{label: "Other (please specify)", value: "other", is_other: true}])
           }
+        };
+      } else {
+        // For regular questions, infer better defaults from content
+        const contentLower = q.content.toLowerCase();
+        
+        if (contentLower.includes('how many') || contentLower.includes('size') || contentLower.includes('scale')) {
+          q.options = [
+            {label: "Small (1-10)", value: "small"},
+            {label: "Medium (10-100)", value: "medium"},
+            {label: "Large (100+)", value: "large"},
+            {label: "Other (please specify)", value: "other", is_other: true}
+          ];
+        } else if (contentLower.includes('when') || contentLower.includes('timeline') || contentLower.includes('deadline')) {
+          q.options = [
+            {label: "ASAP (within 1 month)", value: "asap"},
+            {label: "Short-term (1-3 months)", value: "short"},
+            {label: "Medium-term (3-6 months)", value: "medium"},
+            {label: "Long-term (6+ months)", value: "long"},
+            {label: "Other (please specify)", value: "other", is_other: true}
+          ];
+        } else if (q.type === 'yes_no') {
+          // Yes/No doesn't need options, skip
+        } else {
+          // Generic meaningful defaults
+          q.options = [
+            {label: "Yes", value: "yes"},
+            {label: "No", value: "no"},
+            {label: "Not sure / Need to decide", value: "undecided"},
+            {label: "Other (please specify)", value: "other", is_other: true}
+          ];
         }
       }
-      
-      // Ensure "Other" option exists in all option arrays
-      if (!q.depth_enabled && q.options && Array.isArray(q.options)) {
-        const hasOther = q.options.some(opt => opt.is_other === true);
-        if (!hasOther) {
-          q.options.push({
-            label: "Other (please specify)", 
-            value: "other", 
-            is_other: true
-          });
-        }
-        // Filter out any invalid options
-        q.options = q.options.filter(opt => opt && opt.label && opt.value);
-      }
-      
-      // Ensure depth level options are clean
-      if (q.depth_enabled && q.depth_levels) {
-        ['instant', 'standard', 'deep'].forEach(level => {
-          if (q.depth_levels[level] && q.depth_levels[level].options) {
-            const opts = q.depth_levels[level].options;
-            // Ensure "Other" exists
-            const hasOther = opts.some(opt => opt.is_other === true);
-            if (!hasOther) {
-              opts.push({
-                label: "Other (please specify)",
-                value: "other",
-                is_other: true
-              });
-            }
-            // Filter out invalid options
-            q.depth_levels[level].options = opts.filter(opt => opt && opt.label && opt.value);
-          }
+    }
+    
+    // Ensure "Other" option exists in all option arrays
+    if (!q.depth_enabled && q.options && Array.isArray(q.options)) {
+      const hasOther = q.options.some(opt => opt.is_other === true);
+      if (!hasOther) {
+        q.options.push({
+          label: "Other (please specify)", 
+          value: "other", 
+          is_other: true
         });
       }
-      
-      return {
-        id: qid,
-        type: q.type,
-        content: q.content,
-        depth_enabled: q.depth_enabled,
-        options: q.options || null,
-        depth_question: q.depth_question || null,
-        depth_levels: q.depth_levels || null
-      };
-    });
+      // Filter out any invalid options
+      q.options = q.options.filter(opt => opt && opt.label && opt.value);
+    }
     
-    console.log(`[promptly] Agent B generated ${validatedQuestions.length} questions successfully`);
-    return validatedQuestions;
-  } catch (err) {
-    // This should not be reached due to retry loop, but keep as final safety net
-    console.error("[promptly] generateChoiceQuestions fatal error");
-    console.error("Error:", err.message);
-    completeRunFailure(runId, "runtime_exception", err.message || err.toString(), "system");
-    throw err;
-  }
+    // Ensure depth level options are clean
+    if (q.depth_enabled && q.depth_levels) {
+      ['instant', 'standard', 'deep'].forEach(level => {
+        if (q.depth_levels[level] && q.depth_levels[level].options) {
+          const opts = q.depth_levels[level].options;
+          // Ensure "Other" exists
+          const hasOther = opts.some(opt => opt.is_other === true);
+          if (!hasOther) {
+            opts.push({
+              label: "Other (please specify)",
+              value: "other",
+              is_other: true
+            });
+          }
+          // Filter out invalid options
+          q.depth_levels[level].options = opts.filter(opt => opt && opt.label && opt.value);
+        }
+      });
+    }
+    
+    return {
+      id: qid,
+      type: q.type,
+      content: q.content,
+      depth_enabled: q.depth_enabled,
+      options: q.options || null,
+      depth_question: q.depth_question || null,
+      depth_levels: q.depth_levels || null
+    };
+  });
+  
+  console.log(`[promptly] Agent B generated ${validatedQuestions.length} questions successfully`);
+  return validatedQuestions;
 }
 
 export async function generateRawSpec({ initialDescription, kind, qaPairs }) {

@@ -1,6 +1,30 @@
 import { nanoid } from "nanoid";
 import { db } from "./db.js";
 
+// Cache prepared statements for better performance
+const stmtCache = {
+  insertRun: db.prepare(
+    `INSERT INTO runs 
+     (id, spec_id, spec_version, model, status, input_blocks, created_at) 
+     VALUES (?, ?, ?, ?, ?, ?, ?)`
+  ),
+  updateRunSuccess: db.prepare(
+    `UPDATE runs 
+     SET status = ?, raw_output = ? 
+     WHERE id = ?`
+  ),
+  updateRunFailed: db.prepare(
+    `UPDATE runs 
+     SET status = ? 
+     WHERE id = ?`
+  ),
+  insertError: db.prepare(
+    `INSERT INTO run_errors 
+     (id, run_id, error_type, details, detected_by, created_at) 
+     VALUES (?, ?, ?, ?, ?, ?)`
+  )
+};
+
 /**
  * Creates a new run record with "pending" status
  * @param {Object} options
@@ -14,11 +38,7 @@ export function createRun({ specId, specVersion, model, inputBlocks }) {
   const runId = `run_${nanoid(16)}`;
   const now = new Date().toISOString();
 
-  db.prepare(
-    `INSERT INTO runs 
-     (id, spec_id, spec_version, model, status, input_blocks, created_at) 
-     VALUES (?, ?, ?, ?, ?, ?, ?)`
-  ).run(
+  stmtCache.insertRun.run(
     runId,
     specId || null,
     specVersion || null,
@@ -37,11 +57,7 @@ export function createRun({ specId, specVersion, model, inputBlocks }) {
  * @param {any} rawOutput - The raw LLM output (will be JSON stringified)
  */
 export function completeRunSuccess(runId, rawOutput) {
-  db.prepare(
-    `UPDATE runs 
-     SET status = ?, raw_output = ? 
-     WHERE id = ?`
-  ).run("success", JSON.stringify(rawOutput), runId);
+  stmtCache.updateRunSuccess.run("success", JSON.stringify(rawOutput), runId);
 }
 
 /**
@@ -56,18 +72,10 @@ export function completeRunFailure(runId, errorType, details, detectedBy = "syst
   const errorId = `err_${nanoid(16)}`;
 
   // Update run status
-  db.prepare(
-    `UPDATE runs 
-     SET status = ? 
-     WHERE id = ?`
-  ).run("failed", runId);
+  stmtCache.updateRunFailed.run("failed", runId);
 
   // Insert error record
-  db.prepare(
-    `INSERT INTO run_errors 
-     (id, run_id, error_type, details, detected_by, created_at) 
-     VALUES (?, ?, ?, ?, ?, ?)`
-  ).run(
+  stmtCache.insertError.run(
     errorId,
     runId,
     errorType,

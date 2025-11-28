@@ -5,6 +5,12 @@ import { nanoid } from "nanoid";
 
 export const authRouter = Router();
 
+// Cache prepared statements for better performance
+const stmtCache = {
+  getUser: db.prepare("SELECT id FROM users WHERE email = ?"),
+  insertUser: db.prepare("INSERT INTO users (id,email,created_at) VALUES (?,?,?)")
+};
+
 authRouter.post("/login", (req, res) => {
   const { email } = req.body || {};
   if (!email || typeof email !== "string")
@@ -17,10 +23,10 @@ authRouter.post("/login", (req, res) => {
 });
 
 function ensureUser(email) {
-  const q = db.prepare("SELECT id FROM users WHERE email = ?").get(email);
+  const q = stmtCache.getUser.get(email);
   if (q?.id) return q.id;
   const id = nanoid(16);
-  db.prepare("INSERT INTO users (id,email,created_at) VALUES (?,?,?)").run(
+  stmtCache.insertUser.run(
     id,
     email,
     new Date().toISOString()

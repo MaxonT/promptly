@@ -157,11 +157,10 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
   // Update progress indicator
   function updateProgressIndicator() {
     if (!progressIndicator || allQuestions.length === 0) return;
-    
+
     const totalPages = getTotalPages();
     const totalQuestions = allQuestions.length;
-    const startQuestion = currentPageIndex * PAGE_SIZE + 1;
-    const endQuestion = Math.min((currentPageIndex + 1) * PAGE_SIZE, totalQuestions);
+    const { startQuestion, endQuestion } = getVisibleQuestionRange();
     
     // Show progress indicator
     progressIndicator.classList.remove("hidden");
@@ -198,6 +197,21 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
         progressDots.style.display = 'inline';
       }
     }
+  }
+
+  function getVisibleQuestionRange() {
+    const pageQuestions = getCurrentPageQuestions();
+    if (pageQuestions.length === 0) {
+      const fallbackStart = currentPageIndex * PAGE_SIZE + 1;
+      const fallbackEnd = Math.min((currentPageIndex + 1) * PAGE_SIZE, allQuestions.length);
+      return { startQuestion: fallbackStart, endQuestion: fallbackEnd };
+    }
+
+    const startQuestion = pageQuestions[0].questionNumber ?? currentPageIndex * PAGE_SIZE + 1;
+    const endQuestion = pageQuestions[pageQuestions.length - 1].questionNumber
+      ?? startQuestion + pageQuestions.length - 1;
+
+    return { startQuestion, endQuestion };
   }
   
   // Update pagination button states
@@ -258,8 +272,7 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
     const pageIndicator = document.createElement("div");
     pageIndicator.className = "wizard-page-indicator";
     const totalPages = getTotalPages();
-    const startQ = currentPageIndex * PAGE_SIZE + 1;
-    const endQ = Math.min((currentPageIndex + 1) * PAGE_SIZE, allQuestions.length);
+    const { startQuestion: startQ, endQuestion: endQ } = getVisibleQuestionRange();
     pageIndicator.innerHTML = `
       <span>Page <span class="wizard-page-indicator-number">${currentPageIndex + 1}</span> of ${totalPages}</span>
       <span style="color:rgba(148,163,184,0.5);">•</span>

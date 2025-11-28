@@ -16,14 +16,25 @@ const stmtCache = {
 
 /**
  * Parse question options JSON once and cache the result
+ * Uses WeakMap for memoization to avoid repeated parsing
  * @param {Object} q - Question object with options_json field
  * @returns {Object|null} Parsed options or null
  */
+const parsedOptionsCache = new WeakMap();
 function parseQuestionOptions(q) {
   if (!q.options_json) return null;
+  
+  // Check cache first
+  if (parsedOptionsCache.has(q)) {
+    return parsedOptionsCache.get(q);
+  }
+  
   try {
-    return JSON.parse(q.options_json);
+    const parsed = JSON.parse(q.options_json);
+    parsedOptionsCache.set(q, parsed);
+    return parsed;
   } catch {
+    parsedOptionsCache.set(q, null);
     return null;
   }
 }

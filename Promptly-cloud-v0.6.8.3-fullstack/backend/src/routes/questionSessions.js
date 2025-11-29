@@ -151,9 +151,10 @@ questionSessionRouter.post("/", async (req, res) => {
 
 questionSessionRouter.get("/:sessionId", (req, res) => {
   const { sessionId } = req.params;
+  const userId = getUserId(req);
   const session = db
-    .prepare("SELECT * FROM question_sessions WHERE id = ?")
-    .get(sessionId);
+    .prepare("SELECT * FROM question_sessions WHERE id = ? AND owner_id = ?")
+    .get(sessionId, userId);
   if (!session) {
     return res.status(404).json({ ok: false, error: "Session not found" });
   }

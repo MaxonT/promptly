@@ -75,31 +75,41 @@
       "Tone: clear, direct, zero fluff.",
     ].join("\n");
   }
+  const basePrompt = buildMagicPrompt("");
   // Optimizer sim
-  const state={iters:0,accuracy:0.62,f1:0.58,pass:0.55,cost:0,progress:0.0,history:[]};
+  const state={
+    iters:1,
+    accuracy:0.62,
+    f1:0.58,
+    pass:0.55,
+    cost:840,
+    progress:0.2,
+    history:[{ver:"v000",prompt:basePrompt,dAcc:0,acc:0.62,f1:0.58,pass:0.55,progress:0.2,cost:840,tokens:840,source:"baseline"}]
+  };
   function rand(n=1){return Math.random()*n}
-  function step(ask){state.iters++;const dAcc=(0.5+rand(1))*0.01,dF1=(0.4+rand(1))*0.01,dPass=(0.3+rand(1))*0.01,tokens=300+Math.floor(rand(500));
+  function step(ask,source="wizard"){state.iters++;const dAcc=(0.5+rand(1))*0.01,dF1=(0.4+rand(1))*0.01,dPass=(0.3+rand(1))*0.01,tokens=300+Math.floor(rand(500));
     state.accuracy=Math.min(0.98,state.accuracy+dAcc);state.f1=Math.min(0.97,state.f1+dF1);state.pass=Math.min(0.99,state.pass+dPass);
     state.cost+=tokens;state.progress=Math.min(1,state.progress+0.06+rand(0.06));const v="v"+String(state.iters).padStart(3,"0");
     const built=buildMagicPrompt(ask || "");
-    state.history.unshift({ver:v,prompt:built,dAcc:dAcc*100});}
+    state.history.unshift({ver:v,prompt:built,dAcc:dAcc*100,acc:state.accuracy,f1:state.f1,pass:state.pass,progress:state.progress,cost:state.cost,tokens,source});}
   function fmtPct(x){return (x*100).toFixed(1)+"%"} function fmtNum(x){return new Intl.NumberFormat().format(x)}
   function rKPIs(){document.getElementById("valAcc").textContent=fmtPct(state.accuracy);document.getElementById("valF1").textContent=fmtPct(state.f1);
     document.getElementById("valPass").textContent=fmtPct(state.pass);document.getElementById("valCost").textContent=fmtNum(state.cost);
     document.getElementById("valProg").textContent=fmtPct(state.progress);const d=state.history[0]?.dAcc||0;const k=document.getElementById("kAcc");
     k.classList.remove("up","down");k.classList.add(d>=0?"up":"down");document.getElementById("deltaAcc").textContent=(d>=0?"+":"")+d.toFixed(2)+"%";}
   function rCharts(){const g=document.getElementById("lineGrowth"),b=document.getElementById("barContrib"),p=document.getElementById("piePass"),ga=document.getElementById("gaugeProg");
-    const seq=state.history.slice().reverse().map(h=>h.dAcc).reduce((acc,v)=>{acc.push((acc[acc.length-1]||state.accuracy*100-(v||0))+v);return acc},[]).map(x=>x||state.accuracy*100);
+    const seq=state.history.slice().reverse().map(h=>Math.round((h.acc||state.accuracy)*100));
     drawLine(g, seq.length?seq:[state.accuracy*100]); drawBars(b, state.history.slice(0,8).map(h=>h.dAcc)); const pass=Math.round(state.pass*100),fail=100-pass; drawPie(p,[pass,fail]); drawGauge(ga,state.progress);}
   function rVersions(){const list=document.getElementById("verList");list.innerHTML="";state.history.forEach(h=>{const li=document.createElement("div");li.className="item";
-      li.innerHTML=`<div><div><b>${h.ver}</b> <span class="badge">ΔAcc</span> <span class="delta-badge ${h.dAcc>=0?"delta-pos":"delta-neg"}">${(h.dAcc>=0?"+":"")+h.dAcc.toFixed(2)}%</span></div>
+      li.innerHTML=`<div><div><b>${h.ver}</b> <span class="badge">ΔAcc</span> <span class="delta-badge ${h.dAcc>=0?"delta-pos":"delta-neg"}">${(h.dAcc>=0?"+":"")+h.dAcc.toFixed(2)}%</span> <span class="badge">${h.source||"run"}</span></div>
+      <div style="color:var(--muted);font-size:12px;margin-top:4px">Acc ${(h.acc*100).toFixed(1)}% · F1 ${(h.f1*100).toFixed(1)}% · Pass ${(h.pass*100).toFixed(1)}% · +${h.tokens} tok</div>
       <div style="color:var(--muted);font-size:12px;margin-top:4px">${h.prompt}</div></div>
       <button class="btn" onclick='document.getElementById("bestPrompt").value=${JSON.stringify(h.prompt)}'>Apply</button>`;list.appendChild(li);});}
-  function onRun(){
+  function onRun(source){
     const quickInput=document.getElementById("quickPromptInput");
     const taskField=document.getElementById("task");
     const ask=((quickInput?.value||"").trim()) || ((taskField?.value||"").trim());
-    step(ask);
+    step(ask,source||"wizard");
     rKPIs();rCharts();rVersions();
     document.getElementById("bestPrompt").value=state.history[0].prompt;
     const hint=document.getElementById("bestPromptHint");
@@ -116,7 +126,7 @@
 
     const bestPromptArea=document.getElementById("bestPrompt");
     if(bestPromptArea && !(bestPromptArea.value||"").trim()){
-      bestPromptArea.value=buildMagicPrompt("");
+      bestPromptArea.value=basePrompt;
     }
 
     const quickBtn=document.getElementById("quickImproveBtn");
@@ -126,19 +136,19 @@
     const examplesField=document.getElementById("examples");
     if(quickBtn){
       quickBtn.addEventListener("click",()=>{
-        const magic=buildMagicPrompt(quickInput?.value||"");
-        if(bestPromptArea){bestPromptArea.value=magic;flash(bestPromptArea);} 
         if(taskField && !(taskField.value||"").trim()) taskField.value=(quickInput?.value||"Improve this prompt").trim()||"Improve this prompt";
         if(examplesField && (!(examplesField.value||"").trim() || examplesField.value.includes("rough prompt"))){
           const seed=(quickInput?.value||"Your ask").trim()||"Your ask";
           examplesField.value=`Input: ${seed}\nIdeal output: A precise prompt with role, steps, and 3 guardrails.`;
         }
-        if(quickStatus) quickStatus.textContent="Done. Copy the prompt or open advanced setup if you want to keep tuning.";
+        onRun("quick");
+        if(bestPromptArea){flash(bestPromptArea);}
+        if(quickStatus) quickStatus.textContent="Done. Copy the prompt, or open metrics to see gains and costs.";
         const hint=document.getElementById("bestPromptHint"); if(hint) hint.textContent="Ready to paste. Use the wizard only when you need a full spec.";
       });
     }
 
-    const run=document.getElementById("runBtn"); if(run) run.addEventListener("click", onRun);
+    const run=document.getElementById("runBtn"); if(run) run.addEventListener("click", ()=>onRun("wizard"));
     rKPIs(); rCharts(); rVersions();
     const metricsAccordion=document.getElementById("metricsAccordion");
     if(metricsAccordion){

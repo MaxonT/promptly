@@ -67,7 +67,7 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
     if (!wizardStatus) return;
     wizardStatus.classList.remove("hidden", "wizard-status--info", "wizard-status--warn", "wizard-status--error");
     wizardStatus.classList.add(`wizard-status--${tone}`);
-    const icon = tone === "error" ? "✕" : tone === "warn" ? "⚠️" : "ℹ";
+    const icon = tone === "error" ? "✕" : tone === "warn" ? "⚠️" : "ℹ️";
     const ticks = showTicks ? '<div class="wizard-loading-ticks" aria-hidden="true"></div>' : "";
     wizardStatus.innerHTML = `
       <span class="wizard-status-icon">${icon}</span>
@@ -637,7 +637,7 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
       renderCurrentPage();
       log(`Loaded ${allQuestions.length} questions (showing page 1/${getTotalPages()})`);
 
-      setWizardStatus("Answer the questions on the right. Use Next/Back to navigate.");
+      setWizardStatus("Answer the questions below. Use Next/Back to navigate.");
       cancelWizardBtn?.classList.add("hidden");
 
       // Update wizard stepper to Questions step

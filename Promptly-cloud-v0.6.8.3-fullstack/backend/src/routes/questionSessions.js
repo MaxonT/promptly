@@ -32,7 +32,17 @@ function getUserId(req) {
 }
 
 questionSessionRouter.post("/", async (req, res) => {
-  const parsed = CreateSessionSchema.safeParse(req.body);
+  const trimmedDescription =
+    typeof req.body.initial_description === "string"
+      ? req.body.initial_description.trim()
+      : "";
+  if (!trimmedDescription) {
+    return res.status(400).json({ error: "Project description is required." });
+  }
+  const parsed = CreateSessionSchema.safeParse({
+    ...req.body,
+    initial_description: trimmedDescription
+  });
   if (!parsed.success) {
     return res.status(400).json({ ok: false, error: parsed.error.flatten() });
   }
@@ -98,7 +108,12 @@ questionSessionRouter.post("/", async (req, res) => {
       depth_levels: q.depth_levels || null
     }));
 
-    return res.json({ ok: true, session_id: sessionId, questions: firstBatch });
+    return res.json({
+      ok: true,
+      session_id: sessionId,
+      initialDescription: initial_description,
+      questions: firstBatch
+    });
   } catch (err) {
     console.error("[promptly] question session init failed", err);
     db.prepare(
@@ -132,6 +147,28 @@ questionSessionRouter.post("/", async (req, res) => {
       error: `Question engine failed: ${err.message || "Unknown error"}` 
     });
   }
+});
+
+questionSessionRouter.get("/:sessionId", (req, res) => {
+  const { sessionId } = req.params;
+  const session = db
+    .prepare("SELECT * FROM question_sessions WHERE id = ?")
+    .get(sessionId);
+  if (!session) {
+    return res.status(404).json({ ok: false, error: "Session not found" });
+  }
+
+  return res.json({
+    ok: true,
+    session: {
+      id: session.id,
+      initialDescription: session.initial_description,
+      kind: session.kind,
+      status: session.status,
+      createdAt: session.created_at,
+      updatedAt: session.updated_at
+    }
+  });
 });
 
 questionSessionRouter.post("/:sessionId/answer", (req, res) => {

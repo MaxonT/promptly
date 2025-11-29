@@ -289,6 +289,7 @@ html[data-theme="light"] .grey-gradient-text{
 
       <div class="card">
         <h3 data-i18n="task_label">Task</h3>
+        <p class="help" style="margin:6px 0 10px;">Describe the exact model action you want (e.g., classification rule, rewrite style). This should be more specific than the one-line project idea above.</p>
         <textarea id="task" rows="4" placeholder="e.g., Classify sentiment of a sentence; output POS or NEG only."></textarea>
         <h3 style="margin-top:12px" data-i18n="examples_label">Examples (optional)</h3>
         <textarea id="examples" rows="4">POS || I love this!
@@ -344,6 +345,7 @@ NEG || This is terrible.</textarea>
         <span class="delta">&nbsp;</span>
       </div>
     </section>
+    <p class="help" style="margin-top:6px;">Arrows reflect change since the last run. Accuracy, F1, and Pass Rate are “higher is better,” while Token Cost is “lower is better.” Progress % tracks how close you are to your target accuracy.</p>
 
     <section class="grid grid-2" style="margin-top:16px">
       <div class="card">
@@ -722,12 +724,12 @@ NEG || This is terrible.</textarea>
     const wrap = document.createElement('section');
     wrap.id='util-panel'; wrap.className='util-panel';
     wrap.innerHTML = `
-      <h3 class="gradient-animated" style="margin:0 0 8px">Data Utilities</h3>
-      <div class="help">Import/Export your test cases JSON. Reset fills demo data that matches the UI.</div>
+      <h3 class="gradient-animated" style="margin:0 0 8px">Test cases</h3>
+      <div class="help">Start with ready-made demo tests or bring your own set. Advanced JSON import/export stays available but tucked behind the buttons below.</div>
       <div class="util-buttons">
-        <button class="btn" id="btn-export">Export JSON</button>
-        <button class="btn" id="btn-import">Import JSON</button>
-        <button class="btn" id="btn-reset">Reset to Demo Data</button>
+        <button class="btn" id="btn-reset">Use demo test cases</button>
+        <button class="btn" id="btn-import">Upload JSON</button>
+        <button class="btn" id="btn-export">Download JSON</button>
         <input type="file" id="file-import" accept="application/json" style="display:none" />
       </div>`;
     document.body.appendChild(wrap);
@@ -811,7 +813,7 @@ NEG || This is terrible.</textarea>
     const container = document.createElement('div'); container.className='state-banner';
     container.innerHTML = `
        <div class="state-empty"><strong>Empty state:</strong> No test cases yet. <button class="btn" id="cta-import">Import</button> or <button class="btn" id="cta-reset">Use Demo</button></div>
-       <div class="state-error"><strong>Error:</strong> Model API key missing or rate-limited. <button class="btn" id="cta-retry">Retry</button></div>
+       <div class="state-error"><strong>We couldn’t reach the AI service.</strong> Your API key may be missing or at its daily limit. <button class="btn" id="cta-retry">Retry</button></div>
        <div class="state-skeleton"><div class="row"></div><div class="row"></div><div class="row"></div></div>
        <div class="util-buttons"><button class="btn" id="toggle-empty">Show Empty</button><button class="btn" id="toggle-error">Show Error</button><button class="btn" id="toggle-skeleton">Show Skeleton</button><span class="help">Click toggles again to hide.</span></div>
     `;

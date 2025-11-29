@@ -30,6 +30,8 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
   const backBtn = document.getElementById("backBtn");
   const skipBtn = document.getElementById("skipBtn");
   const saveSnapshotBtn = document.getElementById("saveSnapshotBtn");
+  const cancelWizardBtn = document.getElementById("cancelWizardBtn");
+  const wizardStatus = document.getElementById("wizardStatus");
 
   const resultEmptyState = document.getElementById("resultEmptyState");
   const resultContainer = document.getElementById("resultContainer");
@@ -51,11 +53,46 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
   const prefillKind = urlParams.get("kind");
 
   const currentAnswers = new Map();
+  let startController = null;
+  let loadingTimeoutRef = null;
+  let slowWarningTimerRef = null;
 
   function log(line) {
     const ts = new Date().toISOString().slice(11, 19);
     logOutput.textContent += `[${ts}] ${line}\n`;
     logOutput.scrollTop = logOutput.scrollHeight;
+  }
+
+  function setWizardStatus(message, tone = "info", { showTicks = false } = {}) {
+    if (!wizardStatus) return;
+    wizardStatus.classList.remove("hidden", "wizard-status--info", "wizard-status--warn", "wizard-status--error");
+    wizardStatus.classList.add(`wizard-status--${tone}`);
+    const icon = tone === "error" ? "✕" : tone === "warn" ? "⚠️" : "ℹ";
+    const ticks = showTicks ? '<div class="wizard-loading-ticks" aria-hidden="true"></div>' : "";
+    wizardStatus.innerHTML = `
+      <span class="wizard-status-icon">${icon}</span>
+      <div class="wizard-status-text">${message}</div>
+      ${ticks}
+    `;
+  }
+
+  function clearWizardStatus() {
+    if (!wizardStatus) return;
+    wizardStatus.classList.add("hidden");
+    wizardStatus.textContent = "";
+  }
+
+  function syncStartButtonState() {
+    const idea = (ideaInput?.value || "").trim();
+    const isValid = idea.length >= 10;
+    if (startBtn) {
+      startBtn.disabled = !isValid;
+      startBtn.setAttribute("aria-disabled", startBtn.disabled ? "true" : "false");
+      startBtn.title = isValid ? "" : "Enter at least 10 characters to continue";
+    }
+    if (!isValid && ideaError) {
+      ideaError.classList.add("hidden");
+    }
   }
   
   // Loading overlay helpers (FIX 2.1)
@@ -500,9 +537,10 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
   async function startWizard() {
     const idea = (ideaInput.value || "").trim();
     const kind = kindSelect.value || undefined;
-    if (!idea) {
-      ideaError.textContent = "Please describe your project idea before starting.";
+    if (!idea || idea.length < 10) {
+      ideaError.textContent = "Please describe your project idea before starting (min 10 characters).";
       ideaError.classList.remove("hidden");
+      syncStartButtonState();
       return;
     }
     ideaError.classList.add("hidden");
@@ -513,17 +551,25 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
     promptOutput.textContent = "";
     explanationOutput.textContent = "";
 
+    startController = new AbortController();
+    clearTimeout(loadingTimeoutRef);
+    clearTimeout(slowWarningTimerRef);
+    loadingTimeoutRef = null;
+    slowWarningTimerRef = null;
+
     // Start transition animation
     ideaPanel?.classList.add("is-starting");
     startBtn.disabled = true;
     startBtn.textContent = "Starting...";
-    
+    cancelWizardBtn?.classList.remove("hidden");
+    setWizardStatus("Preparing questions... This usually takes 10–15 seconds.", "info", { showTicks: true });
+
     // Wait for fade-out animation before starting API call
     await new Promise(resolve => setTimeout(resolve, 300));
 
     try {
       log("Starting new question session...");
-      
+
       // FIX 2.1: Show enhanced loading overlay with progress info
       showLoadingInQuestionPanel(`
         <div class="wizard-loading-spinner"></div>
@@ -533,9 +579,13 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
       `);
 
       qaPanel?.classList.add("is-appearing");
-      
+
+      slowWarningTimerRef = setTimeout(() => {
+        setWizardStatus("This is taking longer than usual. You can cancel and retry.", "warn", { showTicks: true });
+      }, 20000);
+
       // FIX 2.1: Set timeout to show error if request takes too long
-      const timeoutId = setTimeout(() => {
+      loadingTimeoutRef = setTimeout(() => {
         if (loadingOverlay && loadingOverlay.parentNode) {
           log("⚠️ Request is taking longer than expected. Please wait...");
           // Update loading message
@@ -557,10 +607,11 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
           initial_description: idea,
           kind
         })
-      });
+      , signal: startController.signal });
 
       // Clear timeout if request completes
-      clearTimeout(timeoutId);
+      clearTimeout(loadingTimeoutRef);
+      clearTimeout(slowWarningTimerRef);
       if (!res.ok) {
         const txt = await res.text();
         log(`Failed to start session: HTTP ${res.status} ${txt}`);
@@ -569,6 +620,8 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
         qaPanel?.classList.remove("is-appearing");
         startBtn.disabled = false;
         startBtn.textContent = "Start wizard";
+        cancelWizardBtn?.classList.add("hidden");
+        setWizardStatus("Could not start the wizard. Please verify your connection or API key and try again.", "error");
         return;
       }
       const data = await res.json();
@@ -583,20 +636,32 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
       currentPageIndex = 0;
       renderCurrentPage();
       log(`Loaded ${allQuestions.length} questions (showing page 1/${getTotalPages()})`);
-      
+
+      setWizardStatus("Answer the questions on the right. Use Next/Back to navigate.");
+      cancelWizardBtn?.classList.add("hidden");
+
       // Update wizard stepper to Questions step
       updateWizardStepper('questions');
-      
+
       // Keep button disabled after successful start
       startBtn.textContent = "Session started";
+      startController = null;
     } catch (err) {
-      console.error(err);
-      log("Error while starting wizard: " + err.message);
+      if (err.name === "AbortError") {
+        log("Wizard start cancelled by user.");
+        setWizardStatus("Wizard cancelled. You can edit your idea and start again.", "warn");
+      } else {
+        console.error(err);
+        log("Error while starting wizard: " + err.message);
+        setWizardStatus("Something went wrong while preparing questions. Please try again.", "error");
+      }
       // Revert animations on error
       ideaPanel?.classList.remove("is-starting");
       qaPanel?.classList.remove("is-appearing");
       startBtn.disabled = false;
       startBtn.textContent = "Start wizard";
+      cancelWizardBtn?.classList.add("hidden");
+      startController = null;
     }
   }
 
@@ -957,6 +1022,22 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
     }
   }
 
+  function cancelWizard() {
+    if (startController) {
+      startController.abort();
+      startController = null;
+    }
+    clearTimeout(loadingTimeoutRef);
+    clearTimeout(slowWarningTimerRef);
+    hideLoadingInQuestionPanel();
+    clearWizardStatus();
+    ideaPanel?.classList.remove("is-starting");
+    qaPanel?.classList.remove("is-appearing");
+    startBtn.disabled = false;
+    startBtn.textContent = "Start wizard";
+    cancelWizardBtn?.classList.add("hidden");
+  }
+
   // Input focus animations
   ideaInput?.addEventListener("focus", () => {
     ideaPanel?.classList.add("is-focused");
@@ -981,9 +1062,13 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
   skipBtn?.addEventListener("click", skipCurrent);
   saveSnapshotBtn?.addEventListener("click", saveSnapshot);
   restoreSnapshotBtn?.addEventListener("click", restoreSnapshot);
+  cancelWizardBtn?.addEventListener("click", cancelWizard);
+  ideaInput?.addEventListener("input", syncStartButtonState);
+  ideaInput?.addEventListener("blur", syncStartButtonState);
 
   // Initialize wizard stepper to Describe step
   updateWizardStepper('describe');
+  syncStartButtonState();
 
   // FIX 1.2: Auto-fill idea from sessionStorage (passed from index.html)
   (function autoFillFromSession() {
@@ -999,6 +1084,7 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
       setTimeout(() => {
         ideaInput.style.borderColor = "";
       }, 2000);
+      syncStartButtonState();
     }
 
     if (savedKind && kindSelect) {

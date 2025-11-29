@@ -18,7 +18,7 @@ const PROJECT_DESCRIPTION_REQUIRED_MESSAGE = "Project description is required.";
 const CreateSessionSchema = z.object({
   initial_description: z
     .string()
-    .transform((value) => value.trim())
+    .trim()
     .min(1, { message: PROJECT_DESCRIPTION_REQUIRED_MESSAGE }),
   kind: z.string().min(1).max(64).optional()
 });

@@ -10,6 +10,7 @@ import { shareRouter } from "./routes/share.js";
 import { specsRouter } from "./routes/specs.js";
 import { questionSessionRouter } from "./routes/questionSessions.js";
 import { runsRouter } from "./routes/runs.js";
+import { outcomeRunsRouter } from "./routes/outcomeRuns.js";
 
 dotenv.config();
 const app = express();
@@ -56,6 +57,7 @@ app.use("/api/share", shareRouter);
 app.use("/api/specs", specsRouter);
 app.use("/api/question-sessions", questionSessionRouter);
 app.use("/api/runs", runsRouter);
+app.use("/api/outcome-runs", outcomeRunsRouter);
 
 const PORT = process.env.PORT || 8080;
 app.listen(PORT, () => {

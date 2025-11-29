@@ -115,12 +115,7 @@ questionSessionRouter.post("/", async (req, res) => {
       depth_levels: q.depth_levels || null
     }));
 
-    return res.json({
-      ok: true,
-      session_id: sessionId,
-      initialDescription: initial_description,
-      questions: firstBatch
-    });
+    return res.json({ ok: true, session_id: sessionId, questions: firstBatch });
   } catch (err) {
     console.error("[promptly] question session init failed", err);
     db.prepare(

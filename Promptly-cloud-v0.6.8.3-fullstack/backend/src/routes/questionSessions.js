@@ -2,15 +2,24 @@ import { Router } from "express";
 import { nanoid } from "nanoid";
 import { z } from "zod";
 import { db, ensureUser } from "../lib/db.js";
-import { generateBroadQuestions, generateChoiceQuestions, generateRawSpec } from "../lib/llmAgents.js";
+import {
+  generateBroadQuestions,
+  generateChoiceQuestions,
+  generateRawSpec
+} from "../lib/llmAgents.js";
 import { compileSpecToPrompt } from "../lib/specCompiler.js";
 import { LlmDisabledError } from "../lib/openaiClient.js";
 import { goBack, skipQuestion } from "../lib/questionNavigator.js";
 
 export const questionSessionRouter = Router();
 
+const PROJECT_DESCRIPTION_REQUIRED_MESSAGE = "Project description is required.";
+
 const CreateSessionSchema = z.object({
-  initial_description: z.string().min(1),
+  initial_description: z
+    .string()
+    .trim()
+    .min(1, { message: PROJECT_DESCRIPTION_REQUIRED_MESSAGE }),
   kind: z.string().min(1).max(64).optional()
 });
 
@@ -34,6 +43,14 @@ function getUserId(req) {
 questionSessionRouter.post("/", async (req, res) => {
   const parsed = CreateSessionSchema.safeParse(req.body);
   if (!parsed.success) {
+    const hasDescriptionIssue = parsed.error.issues.some(
+      (issue) => issue.path && issue.path[0] === "initial_description"
+    );
+    if (hasDescriptionIssue) {
+      return res
+        .status(400)
+        .json({ error: PROJECT_DESCRIPTION_REQUIRED_MESSAGE });
+    }
     return res.status(400).json({ ok: false, error: parsed.error.flatten() });
   }
   const { initial_description, kind } = parsed.data;
@@ -132,6 +149,35 @@ questionSessionRouter.post("/", async (req, res) => {
       error: `Question engine failed: ${err.message || "Unknown error"}` 
     });
   }
+});
+
+questionSessionRouter.get("/:sessionId", (req, res) => {
+  const { sessionId } = req.params;
+  const session = db
+    .prepare(
+      `SELECT id, owner_id, kind, status, initial_description, created_at, updated_at
+       FROM question_sessions
+       WHERE id = ?`
+    )
+    .get(sessionId);
+
+  if (!session) {
+    return res.status(404).json({ ok: false, error: "Session not found" });
+  }
+
+  return res.json({
+    ok: true,
+    session: {
+      id: session.id,
+      owner_id: session.owner_id,
+      kind: session.kind,
+      status: session.status,
+      initial_description: session.initial_description,
+      initialDescription: session.initial_description,
+      created_at: session.created_at,
+      updated_at: session.updated_at
+    }
+  });
 });
 
 questionSessionRouter.post("/:sessionId/answer", (req, res) => {

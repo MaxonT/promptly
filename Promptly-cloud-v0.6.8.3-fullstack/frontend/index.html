@@ -813,7 +813,7 @@ NEG || This is terrible.</textarea>
     const container = document.createElement('div'); container.className='state-banner';
     container.innerHTML = `
        <div class="state-empty"><strong>Empty state:</strong> No test cases yet. <button class="btn" id="cta-import">Import</button> or <button class="btn" id="cta-reset">Use Demo</button></div>
-       <div class="state-error"><strong>We couldn’t reach the AI service.</strong> Your API key may be missing or at its daily limit. <button class="btn" id="cta-retry">Retry</button></div>
+       <div class="state-error"><strong>Connection failed.</strong> Check your network connection and try again. If the problem persists, verify your API key in Settings. <button class="btn" id="cta-retry">Retry</button></div>
        <div class="state-skeleton"><div class="row"></div><div class="row"></div><div class="row"></div></div>
        <div class="util-buttons"><button class="btn" id="toggle-empty">Show Empty</button><button class="btn" id="toggle-error">Show Error</button><button class="btn" id="toggle-skeleton">Show Skeleton</button><span class="help">Click toggles again to hide.</span></div>
     `;

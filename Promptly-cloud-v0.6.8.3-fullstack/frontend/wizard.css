@@ -1098,3 +1098,14 @@
     border-left-color:transparent;
   }
 }
+
+/* Guided status + inline hints */
+.wizard-inline-hint{margin:6px 0 10px;color:var(--text-low,#94a3b8);font-size:0.9rem;}
+.wizard-status{margin:10px 0;padding:12px 14px;border-radius:12px;border:1px solid rgba(148,163,184,0.4);background:rgba(15,23,42,0.55);color:var(--text-high,#E7EAF0);display:flex;align-items:center;gap:10px;box-shadow:0 6px 24px rgba(0,0,0,0.2);}
+.wizard-status.wizard-status--info{border-color:rgba(6,182,212,0.6);background:rgba(6,182,212,0.08);}
+.wizard-status.wizard-status--warn{border-color:rgba(245,158,11,0.6);background:rgba(245,158,11,0.08);}
+.wizard-status.wizard-status--error{border-color:rgba(239,68,68,0.6);background:rgba(239,68,68,0.08);}
+.wizard-status-icon{width:18px;height:18px;display:inline-flex;align-items:center;justify-content:center;}
+.wizard-loading-ticks{flex:1;height:6px;border-radius:999px;background:linear-gradient(90deg,rgba(124,58,237,0.2),rgba(6,182,212,0.5),rgba(124,58,237,0.2));background-size:200% 100%;animation:wizardLoadingBar 1.4s linear infinite;}
+@keyframes wizardLoadingBar{0%{background-position:0% 50%;}100%{background-position:200% 50%;}}
+.wizard-status strong{font-weight:700;}

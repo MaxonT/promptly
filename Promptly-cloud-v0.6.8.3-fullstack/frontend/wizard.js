@@ -58,19 +58,26 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
     logOutput.scrollTop = logOutput.scrollHeight;
   }
   
-  // Loading overlay helpers (FIX 2)
+  // Loading overlay helpers (FIX 2.1)
   let loadingOverlay = null;
   
-  function showLoadingInQuestionPanel(message = "Loading...") {
+  function showLoadingInQuestionPanel(htmlContent = "Loading...") {
     if (loadingOverlay) return; // Already showing
     
     loadingOverlay = document.createElement("div");
     loadingOverlay.className = "wizard-loading-overlay";
-    loadingOverlay.innerHTML = `
-      <div class="wizard-loading-spinner"></div>
-      <div class="wizard-loading-text">${message}</div>
-    `;
-    
+
+    // Support HTML content
+    if (typeof htmlContent === 'string' && htmlContent.includes('<')) {
+      loadingOverlay.innerHTML = htmlContent;
+    } else {
+      // Simple text fallback
+      loadingOverlay.innerHTML = `
+        <div class="wizard-loading-spinner"></div>
+        <div class="wizard-loading-text">${htmlContent}</div>
+      `;
+    }
+
     // Insert into question panel
     if (qaPanel) {
       qaPanel.style.position = "relative";
@@ -517,11 +524,32 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
     try {
       log("Starting new question session...");
       
-      // Show loading overlay in question panel
-      showLoadingInQuestionPanel("Preparing questions...");
-      
+      // FIX 2.1: Show enhanced loading overlay with progress info
+      showLoadingInQuestionPanel(`
+        <div class="wizard-loading-spinner"></div>
+        <div class="wizard-loading-text" style="font-size:1rem;margin-top:0.5rem;">Generating questions...</div>
+        <div class="wizard-loading-text" style="font-size:0.875rem;opacity:0.7;">This usually takes 10-15 seconds</div>
+        <div class="wizard-loading-text" style="font-size:0.75rem;margin-top:0.5rem;opacity:0.6;">We'll generate 5-8 customized questions for your project</div>
+      `);
+
       qaPanel?.classList.add("is-appearing");
       
+      // FIX 2.1: Set timeout to show error if request takes too long
+      const timeoutId = setTimeout(() => {
+        if (loadingOverlay && loadingOverlay.parentNode) {
+          log("⚠️ Request is taking longer than expected. Please wait...");
+          // Update loading message
+          const loadingText = loadingOverlay.querySelector(".wizard-loading-text");
+          if (loadingText) {
+            loadingText.innerHTML = `
+              <div style="font-size:1rem;margin-top:0.5rem;">Still working...</div>
+              <div style="font-size:0.875rem;opacity:0.7;margin-top:0.3rem;">This is taking longer than usual</div>
+              <div style="font-size:0.75rem;opacity:0.6;margin-top:0.3rem;">Please check your connection or try refreshing</div>
+            `;
+          }
+        }
+      }, 30000); // 30 seconds
+
       const res = await fetch(`${API_BASE}/api/question-sessions`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -530,6 +558,9 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
           kind
         })
       });
+
+      // Clear timeout if request completes
+      clearTimeout(timeoutId);
       if (!res.ok) {
         const txt = await res.text();
         log(`Failed to start session: HTTP ${res.status} ${txt}`);
@@ -953,6 +984,31 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
 
   // Initialize wizard stepper to Describe step
   updateWizardStepper('describe');
+
+  // FIX 1.2: Auto-fill idea from sessionStorage (passed from index.html)
+  (function autoFillFromSession() {
+    const savedIdea = sessionStorage.getItem("projectIdea");
+    const savedKind = sessionStorage.getItem("projectKind");
+
+    if (savedIdea && ideaInput) {
+      ideaInput.value = savedIdea;
+      log("✓ Project idea loaded from previous page");
+
+      // Show a gentle visual hint
+      ideaInput.style.borderColor = "#10b981";
+      setTimeout(() => {
+        ideaInput.style.borderColor = "";
+      }, 2000);
+    }
+
+    if (savedKind && kindSelect) {
+      kindSelect.value = savedKind;
+    }
+
+    // Clear sessionStorage after reading (one-time use)
+    sessionStorage.removeItem("projectIdea");
+    sessionStorage.removeItem("projectKind");
+  })();
 
   log("Wizard page loaded. Describe your idea on the left to begin.");
 })();

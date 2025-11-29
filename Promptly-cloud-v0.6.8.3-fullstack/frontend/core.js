@@ -4,7 +4,7 @@
   const prefersDark=window.matchMedia("(prefers-color-scheme: dark)");
   const translations={
     en:{nav_home:"Dashboard",nav_privacy:"Privacy",nav_terms:"Terms",nav_cookies:"Cookies",appearance:"System",auto:"System",light:"Light",dark:"Dark",language:"English",
-        hero_title:"Promptly — Prompt Optimizer Studio",hero_subtitle:"Visualization-first workflow. See every gain, every cost, every version.",
+        hero_title:"Promptly — Prompt Optimizer Studio",hero_subtitle:"Skip the homework. Paste one messy line and get a copy-ready prompt in seconds.",
         task_label:"Task",examples_label:"Examples (optional)",best_prompt:"Best Prompt",run_btn:"Run Optimization",
         kpi_accuracy:"Accuracy",kpi_f1:"F1",kpi_pass:"Pass Rate",kpi_cost:"Token Cost",kpi_prog:"Progress %",
         growth_chart:"Growth Over Iterations",contrib_chart:"Change Contribution",pass_pie:"Pass vs Fail (%)",gauge:"Progress Meter (%)",
@@ -13,7 +13,7 @@
         placeholder_task:"e.g., Classify sentiment of a sentence; output POS or NEG only.",
         placeholder_examples:"POS || I love this!\nNEG || This is terrible."},
     zh:{nav_home:"仪表盘",nav_privacy:"隐私政策",nav_terms:"服务条款",nav_cookies:"Cookie 政策",appearance:"系统",auto:"系统",light:"浅色",dark:"深色",language:"中文",
-        hero_title:"Promptly — 提示优化工作室",hero_subtitle:"可视化优先：每次提升、每分成本、每个版本都一目了然。",
+        hero_title:"Promptly — 提示优化工作室",hero_subtitle:"跳过繁琐步骤：一句模糊想法即可生成可直接使用的提示。",
         task_label:"任务",examples_label:"示例（可选）",best_prompt:"最佳 Prompt",run_btn:"运行优化",
         kpi_accuracy:"准确率",kpi_f1:"F1",kpi_pass:"通过率",kpi_cost:"Token 成本",kpi_prog:"进度 %",
         growth_chart:"迭代增长曲线",contrib_chart:"改动贡献",pass_pie:"通过 vs 失败（%）",gauge:"进度仪表（%）",
@@ -51,6 +51,30 @@
     const cx=w/2,cy=h*0.9,r=Math.min(w,h)*0.75,start=Math.PI,end=2*Math.PI;ctx.lineWidth=14;ctx.strokeStyle="#333a";ctx.beginPath();ctx.arc(cx,cy,r*0.5,start,end);ctx.stroke();
     ctx.strokeStyle=getComputedStyle(document.documentElement).getPropertyValue("--accent")||"#06b6d4";ctx.beginPath();ctx.arc(cx,cy,r*0.5,start,start+(end-start)*Math.max(0,Math.min(1,p)));ctx.stroke();
     ctx.fillStyle=getComputedStyle(document.documentElement).getPropertyValue("--text")||"#eaf0fb";ctx.font="bold 24px Inter, system-ui";ctx.textAlign="center";ctx.fillText(Math.round(p*100)+"%",cx,cy-10);}
+
+  function flash(el){
+    if(!el) return;
+    el.classList.add("pulse-outline");
+    setTimeout(()=>el.classList.remove("pulse-outline"),600);
+  }
+
+  function buildMagicPrompt(raw){
+    const cleaned = (raw||"").trim();
+    const goal = cleaned || "Polish the user's prompt into a tight, copy-pasteable instruction with safety rails.";
+    return [
+      "### Promptly Magic Button",
+      `Goal: ${goal}`,
+      "What you do:",
+      "- Rewrite the ask with role + constraints + style.",
+      "- Add 2-3 guardrail checks the model must pass (concise).",
+      "- Suggest 2 tiny example I/O pairs the user could try (you invent them).",
+      "Output strictly in this order:",
+      "1) Final prompt (plain text, ready to copy)",
+      "2) Example inputs with ideal outputs",
+      "3) A 3-item validation checklist",
+      "Tone: clear, direct, zero fluff.",
+    ].join("\n");
+  }
   // Optimizer sim
   const state={iters:0,accuracy:0.62,f1:0.58,pass:0.55,cost:0,progress:0.0,history:[]};
   function rand(n=1){return Math.random()*n}
@@ -76,8 +100,37 @@
     if(langSel){langSel.innerHTML=LANG_OPTIONS.map(([v,t])=>`<option value="${v}">${t}</option>`).join("");const saved=localStorage.getItem(LANG_KEY)||"en";langSel.value=saved;i18nApply(saved);langSel.addEventListener("change",()=>{const v=langSel.value;localStorage.setItem(LANG_KEY,v);i18nApply(v);});}
     if(themeSel){const saved=localStorage.getItem(THEME_KEY)||"auto";themeSel.value=saved;applyTheme(saved);themeSel.addEventListener("change",()=>{const v=themeSel.value;localStorage.setItem(THEME_KEY,v);applyTheme(v)});prefersDark.addEventListener("change",()=>{if((localStorage.getItem(THEME_KEY)||"auto")==="auto")applyTheme("auto")});}
     consentBanner();
+
+    const bestPromptArea=document.getElementById("bestPrompt");
+    if(bestPromptArea && !(bestPromptArea.value||"").trim()){
+      bestPromptArea.value=buildMagicPrompt("");
+    }
+
+    const quickBtn=document.getElementById("quickImproveBtn");
+    const quickInput=document.getElementById("quickPromptInput");
+    const quickStatus=document.getElementById("quickStatus");
+    const taskField=document.getElementById("task");
+    const examplesField=document.getElementById("examples");
+    if(quickBtn){
+      quickBtn.addEventListener("click",()=>{
+        const magic=buildMagicPrompt(quickInput?.value||"");
+        if(bestPromptArea){bestPromptArea.value=magic;flash(bestPromptArea);} 
+        if(taskField && !(taskField.value||"").trim()) taskField.value=(quickInput?.value||"Improve this prompt").trim()||"Improve this prompt";
+        if(examplesField && (!(examplesField.value||"").trim() || examplesField.value.includes("rough prompt"))){
+          const seed=(quickInput?.value||"Your ask").trim()||"Your ask";
+          examplesField.value=`Input: ${seed}\nIdeal output: A precise prompt with role, steps, and 3 guardrails.`;
+        }
+        if(quickStatus) quickStatus.textContent="Done. Copy the prompt or open advanced setup if you want to keep tuning.";
+        const hint=document.getElementById("bestPromptHint"); if(hint) hint.textContent="Ready to paste. Use the wizard only when you need a full spec.";
+      });
+    }
+
     const run=document.getElementById("runBtn"); if(run) run.addEventListener("click", onRun);
     rKPIs(); rCharts(); rVersions();
+    const metricsAccordion=document.getElementById("metricsAccordion");
+    if(metricsAccordion){
+      metricsAccordion.addEventListener("toggle",()=>{ if(metricsAccordion.open){ rKPIs(); rCharts(); rVersions(); }});
+    }
     const ro=new ResizeObserver(()=>rCharts()); ["lineGrowth","barContrib","piePass","gaugeProg"].forEach(id=>{const c=document.getElementById(id); if(c) ro.observe(c);});
   });
 })();

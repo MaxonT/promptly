@@ -82,13 +82,15 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
     wizardStatus.textContent = "";
   }
 
+  const MIN_IDEA_LENGTH = 4;
+
   function syncStartButtonState() {
     const idea = (ideaInput?.value || "").trim();
-    const isValid = idea.length >= 10;
+    const isValid = idea.length >= MIN_IDEA_LENGTH;
     if (startBtn) {
       startBtn.disabled = !isValid;
       startBtn.setAttribute("aria-disabled", startBtn.disabled ? "true" : "false");
-      startBtn.title = isValid ? "" : "Enter at least 10 characters to continue";
+      startBtn.title = isValid ? "" : `Add a few words (min ${MIN_IDEA_LENGTH} characters) to continue`;
     }
     if (!isValid && ideaError) {
       ideaError.classList.add("hidden");
@@ -537,8 +539,8 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
   async function startWizard() {
     const idea = (ideaInput.value || "").trim();
     const kind = kindSelect.value || undefined;
-    if (!idea || idea.length < 10) {
-      ideaError.textContent = "Please describe your project idea before starting (min 10 characters).";
+    if (!idea || idea.length < MIN_IDEA_LENGTH) {
+      ideaError.textContent = `Please share a short idea before starting (min ${MIN_IDEA_LENGTH} characters).`;
       ideaError.classList.remove("hidden");
       syncStartButtonState();
       return;

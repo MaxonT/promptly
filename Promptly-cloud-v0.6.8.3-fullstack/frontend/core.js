@@ -78,9 +78,11 @@
   // Optimizer sim
   const state={iters:0,accuracy:0.62,f1:0.58,pass:0.55,cost:0,progress:0.0,history:[]};
   function rand(n=1){return Math.random()*n}
-  function step(){state.iters++;const dAcc=(0.5+rand(1))*0.01,dF1=(0.4+rand(1))*0.01,dPass=(0.3+rand(1))*0.01,tokens=300+Math.floor(rand(500));
+  function step(ask){state.iters++;const dAcc=(0.5+rand(1))*0.01,dF1=(0.4+rand(1))*0.01,dPass=(0.3+rand(1))*0.01,tokens=300+Math.floor(rand(500));
     state.accuracy=Math.min(0.98,state.accuracy+dAcc);state.f1=Math.min(0.97,state.f1+dF1);state.pass=Math.min(0.99,state.pass+dPass);
-    state.cost+=tokens;state.progress=Math.min(1,state.progress+0.06+rand(0.06));const v="v"+String(state.iters).padStart(3,"0");const p=`[${v}] Use role+steps+checks. Tighten constraints. Cite fail-cases.`;state.history.unshift({ver:v,prompt:p,dAcc:dAcc*100});}
+    state.cost+=tokens;state.progress=Math.min(1,state.progress+0.06+rand(0.06));const v="v"+String(state.iters).padStart(3,"0");
+    const built=buildMagicPrompt(ask || "");
+    state.history.unshift({ver:v,prompt:built,dAcc:dAcc*100});}
   function fmtPct(x){return (x*100).toFixed(1)+"%"} function fmtNum(x){return new Intl.NumberFormat().format(x)}
   function rKPIs(){document.getElementById("valAcc").textContent=fmtPct(state.accuracy);document.getElementById("valF1").textContent=fmtPct(state.f1);
     document.getElementById("valPass").textContent=fmtPct(state.pass);document.getElementById("valCost").textContent=fmtNum(state.cost);
@@ -93,7 +95,18 @@
       li.innerHTML=`<div><div><b>${h.ver}</b> <span class="badge">ΔAcc</span> <span class="delta-badge ${h.dAcc>=0?"delta-pos":"delta-neg"}">${(h.dAcc>=0?"+":"")+h.dAcc.toFixed(2)}%</span></div>
       <div style="color:var(--muted);font-size:12px;margin-top:4px">${h.prompt}</div></div>
       <button class="btn" onclick='document.getElementById("bestPrompt").value=${JSON.stringify(h.prompt)}'>Apply</button>`;list.appendChild(li);});}
-  function onRun(){step();rKPIs();rCharts();rVersions();document.getElementById("bestPrompt").value=state.history[0].prompt;}
+  function onRun(){
+    const quickInput=document.getElementById("quickPromptInput");
+    const taskField=document.getElementById("task");
+    const ask=((quickInput?.value||"").trim()) || ((taskField?.value||"").trim());
+    step(ask);
+    rKPIs();rCharts();rVersions();
+    document.getElementById("bestPrompt").value=state.history[0].prompt;
+    const hint=document.getElementById("bestPromptHint");
+    if(hint){
+      hint.textContent="Updated from your ask. Copy and ship, or iterate further.";
+    }
+  }
   document.addEventListener("DOMContentLoaded",()=>{ // init
     // header
     const themeSel=document.getElementById("themeSelect"), langSel=document.getElementById("langSelect");

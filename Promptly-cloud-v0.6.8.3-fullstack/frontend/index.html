@@ -265,21 +265,29 @@ html[data-theme="light"] .grey-gradient-text{
         <div class="eyebrow">Quick Mode</div>
         <h2 class="gradient-text">Magic Button</h2>
         <p class="subtitle">Paste your rough ask and get a confident, copy-pasteable prompt without filling a checklist.</p>
+        <div class="flow-hint">
+          <span class="pill pill-fast">Fast lane</span>
+          <span>Instant prompt → auto-runs through the optimizer so metrics & history update.</span>
+        </div>
         <textarea id="quickPromptInput" rows="5" placeholder="Example: rewrite my resume bullets so they are shorter and highlight outcomes"></textarea>
         <div class="quick-actions">
           <button id="quickImproveBtn" class="btn">Instantly improve</button>
-          <p id="quickStatus" class="help">No test set or spec required. We will draft the structure for you.</p>
+          <p id="quickStatus" class="help">No test set or spec required. We will draft the structure for you and refresh KPIs below.</p>
         </div>
         <details class="accordion" id="advancedSetup">
           <summary>Open advanced setup (optional)</summary>
           <div class="accordion-body">
             <h3 data-i18n="task_label">Task</h3>
-            <p class="help" style="margin:6px 0 10px;">Use this only if you want to pin down exact rules. Otherwise, stick with Quick Mode.</p>
+            <p class="help" style="margin:6px 0 10px;">Use this when you want to pin down exact rules that the optimizer and dashboard will score. If you already typed it above, keep it short here.</p>
             <textarea id="task" rows="4" placeholder="e.g., Classify sentiment of a sentence; output POS or NEG only."></textarea>
             <h3 style="margin-top:12px" data-i18n="examples_label">Examples (optional)</h3>
-            <textarea id="examples" rows="4">Input: A short, rough prompt
-Ideal output: A polished, structured prompt with role, steps, and guardrails.</textarea>
-            <button id="runBtn" class="btn" style="margin-top:12px" data-i18n="run_btn">Run Optimization</button>
+            <p class="help">These are test cases. We score Accuracy / F1 / Pass Rate against them.</p>
+            <textarea id="examples" rows="4">Input: The product arrived late and broken
+Expected label: NEG
+
+Input: Delivery was fast and friendly
+Expected label: POS</textarea>
+            <button id="runBtn" class="btn" style="margin-top:12px" data-i18n="run_btn">Run Optimization & refresh metrics</button>
           </div>
         </details>
       </div>
@@ -288,7 +296,7 @@ Ideal output: A polished, structured prompt with role, steps, and guardrails.</t
         <div class="eyebrow">Ready to copy</div>
         <h3 class="gradient-text" data-i18n="best_prompt">Prompt output</h3>
         <textarea id="bestPrompt" class="codeblock" rows="12" placeholder="Your improved prompt will appear here."></textarea>
-        <p id="bestPromptHint" class="help">Hit the Magic Button to auto-fill this with a clean, constrained template.</p>
+        <p id="bestPromptHint" class="help">Hit the Magic Button to auto-fill this with a clean, constrained template and see metrics update below.</p>
       </div>
     </section>
 
@@ -317,78 +325,82 @@ Ideal output: A polished, structured prompt with role, steps, and guardrails.</t
       <p class="help">Prefer not to think about specs? Stay in Quick Mode—this wizard is optional.</p>
     </section>
 
-    <details class="accordion" id="metricsAccordion">
-      <summary>Show metrics & history (optional)</summary>
-      <div class="accordion-body">
-        <section class="grid grid-4" style="margin-top:0">
-          <div class="card kpi" id="kAcc">
-            <span class="label metric-with-tooltip" data-i18n="kpi_accuracy">
-              Accuracy
-              <span class="metric-tooltip">Percentage of test cases that passed with correct outputs</span>
-            </span>
-            <span class="value" id="valAcc">—</span>
-            <span class="delta" id="deltaAcc">+0.00%</span>
-          </div>
-          <div class="card kpi">
-            <span class="label metric-with-tooltip" data-i18n="kpi_f1">
-              F1
-              <span class="metric-tooltip">Balance between precision and recall (higher is better)</span>
-            </span>
-            <span class="value" id="valF1">—</span>
-            <span class="delta">&nbsp;</span>
-          </div>
-          <div class="card kpi">
-            <span class="label metric-with-tooltip" data-i18n="kpi_pass">
-              Pass Rate
-              <span class="metric-tooltip">Ratio of successful runs to total attempts</span>
-            </span>
-            <span class="value" id="valPass">—</span>
-            <span class="delta">&nbsp;</span>
-          </div>
-          <div class="card kpi">
-            <span class="label metric-with-tooltip" data-i18n="kpi_cost">
-              Token Cost
-              <span class="metric-tooltip">Average tokens used per request (lower is better for cost)</span>
-            </span>
-            <span class="value" id="valCost">—</span>
-            <span class="delta">&nbsp;</span>
-          </div>
-          <div class="card kpi">
-            <span class="label metric-with-tooltip" data-i18n="kpi_prog">
-              Progress %
-              <span class="metric-tooltip">Completion percentage towards target accuracy</span>
-            </span>
-            <span class="value" id="valProg">—</span>
-            <span class="delta">&nbsp;</span>
-          </div>
-        </section>
-        <p class="help" style="margin-top:6px;">Open this section only when you want charts. You can ignore metrics and still grab the improved prompt.</p>
-
-        <section class="grid grid-2" style="margin-top:16px">
-          <div class="card">
-            <h3 class="gradient-text" data-i18n="growth_chart">Growth Over Iterations</h3>
-            <canvas id="lineGrowth" class="canvas"></canvas>
-          </div>
-          <div class="card">
-            <h3 class="gradient-text" data-i18n="contrib_chart">Change Contribution</h3>
-            <canvas id="barContrib" class="canvas"></canvas>
-          </div>
-          <div class="card">
-            <h3 class="gradient-text" data-i18n="pass_pie">Pass vs Fail (%)</h3>
-            <canvas id="piePass" class="canvas"></canvas>
-          </div>
-          <div class="card">
-            <h3 class="gradient-text" data-i18n="gauge">Progress Meter (%)</h3>
-            <canvas id="gaugeProg" class="canvas"></canvas>
-          </div>
-        </section>
-
-        <section class="card" style="margin-top:16px">
-          <h3 class="gradient-text" data-i18n="versions">Prompt Versions</h3>
-          <div id="verList" class="list"></div>
-        </section>
+    <section class="card metrics-shell" id="metricsAccordion" open>
+      <div class="metrics-header">
+        <div>
+          <div class="eyebrow">Metrics & history</div>
+          <h3 class="gradient-text">See every gain, every cost, every version</h3>
+          <p class="subtitle">Magic Button and Run Optimization both feed these KPIs. Add test cases above to make scores meaningful.</p>
+        </div>
+        <div class="pill pill-live">Live after every run</div>
       </div>
-    </details>
+      <section class="grid grid-4" style="margin-top:0">
+        <div class="card kpi" id="kAcc">
+          <span class="label metric-with-tooltip" data-i18n="kpi_accuracy">
+            Accuracy
+            <span class="metric-tooltip">Percentage of test cases that passed with correct outputs</span>
+          </span>
+          <span class="value" id="valAcc">—</span>
+          <span class="delta" id="deltaAcc">+0.00%</span>
+        </div>
+        <div class="card kpi">
+          <span class="label metric-with-tooltip" data-i18n="kpi_f1">
+            F1
+            <span class="metric-tooltip">Balance between precision and recall (higher is better)</span>
+          </span>
+          <span class="value" id="valF1">—</span>
+          <span class="delta">&nbsp;</span>
+        </div>
+        <div class="card kpi">
+          <span class="label metric-with-tooltip" data-i18n="kpi_pass">
+            Pass Rate
+            <span class="metric-tooltip">Ratio of successful runs to total attempts</span>
+          </span>
+          <span class="value" id="valPass">—</span>
+          <span class="delta">&nbsp;</span>
+        </div>
+        <div class="card kpi">
+          <span class="label metric-with-tooltip" data-i18n="kpi_cost">
+            Token Cost
+            <span class="metric-tooltip">Average tokens used per request (lower is better for cost)</span>
+          </span>
+          <span class="value" id="valCost">—</span>
+          <span class="delta">&nbsp;</span>
+        </div>
+        <div class="card kpi">
+          <span class="label metric-with-tooltip" data-i18n="kpi_prog">
+            Progress %
+            <span class="metric-tooltip">Completion percentage towards target accuracy</span>
+          </span>
+          <span class="value" id="valProg">—</span>
+          <span class="delta">&nbsp;</span>
+        </div>
+      </section>
+      <section class="grid grid-3">
+        <div class="card chart">
+          <div class="label" data-i18n="growth_chart">Growth Over Iterations</div>
+          <canvas id="lineGrowth" height="240"></canvas>
+        </div>
+        <div class="card chart">
+          <div class="label" data-i18n="contrib_chart">Change Contribution</div>
+          <canvas id="barContrib" height="240"></canvas>
+        </div>
+        <div class="card chart">
+          <div class="label" data-i18n="pass_pie">Pass vs Fail (%)</div>
+          <canvas id="piePass" height="240"></canvas>
+        </div>
+      </section>
+      <section class="grid grid-2">
+        <div class="card chart">
+          <div class="label" data-i18n="gauge">Progress Meter (%)</div>
+          <canvas id="gaugeProg" height="260"></canvas>
+        </div>
+        <div class="card versions">
+          <div class="label" data-i18n="versions">Prompt Versions</div>
+          <div id="verList" class="list"></div>
+        </div>
+      </section>
+    </section>
   </main>
 
   <footer class="footer">

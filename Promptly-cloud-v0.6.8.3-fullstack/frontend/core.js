@@ -152,7 +152,12 @@
     rKPIs(); rCharts(); rVersions();
     const metricsAccordion=document.getElementById("metricsAccordion");
     if(metricsAccordion){
-      metricsAccordion.addEventListener("toggle",()=>{ if(metricsAccordion.open){ rKPIs(); rCharts(); rVersions(); }});
+      if(metricsAccordion.tagName === "DETAILS"){
+        metricsAccordion.addEventListener("toggle",()=>{ if(metricsAccordion.open){ rKPIs(); rCharts(); rVersions(); }});
+      } else {
+        // Always visible metrics shell; ensure data is live on load
+        rKPIs(); rCharts(); rVersions();
+      }
     }
     const ro=new ResizeObserver(()=>rCharts()); ["lineGrowth","barContrib","piePass","gaugeProg"].forEach(id=>{const c=document.getElementById(id); if(c) ro.observe(c);});
   });

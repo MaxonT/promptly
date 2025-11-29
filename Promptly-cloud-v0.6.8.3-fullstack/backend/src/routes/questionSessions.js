@@ -37,7 +37,7 @@ questionSessionRouter.post("/", async (req, res) => {
       ? req.body.initial_description.trim()
       : "";
   if (!trimmedDescription) {
-    return res.status(400).json({ error: "Project description is required." });
+    return res.status(400).json({ ok: false, error: "Project description is required." });
   }
   const parsed = CreateSessionSchema.safeParse({
     ...req.body,

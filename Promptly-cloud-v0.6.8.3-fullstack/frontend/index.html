@@ -423,15 +423,15 @@ html[data-theme="light"] .grey-gradient-text{
         <p class="layer-note">Tweak the internal blueprint before we run the optimization pipeline.</p>
         <div class="layer-panel__grid">
           <label class="layer-field">
-            <span>Instruction blueprint</span>
+            <span>Instruction blueprint (Optional)</span>
             <textarea id="blueprintInstructions" rows="4" placeholder="E.g., Use Architect → Planner → Editor roles. Include evaluation checks."></textarea>
           </label>
           <label class="layer-field">
-            <span>Demonstration examples</span>
+            <span>Demonstration examples (Optional)</span>
             <textarea id="blueprintExamples" rows="4" placeholder="Example input → desired output pairs. One per line."></textarea>
           </label>
           <label class="layer-field">
-            <span>Constraints & style</span>
+            <span>Constraints & style (Optional)</span>
             <textarea id="blueprintConstraints" rows="4" placeholder="Tone, length, formatting, safety requirements…"></textarea>
           </label>
         </div>
@@ -446,46 +446,46 @@ html[data-theme="light"] .grey-gradient-text{
       <div id="expertPanel" class="layer-panel">
         <div class="layer-panel__grid">
           <label class="layer-field">
-            <span>POS / NEG dataset snippets</span>
+            <span>POS / NEG dataset snippets (Optional)</span>
             <textarea rows="4">POS || This is fantastic!
 NEG || This completely missed the brief.</textarea>
           </label>
           <label class="layer-field">
-            <span>Schema or output template</span>
+            <span>Schema or output template (Optional)</span>
             <textarea rows="4">{ "sections": ["Summary","Action items","Risks"], "style": "Concise, bullet-first" }</textarea>
           </label>
           <label class="layer-field">
-            <span>Optimization knobs</span>
+            <span>Optimization knobs (Optional)</span>
             <textarea rows="4">candidates: 4
 tests: ["coherence","style_match","risk"]
 temperature: 0.5</textarea>
           </label>
         </div>
         <div class="expert-divider"></div>
-        <div class="expert-wizard">
-          <h4>Question Wizard</h4>
-          <p>Need a full spec from scratch? Launch the Question Wizard.</p>
-          <div class="wizard-wrapper">
-            <label class="wizard-label">
-              <span>Project idea *</span>
-              <textarea id="landingIdeaInput" rows="3" placeholder="Example: Build a prompt to summarize YouTube videos into 5 bullet points." required minlength="10"></textarea>
-              <small class="help" style="display:block;margin-top:4px;color:var(--text-low);">Minimum 10 characters required</small>
-            </label>
-            <label class="wizard-label">
-              <span>Project type</span>
-              <select id="landingKindSelect">
-                <option value="">Auto-detect</option>
-                <option value="coding">Coding / engineering</option>
-                <option value="writing">Writing / content</option>
-                <option value="analysis">Analysis / research</option>
-                <option value="product">Product / UX design</option>
-                <option value="custom">Custom / other</option>
-              </select>
-            </label>
-            <button id="landingStartBtn" class="btn" disabled title="Please enter your project idea first">Start Question Wizard</button>
-          </div>
-        </div>
       </div>
+    </section>
+
+    <section class="card wizard-landing gradient-border" id="wizardLanding">
+  <h2 class="gradient-text">Question Wizard</h2>
+      <p class="subtitle">Go from a one-line idea to a structured spec and compiled prompt blocks.</p>
+  <label class="wizard-label">
+    <span>Project idea *</span>
+    <textarea id="landingIdeaInput" rows="3" placeholder="Example: Build a prompt to summarize YouTube videos into 5 bullet points." required minlength="10"></textarea>
+    <small class="help" style="display:block;margin-top:4px;color:var(--text-low);">Minimum 10 characters required</small>
+  </label>
+  <label class="wizard-label">
+    <span>Project type</span>
+    <select id="landingKindSelect">
+      <option value="">Auto-detect</option>
+      <option value="coding">Coding / engineering</option>
+      <option value="writing">Writing / content</option>
+      <option value="analysis">Analysis / research</option>
+      <option value="product">Product / UX design</option>
+      <option value="custom">Custom / other</option>
+    </select>
+  </label>
+  <button id="landingStartBtn" class="btn" disabled title="Please enter your project idea first">Start Question Wizard</button>
+  <p class="help">This will open the Question Wizard and guide you step by step.</p>
     </section>
 
     <section class="grid grid-4" style="margin-top:16px">
@@ -852,13 +852,13 @@ temperature: 0.5</textarea>
         <div><img src="assets/placeholder_gauge.png" alt="Progress gauge" style="width:100%;border-radius:12px;box-shadow:0 4px 24px rgba(0,0,0,.25)"><p style="opacity:.7;margin-top:6px">Progress Gauge</p></div>
       </div>
       <h3 style="margin-top:16px" class="gradient-animated">Glossary</h3>
-      <ul class="glossary-list glossy">
+<ul class="glossary-list glossy">
         <li><span class="glossary-term" data-i18n-key="accuracy">Accuracy</span><span class="glossary-def">Correct outputs / total cases.</span></li>
         <li><span class="glossary-term" data-i18n-key="f1">F1</span><span class="glossary-def">2 × precision × recall ÷ (precision + recall).</span></li>
         <li><span class="glossary-term" data-i18n-key="pass_rate">Pass Rate</span><span class="glossary-def">Passed constraints / total constraints.</span></li>
         <li><span class="glossary-term" data-i18n-key="token_cost">Token Cost</span><span class="glossary-def">prompt_tokens + completion_tokens.</span></li>
         <li><span class="glossary-term" data-i18n-key="progress">Progress %</span><span class="glossary-def">average(accuracy/target_accuracy, f1/target_f1, pass_rate/target_pass_rate, ideal_token_cost/token_cost) × 100.</span></li>
-      </ul>
+</ul>
     `;
     document.body.appendChild(section);
   }

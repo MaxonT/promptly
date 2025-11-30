@@ -21,6 +21,9 @@ const BCRYPT_ROUNDS = 10;
 // Dummy hash generated with same cost factor to ensure constant-time comparison (prevents timing attacks)
 const DUMMY_HASH = bcrypt.hashSync("dummy-password-for-timing-attack-prevention", BCRYPT_ROUNDS);
 
+// Email validation regex pattern (more restrictive per RFC standards)
+const EMAIL_REGEX = /^[a-zA-Z0-9_%+-]+(\.[a-zA-Z0-9_%+-]+)*@[a-zA-Z0-9-]+(\.[a-zA-Z0-9-]+)*\.[a-zA-Z]{2,}$/;
+
 function normalizeEmail(email = "") {
   return email.trim().toLowerCase();
 }
@@ -58,7 +61,7 @@ authRouter.post("/register", async (req, res) => {
       return res.status(400).json({ ok: false, error: "Email is required" });
     }
     const normalizedEmail = normalizeEmail(email);
-    if (!normalizedEmail.includes("@")) {
+    if (!EMAIL_REGEX.test(normalizedEmail)) {
       return res.status(400).json({ ok: false, error: "Email is invalid" });
     }
     if (!password || typeof password !== "string" || password.length < PASSWORD_MIN_LENGTH) {
@@ -95,11 +98,14 @@ authRouter.post("/login", async (req, res) => {
     if (!email || typeof email !== "string") {
       return res.status(400).json({ ok: false, error: "Email is required" });
     }
+    const normalizedEmail = normalizeEmail(email);
+    if (!EMAIL_REGEX.test(normalizedEmail)) {
+      return res.status(400).json({ ok: false, error: "Email is invalid" });
+    }
     if (!password || typeof password !== "string") {
       return res.status(400).json({ ok: false, error: "Password is required" });
     }
 
-    const normalizedEmail = normalizeEmail(email);
     const row = db.prepare("SELECT * FROM users WHERE email = ?").get(normalizedEmail);
     
     // Always perform bcrypt.compare() to prevent timing attacks

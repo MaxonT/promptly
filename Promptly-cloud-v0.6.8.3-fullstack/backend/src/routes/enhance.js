@@ -46,6 +46,8 @@ function formatSize(bytes) {
 
 // Maximum allowed length for sanitized attachment names
 const MAX_FILENAME_LENGTH = 100;
+// Maximum expected file extension length (e.g., .docx, .jpeg, .html)
+const MAX_EXTENSION_LENGTH = 10;
 
 /**
  * Sanitize attachment name for safe inclusion in LLM prompts
@@ -59,13 +61,13 @@ function sanitizeAttachmentName(name) {
     return 'unnamed_file';
   }
   
-  // Remove control characters and null bytes
-  let sanitized = name.replace(/[\x00-\x1f\x7f]/g, '');
+  // Remove control characters, null bytes, and extended control characters (C0, DEL, C1)
+  let sanitized = name.replace(/[\x00-\x1f\x7f\x80-\x9f]/g, '');
   
   // Replace characters that could be used for prompt injection or confusion
-  // This includes: backticks, brackets, pipes, and multiple dashes
+  // This includes: backticks, brackets, pipes, angle brackets, and parentheses
   sanitized = sanitized
-    .replace(/[`[\]{}|<>]/g, '_')
+    .replace(/[`[\]{}|<>()]/g, '_')
     .replace(/---+/g, '-')  // Prevent delimiter-like sequences
     .replace(/\.\.\./g, '.')  // Collapse ellipsis
     .replace(/\s+/g, ' ')  // Normalize whitespace
@@ -74,7 +76,8 @@ function sanitizeAttachmentName(name) {
   // Truncate to maximum length, preserving file extension if possible
   if (sanitized.length > MAX_FILENAME_LENGTH) {
     const lastDot = sanitized.lastIndexOf('.');
-    if (lastDot > 0 && lastDot > sanitized.length - 10) {
+    // Check if extension exists and is within expected length
+    if (lastDot > 0 && lastDot > sanitized.length - MAX_EXTENSION_LENGTH) {
       // Preserve extension
       const ext = sanitized.substring(lastDot);
       const baseName = sanitized.substring(0, MAX_FILENAME_LENGTH - ext.length - 3);

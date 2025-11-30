@@ -95,7 +95,6 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
       log("Account error: " + err.message);
     }
   }
-
   async function submitAuthForm(path, payload) {
     log(`POST ${path} ...`);
     const res = await fetch(`${API_BASE}${path}`, {
@@ -120,9 +119,14 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
     try {
       const data = await submitAuthForm("/api/auth/login", payload);
       saveToken(data.token);
-      updateAuthView(data.user);
-      setAuthMessage("Signed in successfully.");
-      loginForm.reset();
+      try {
+        await loadAccount();
+        setAuthMessage("Signed in successfully.");
+        loginForm.reset();
+      } catch (refreshErr) {
+        console.error(refreshErr);
+        setAuthMessage("Signed in, but failed to load account details. Please try refreshing the page.", true);
+      }
     } catch (err) {
       console.error(err);
       setAuthMessage(err.message, true);
@@ -139,9 +143,14 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
     try {
       const data = await submitAuthForm("/api/auth/register", payload);
       saveToken(data.token);
-      updateAuthView(data.user);
-      setAuthMessage("Account created and signed in.");
-      registerForm.reset();
+      try {
+        await loadAccount();
+        setAuthMessage("Account created and signed in.");
+        registerForm.reset();
+      } catch (refreshErr) {
+        console.error(refreshErr);
+        setAuthMessage("Account created, but failed to load account details. Please try refreshing the page.", true);
+      }
     } catch (err) {
       console.error(err);
       setAuthMessage(err.message, true);

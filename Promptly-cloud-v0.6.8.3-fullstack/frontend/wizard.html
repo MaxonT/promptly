@@ -166,8 +166,9 @@
       </p>
       <label class="wizard-label">
         Project idea
-        <textarea id="ideaInput" rows="4" placeholder="Example: Help me design a full-stack web app that lets users save and refine prompts with tags, version history, and collaboration."></textarea>
+        <textarea id="ideaInput" rows="4" aria-describedby="ideaHint" placeholder="Example: Help me design a full-stack web app that lets users save and refine prompts with tags, version history, and collaboration."></textarea>
       </label>
+      <p id="ideaHint" class="wizard-inline-hint">Minimum 10 characters. The Start button will enable automatically once this requirement is met.</p>
       <label class="wizard-label">
         Project type
         <select id="kindSelect">
@@ -195,6 +196,7 @@
       <div id="qaEmptyState" class="wizard-empty">
         <p>No questions yet. Start the wizard by describing your project on the left.</p>
       </div>
+      <div id="wizardStatus" class="wizard-status hidden" role="status" aria-live="polite"></div>
       <div id="questionsContainer" class="wizard-questions hidden"></div>
       <div class="wizard-qa-actions">
         <!-- Progress indicator at top of navigation bar -->
@@ -214,6 +216,7 @@
               <span class="wizard-button-icon">←</span>
               <span>Back</span>
             </button>
+            <button id="cancelWizardBtn" class="wizard-button-secondary hidden" type="button">Cancel</button>
             <button id="saveSnapshotBtn" class="wizard-button-secondary hidden">💾 Save snapshot</button>
           </div>
           <div class="wizard-qa-actions-right">

@@ -386,45 +386,105 @@ html[data-theme="light"] .grey-gradient-text{
     </div>
 
 
-<section class="card wizard-landing" id="wizardLanding">
-  <h2 class="gradient-text">Question Wizard</h2>
-  <p class="subtitle">
-    Go from a one-line idea to a structured spec and compiled prompt blocks.
-  </p>
-  <label class="wizard-label">
-    <span>Project idea *</span>
-    <textarea id="landingIdeaInput" rows="3" placeholder="Example: Build a prompt to summarize YouTube videos into 5 bullet points." required minlength="10"></textarea>
-    <small class="help" style="display:block;margin-top:4px;color:var(--text-low);">Minimum 10 characters required</small>
-  </label>
-  <label class="wizard-label">
-    <span>Project type</span>
-    <select id="landingKindSelect">
-      <option value="">Auto-detect</option>
-      <option value="coding">Coding / engineering</option>
-      <option value="writing">Writing / content</option>
-      <option value="analysis">Analysis / research</option>
-      <option value="product">Product / UX design</option>
-      <option value="custom">Custom / other</option>
-    </select>
-  </label>
-  <button id="landingStartBtn" class="btn" disabled title="Please enter your project idea first">Start Question Wizard</button>
-  <p class="help">This will open the Question Wizard and guide you step by step.</p>
-</section>
-
-<section class="grid grid-2">
-
-      <div class="card">
-        <h3 data-i18n="task_label">Task</h3>
-        <textarea id="task" rows="4" placeholder="e.g., Classify sentiment of a sentence; output POS or NEG only."></textarea>
-        <h3 style="margin-top:12px" data-i18n="examples_label">Examples (optional)</h3>
-        <textarea id="examples" rows="4">POS || I love this!
-NEG || This is terrible.</textarea>
-        <button id="runBtn" class="btn" style="margin-top:12px" data-i18n="run_btn">Run Optimization</button>
+    <section class="layer-card layer-default" id="layerDefault">
+      <div class="layer-default__column">
+        <span class="layer-badge">Layer 1 · Magic Mode</span>
+        <h2>Describe your goal</h2>
+        <p>Promptly turns a single sentence into a multi-step optimized prompt. Tell us what you want and we’ll handle the rest.</p>
+        <label class="layer-field">
+          <span>What should the AI do?</span>
+          <textarea id="task" rows="4" placeholder="Summarize customer interviews into 5 product requirements."></textarea>
+        </label>
+        <label class="layer-field">
+          <span>Optional context or source text</span>
+          <textarea id="examples" rows="4" placeholder="Paste key paragraphs, bullet points, or constraints (optional)."></textarea>
+        </label>
+        <button id="runBtn" class="btn layer-primary-action" data-i18n="run_btn">Generate optimized prompt</button>
       </div>
+      <div class="layer-default__output">
+        <div class="layer-output-header">
+          <div>
+            <h3 class="gradient-text" data-i18n="best_prompt">Best Prompt</h3>
+            <small>Selected via Outcome Runner (best-of-N evaluation)</small>
+          </div>
+          <button class="btn copy-btn" type="button" onclick="navigator.clipboard?.writeText(document.getElementById('bestPrompt').value)">Copy</button>
+        </div>
+        <textarea id="bestPrompt" class="codeblock" rows="14" placeholder="Click “Generate optimized prompt” to see the strongest prompt for your goal."></textarea>
+        <p class="layer-output-hint">We run Spec → Questions → LLM agents → Metrics → Outcome Runner before surfacing this prompt.</p>
+      </div>
+    </section>
 
-      <div class="card">
-        <h3 class="gradient-text" data-i18n="best_prompt">Best Prompt</h3>
-        <textarea id="bestPrompt" class="codeblock" rows="10"></textarea>
+    <section class="layer-card">
+      <button class="layer-toggle" type="button" data-layer-toggle="advancedPanel" aria-expanded="false">
+        <span>Layer 2 · Advanced controls</span>
+        <span class="layer-toggle__chevron">▾</span>
+      </button>
+      <div id="advancedPanel" class="layer-panel">
+        <p class="layer-note">Tweak the internal blueprint before we run the optimization pipeline.</p>
+        <div class="layer-panel__grid">
+          <label class="layer-field">
+            <span>Instruction blueprint</span>
+            <textarea id="blueprintInstructions" rows="4" placeholder="E.g., Use Architect → Planner → Editor roles. Include evaluation checks."></textarea>
+          </label>
+          <label class="layer-field">
+            <span>Demonstration examples</span>
+            <textarea id="blueprintExamples" rows="4" placeholder="Example input → desired output pairs. One per line."></textarea>
+          </label>
+          <label class="layer-field">
+            <span>Constraints & style</span>
+            <textarea id="blueprintConstraints" rows="4" placeholder="Tone, length, formatting, safety requirements…"></textarea>
+          </label>
+        </div>
+      </div>
+    </section>
+
+    <section class="layer-card layer-expert">
+      <button class="layer-toggle" type="button" data-layer-toggle="expertPanel" aria-expanded="false">
+        <span>Layer 3 · Expert toolbox</span>
+        <span class="layer-toggle__chevron">▾</span>
+      </button>
+      <div id="expertPanel" class="layer-panel">
+        <div class="layer-panel__grid">
+          <label class="layer-field">
+            <span>POS / NEG dataset snippets</span>
+            <textarea rows="4">POS || This is fantastic!
+NEG || This completely missed the brief.</textarea>
+          </label>
+          <label class="layer-field">
+            <span>Schema or output template</span>
+            <textarea rows="4">{ "sections": ["Summary","Action items","Risks"], "style": "Concise, bullet-first" }</textarea>
+          </label>
+          <label class="layer-field">
+            <span>Optimization knobs</span>
+            <textarea rows="4">candidates: 4
+tests: ["coherence","style_match","risk"]
+temperature: 0.5</textarea>
+          </label>
+        </div>
+        <div class="expert-divider"></div>
+        <div class="expert-wizard">
+          <h4>Question Wizard</h4>
+          <p>Need a full spec from scratch? Launch the Question Wizard.</p>
+          <div class="wizard-wrapper">
+            <label class="wizard-label">
+              <span>Project idea *</span>
+              <textarea id="landingIdeaInput" rows="3" placeholder="Example: Build a prompt to summarize YouTube videos into 5 bullet points." required minlength="10"></textarea>
+              <small class="help" style="display:block;margin-top:4px;color:var(--text-low);">Minimum 10 characters required</small>
+            </label>
+            <label class="wizard-label">
+              <span>Project type</span>
+              <select id="landingKindSelect">
+                <option value="">Auto-detect</option>
+                <option value="coding">Coding / engineering</option>
+                <option value="writing">Writing / content</option>
+                <option value="analysis">Analysis / research</option>
+                <option value="product">Product / UX design</option>
+                <option value="custom">Custom / other</option>
+              </select>
+            </label>
+            <button id="landingStartBtn" class="btn" disabled title="Please enter your project idea first">Start Question Wizard</button>
+          </div>
+        </div>
       </div>
     </section>
 
@@ -470,6 +530,7 @@ NEG || This is terrible.</textarea>
         <span class="delta">&nbsp;</span>
       </div>
     </section>
+    <p class="help" style="margin-top:6px;">Arrows reflect change since the last run. Accuracy, F1, and Pass Rate are “higher is better,” while Token Cost is “lower is better.” Progress % tracks how close you are to your target accuracy.</p>
 
     <section class="grid grid-2" style="margin-top:16px">
       <div class="card">
@@ -791,49 +852,13 @@ NEG || This is terrible.</textarea>
         <div><img src="assets/placeholder_gauge.png" alt="Progress gauge" style="width:100%;border-radius:12px;box-shadow:0 4px 24px rgba(0,0,0,.25)"><p style="opacity:.7;margin-top:6px">Progress Gauge</p></div>
       </div>
       <h3 style="margin-top:16px" class="gradient-animated">Glossary</h3>
-<ul class="glossary-list glossy">
-  <li>
-    <span class="glossary-term" data-i18n-key="accuracy">Accuracy</span>
-    <span class="glossary-def">
-      正确输出占比，范围 0–1。公式：<code>correct_count / total_cases</code>。
-      当每个测试和预期完全匹配时，Acc=1。
-    </span>
-  </li>
-  <li>
-    <span class="glossary-term" data-i18n-key="f1">F1</span>
-    <span class="glossary-def">
-      调和平均数，衡量精度与召回的平衡。范围 0–1。
-      公式：<code>2 × precision × recall / (precision + recall)</code>，precision = TP/(TP+FP)，recall = TP/(TP+FN)。
-    </span>
-  </li>
-  <li>
-    <span class="glossary-term" data-i18n-key="pass_rate">Pass Rate</span>
-    <span class="glossary-def">
-      满足结构/格式约束的输出比例，范围 0–1。
-      公式：<code>passed_constraints / total_constraints</code>（或 passed_cases/total_cases）。
-    </span>
-  </li>
-  <li>
-    <span class="glossary-term" data-i18n-key="token_cost">Token Cost</span>
-    <span class="glossary-def">
-      模型使用的总 token 数，公式：<code>prompt_tokens + completion_tokens</code>。
-      越低表示提示更紧凑，有助于控制成本。
-    </span>
-  </li>
-  <li>
-    <span class="glossary-term" data-i18n-key="progress">Progress %</span>
-    <span class="glossary-def">
-      复合优化指标，范围 0–100，权重平均计算：
-      <code>progress = average([
-        accuracy / target_accuracy,
-        f1 / target_f1,
-        pass_rate / target_pass_rate,
-        ideal_token_cost / token_cost
-      ]) × 100</code>。
-      越接近 100 表示越接近目标。
-    </span>
-  </li>
-</ul>
+      <ul class="glossary-list glossy">
+        <li><span class="glossary-term" data-i18n-key="accuracy">Accuracy</span><span class="glossary-def">Correct outputs / total cases.</span></li>
+        <li><span class="glossary-term" data-i18n-key="f1">F1</span><span class="glossary-def">2 × precision × recall ÷ (precision + recall).</span></li>
+        <li><span class="glossary-term" data-i18n-key="pass_rate">Pass Rate</span><span class="glossary-def">Passed constraints / total constraints.</span></li>
+        <li><span class="glossary-term" data-i18n-key="token_cost">Token Cost</span><span class="glossary-def">prompt_tokens + completion_tokens.</span></li>
+        <li><span class="glossary-term" data-i18n-key="progress">Progress %</span><span class="glossary-def">average(accuracy/target_accuracy, f1/target_f1, pass_rate/target_pass_rate, ideal_token_cost/token_cost) × 100.</span></li>
+      </ul>
     `;
     document.body.appendChild(section);
   }
@@ -967,12 +992,12 @@ NEG || This is terrible.</textarea>
     const wrap = document.createElement('section');
     wrap.id='util-panel'; wrap.className='util-panel';
     wrap.innerHTML = `
-      <h3 class="gradient-animated" style="margin:0 0 8px">Data Utilities</h3>
-      <div class="help">Import/Export your test cases JSON. Reset fills demo data that matches the UI.</div>
+      <h3 class="gradient-animated" style="margin:0 0 8px">Test cases</h3>
+      <div class="help">Start with ready-made demo tests or bring your own set. Advanced JSON import/export stays available but tucked behind the buttons below.</div>
       <div class="util-buttons">
-        <button class="btn" id="btn-export">Export JSON</button>
-        <button class="btn" id="btn-import">Import JSON</button>
-        <button class="btn" id="btn-reset">Reset to Demo Data</button>
+        <button class="btn" id="btn-reset">Use demo test cases</button>
+        <button class="btn" id="btn-import">Upload JSON</button>
+        <button class="btn" id="btn-export">Download JSON</button>
         <input type="file" id="file-import" accept="application/json" style="display:none" />
       </div>`;
     document.body.appendChild(wrap);
@@ -1056,7 +1081,7 @@ NEG || This is terrible.</textarea>
     const container = document.createElement('div'); container.className='state-banner';
     container.innerHTML = `
        <div class="state-empty"><strong>Empty state:</strong> No test cases yet. <button class="btn" id="cta-import">Import</button> or <button class="btn" id="cta-reset">Use Demo</button></div>
-       <div class="state-error"><strong>Error:</strong> Model API key missing or rate-limited. <button class="btn" id="cta-retry">Retry</button></div>
+       <div class="state-error"><strong>Connection failed.</strong> Check your network connection and try again. If the problem persists, verify your API key in Settings. <button class="btn" id="cta-retry">Retry</button></div>
        <div class="state-skeleton"><div class="row"></div><div class="row"></div><div class="row"></div></div>
        <div class="util-buttons"><button class="btn" id="toggle-empty">Show Empty</button><button class="btn" id="toggle-error">Show Error</button><button class="btn" id="toggle-skeleton">Show Skeleton</button><span class="help">Click toggles again to hide.</span></div>
     `;
@@ -1313,6 +1338,25 @@ NEG || This is terrible.</textarea>
 
   renderTabs();
   setScenario(activeId);
+})();
+</script>
+
+<script>
+(() => {
+  document.querySelectorAll("[data-layer-toggle]").forEach((btn) => {
+    const targetId = btn.getAttribute("data-layer-toggle");
+    const panel = document.getElementById(targetId);
+    if (!panel) return;
+    panel.classList.remove("layer-panel--open");
+    btn.addEventListener("click", () => {
+      const open = panel.classList.toggle("layer-panel--open");
+      btn.setAttribute("aria-expanded", open ? "true" : "false");
+      const chev = btn.querySelector(".layer-toggle__chevron");
+      if (chev) {
+        chev.style.transform = open ? "rotate(180deg)" : "rotate(0deg)";
+      }
+    });
+  });
 })();
 </script>
 

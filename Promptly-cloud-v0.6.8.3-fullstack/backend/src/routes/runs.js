@@ -26,6 +26,19 @@ const OutcomeRunRequestSchema = z.object({
   model: z.string().min(1).optional()
 });
 
+function parseRunWithMetrics(row) {
+  if (!row) return null;
+  const metrics =
+    row.metrics_json && typeof row.metrics_json === "string"
+      ? JSON.parse(row.metrics_json || "null")
+      : row.metrics_json || null;
+
+  return {
+    ...row,
+    metrics
+  };
+}
+
 // POST /api/runs - Create a new run
 runsRouter.post("/", (req, res) => {
   const parsed = CreateRunSchema.safeParse(req.body);
@@ -56,10 +69,23 @@ runsRouter.post("/", (req, res) => {
   return res.json({ ok: true, run });
 });
 
+// GET /api/runs/latest - Return most recent run with metrics
+runsRouter.get("/latest", (req, res) => {
+  const run = parseRunWithMetrics(
+    db
+      .prepare("SELECT * FROM runs ORDER BY created_at DESC LIMIT 1")
+      .get()
+  );
+  if (!run) {
+    return res.status(404).json({ ok: false, error: "No runs found" });
+  }
+  return res.json({ ok: true, run });
+});
+
 // GET /api/runs/:id - Get a specific run
 runsRouter.get("/:id", (req, res) => {
   const { id } = req.params;
-  const run = db.prepare("SELECT * FROM runs WHERE id = ?").get(id);
+  const run = parseRunWithMetrics(db.prepare("SELECT * FROM runs WHERE id = ?").get(id));
 
   if (!run) {
     return res.status(404).json({ ok: false, error: "Run not found" });

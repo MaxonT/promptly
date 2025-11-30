@@ -3,7 +3,7 @@
   const THEME_KEY="promptly.theme", LANG_KEY="promptly.lang", CONSENT_KEY="promptly.consent";
   const prefersDark=window.matchMedia("(prefers-color-scheme: dark)");
   const translations={
-    en:{nav_home:"Dashboard",nav_privacy:"Privacy",nav_terms:"Terms",nav_cookies:"Cookies",appearance:"System",auto:"System",light:"Light",dark:"Dark",language:"English",
+    en:{nav_home:"Dashboard",nav_privacy:"Privacy",nav_terms:"Terms",nav_cookies:"Cookies",nav_account:"Account",appearance:"System",auto:"System",light:"Light",dark:"Dark",language:"English",
         hero_title:"Promptly — Prompt Optimizer Studio",hero_subtitle:"Visualization-first workflow. See every gain, every cost, every version.",
         task_label:"Task",examples_label:"Examples (optional)",best_prompt:"Best Prompt",run_btn:"Run Optimization",
         kpi_accuracy:"Accuracy",kpi_f1:"F1",kpi_pass:"Pass Rate",kpi_cost:"Token Cost",kpi_prog:"Progress %",
@@ -12,7 +12,7 @@
         consent_text:"We use cookies to improve your experience and remember preferences.",consent_btn:"Accept",
         placeholder_task:"e.g., Classify sentiment of a sentence; output POS or NEG only.",
         placeholder_examples:"POS || I love this!\nNEG || This is terrible."},
-    zh:{nav_home:"仪表盘",nav_privacy:"隐私政策",nav_terms:"服务条款",nav_cookies:"Cookie 政策",appearance:"系统",auto:"系统",light:"浅色",dark:"深色",language:"中文",
+    zh:{nav_home:"仪表盘",nav_privacy:"隐私政策",nav_terms:"服务条款",nav_cookies:"Cookie 政策",nav_account:"账号",appearance:"系统",auto:"系统",light:"浅色",dark:"深色",language:"中文",
         hero_title:"Promptly — 提示优化工作室",hero_subtitle:"可视化优先：每次提升、每分成本、每个版本都一目了然。",
         task_label:"任务",examples_label:"示例（可选）",best_prompt:"最佳 Prompt",run_btn:"运行优化",
         kpi_accuracy:"准确率",kpi_f1:"F1",kpi_pass:"通过率",kpi_cost:"Token 成本",kpi_prog:"进度 %",
@@ -51,33 +51,97 @@
     const cx=w/2,cy=h*0.9,r=Math.min(w,h)*0.75,start=Math.PI,end=2*Math.PI;ctx.lineWidth=14;ctx.strokeStyle="#333a";ctx.beginPath();ctx.arc(cx,cy,r*0.5,start,end);ctx.stroke();
     ctx.strokeStyle=getComputedStyle(document.documentElement).getPropertyValue("--accent")||"#06b6d4";ctx.beginPath();ctx.arc(cx,cy,r*0.5,start,start+(end-start)*Math.max(0,Math.min(1,p)));ctx.stroke();
     ctx.fillStyle=getComputedStyle(document.documentElement).getPropertyValue("--text")||"#eaf0fb";ctx.font="bold 24px Inter, system-ui";ctx.textAlign="center";ctx.fillText(Math.round(p*100)+"%",cx,cy-10);}
-  // Optimizer sim
-  const state={iters:0,accuracy:0.62,f1:0.58,pass:0.55,cost:0,progress:0.0,history:[]};
-  function rand(n=1){return Math.random()*n}
-  function step(){state.iters++;const dAcc=(0.5+rand(1))*0.01,dF1=(0.4+rand(1))*0.01,dPass=(0.3+rand(1))*0.01,tokens=300+Math.floor(rand(500));
-    state.accuracy=Math.min(0.98,state.accuracy+dAcc);state.f1=Math.min(0.97,state.f1+dF1);state.pass=Math.min(0.99,state.pass+dPass);
-    state.cost+=tokens;state.progress=Math.min(1,state.progress+0.06+rand(0.06));const v="v"+String(state.iters).padStart(3,"0");const p=`[${v}] Use role+steps+checks. Tighten constraints. Cite fail-cases.`;state.history.unshift({ver:v,prompt:p,dAcc:dAcc*100});}
-  function fmtPct(x){return (x*100).toFixed(1)+"%"} function fmtNum(x){return new Intl.NumberFormat().format(x)}
-  function rKPIs(){document.getElementById("valAcc").textContent=fmtPct(state.accuracy);document.getElementById("valF1").textContent=fmtPct(state.f1);
-    document.getElementById("valPass").textContent=fmtPct(state.pass);document.getElementById("valCost").textContent=fmtNum(state.cost);
-    document.getElementById("valProg").textContent=fmtPct(state.progress);const d=state.history[0]?.dAcc||0;const k=document.getElementById("kAcc");
-    k.classList.remove("up","down");k.classList.add(d>=0?"up":"down");document.getElementById("deltaAcc").textContent=(d>=0?"+":"")+d.toFixed(2)+"%";}
-  function rCharts(){const g=document.getElementById("lineGrowth"),b=document.getElementById("barContrib"),p=document.getElementById("piePass"),ga=document.getElementById("gaugeProg");
-    const seq=state.history.slice().reverse().map(h=>h.dAcc).reduce((acc,v)=>{acc.push((acc[acc.length-1]||state.accuracy*100-(v||0))+v);return acc},[]).map(x=>x||state.accuracy*100);
-    drawLine(g, seq.length?seq:[state.accuracy*100]); drawBars(b, state.history.slice(0,8).map(h=>h.dAcc)); const pass=Math.round(state.pass*100),fail=100-pass; drawPie(p,[pass,fail]); drawGauge(ga,state.progress);}
-  function rVersions(){const list=document.getElementById("verList");list.innerHTML="";state.history.forEach(h=>{const li=document.createElement("div");li.className="item";
-      li.innerHTML=`<div><div><b>${h.ver}</b> <span class="badge">ΔAcc</span> <span class="delta-badge ${h.dAcc>=0?"delta-pos":"delta-neg"}">${(h.dAcc>=0?"+":"")+h.dAcc.toFixed(2)}%</span></div>
-      <div style="color:var(--muted);font-size:12px;margin-top:4px">${h.prompt}</div></div>
-      <button class="btn" onclick='document.getElementById("bestPrompt").value=${JSON.stringify(h.prompt)}'>Apply</button>`;list.appendChild(li);});}
-  function onRun(){step();rKPIs();rCharts();rVersions();document.getElementById("bestPrompt").value=state.history[0].prompt;}
-  document.addEventListener("DOMContentLoaded",()=>{ // init
-    // header
-    const themeSel=document.getElementById("themeSelect"), langSel=document.getElementById("langSelect");
-    if(langSel){langSel.innerHTML=LANG_OPTIONS.map(([v,t])=>`<option value="${v}">${t}</option>`).join("");const saved=localStorage.getItem(LANG_KEY)||"en";langSel.value=saved;i18nApply(saved);langSel.addEventListener("change",()=>{const v=langSel.value;localStorage.setItem(LANG_KEY,v);i18nApply(v);});}
-    if(themeSel){const saved=localStorage.getItem(THEME_KEY)||"auto";themeSel.value=saved;applyTheme(saved);themeSel.addEventListener("change",()=>{const v=themeSel.value;localStorage.setItem(THEME_KEY,v);applyTheme(v)});prefersDark.addEventListener("change",()=>{if((localStorage.getItem(THEME_KEY)||"auto")==="auto")applyTheme("auto")});}
+  const runIdParam = new URLSearchParams(window.location.search).get("runId");
+  function getRunUrl() {
+    return runIdParam ? `/api/runs/${runIdParam}` : "/api/runs/latest";
+  }
+  function formatPercent(value) {
+    return value == null ? "—" : `${(value * 100).toFixed(1)}%`;
+  }
+  function formatNumber(value) {
+    return value == null ? "—" : new Intl.NumberFormat().format(value);
+  }
+  function renderMetrics(metrics = {}) {
+    const valAcc = document.getElementById("valAcc");
+    const valF1 = document.getElementById("valF1");
+    const valPass = document.getElementById("valPass");
+    const valCost = document.getElementById("valCost");
+    const valProg = document.getElementById("valProg");
+    if (valAcc) valAcc.textContent = formatPercent(metrics.accuracy);
+    if (valF1) valF1.textContent = metrics.f1 ? metrics.f1.toFixed(2) : "—";
+    if (valPass) valPass.textContent = formatPercent(metrics.pass_rate ?? metrics.passRate);
+    if (valCost) valCost.textContent = formatNumber(metrics.token_cost ?? metrics.tokenCost);
+    if (valProg) valProg.textContent = formatPercent((metrics.progress_pct ?? metrics.progressPct) / 100);
+    const delta = document.getElementById("deltaAcc");
+    if (delta) delta.textContent = "";
+    renderCharts(metrics);
+  }
+  function renderCharts(metrics = {}) {
+    const progress = Math.max(0, Math.min(1, (metrics.progress_pct ?? metrics.progressPct ?? 0) / 100));
+    const line = document.getElementById("lineGrowth");
+    const bar = document.getElementById("barContrib");
+    const pie = document.getElementById("piePass");
+    const gauge = document.getElementById("gaugeProg");
+    if (line) drawLine(line, [progress * 100, progress * 100, progress * 100]);
+    if (bar) drawBars(bar, [progress * 100, progress * 100, progress * 100]);
+    if (pie) drawPie(pie, [Math.round((metrics.pass_rate ?? metrics.passRate ?? 0) * 100), Math.round((1 - (metrics.pass_rate ?? metrics.passRate ?? 0)) * 100)]);
+    if (gauge) drawGauge(gauge, progress);
+  }
+  async function fetchRunMetrics() {
+    try {
+      const res = await fetch(getRunUrl());
+      const data = await res.json();
+      return data.metrics || null;
+    } catch (err) {
+      console.error("[promptly] fetchRunMetrics error", err);
+      return null;
+    }
+  }
+  async function refreshMetrics() {
+    const metrics = await fetchRunMetrics();
+    renderMetrics(metrics);
+  }
+  document.addEventListener("DOMContentLoaded", () => {
+    const themeSel = document.getElementById("themeSelect");
+    const langSel = document.getElementById("langSelect");
+    if (langSel) {
+      langSel.innerHTML = LANG_OPTIONS.map(([v, t]) => `<option value="${v}">${t}</option>`).join("");
+      const saved = localStorage.getItem(LANG_KEY) || "en";
+      langSel.value = saved;
+      i18nApply(saved);
+      langSel.addEventListener("change", () => {
+        const v = langSel.value;
+        localStorage.setItem(LANG_KEY, v);
+        i18nApply(v);
+      });
+    }
+    if (themeSel) {
+      const saved = localStorage.getItem(THEME_KEY) || "auto";
+      themeSel.value = saved;
+      applyTheme(saved);
+      themeSel.addEventListener("change", () => {
+        const v = themeSel.value;
+        localStorage.setItem(THEME_KEY, v);
+        applyTheme(v);
+      });
+      prefersDark.addEventListener("change", () => {
+        if ((localStorage.getItem(THEME_KEY) || "auto") === "auto") {
+          applyTheme("auto");
+        }
+      });
+    }
     consentBanner();
-    const run=document.getElementById("runBtn"); if(run) run.addEventListener("click", onRun);
-    rKPIs(); rCharts(); rVersions();
-    const ro=new ResizeObserver(()=>rCharts()); ["lineGrowth","barContrib","piePass","gaugeProg"].forEach(id=>{const c=document.getElementById(id); if(c) ro.observe(c);});
+    const run = document.getElementById("runBtn");
+    if (run) {
+      run.addEventListener("click", () => {
+        refreshMetrics();
+      });
+    }
+    refreshMetrics();
+    const ro = new ResizeObserver(() => renderCharts());
+    ["lineGrowth", "barContrib", "piePass", "gaugeProg"].forEach(id => {
+      const c = document.getElementById(id);
+      if (c) ro.observe(c);
+    });
   });
 })();

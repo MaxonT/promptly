@@ -10,9 +10,9 @@ const TOKEN_SECRET = process.env.JWT_SECRET || "dev";
 const TOKEN_EXPIRES_IN = process.env.JWT_EXPIRES_IN || "7d";
 const PASSWORD_MIN_LENGTH = 8;
 
-// Pre-computed dummy hash for constant-time comparison when user is not found
+// Generate dummy hash at startup for constant-time comparison when user is not found
 // This prevents timing attacks by ensuring bcrypt.compare() is always called
-const DUMMY_HASH = "$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy";
+const DUMMY_HASH = bcrypt.hashSync("dummy_password_for_timing", 10);
 
 function normalizeEmail(email = "") {
   return email.trim().toLowerCase();
@@ -97,7 +97,7 @@ authRouter.post("/login", async (req, res) => {
     
     // Always perform bcrypt comparison to prevent timing attacks
     // If user not found, compare against dummy hash to maintain constant time
-    const hashToCompare = (row && row.password_hash) ? row.password_hash : DUMMY_HASH;
+    const hashToCompare = row?.password_hash || DUMMY_HASH;
     const valid = await bcrypt.compare(password, hashToCompare);
     
     if (!row || !row.password_hash || !valid) {

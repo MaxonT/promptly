@@ -1157,3 +1157,16 @@ html[data-theme="light"] .topbar label.control span[data-i18n]{
   -webkit-text-fill-color: #0B0D13 !important;
   text-shadow: none !important;
 }
+
+/* === Patch v22: Light mode — fix ALL nav links (including those without data-i18n like Account) === */
+html[data-theme="light"] .topbar .navlinks a,
+html[data-theme="light"] .topbar .navlinks a:link,
+html[data-theme="light"] .topbar .navlinks a:visited{
+  background: none !important;
+  background-image: none !important;
+  -webkit-background-clip: initial !important;
+  background-clip: initial !important;
+  -webkit-text-fill-color: #0B0D13 !important;
+  color: #0B0D13 !important;
+  text-shadow: none !important;
+}

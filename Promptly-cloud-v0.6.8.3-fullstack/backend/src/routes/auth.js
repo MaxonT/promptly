@@ -17,6 +17,9 @@ if (!TOKEN_SECRET) {
 }
 const TOKEN_EXPIRES_IN = process.env.JWT_EXPIRES_IN || "7d";
 const PASSWORD_MIN_LENGTH = 8;
+const BCRYPT_ROUNDS = 10;
+// Dummy hash generated with same cost factor to ensure constant-time comparison (prevents timing attacks)
+const DUMMY_HASH = bcrypt.hashSync("dummy-password-for-timing-attack-prevention", BCRYPT_ROUNDS);
 
 function normalizeEmail(email = "") {
   return email.trim().toLowerCase();
@@ -70,7 +73,7 @@ authRouter.post("/register", async (req, res) => {
       return res.status(409).json({ ok: false, error: "Email already registered" });
     }
 
-    const passwordHash = await bcrypt.hash(password, 10);
+    const passwordHash = await bcrypt.hash(password, BCRYPT_ROUNDS);
     const userId = nanoid(16);
     const now = new Date().toISOString();
     db.prepare(`
@@ -98,12 +101,17 @@ authRouter.post("/login", async (req, res) => {
 
     const normalizedEmail = normalizeEmail(email);
     const row = db.prepare("SELECT * FROM users WHERE email = ?").get(normalizedEmail);
-    if (!row || !row.password_hash) {
-      return res.status(401).json({ ok: false, error: "Invalid credentials" });
-    }
-
-    const valid = await bcrypt.compare(password, row.password_hash);
-    if (!valid) {
+    
+    // Always perform bcrypt.compare() to prevent timing attacks
+    // Use dummy hash when user not found to ensure constant-time comparison
+    const hashToCompare = row?.password_hash || DUMMY_HASH;
+    const valid = await bcrypt.compare(password, hashToCompare);
+    
+    // Combine conditions using bitwise AND to avoid short-circuit evaluation and timing leaks
+    const userExists = !!row;
+    const credentialsValid = userExists & valid;
+    
+    if (!credentialsValid) {
       return res.status(401).json({ ok: false, error: "Invalid credentials" });
     }
 

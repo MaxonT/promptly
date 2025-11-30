@@ -206,16 +206,32 @@ html[data-theme="light"] .account-form input{
 .model-item .model-details{
   flex:1;
 }
+.model-item .model-header{
+  display:flex;
+  align-items:baseline;
+  flex-wrap:wrap;
+  gap:0.25rem;
+}
 .model-item .model-label{
-  font-size:0.75rem;
+  font-size:0.8rem;
   color:var(--muted);
-  text-transform:uppercase;
-  letter-spacing:0.05em;
+  font-weight:500;
 }
 .model-item .model-value{
-  font-weight:600;
+  font-weight:700;
   color:var(--text);
   font-size:0.9rem;
+  background:linear-gradient(90deg,#7C3AED,#06B6D4);
+  -webkit-background-clip:text;
+  background-clip:text;
+  -webkit-text-fill-color:transparent;
+}
+.model-item .model-desc{
+  font-size:0.72rem;
+  color:var(--muted);
+  margin-top:0.25rem;
+  line-height:1.4;
+  opacity:0.85;
 }
 .model-item .model-badge{
   padding:0.2rem 0.5rem;

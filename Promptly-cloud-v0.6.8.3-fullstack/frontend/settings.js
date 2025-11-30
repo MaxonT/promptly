@@ -179,9 +179,9 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
       modelListEl.innerHTML = "";
       const modelDisplayName = "Promptly Refined LLM Model";
       const modelItems = [
-        { icon: "🤖", label: "Default model", value: modelDisplayName, badge: "Primary" },
-        { icon: "🎯", label: "Outcome model", value: s.outcomeModel ? modelDisplayName : "(uses default)", badge: null },
-        { icon: "📊", label: "Max candidates", value: String(s.maxCandidates ?? 8), badge: "Optimized" }
+        { icon: "🤖", label: "Default Model", value: modelDisplayName, badge: "Primary", desc: "Main generation model that produces the actual responses." },
+        { icon: "🎯", label: "Outcome Model", value: s.outcomeModel ? modelDisplayName : "(uses default)", badge: null, desc: "Judging model that scores candidates and picks the best one." },
+        { icon: "📊", label: "Max Candidates", value: String(s.maxCandidates ?? 8), badge: "Optimized", desc: "Generates up to 8 candidate answers per run and selects the best." }
       ];
       for (const item of modelItems) {
         const div = document.createElement("div");
@@ -194,16 +194,26 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
         const detailsDiv = document.createElement("div");
         detailsDiv.className = "model-details";
         
+        const headerDiv = document.createElement("div");
+        headerDiv.className = "model-header";
+        
         const labelSpan = document.createElement("span");
         labelSpan.className = "model-label";
-        labelSpan.textContent = item.label;
+        labelSpan.textContent = item.label + ": ";
         
         const valueSpan = document.createElement("span");
         valueSpan.className = "model-value";
         valueSpan.textContent = item.value;
         
-        detailsDiv.appendChild(labelSpan);
-        detailsDiv.appendChild(valueSpan);
+        headerDiv.appendChild(labelSpan);
+        headerDiv.appendChild(valueSpan);
+        
+        const descSpan = document.createElement("div");
+        descSpan.className = "model-desc";
+        descSpan.textContent = item.desc;
+        
+        detailsDiv.appendChild(headerDiv);
+        detailsDiv.appendChild(descSpan);
         div.appendChild(iconSpan);
         div.appendChild(detailsDiv);
         

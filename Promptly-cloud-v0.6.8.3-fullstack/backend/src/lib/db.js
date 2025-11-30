@@ -196,7 +196,26 @@ CREATE TABLE IF NOT EXISTS outcome_candidates (
 );
 `);
 
+// Whitelists for allowed table and column names
+const ALLOWED_TABLES = [
+  "runs",
+  "evaluations",
+  "users"
+];
+const ALLOWED_COLUMNS = {
+  runs: ["completed_at", "metrics_json"],
+  evaluations: ["metrics_json"],
+  users: ["password_hash", "subscription_tier", "subscription_active", "updated_at"]
+};
+
 function ensureColumnExists(table, column, definition) {
+  if (!ALLOWED_TABLES.includes(table)) {
+    throw new Error(`[promptly] Table name not allowed: ${table}`);
+  }
+  if (!ALLOWED_COLUMNS[table] || !ALLOWED_COLUMNS[table].includes(column)) {
+    throw new Error(`[promptly] Column name not allowed for table ${table}: ${column}`);
+  }
+  // Optionally, add further validation for definition if desired
   try {
     db.prepare(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`).run();
   } catch (err) {

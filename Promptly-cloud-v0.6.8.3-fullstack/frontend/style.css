@@ -32,6 +32,92 @@ header.topbar{position:sticky;top:0;display:flex;align-items:center;justify-cont
 .card{background:var(--card);border:1px solid var(--border);border-radius:16px;box-shadow:var(--shadow);padding:18px}
 .card h2,.card h3{margin:6px 0 12px 0}
 
+.algorithm-section{
+  border:1px solid var(--border);
+  background:linear-gradient(var(--surface-2),var(--surface-2)) padding-box,
+             linear-gradient(90deg,var(--brand-a,#7C3AED),var(--brand-b,#06B6D4),var(--brand-c,#22D3EE)) border-box;
+  padding:24px;
+  margin-bottom:20px;
+  border-radius:20px;
+}
+.algorithm-section__intro{
+  margin-bottom:18px;
+}
+.algorithm-section__intro p{
+  margin:0;
+  color:var(--muted);
+  max-width:560px;
+}
+.algorithm-section__grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+  gap:16px;
+  align-items:start;
+}
+.algorithm-steps{
+  display:grid;
+  gap:12px;
+}
+.algorithm-step{
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+  padding:16px;
+  border-radius:14px;
+  background:var(--bg-soft);
+  border:1px solid rgba(15,23,42,0.08);
+}
+.algorithm-step h4{
+  margin:0;
+  font-size:1rem;
+}
+.algorithm-step p{
+  margin:0;
+  font-size:0.85rem;
+  color:var(--muted);
+}
+.step-number{
+  width:28px;
+  height:28px;
+  border-radius:50%;
+  background:rgba(124,58,237,0.1);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  color:#7C3AED;
+  font-weight:600;
+}
+.algorithm-spec{
+  background:var(--bg-soft);
+  border-radius:14px;
+  padding:18px;
+  border:1px solid rgba(15,23,42,0.08);
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+}
+.algorithm-spec h4{
+  margin:0;
+}
+.algorithm-spec ul{
+  margin:0;
+  padding-left:1rem;
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+  color:var(--muted);
+}
+.algorithm-spec strong{
+  color:var(--text);
+}
+.algorithm-callout{
+  margin-top:16px;
+  font-size:0.85rem;
+  color:var(--muted);
+  border-top:1px solid rgba(15,23,42,0.08);
+  padding-top:12px;
+}
+
 .hero{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
 .title{font-size:30px;font-weight:1000}
 .subtitle{color:var(--muted)}

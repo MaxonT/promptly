@@ -32,6 +32,114 @@ header.topbar{position:sticky;top:0;display:flex;align-items:center;justify-cont
 .card{background:var(--card);border:1px solid var(--border);border-radius:16px;box-shadow:var(--shadow);padding:18px}
 .card h2,.card h3{margin:6px 0 12px 0}
 
+.layer-card{
+  background:var(--card);
+  border:1px solid var(--border);
+  border-radius:20px;
+  padding:22px;
+  margin-bottom:20px;
+}
+.layer-default{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(280px,1fr));
+  gap:24px;
+  align-items:start;
+}
+.layer-default__column{
+  display:flex;
+  flex-direction:column;
+  gap:14px;
+}
+.layer-default__output{
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+}
+.layer-badge{
+  display:inline-flex;
+  padding:4px 12px;
+  border-radius:999px;
+  background:rgba(124,58,237,0.12);
+  color:#c4b5fd;
+  font-size:0.8rem;
+  width:max-content;
+}
+.layer-field{
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+  font-size:0.9rem;
+}
+.layer-field textarea{
+  min-height:110px;
+}
+.layer-primary-action{
+  width:fit-content;
+}
+.layer-output-header{
+  display:flex;
+  justify-content:space-between;
+  gap:12px;
+  align-items:center;
+}
+.copy-btn{
+  background:rgba(124,58,237,0.25);
+  padding:8px 14px;
+}
+.layer-output-hint{
+  margin:0;
+  font-size:0.8rem;
+  color:var(--muted);
+}
+.layer-toggle{
+  width:100%;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  background:rgba(124,58,237,0.08);
+  border:1px solid rgba(124,58,237,0.25);
+  border-radius:14px;
+  color:inherit;
+  padding:12px 16px;
+  font-weight:600;
+  cursor:pointer;
+}
+.layer-toggle__chevron{
+  transition:transform 0.2s ease;
+}
+.layer-panel{
+  display:none;
+  margin-top:18px;
+  border-radius:16px;
+  border:1px dashed rgba(255,255,255,0.12);
+  padding:18px;
+  background:rgba(15,23,42,0.35);
+}
+.layer-panel--open{
+  display:block;
+}
+.layer-panel__grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+  gap:16px;
+}
+.layer-note{
+  margin:0 0 12px;
+  color:var(--muted);
+  font-size:0.85rem;
+}
+.layer-expert{
+  border-style:dashed;
+}
+.expert-divider{
+  border-top:1px dashed rgba(255,255,255,0.15);
+  margin:20px 0;
+}
+.expert-wizard .wizard-wrapper{
+  display:grid;
+  gap:12px;
+}
+
 .algorithm-section{
   border:1px solid var(--border);
   background:linear-gradient(var(--surface-2),var(--surface-2)) padding-box,

@@ -395,10 +395,11 @@ html[data-theme="light"] .grey-gradient-text{
           <span>What should the AI do?</span>
           <textarea id="task" rows="4" placeholder="Summarize customer interviews into 5 product requirements."></textarea>
         </label>
-        <label class="layer-field">
-          <span>Optional context or source text</span>
-          <textarea id="examples" rows="4" placeholder="Paste key paragraphs, bullet points, or constraints (optional)."></textarea>
-        </label>
+        <details class="layer-field">
+          <summary>Optional context or source text (Optional)</summary>
+          <textarea id="examples" rows="4" placeholder="Paste key paragraphs, bullet points, or constraints you already have."></textarea>
+          <small class="help">This helps Promptly understand existing material without forcing you to share it.</small>
+        </details>
         <button id="runBtn" class="btn layer-primary-action" data-i18n="run_btn">Generate optimized prompt</button>
       </div>
       <div class="layer-default__output">
@@ -416,52 +417,58 @@ html[data-theme="light"] .grey-gradient-text{
 
     <section class="layer-card">
       <button class="layer-toggle" type="button" data-layer-toggle="advancedPanel" aria-expanded="false">
-        <span>Layer 2 · Advanced controls</span>
+        <span>Layer 2 · Blueprint sync</span>
         <span class="layer-toggle__chevron">▾</span>
       </button>
       <div id="advancedPanel" class="layer-panel">
-        <p class="layer-note">Tweak the internal blueprint before we run the optimization pipeline.</p>
+        <p class="layer-note">Fine-tune the structural instructions and constraints that guide the agents behind the magic.</p>
         <div class="layer-panel__grid">
-          <label class="layer-field">
-            <span>Instruction blueprint (Optional)</span>
-            <textarea id="blueprintInstructions" rows="4" placeholder="E.g., Use Architect → Planner → Editor roles. Include evaluation checks."></textarea>
-          </label>
-          <label class="layer-field">
-            <span>Demonstration examples (Optional)</span>
-            <textarea id="blueprintExamples" rows="4" placeholder="Example input → desired output pairs. One per line."></textarea>
-          </label>
-          <label class="layer-field">
-            <span>Constraints & style (Optional)</span>
-            <textarea id="blueprintConstraints" rows="4" placeholder="Tone, length, formatting, safety requirements…"></textarea>
-          </label>
+          <details class="layer-field" open>
+            <summary>Instruction blueprint (Optional)</summary>
+            <textarea id="blueprintInstructions" rows="4" placeholder="Architect → Planner → Editor. Mention checks like “clarity” and “determinism.”"></textarea>
+            <small class="help">Describe how the agents should approach the prompt (tone, flow, guardrails).</small>
+          </details>
+          <details class="layer-field">
+            <summary>Demonstration examples (Optional)</summary>
+            <textarea id="blueprintExamples" rows="4" placeholder="POS || I love this! → Summary: Glowing praise."></textarea>
+            <small class="help">Share one input/output pair so agents know desired output style.</small>
+          </details>
+          <details class="layer-field">
+            <summary>Constraints & style (Optional)</summary>
+            <textarea id="blueprintConstraints" rows="4" placeholder="“Limit to 150 words”, “Use bullet list”, “Avoid slang.”"></textarea>
+            <small class="help">List formatting rules, length, safety limits, or tone you care about.</small>
+          </details>
         </div>
       </div>
     </section>
 
     <section class="layer-card layer-expert">
       <button class="layer-toggle" type="button" data-layer-toggle="expertPanel" aria-expanded="false">
-        <span>Layer 3 · Expert toolbox</span>
+        <span>Layer 3 · Expert lab</span>
         <span class="layer-toggle__chevron">▾</span>
       </button>
       <div id="expertPanel" class="layer-panel">
+        <p class="layer-note">Only open this when you want dataset-style control over samples, schema, and optimization knobs.</p>
         <div class="layer-panel__grid">
-          <label class="layer-field">
-            <span>POS / NEG dataset snippets (Optional)</span>
-            <textarea rows="4">POS || This is fantastic!
-NEG || This completely missed the brief.</textarea>
-          </label>
-          <label class="layer-field">
-            <span>Schema or output template (Optional)</span>
-            <textarea rows="4">{ "sections": ["Summary","Action items","Risks"], "style": "Concise, bullet-first" }</textarea>
-          </label>
-          <label class="layer-field">
-            <span>Optimization knobs (Optional)</span>
+          <details class="layer-field">
+            <summary>POS / NEG dataset snippets (Optional)</summary>
+            <textarea rows="4">POS || This highlights the main benefit.
+NEG || This is off track.</textarea>
+            <small class="help">List a few positive/negative examples to bias scoring.</small>
+          </details>
+          <details class="layer-field">
+            <summary>Schema or output template (Optional)</summary>
+            <textarea rows="4">{ "sections": ["Summary","Action items"], "style": "Polite, structured" }</textarea>
+            <small class="help">Define the structure we should respect in the final prompt.</small>
+          </details>
+          <details class="layer-field">
+            <summary>Optimization knobs (Optional)</summary>
             <textarea rows="4">candidates: 4
-tests: ["coherence","style_match","risk"]
+tests: ["clarity","risk"]
 temperature: 0.5</textarea>
-          </label>
+            <small class="help">Control candidate count, evaluation tests, or sampling behavior.</small>
+          </details>
         </div>
-        <div class="expert-divider"></div>
       </div>
     </section>
 

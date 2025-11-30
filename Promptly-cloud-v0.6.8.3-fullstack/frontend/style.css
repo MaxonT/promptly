@@ -3,7 +3,6 @@
   --bg:#0b0c10;--bg-soft:#0f121a;--card:#111624;--text:#eaf0fb;--muted:#9aa6bd;
   --border:#1e2740;--primary:#7c3aed;--accent:#06b6d4;--ok:#34d399;--warn:#fbbf24;--err:#f87171;
   --shadow:0 12px 30px rgba(0,0,0,.35);
-  --gradient-border:linear-gradient(120deg,var(--brand-a,#7C3AED),var(--brand-b,#06B6D4),var(--brand-c,#22D3EE));
 }
 [data-theme="light"]{
   --bg:#f6f8fb;--bg-soft:#ffffff;--card:#ffffff;--text:#05070c;--muted:#2f3744;

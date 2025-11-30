@@ -95,6 +95,7 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
       log("Account error: " + err.message);
     }
   }
+  const refreshAccount = () => loadAccount();
 
   async function submitAuthForm(path, payload) {
     log(`POST ${path} ...`);
@@ -120,7 +121,7 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
     try {
       const data = await submitAuthForm("/api/auth/login", payload);
       saveToken(data.token);
-      updateAuthView(data.user);
+      await refreshAccount();
       setAuthMessage("Signed in successfully.");
       loginForm.reset();
     } catch (err) {
@@ -139,7 +140,7 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
     try {
       const data = await submitAuthForm("/api/auth/register", payload);
       saveToken(data.token);
-      updateAuthView(data.user);
+      await refreshAccount();
       setAuthMessage("Account created and signed in.");
       registerForm.reset();
     } catch (err) {

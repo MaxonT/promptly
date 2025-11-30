@@ -9,6 +9,8 @@ export const authRouter = Router();
 const TOKEN_SECRET = process.env.JWT_SECRET || "dev";
 const TOKEN_EXPIRES_IN = process.env.JWT_EXPIRES_IN || "7d";
 const PASSWORD_MIN_LENGTH = 8;
+// Dummy hash used for constant-time comparison when user is not found (prevents timing attacks)
+const DUMMY_HASH = "$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy";
 
 function normalizeEmail(email = "") {
   return email.trim().toLowerCase();
@@ -90,12 +92,13 @@ authRouter.post("/login", async (req, res) => {
 
     const normalizedEmail = normalizeEmail(email);
     const row = db.prepare("SELECT * FROM users WHERE email = ?").get(normalizedEmail);
-    if (!row || !row.password_hash) {
-      return res.status(401).json({ ok: false, error: "Invalid credentials" });
-    }
-
-    const valid = await bcrypt.compare(password, row.password_hash);
-    if (!valid) {
+    
+    // Always perform bcrypt.compare() to prevent timing attacks
+    // Use dummy hash when user not found to ensure constant-time comparison
+    const hashToCompare = row?.password_hash || DUMMY_HASH;
+    const valid = await bcrypt.compare(password, hashToCompare);
+    
+    if (!row || !valid) {
       return res.status(401).json({ ok: false, error: "Invalid credentials" });
     }
 

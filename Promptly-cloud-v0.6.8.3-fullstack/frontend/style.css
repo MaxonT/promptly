@@ -33,8 +33,8 @@ header.topbar{position:sticky;top:0;display:flex;align-items:center;justify-cont
 .card{background:var(--card);border:1.2px solid transparent;border-radius:20px;box-shadow:var(--shadow);padding:18px;border-image:var(--gradient-border) 1;margin-bottom:12px}
 .card h2,.card h3{margin:6px 0 12px 0}
 .gradient-border{
-  border:1.5px solid transparent !important;
-  border-image: linear-gradient(120deg,var(--brand-a,#7C3AED),var(--brand-b,#06B6D4),var(--brand-c,#22D3EE)) 1 !important;
+  border:1.5px solid transparent;
+  border-image: linear-gradient(120deg,var(--brand-a,#7C3AED),var(--brand-b,#06B6D4),var(--brand-c,#22D3EE)) 1;
 }
 
 .layer-card{

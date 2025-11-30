@@ -46,6 +46,8 @@ header.topbar{position:sticky;top:0;display:flex;align-items:center;justify-cont
   z-index:0;
   border-radius:inherit;
   padding:0;
+  /* Negative margin matches the border-width (1.2px) to expand the pseudo-element
+     outward, creating a visible gradient border effect around the card */
   margin:-1.2px;
   background:var(--gradient-border);
   pointer-events:none;
@@ -67,6 +69,8 @@ header.topbar{position:sticky;top:0;display:flex;align-items:center;justify-cont
   z-index:0;
   border-radius:inherit;
   padding:0;
+  /* Negative margin matches the border-width (1.5px) to expand the pseudo-element
+     outward, creating a visible gradient border effect */
   margin:-1.5px;
   background:linear-gradient(120deg,var(--brand-a,#7C3AED),var(--brand-b,#06B6D4),var(--brand-c,#22D3EE));
   pointer-events:none;

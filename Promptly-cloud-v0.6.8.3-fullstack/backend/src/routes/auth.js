@@ -98,7 +98,11 @@ authRouter.post("/login", async (req, res) => {
     const hashToCompare = row?.password_hash || DUMMY_HASH;
     const valid = await bcrypt.compare(password, hashToCompare);
     
-    if (!row || !valid) {
+    // Combine conditions to avoid short-circuit evaluation that could leak timing info
+    const userExists = !!row;
+    const credentialsValid = userExists && valid;
+    
+    if (!credentialsValid) {
       return res.status(401).json({ ok: false, error: "Invalid credentials" });
     }
 

@@ -192,6 +192,21 @@ CREATE TABLE IF NOT EXISTS outcome_candidates (
 );
 `);
 
+function ensureColumnExists(table, column, definition) {
+  try {
+    db.prepare(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`).run();
+  } catch (err) {
+    if (!/duplicate column name/i.test(err.message)) {
+      console.error(`[promptly] Failed to add column ${column} to ${table}:`, err);
+      throw err;
+    }
+  }
+}
+
+ensureColumnExists("runs", "completed_at", "TEXT");
+ensureColumnExists("runs", "metrics_json", "TEXT");
+ensureColumnExists("evaluations", "metrics_json", "TEXT");
+
 // Ensure demo user exists (for question sessions without authentication)
 // This runs every time the server starts
 try {

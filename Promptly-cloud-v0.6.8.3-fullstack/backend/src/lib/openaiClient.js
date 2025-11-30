@@ -32,7 +32,16 @@ export async function chatJson({ system, user, model }) {
     ]
   });
   const content = completion.choices?.[0]?.message?.content || "{}";
-  return JSON.parse(content);
+  let parsed;
+  try {
+    parsed = JSON.parse(content);
+  } catch {
+    parsed = {};
+  }
+  return {
+    data: parsed,
+    usage: completion.usage || {}
+  };
 }
 
 /**
@@ -51,5 +60,8 @@ export async function chatText({ system, user, model }) {
       { role: "user", content: user }
     ]
   });
-  return completion.choices?.[0]?.message?.content || "";
+  return {
+    text: completion.choices?.[0]?.message?.content || "",
+    usage: completion.usage || {}
+  };
 }

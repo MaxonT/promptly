@@ -115,7 +115,7 @@ enhanceRouter.post("/structure", async (req, res) => {
 
 Return only the enhanced prompt. Do not add explanations.`;
 
-    const enhanced = await chatText({ system, user: fullPrompt });
+    const { text: enhanced } = await chatText({ system, user: fullPrompt });
 
     res.json({
       ok: true,
@@ -162,7 +162,7 @@ enhanceRouter.post("/style", async (req, res) => {
 
 Return only the enhanced prompt. Do not add explanations.`;
 
-    const enhanced = await chatText({ system, user: fullPrompt });
+    const { text: enhanced } = await chatText({ system, user: fullPrompt });
 
     res.json({
       ok: true,
@@ -209,7 +209,7 @@ enhanceRouter.post("/simplify", async (req, res) => {
 
 Return only the simplified prompt. Do not add explanations.`;
 
-    const enhanced = await chatText({ system, user: fullPrompt });
+    const { text: enhanced } = await chatText({ system, user: fullPrompt });
 
     res.json({
       ok: true,
@@ -268,7 +268,7 @@ Return ONLY a JSON object in this exact format:
   ]
 }`;
 
-    const result = await chatJson({ system, user: fullPrompt });
+    const { data: result } = await chatJson({ system, user: fullPrompt });
 
     res.json({
       ok: true,
@@ -326,7 +326,7 @@ Return ONLY a JSON object in this exact format:
 
 If no issues found, return {"issues": []}`;
 
-    const result = await chatJson({ system, user: fullPrompt });
+    const { data: result } = await chatJson({ system, user: fullPrompt });
 
     res.json({
       ok: true,

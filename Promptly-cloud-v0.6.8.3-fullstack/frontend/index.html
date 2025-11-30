@@ -583,11 +583,47 @@ NEG || This is terrible.</textarea>
       </pre>
       <h3 style="margin-top:16px" class="gradient-animated">Glossary</h3>
 <ul class="glossary-list glossy">
-  <li><span class="glossary-term" data-i18n-key="accuracy">Accuracy</span><span class="glossary-def">correct outputs / all tests.</span></li>
-  <li><span class="glossary-term" data-i18n-key="f1">F1</span><span class="glossary-def">harmonic mean of precision & recall (0–1).</span></li>
-  <li><span class="glossary-term" data-i18n-key="pass_rate">Pass Rate</span><span class="glossary-def">tests passed with a threshold.</span></li>
-  <li><span class="glossary-term" data-i18n-key="token_cost">Token Cost</span><span class="glossary-def">total tokens used (proxy for $$).</span></li>
-  <li><span class="glossary-term" data-i18n-key="progress">Progress %</span><span class="glossary-def">optimization completion estimate.</span></li>
+  <li>
+    <span class="glossary-term" data-i18n-key="accuracy">Accuracy</span>
+    <span class="glossary-def">
+      正确输出占比，范围 0–1。公式：<code>correct_count / total_cases</code>。
+      当每个测试和预期完全匹配时，Acc=1。
+    </span>
+  </li>
+  <li>
+    <span class="glossary-term" data-i18n-key="f1">F1</span>
+    <span class="glossary-def">
+      调和平均数，衡量精度与召回的平衡。范围 0–1。
+      公式：<code>2 × precision × recall / (precision + recall)</code>，precision = TP/(TP+FP)，recall = TP/(TP+FN)。
+    </span>
+  </li>
+  <li>
+    <span class="glossary-term" data-i18n-key="pass_rate">Pass Rate</span>
+    <span class="glossary-def">
+      满足结构/格式约束的输出比例，范围 0–1。
+      公式：<code>passed_constraints / total_constraints</code>（或 passed_cases/total_cases）。
+    </span>
+  </li>
+  <li>
+    <span class="glossary-term" data-i18n-key="token_cost">Token Cost</span>
+    <span class="glossary-def">
+      模型使用的总 token 数，公式：<code>prompt_tokens + completion_tokens</code>。
+      越低表示提示更紧凑，有助于控制成本。
+    </span>
+  </li>
+  <li>
+    <span class="glossary-term" data-i18n-key="progress">Progress %</span>
+    <span class="glossary-def">
+      复合优化指标，范围 0–100，权重平均计算：
+      <code>progress = average([
+        accuracy / target_accuracy,
+        f1 / target_f1,
+        pass_rate / target_pass_rate,
+        ideal_token_cost / token_cost
+      ]) × 100</code>。
+      越接近 100 表示越接近目标。
+    </span>
+  </li>
 </ul>
     `;
     document.body.appendChild(section);

@@ -11,7 +11,7 @@ const TOKEN_EXPIRES_IN = process.env.JWT_EXPIRES_IN || "7d";
 const PASSWORD_MIN_LENGTH = 8;
 
 // Email validation regex pattern (more restrictive per RFC standards)
-const EMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+const EMAIL_REGEX = /^[a-zA-Z0-9_%+-]+(\.[a-zA-Z0-9_%+-]+)*@[a-zA-Z0-9-]+(\.[a-zA-Z0-9-]+)*\.[a-zA-Z]{2,}$/;
 
 function normalizeEmail(email = "") {
   return email.trim().toLowerCase();

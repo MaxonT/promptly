@@ -92,13 +92,13 @@ h3[data-title='instances'] + pre{ display:none !important; }
 .glossary-list{ list-style:none; padding:0; margin:14px 0; display:grid; gap:12px; }
 .glossary-list li{
   display:grid; grid-template-columns:220px 1fr; align-items:center;
-  border:1px solid transparent; border-radius:18px; padding:14px 16px;
+  border:1.5px solid transparent; border-radius:18px; padding:14px 16px;
   background: linear-gradient(var(--surface-2),var(--surface-2)) padding-box,
               linear-gradient(90deg,var(--brand-a),var(--brand-b),var(--brand-c)) border-box;
 }
 .glossary-term{ font-weight:800; font-size:1.05rem; }
 .glossary-def{ color:var(--text-med); }
-html[data-theme="light"] .glossary-def{ color:#334155; }
+html[data-theme="light"] .glossary-def{ color:#1F2937; }
 @media (max-width:640px){
   .glossary-list li{ grid-template-columns:1fr; row-gap:6px; }
 }
@@ -120,7 +120,7 @@ html[data-theme="light"] .glossary-def{ color:#334155; }
   --brand-c:#22D3EE;
 }
 .kpi-card, .card, .metric, .stat, .tile, .panel{
-  border:1px solid transparent;
+  border:1.5px solid transparent;
   background: linear-gradient(var(--surface-2),var(--surface-2)) padding-box,
               linear-gradient(90deg,var(--brand-a),var(--brand-b),var(--brand-c)) border-box;
   border-radius:20px;
@@ -187,8 +187,8 @@ html[data-theme="light"]{
   --surface:#F5F7FB;
   --surface-2:#FFFFFF;
   --text-high:#0B0F14;
-  --text-med:#293042;
-  --text-low:#6B7280;
+  --text-med:#1F2937;
+  --text-low:#4B5563;
 }
 /* Light theme card adjustments */
 html[data-theme="light"] .kpi-card, 

@@ -229,6 +229,130 @@ html[data-theme="light"] .grey-gradient-text{
   resize:vertical;
 }
 </style>
+<style>
+.example-gallery{
+  border-radius:1rem;
+  border:1px solid rgba(255,255,255,0.08);
+  background:linear-gradient(180deg,rgba(15,23,42,0.9),rgba(15,23,42,0.6));
+  padding:1.5rem;
+  margin-top:1.5rem;
+  box-shadow:0 10px 30px rgba(15,23,42,0.45);
+}
+.example-gallery__intro{
+  margin-bottom:1rem;
+}
+.example-gallery__subtitle{
+  margin:0;
+  font-size:0.9rem;
+  color:hsla(0,0%,100%,0.72);
+}
+.example-tabs{
+  display:flex;
+  flex-wrap:wrap;
+  gap:0.5rem;
+  margin-bottom:1rem;
+}
+.example-tab{
+  border-radius:999px;
+  border:1px solid rgba(255,255,255,0.2);
+  background:transparent;
+  color:inherit;
+  font-size:0.82rem;
+  padding:0.35rem 0.9rem;
+  cursor:pointer;
+  transition:all 0.2s ease;
+}
+.example-tab:hover{
+  border-color:rgba(124,58,237,0.8);
+}
+.example-tab--active{
+  border-color:transparent;
+  background:linear-gradient(120deg,#7c3aed,#06b6d4);
+  font-weight:600;
+  box-shadow:0 6px 18px rgba(0,0,0,0.25);
+}
+.example-card{
+  background:rgba(15,23,42,0.95);
+  border-radius:1rem;
+  padding:1.25rem;
+  border:1px solid rgba(255,255,255,0.08);
+  transition:opacity .35s ease,transform .35s ease;
+  box-shadow:0 15px 35px rgba(0,0,0,0.35);
+  opacity:0;
+  transform:translateY(6px);
+}
+.example-card--visible{
+  opacity:1;
+  transform:translateY(0);
+}
+.example-card__header{
+  display:flex;
+  align-items:center;
+  gap:0.75rem;
+  margin-bottom:1rem;
+}
+.example-card__icon{
+  width:46px;
+  height:46px;
+  border-radius:0.85rem;
+  background:rgba(255,255,255,0.05);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:1.65rem;
+}
+.example-card__title{
+  font-size:1.15rem;
+  font-weight:600;
+}
+.example-card__description{
+  margin:0;
+  font-size:0.85rem;
+  color:hsla(0,0%,100%,0.7);
+}
+.example-card__body{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+  gap:1rem;
+}
+.example-block{
+  border-radius:0.9rem;
+  border:1px solid rgba(255,255,255,0.08);
+  padding:0.85rem;
+  overflow:hidden;
+}
+.example-block--input{
+  background:rgba(255,255,255,0.04);
+}
+.example-block--output{
+  background:rgba(255,255,255,0.08);
+}
+.example-block__label{
+  display:flex;
+  align-items:center;
+  gap:0.35rem;
+  font-size:0.7rem;
+  letter-spacing:0.08em;
+  text-transform:uppercase;
+  color:rgba(255,255,255,0.7);
+  margin-bottom:0.4rem;
+}
+.example-block__icon{
+  font-size:0.9rem;
+}
+.example-block__text{
+  margin:0;
+  font-size:0.85rem;
+  line-height:1.45;
+  white-space:pre-wrap;
+  color:#fff;
+}
+@media (max-width:960px){
+  .example-card__body{
+    grid-template-columns:1fr;
+  }
+}
+</style>
 </head>
 <body>
   <!-- FIX 3.2: Toast notification container -->
@@ -365,9 +489,41 @@ NEG || This is terrible.</textarea>
       </div>
     </section>
 
-    <section class="card" style="margin-top:16px">
-      <h3 class="gradient-text" data-i18n="versions">Prompt Versions</h3>
-      <div id="verList" class="list"></div>
+    <section class="card example-gallery" id="exampleGallery">
+      <div class="example-gallery__intro">
+        <h3 class="gradient-text">See what Promptly can do</h3>
+        <p class="example-gallery__subtitle">
+          Pick a scenario and watch how messy input turns into clean, ready-to-use output.
+        </p>
+      </div>
+      <div class="example-tabs" id="exampleTabs"></div>
+      <div class="example-card example-card--visible" id="exampleCard">
+        <div class="example-card__header">
+          <span class="example-card__icon" id="exampleIcon">✉️</span>
+          <div>
+            <div class="example-card__title" id="exampleTitle">Email Reply Assistant</div>
+            <p class="example-card__description" id="exampleDescription">
+              Turn rough email threads into warm, polite replies.
+            </p>
+          </div>
+        </div>
+        <div class="example-card__body">
+          <div class="example-block example-block--input">
+            <div class="example-block__label">
+              <span class="example-block__icon">📥</span>
+              <span>Input</span>
+            </div>
+            <pre class="example-block__text" id="exampleInput"></pre>
+          </div>
+          <div class="example-block example-block--output">
+            <div class="example-block__label">
+              <span class="example-block__icon">📤</span>
+              <span>Output</span>
+            </div>
+            <pre class="example-block__text" id="exampleOutput"></pre>
+          </div>
+        </div>
+      </div>
     </section>
   </main>
 
@@ -572,16 +728,6 @@ NEG || This is terrible.</textarea>
         <div><img src="assets/placeholder_pie.png" alt="Error breakdown" style="width:100%;border-radius:12px;box-shadow:0 4px 24px rgba(0,0,0,.25)"><p style="opacity:.7;margin-top:6px">Error Breakdown</p></div>
         <div><img src="assets/placeholder_gauge.png" alt="Progress gauge" style="width:100%;border-radius:12px;box-shadow:0 4px 24px rgba(0,0,0,.25)"><p style="opacity:.7;margin-top:6px">Progress Gauge</p></div>
       </div>
-      <h3 style="margin-top:16px" class="gradient-animated">Instances</h3>
-      <pre style="white-space:pre-wrap;background:rgba(255,255,255,.04);padding:12px;border-radius:12px">
-1) Summarization
-   Instruction: "Summarize the article in 3 bullet points. Tone: neutral."
-   Test: input: {url: "..."} → ideal: "- point A\n- point B\n- point C"
-
-2) Email draft
-   Instruction: "Write a warm reply confirming availability on Tuesday 3pm."
-   Test: input: {thread:"..."} → ideal: "Warm, polite confirmation with time."
-      </pre>
       <h3 style="margin-top:16px" class="gradient-animated">Glossary</h3>
 <ul class="glossary-list glossy">
   <li>
@@ -945,15 +1091,6 @@ NEG || This is terrible.</textarea>
   }
   hookThemeSelector();
 
-  // 3) Hide Instances block created earlier
-  const instTitle = Array.from(document.querySelectorAll('#user-guide h3')).find(h=>/^\s*instances\s*$/i.test(h.textContent||''));
-  if(instTitle){
-    instTitle.setAttribute('data-title','instances');
-    const next = instTitle.nextElementSibling;
-    if(next && next.tagName==='PRE'){ next.style.display='none'; }
-    instTitle.style.display='none';
-  }
-
   // 4) Move KPI badges to top-right explicitly after layout
   function fixBadgePositions(){
     document.querySelectorAll('.kpi-card .badge-updated').forEach(b=>{
@@ -1029,4 +1166,93 @@ NEG || This is terrible.</textarea>
 })();
 </script>
 
+<script>
+(() => {
+  const SCENARIOS = [
+    {
+      id: "email",
+      tabLabel: "Email reply",
+      icon: "✉️",
+      title: "Email Reply Assistant",
+      description: "Turn rough email threads into warm, polite replies.",
+      inputExample:
+        "Hey, can you still meet on Tuesday afternoon?\nLet me know what works.",
+      outputExample:
+        "Hi! Tuesday at 3pm works great for me. Thanks for checking in!"
+    },
+    {
+      id: "summarize",
+      tabLabel: "Summarize",
+      icon: "📝",
+      title: "Article Summarizer",
+      description: "Turn long text into short bullet-point summaries.",
+      inputExample: "Here is a multi-paragraph article about product design...",
+      outputExample: "- Key point 1\n- Key point 2\n- Key point 3"
+    },
+    {
+      id: "rewrite",
+      tabLabel: "Rewrite",
+      icon: "🔄",
+      title: "Rewrite & Polish",
+      description: "Clean up grammar and make your writing clearer.",
+      inputExample:
+        "this sentence are not very good written but I wanna send to my boss",
+      outputExample:
+        "This sentence isn’t very well written, but I’d like to send it to my boss."
+    },
+    {
+      id: "translate",
+      tabLabel: "Translate",
+      icon: "🌎",
+      title: "Translate",
+      description: "Translate text while keeping tone and style.",
+      inputExample:
+        "Please help me translate this email to English, but keep it polite and friendly.",
+      outputExample:
+        "Hi there, I hope you’ve been doing well. I wanted to follow up about..."
+    }
+  ];
+
+  const tabsEl = document.getElementById("exampleTabs");
+  const cardEl = document.getElementById("exampleCard");
+  if (!tabsEl || !cardEl) return;
+  const iconEl = document.getElementById("exampleIcon");
+  const titleEl = document.getElementById("exampleTitle");
+  const descEl = document.getElementById("exampleDescription");
+  const inputEl = document.getElementById("exampleInput");
+  const outputEl = document.getElementById("exampleOutput");
+  const activeClass = "example-tab--active";
+  let activeId = SCENARIOS[0].id;
+
+  function renderTabs() {
+    tabsEl.innerHTML = SCENARIOS.map(
+      (scenario) =>
+        `<button type="button" class="example-tab" data-id="${scenario.id}">${scenario.tabLabel}</button>`
+    ).join("");
+    tabsEl.querySelectorAll(".example-tab").forEach((btn) => {
+      btn.addEventListener("click", () => setScenario(btn.dataset.id));
+    });
+  }
+
+  function setScenario(id) {
+    const scenario = SCENARIOS.find((s) => s.id === id) || SCENARIOS[0];
+    activeId = scenario.id;
+    if (iconEl) iconEl.textContent = scenario.icon;
+    if (titleEl) titleEl.textContent = scenario.title;
+    if (descEl) descEl.textContent = scenario.description;
+    if (inputEl) inputEl.textContent = scenario.inputExample;
+    if (outputEl) outputEl.textContent = scenario.outputExample;
+    tabsEl.querySelectorAll(".example-tab").forEach((btn) => {
+      btn.classList.toggle(activeClass, btn.dataset.id === activeId);
+    });
+    cardEl.classList.remove("example-card--visible");
+    requestAnimationFrame(() => cardEl.classList.add("example-card--visible"));
+  }
+
+  renderTabs();
+  setScenario(activeId);
+})();
+</script>
+
+</body>
 </html>

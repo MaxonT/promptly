@@ -6,7 +6,15 @@ import { nanoid } from "nanoid";
 
 export const authRouter = Router();
 
-const TOKEN_SECRET = process.env.JWT_SECRET || "dev";
+let TOKEN_SECRET = process.env.JWT_SECRET;
+if (!TOKEN_SECRET) {
+  if (process.env.NODE_ENV === "development") {
+    console.warn("[promptly] WARNING: JWT_SECRET is not set. Using default insecure development secret.");
+    TOKEN_SECRET = "dev";
+  } else {
+    throw new Error("[promptly] FATAL: JWT_SECRET environment variable must be set in production.");
+  }
+}
 const TOKEN_EXPIRES_IN = process.env.JWT_EXPIRES_IN || "7d";
 const PASSWORD_MIN_LENGTH = 8;
 

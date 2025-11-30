@@ -3,7 +3,6 @@
   --bg:#0b0c10;--bg-soft:#0f121a;--card:#111624;--text:#eaf0fb;--muted:#9aa6bd;
   --border:#1e2740;--primary:#7c3aed;--accent:#06b6d4;--ok:#34d399;--warn:#fbbf24;--err:#f87171;
   --shadow:0 12px 30px rgba(0,0,0,.35);
-  --gradient-border:linear-gradient(120deg,var(--brand-a,#7C3AED),var(--brand-b,#06B6D4),var(--brand-c,#22D3EE));
 }
 [data-theme="light"]{
   --bg:#f6f8fb;--bg-soft:#ffffff;--card:#ffffff;--text:#05070c;--muted:#2f3744;
@@ -32,76 +31,28 @@ header.topbar{position:sticky;top:0;display:flex;align-items:center;justify-cont
 
 .card{
   background:var(--card);
+  border:1.5px solid var(--border);
   border-radius:20px;
   box-shadow:var(--shadow);
   padding:18px;
   margin-bottom:12px;
   position:relative;
 }
-.card::before{
-  content:"";
-  position:absolute;
-  inset:0;
-  z-index:0;
-  border-radius:inherit;
-  padding:0;
-  margin:-1.2px;
-  background:var(--gradient-border);
-  pointer-events:none;
-}
-.card > *{
-  position:relative;
-  z-index:1;
-}
 .card h2,.card h3{margin:6px 0 12px 0}
-.gradient-border{
-  position:relative;
-}
-.gradient-border::before{
-  content:"";
-  position:absolute;
-  inset:0;
-  z-index:0;
-  border-radius:inherit;
-  padding:0;
-  margin:-1.5px;
-  background:linear-gradient(120deg,var(--brand-a,#7C3AED),var(--brand-b,#06B6D4),var(--brand-c,#22D3EE));
-  pointer-events:none;
-}
-.gradient-border > *{
-  position:relative;
-  z-index:1;
-}
 
 .layer-card{
   background:var(--card);
+  border:1.5px solid var(--border);
   border-radius:20px;
   padding:22px;
   margin-bottom:20px;
   position: relative;
-  /* border and border-image removed, handled by ::before */
-}
-.layer-card::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  border-radius: inherit;
-  padding: 0;
-  margin: -2px; /* thickness of the border */
-  background: var(--gradient-border);
-  pointer-events: none;
-}
-.layer-card > * {
-  position: relative;
-  z-index: 1;
 }
 .layer-card.layer-default{
   box-shadow:0 20px 40px rgba(0,0,0,0.15);
 }
 .layer-card .layer-toggle{
-  border-width:1.5px;
-  border-image: linear-gradient(90deg,var(--brand-a,#7C3AED),var(--brand-b,#06B6D4),var(--brand-c,#22D3EE)) 1;
+  border:1.5px solid rgba(124,58,237,0.25);
 }
 .layer-panel{
   border-color:rgba(255,255,255,0.2);

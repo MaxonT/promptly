@@ -180,7 +180,7 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
       const modelDisplayName = "Promptly Refined LLM Model";
       const modelItems = [
         { icon: "🤖", label: "Default Model", value: modelDisplayName, badge: "Primary", desc: "Main generation model that produces the actual responses." },
-        { icon: "🎯", label: "Outcome Model", value: s.outcomeModel ? modelDisplayName : "(uses default)", badge: null, desc: "Judging model that scores candidates and picks the best one." },
+        { icon: "🎯", label: "Outcome Model", value: s.outcomeModel ? modelDisplayName : "Promptly Refined Judge", badge: "Optimized", desc: "Judging model that scores candidates and picks the best one." },
         { icon: "📊", label: "Max Candidates", value: String(s.maxCandidates ?? 8), badge: "Optimized", desc: "Generates up to 8 candidate answers per run and selects the best." }
       ];
       for (const item of modelItems) {

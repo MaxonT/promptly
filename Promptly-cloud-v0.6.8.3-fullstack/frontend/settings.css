@@ -90,6 +90,10 @@
   gap:0.45rem;
   background:rgba(15,23,42,0.4);
 }
+html[data-theme="light"] .account-form{
+  background:rgba(241,245,249,0.95);
+  border-color:#cbd5e1;
+}
 .account-form h3{
   margin:0;
   font-size:0.95rem;
@@ -106,6 +110,11 @@
   padding:0.4rem 0.5rem;
   background:var(--surface,rgba(15,23,42,0.92));
   color:inherit;
+}
+html[data-theme="light"] .account-form input{
+  background:#ffffff;
+  border-color:#cbd5e1;
+  color:#0f172a;
 }
 .account-form button,
 .account-logout{
@@ -145,9 +154,68 @@
   padding:0;
   margin:0;
   font-size:0.85rem;
+  display:flex;
+  flex-direction:column;
+  gap:0.5rem;
 }
 .settings-features li{
-  padding:0.25rem 0;
+  padding:0.6rem 0.75rem;
+  border-radius:0.5rem;
+  background:linear-gradient(135deg,rgba(124,58,237,0.1),rgba(6,182,212,0.1));
+  border:1px solid rgba(124,58,237,0.2);
+  display:flex;
+  align-items:center;
+  gap:0.5rem;
+  transition:all 0.2s ease;
+}
+.settings-features li:hover{
+  background:linear-gradient(135deg,rgba(124,58,237,0.18),rgba(6,182,212,0.18));
+  border-color:rgba(124,58,237,0.35);
+  transform:translateX(4px);
+}
+.settings-features li .feature-icon{
+  width:24px;
+  height:24px;
+  border-radius:50%;
+  background:linear-gradient(135deg,#7C3AED,#06B6D4);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:0.7rem;
+  color:#fff;
+  flex-shrink:0;
+}
+.settings-features li .feature-name{
+  font-weight:600;
+  color:var(--text);
+}
+.settings-features li .feature-status{
+  margin-left:auto;
+  padding:0.2rem 0.5rem;
+  border-radius:999px;
+  font-size:0.7rem;
+  font-weight:600;
+  text-transform:uppercase;
+  letter-spacing:0.05em;
+}
+.settings-features li .feature-status.on{
+  background:linear-gradient(135deg,rgba(16,185,129,0.2),rgba(34,211,238,0.2));
+  color:#10b981;
+  border:1px solid rgba(16,185,129,0.3);
+}
+.settings-features li .feature-status.off{
+  background:rgba(100,116,139,0.2);
+  color:#64748b;
+  border:1px solid rgba(100,116,139,0.3);
+}
+
+/* Hide raw settings - not needed for polished UI */
+.settings-panel--raw{
+  display:none;
+}
+/* Hide log panel by default */
+.settings-panel--log{
+  display:none;
 }
 .settings-code-block{
   border-radius:0.6rem;

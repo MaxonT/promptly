@@ -177,9 +177,10 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
       envSummaryEl.textContent = `Environment: ${env} · LLM: ${llmEnabled}`;
 
       modelListEl.innerHTML = "";
+      const modelDisplayName = "Promptly Refined LLM Model";
       const rows = [
-        ["Default model", s.defaultModel || "(not set)"],
-        ["Outcome model", s.outcomeModel || "(fallback to default)"],
+        ["Default model", modelDisplayName],
+        ["Outcome model", s.outcomeModel ? modelDisplayName : "(uses default)"],
         ["Max candidates", String(s.maxCandidates ?? 8)]
       ];
       for (const [label, value] of rows) {
@@ -193,9 +194,35 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
 
       featuresListEl.innerHTML = "";
       const features = s.features || {};
+      const featureIcons = {
+        questionWizard: "🧙",
+        promptEnhancer: "✨",
+        outcomeRunner: "🎯"
+      };
+      const featureLabels = {
+        questionWizard: "Question Wizard",
+        promptEnhancer: "Prompt Enhancer",
+        outcomeRunner: "Outcome Runner"
+      };
       Object.keys(features).forEach((key) => {
         const li = document.createElement("li");
-        li.textContent = `${key}: ${features[key] ? "on" : "off"}`;
+        const isOn = features[key];
+        
+        const iconSpan = document.createElement("span");
+        iconSpan.className = "feature-icon";
+        iconSpan.textContent = featureIcons[key] || "⚡";
+        
+        const nameSpan = document.createElement("span");
+        nameSpan.className = "feature-name";
+        nameSpan.textContent = featureLabels[key] || key;
+        
+        const statusSpan = document.createElement("span");
+        statusSpan.className = `feature-status ${isOn ? "on" : "off"}`;
+        statusSpan.textContent = isOn ? "Active" : "Inactive";
+        
+        li.appendChild(iconSpan);
+        li.appendChild(nameSpan);
+        li.appendChild(statusSpan);
         featuresListEl.appendChild(li);
       });
 

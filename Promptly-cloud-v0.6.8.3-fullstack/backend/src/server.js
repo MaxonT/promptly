@@ -11,6 +11,7 @@ import { specsRouter } from "./routes/specs.js";
 import { questionSessionRouter } from "./routes/questionSessions.js";
 import { runsRouter } from "./routes/runs.js";
 import { outcomeRunsRouter } from "./routes/outcomeRuns.js";
+import { enhanceRouter } from "./routes/enhance.js";
 
 dotenv.config();
 const app = express();
@@ -58,6 +59,7 @@ app.use("/api/specs", specsRouter);
 app.use("/api/question-sessions", questionSessionRouter);
 app.use("/api/runs", runsRouter);
 app.use("/api/outcome-runs", outcomeRunsRouter);
+app.use("/api/enhance", enhanceRouter);
 
 const PORT = process.env.PORT || 8080;
 app.listen(PORT, () => {

@@ -92,13 +92,13 @@ h3[data-title='instances'] + pre{ display:none !important; }
 .glossary-list{ list-style:none; padding:0; margin:14px 0; display:grid; gap:12px; }
 .glossary-list li{
   display:grid; grid-template-columns:220px 1fr; align-items:center;
-  border:1px solid transparent; border-radius:18px; padding:14px 16px;
+  border:1.5px solid transparent; border-radius:18px; padding:14px 16px;
   background: linear-gradient(var(--surface-2),var(--surface-2)) padding-box,
               linear-gradient(90deg,var(--brand-a),var(--brand-b),var(--brand-c)) border-box;
 }
 .glossary-term{ font-weight:800; font-size:1.05rem; }
 .glossary-def{ color:var(--text-med); }
-html[data-theme="light"] .glossary-def{ color:#334155; }
+html[data-theme="light"] .glossary-def{ color:#1F2937; }
 @media (max-width:640px){
   .glossary-list li{ grid-template-columns:1fr; row-gap:6px; }
 }
@@ -120,7 +120,7 @@ html[data-theme="light"] .glossary-def{ color:#334155; }
   --brand-c:#22D3EE;
 }
 .kpi-card, .card, .metric, .stat, .tile, .panel{
-  border:1px solid transparent;
+  border:1.5px solid transparent;
   background: linear-gradient(var(--surface-2),var(--surface-2)) padding-box,
               linear-gradient(90deg,var(--brand-a),var(--brand-b),var(--brand-c)) border-box;
   border-radius:20px;
@@ -187,8 +187,8 @@ html[data-theme="light"]{
   --surface:#F5F7FB;
   --surface-2:#FFFFFF;
   --text-high:#0B0F14;
-  --text-med:#293042;
-  --text-low:#6B7280;
+  --text-med:#1F2937;
+  --text-low:#4B5563;
 }
 /* Light theme card adjustments */
 html[data-theme="light"] .kpi-card, 
@@ -229,6 +229,130 @@ html[data-theme="light"] .grey-gradient-text{
   resize:vertical;
 }
 </style>
+<style>
+.example-gallery{
+  border-radius:1rem;
+  border:1px solid rgba(255,255,255,0.08);
+  background:linear-gradient(180deg,rgba(15,23,42,0.9),rgba(15,23,42,0.6));
+  padding:1.5rem;
+  margin-top:1.5rem;
+  box-shadow:0 10px 30px rgba(15,23,42,0.45);
+}
+.example-gallery__intro{
+  margin-bottom:1rem;
+}
+.example-gallery__subtitle{
+  margin:0;
+  font-size:0.9rem;
+  color:hsla(0,0%,100%,0.72);
+}
+.example-tabs{
+  display:flex;
+  flex-wrap:wrap;
+  gap:0.5rem;
+  margin-bottom:1rem;
+}
+.example-tab{
+  border-radius:999px;
+  border:1px solid rgba(255,255,255,0.2);
+  background:transparent;
+  color:inherit;
+  font-size:0.82rem;
+  padding:0.35rem 0.9rem;
+  cursor:pointer;
+  transition:all 0.2s ease;
+}
+.example-tab:hover{
+  border-color:rgba(124,58,237,0.8);
+}
+.example-tab--active{
+  border-color:transparent;
+  background:linear-gradient(120deg,#7c3aed,#06b6d4);
+  font-weight:600;
+  box-shadow:0 6px 18px rgba(0,0,0,0.25);
+}
+.example-card{
+  background:rgba(15,23,42,0.95);
+  border-radius:1rem;
+  padding:1.25rem;
+  border:1px solid rgba(255,255,255,0.08);
+  transition:opacity .35s ease,transform .35s ease;
+  box-shadow:0 15px 35px rgba(0,0,0,0.35);
+  opacity:0;
+  transform:translateY(6px);
+}
+.example-card--visible{
+  opacity:1;
+  transform:translateY(0);
+}
+.example-card__header{
+  display:flex;
+  align-items:center;
+  gap:0.75rem;
+  margin-bottom:1rem;
+}
+.example-card__icon{
+  width:46px;
+  height:46px;
+  border-radius:0.85rem;
+  background:rgba(255,255,255,0.05);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:1.65rem;
+}
+.example-card__title{
+  font-size:1.15rem;
+  font-weight:600;
+}
+.example-card__description{
+  margin:0;
+  font-size:0.85rem;
+  color:hsla(0,0%,100%,0.7);
+}
+.example-card__body{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+  gap:1rem;
+}
+.example-block{
+  border-radius:0.9rem;
+  border:1px solid rgba(255,255,255,0.08);
+  padding:0.85rem;
+  overflow:hidden;
+}
+.example-block--input{
+  background:rgba(255,255,255,0.04);
+}
+.example-block--output{
+  background:rgba(255,255,255,0.08);
+}
+.example-block__label{
+  display:flex;
+  align-items:center;
+  gap:0.35rem;
+  font-size:0.7rem;
+  letter-spacing:0.08em;
+  text-transform:uppercase;
+  color:rgba(255,255,255,0.7);
+  margin-bottom:0.4rem;
+}
+.example-block__icon{
+  font-size:0.9rem;
+}
+.example-block__text{
+  margin:0;
+  font-size:0.85rem;
+  line-height:1.45;
+  white-space:pre-wrap;
+  color:#fff;
+}
+@media (max-width:960px){
+  .example-card__body{
+    grid-template-columns:1fr;
+  }
+}
+</style>
 </head>
 <body>
   <!-- FIX 3.2: Toast notification container -->
@@ -242,6 +366,7 @@ html[data-theme="light"] .grey-gradient-text{
         <a href="privacy.html" data-i18n="nav_privacy">Privacy</a>
         <a href="terms.html" data-i18n="nav_terms">Terms</a>
         <a href="cookies.html" data-i18n="nav_cookies">Cookies</a>
+        <a href="settings.html#accountPanel" data-i18n="nav_account">Account</a>
       </div>
       <label class="control"><span data-i18n="appearance">Appearance</span>
         <select id="themeSelect"><option value="auto" data-i18n="auto">System</option><option value="light" data-i18n="light">Light</option><option value="dark" data-i18n="dark">Dark</option></select>
@@ -259,6 +384,7 @@ html[data-theme="light"] .grey-gradient-text{
         <div class="subtitle" data-i18n="hero_subtitle">Visualization-first workflow. See every gain, every cost, every version.</div>
       </div>
     </div>
+
 
 <section class="card wizard-landing" id="wizardLanding">
   <h2 class="gradient-text">Question Wizard</h2>
@@ -366,9 +492,102 @@ NEG || This is terrible.</textarea>
       </div>
     </section>
 
-    <section class="card" style="margin-top:16px">
-      <h3 class="gradient-text" data-i18n="versions">Prompt Versions</h3>
-      <div id="verList" class="list"></div>
+    <section class="card example-gallery" id="exampleGallery">
+      <div class="example-gallery__intro">
+        <h3 class="gradient-text">See what Promptly can do</h3>
+        <p class="example-gallery__subtitle">
+          Pick a scenario and watch how messy input turns into clean, ready-to-use output.
+        </p>
+      </div>
+      <div class="example-tabs" id="exampleTabs"></div>
+      <div class="example-card example-card--visible" id="exampleCard">
+        <div class="example-card__header">
+          <span class="example-card__icon" id="exampleIcon">✉️</span>
+          <div>
+            <div class="example-card__title" id="exampleTitle">Email Reply Assistant</div>
+            <p class="example-card__description" id="exampleDescription">
+              Turn rough email threads into warm, polite replies.
+            </p>
+          </div>
+        </div>
+        <div class="example-card__body">
+          <div class="example-block example-block--input">
+            <div class="example-block__label">
+              <span class="example-block__icon">📥</span>
+              <span>Input</span>
+            </div>
+            <pre class="example-block__text" id="exampleInput"></pre>
+          </div>
+          <div class="example-block example-block--output">
+            <div class="example-block__label">
+              <span class="example-block__icon">📤</span>
+              <span>Output</span>
+            </div>
+            <pre class="example-block__text" id="exampleOutput"></pre>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Enhanced Algorithm Section - Moved below main features for better UX -->
+    <section class="card algorithm-section-enhanced" aria-labelledby="algorithm-title">
+      <div class="algorithm-header">
+        <h3 id="algorithm-title" class="algorithm-title gradient-text">✨ Why Promptly beats a plain AI model</h3>
+        <p class="algorithm-subtitle">We run a <span class="highlight-text">structured pipeline</span>—spec building, question refining, <span class="highlight-accent">multi-agent orchestration</span>, scoring, and Outcome Runner selection—so you're never just sending a single prompt to an LLM.</p>
+      </div>
+      <div class="algorithm-grid-enhanced">
+        <div class="algorithm-steps-enhanced">
+          <article class="algorithm-step-enhanced">
+            <div class="step-header">
+              <span class="step-number-enhanced">1</span>
+              <h4 class="step-title">Spec Builder</h4>
+            </div>
+            <p>Turn your <span class="keyword">raw idea</span> into a <span class="highlight-text">structured spec</span> so every requirement is explicit before we touch an LLM.</p>
+          </article>
+          <article class="algorithm-step-enhanced">
+            <div class="step-header">
+              <span class="step-number-enhanced">2</span>
+              <h4 class="step-title">Question Engine</h4>
+            </div>
+            <p>We ask <span class="highlight-accent">targeted follow-up questions</span> (Q1–Q3 flow) to remove ambiguity and surface context you might forget.</p>
+          </article>
+          <article class="algorithm-step-enhanced">
+            <div class="step-header">
+              <span class="step-number-enhanced">3</span>
+              <h4 class="step-title">LLM Agents</h4>
+            </div>
+            <p><span class="keyword">Specialized agents</span> (Architect, Editor, Judge, etc.) craft <span class="highlight-text">multiple candidate prompts</span> instead of relying on a single response.</p>
+          </article>
+          <article class="algorithm-step-enhanced">
+            <div class="step-header">
+              <span class="step-number-enhanced">4</span>
+              <h4 class="step-title">Metrics & Scoring</h4>
+            </div>
+            <p>Every candidate is scored on <span class="highlight-accent">clarity, coherence, style match</span>, safety, token cost, and risk to <span class="keyword">quantify quality</span>.</p>
+          </article>
+          <article class="algorithm-step-enhanced">
+            <div class="step-header">
+              <span class="step-number-enhanced">5</span>
+              <h4 class="step-title">Outcome Runner</h4>
+            </div>
+            <p>The <span class="highlight-text">Outcome-First runner</span> applies your success criteria, compares <span class="keyword">best-of-N candidates</span>, and returns the most reliable result.</p>
+          </article>
+        </div>
+        <div class="algorithm-spec-enhanced">
+          <h4 class="spec-title">🔧 Algorithm Specs</h4>
+          <ul class="spec-list">
+            <li><span class="spec-key">Structured spec</span> – <span class="spec-desc">JSON-ready blueprint guides every subsequent stage.</span></li>
+            <li><span class="spec-key">Clarifying questions</span> – <span class="spec-desc">Removes guesswork before generating prompts.</span></li>
+            <li><span class="spec-key">Multi-agent orchestration</span> – <span class="spec-desc">Different agents collaborate on architecture, editing, and judgment.</span></li>
+            <li><span class="spec-key">Best-of-N selection</span> – <span class="spec-desc">We compare candidates rather than returning the first hit.</span></li>
+            <li><span class="spec-key">Metric panel</span> – <span class="spec-desc">Coherence, style, pass rate, token efficiency, and risk scores feed into the payoff.</span></li>
+            <li><span class="spec-key">Outcome Runner</span> – <span class="spec-desc">Picks the winner according to your defined tests/criteria.</span></li>
+          </ul>
+        </div>
+      </div>
+      <p class="algorithm-callout-enhanced">
+        🚀 Every enhancement passes through the <span class="pipeline-step">Spec</span> → <span class="pipeline-step">Question</span> → <span class="pipeline-step">Agent</span> → <span class="pipeline-step">Outcome</span> pipeline so the result you copy is the <span class="highlight-text">top-ranked candidate</span> after multi-metric scoring.
+      </p>
     </section>
   </main>
 
@@ -573,23 +792,49 @@ NEG || This is terrible.</textarea>
         <div><img src="assets/placeholder_pie.png" alt="Error breakdown" style="width:100%;border-radius:12px;box-shadow:0 4px 24px rgba(0,0,0,.25)"><p style="opacity:.7;margin-top:6px">Error Breakdown</p></div>
         <div><img src="assets/placeholder_gauge.png" alt="Progress gauge" style="width:100%;border-radius:12px;box-shadow:0 4px 24px rgba(0,0,0,.25)"><p style="opacity:.7;margin-top:6px">Progress Gauge</p></div>
       </div>
-      <h3 style="margin-top:16px" class="gradient-animated">Instances</h3>
-      <pre style="white-space:pre-wrap;background:rgba(255,255,255,.04);padding:12px;border-radius:12px">
-1) Summarization
-   Instruction: "Summarize the article in 3 bullet points. Tone: neutral."
-   Test: input: {url: "..."} → ideal: "- point A\n- point B\n- point C"
-
-2) Email draft
-   Instruction: "Write a warm reply confirming availability on Tuesday 3pm."
-   Test: input: {thread:"..."} → ideal: "Warm, polite confirmation with time."
-      </pre>
       <h3 style="margin-top:16px" class="gradient-animated">Glossary</h3>
 <ul class="glossary-list glossy">
-  <li><span class="glossary-term" data-i18n-key="accuracy">Accuracy</span><span class="glossary-def">correct outputs / all tests.</span></li>
-  <li><span class="glossary-term" data-i18n-key="f1">F1</span><span class="glossary-def">harmonic mean of precision & recall (0–1).</span></li>
-  <li><span class="glossary-term" data-i18n-key="pass_rate">Pass Rate</span><span class="glossary-def">tests passed with a threshold.</span></li>
-  <li><span class="glossary-term" data-i18n-key="token_cost">Token Cost</span><span class="glossary-def">total tokens used (proxy for $$).</span></li>
-  <li><span class="glossary-term" data-i18n-key="progress">Progress %</span><span class="glossary-def">optimization completion estimate.</span></li>
+  <li>
+    <span class="glossary-term" data-i18n-key="accuracy">Accuracy</span>
+    <span class="glossary-def">
+      正确输出占比，范围 0–1。公式：<code>correct_count / total_cases</code>。
+      当每个测试和预期完全匹配时，Acc=1。
+    </span>
+  </li>
+  <li>
+    <span class="glossary-term" data-i18n-key="f1">F1</span>
+    <span class="glossary-def">
+      调和平均数，衡量精度与召回的平衡。范围 0–1。
+      公式：<code>2 × precision × recall / (precision + recall)</code>，precision = TP/(TP+FP)，recall = TP/(TP+FN)。
+    </span>
+  </li>
+  <li>
+    <span class="glossary-term" data-i18n-key="pass_rate">Pass Rate</span>
+    <span class="glossary-def">
+      满足结构/格式约束的输出比例，范围 0–1。
+      公式：<code>passed_constraints / total_constraints</code>（或 passed_cases/total_cases）。
+    </span>
+  </li>
+  <li>
+    <span class="glossary-term" data-i18n-key="token_cost">Token Cost</span>
+    <span class="glossary-def">
+      模型使用的总 token 数，公式：<code>prompt_tokens + completion_tokens</code>。
+      越低表示提示更紧凑，有助于控制成本。
+    </span>
+  </li>
+  <li>
+    <span class="glossary-term" data-i18n-key="progress">Progress %</span>
+    <span class="glossary-def">
+      复合优化指标，范围 0–100，权重平均计算：
+      <code>progress = average([
+        accuracy / target_accuracy,
+        f1 / target_f1,
+        pass_rate / target_pass_rate,
+        ideal_token_cost / token_cost
+      ]) × 100</code>。
+      越接近 100 表示越接近目标。
+    </span>
+  </li>
 </ul>
     `;
     document.body.appendChild(section);
@@ -910,15 +1155,6 @@ NEG || This is terrible.</textarea>
   }
   hookThemeSelector();
 
-  // 3) Hide Instances block created earlier
-  const instTitle = Array.from(document.querySelectorAll('#user-guide h3')).find(h=>/^\s*instances\s*$/i.test(h.textContent||''));
-  if(instTitle){
-    instTitle.setAttribute('data-title','instances');
-    const next = instTitle.nextElementSibling;
-    if(next && next.tagName==='PRE'){ next.style.display='none'; }
-    instTitle.style.display='none';
-  }
-
   // 4) Move KPI badges to top-right explicitly after layout
   function fixBadgePositions(){
     document.querySelectorAll('.kpi-card .badge-updated').forEach(b=>{
@@ -994,4 +1230,93 @@ NEG || This is terrible.</textarea>
 })();
 </script>
 
+<script>
+(() => {
+  const SCENARIOS = [
+    {
+      id: "email",
+      tabLabel: "Email reply",
+      icon: "✉️",
+      title: "Email Reply Assistant",
+      description: "Turn rough email threads into warm, polite replies.",
+      inputExample:
+        "Hey, can you still meet on Tuesday afternoon?\nLet me know what works.",
+      outputExample:
+        "Hi! Tuesday at 3pm works great for me. Thanks for checking in!"
+    },
+    {
+      id: "summarize",
+      tabLabel: "Summarize",
+      icon: "📝",
+      title: "Article Summarizer",
+      description: "Turn long text into short bullet-point summaries.",
+      inputExample: "Here is a multi-paragraph article about product design...",
+      outputExample: "- Key point 1\n- Key point 2\n- Key point 3"
+    },
+    {
+      id: "rewrite",
+      tabLabel: "Rewrite",
+      icon: "🔄",
+      title: "Rewrite & Polish",
+      description: "Clean up grammar and make your writing clearer.",
+      inputExample:
+        "this sentence are not very good written but I wanna send to my boss",
+      outputExample:
+        "This sentence isn’t very well written, but I’d like to send it to my boss."
+    },
+    {
+      id: "translate",
+      tabLabel: "Translate",
+      icon: "🌎",
+      title: "Translate",
+      description: "Translate text while keeping tone and style.",
+      inputExample:
+        "Please help me translate this email to English, but keep it polite and friendly.",
+      outputExample:
+        "Hi there, I hope you’ve been doing well. I wanted to follow up about..."
+    }
+  ];
+
+  const tabsEl = document.getElementById("exampleTabs");
+  const cardEl = document.getElementById("exampleCard");
+  if (!tabsEl || !cardEl) return;
+  const iconEl = document.getElementById("exampleIcon");
+  const titleEl = document.getElementById("exampleTitle");
+  const descEl = document.getElementById("exampleDescription");
+  const inputEl = document.getElementById("exampleInput");
+  const outputEl = document.getElementById("exampleOutput");
+  const activeClass = "example-tab--active";
+  let activeId = SCENARIOS[0].id;
+
+  function renderTabs() {
+    tabsEl.innerHTML = SCENARIOS.map(
+      (scenario) =>
+        `<button type="button" class="example-tab" data-id="${scenario.id}">${scenario.tabLabel}</button>`
+    ).join("");
+    tabsEl.querySelectorAll(".example-tab").forEach((btn) => {
+      btn.addEventListener("click", () => setScenario(btn.dataset.id));
+    });
+  }
+
+  function setScenario(id) {
+    const scenario = SCENARIOS.find((s) => s.id === id) || SCENARIOS[0];
+    activeId = scenario.id;
+    if (iconEl) iconEl.textContent = scenario.icon;
+    if (titleEl) titleEl.textContent = scenario.title;
+    if (descEl) descEl.textContent = scenario.description;
+    if (inputEl) inputEl.textContent = scenario.inputExample;
+    if (outputEl) outputEl.textContent = scenario.outputExample;
+    tabsEl.querySelectorAll(".example-tab").forEach((btn) => {
+      btn.classList.toggle(activeClass, btn.dataset.id === activeId);
+    });
+    cardEl.classList.remove("example-card--visible");
+    requestAnimationFrame(() => cardEl.classList.add("example-card--visible"));
+  }
+
+  renderTabs();
+  setScenario(activeId);
+})();
+</script>
+
+</body>
 </html>

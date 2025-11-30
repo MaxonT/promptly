@@ -1,42 +1,164 @@
 import { Router } from "express";
 import jwt from "jsonwebtoken";
+import bcrypt from "bcryptjs";
 import { db } from "../lib/db.js";
 import { nanoid } from "nanoid";
 
 export const authRouter = Router();
 
-authRouter.post("/login", (req, res) => {
-  const { email } = req.body || {};
-  if (!email || typeof email !== "string")
-    return res.status(400).json({ ok: false, error: "Invalid email" });
-  const id = ensureUser(email);
-  const token = jwt.sign({ sub: id, email }, process.env.JWT_SECRET || "dev", {
-    expiresIn: "7d",
-  });
-  res.json({ ok: true, token });
-});
+let TOKEN_SECRET = process.env.JWT_SECRET;
+if (!TOKEN_SECRET) {
+  if (process.env.NODE_ENV === "development") {
+    console.warn("[promptly] WARNING: JWT_SECRET is not set. Using default insecure development secret.");
+    TOKEN_SECRET = "dev";
+  } else {
+    throw new Error("[promptly] FATAL: JWT_SECRET environment variable must be set in production.");
+  }
+}
+const TOKEN_EXPIRES_IN = process.env.JWT_EXPIRES_IN || "7d";
+const PASSWORD_MIN_LENGTH = 8;
+const BCRYPT_ROUNDS = 10;
+// Dummy hash generated with same cost factor to ensure constant-time comparison (prevents timing attacks)
+const DUMMY_HASH = bcrypt.hashSync("dummy-password-for-timing-attack-prevention", BCRYPT_ROUNDS);
 
-function ensureUser(email) {
-  const q = db.prepare("SELECT id FROM users WHERE email = ?").get(email);
-  if (q?.id) return q.id;
-  const id = nanoid(16);
-  db.prepare("INSERT INTO users (id,email,created_at) VALUES (?,?,?)").run(
-    id,
-    email,
-    new Date().toISOString()
-  );
-  return id;
+// Email validation regex pattern (more restrictive per RFC standards)
+const EMAIL_REGEX = /^[a-zA-Z0-9_%+-]+(\.[a-zA-Z0-9_%+-]+)*@[a-zA-Z0-9-]+(\.[a-zA-Z0-9-]+)*\.[a-zA-Z]{2,}$/;
+
+// Generate dummy hash at startup for constant-time comparison when user is not found
+// This prevents timing attacks by ensuring bcrypt.compare() is always called
+const DUMMY_HASH = bcrypt.hashSync("dummy_password_for_timing", 10);
+
+function normalizeEmail(email = "") {
+  return email.trim().toLowerCase();
 }
 
-export function requireAuth(req, res, next) {
-  const auth = req.headers.authorization || "";
-  const token = auth.startsWith("Bearer ") ? auth.slice(7) : null;
-  if (!token) return res.status(401).json({ ok: false, error: "Missing token" });
+function buildUserPayload(row) {
+  if (!row) return null;
+  return {
+    id: row.id,
+    email: row.email,
+    subscription: {
+      tier: row.subscription_tier || "free",
+      isActive: !!row.subscription_active
+    }
+  };
+}
+
+function createAuthToken(user) {
+  return jwt.sign(
+    { sub: user.id, email: user.email },
+    TOKEN_SECRET,
+    { expiresIn: TOKEN_EXPIRES_IN }
+  );
+}
+
+function sendAuthResponse(res, row) {
+  const user = buildUserPayload(row);
+  const token = createAuthToken(user);
+  return res.json({ ok: true, token, user });
+}
+
+authRouter.post("/register", async (req, res) => {
   try {
-    const payload = jwt.verify(token, process.env.JWT_SECRET || "dev");
+    const { email, password } = req.body || {};
+    if (!email || typeof email !== "string") {
+      return res.status(400).json({ ok: false, error: "Email is required" });
+    }
+    const normalizedEmail = normalizeEmail(email);
+    if (!EMAIL_REGEX.test(normalizedEmail)) {
+      return res.status(400).json({ ok: false, error: "Email is invalid" });
+    }
+    if (!password || typeof password !== "string" || password.length < PASSWORD_MIN_LENGTH) {
+      return res.status(400).json({
+        ok: false,
+        error: `Password must be at least ${PASSWORD_MIN_LENGTH} characters`
+      });
+    }
+
+    const existing = db.prepare("SELECT id FROM users WHERE email = ?").get(normalizedEmail);
+    if (existing) {
+      return res.status(409).json({ ok: false, error: "Email already registered" });
+    }
+
+    const passwordHash = await bcrypt.hash(password, BCRYPT_ROUNDS);
+    const userId = nanoid(16);
+    const now = new Date().toISOString();
+    db.prepare(`
+      INSERT INTO users (id, email, password_hash, subscription_tier, subscription_active, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `).run(userId, normalizedEmail, passwordHash, "free", 1, now, now);
+
+    const row = db.prepare("SELECT * FROM users WHERE id = ?").get(userId);
+    return sendAuthResponse(res, row);
+  } catch (err) {
+    console.error("[promptly] register error", err);
+    return res.status(500).json({ ok: false, error: "Registration failed" });
+  }
+});
+
+authRouter.post("/login", async (req, res) => {
+  try {
+    const { email, password } = req.body || {};
+    if (!email || typeof email !== "string") {
+      return res.status(400).json({ ok: false, error: "Email is required" });
+    }
+    const normalizedEmail = normalizeEmail(email);
+    if (!EMAIL_REGEX.test(normalizedEmail)) {
+      return res.status(400).json({ ok: false, error: "Email is invalid" });
+    }
+    if (!password || typeof password !== "string") {
+      return res.status(400).json({ ok: false, error: "Password is required" });
+    }
+
+    const row = db.prepare("SELECT * FROM users WHERE email = ?").get(normalizedEmail);
+    
+    // Always perform bcrypt.compare() to prevent timing attacks
+    // Use dummy hash when user not found to ensure constant-time comparison
+    const hashToCompare = row?.password_hash || DUMMY_HASH;
+    const valid = await bcrypt.compare(password, hashToCompare);
+    
+    // Combine conditions using bitwise AND to avoid short-circuit evaluation and timing leaks
+    const userExists = !!row;
+    const credentialsValid = userExists & valid;
+    
+    if (!credentialsValid) {
+      return res.status(401).json({ ok: false, error: "Invalid credentials" });
+    }
+
+    return sendAuthResponse(res, row);
+  } catch (err) {
+    console.error("[promptly] login error", err);
+    return res.status(500).json({ ok: false, error: "Login failed" });
+  }
+});
+
+authRouter.post("/logout", requireAuth, (_req, res) => {
+  // Stateless JWT logout handled on client by discarding token.
+  return res.json({ ok: true });
+});
+
+authRouter.get("/me", requireAuth, (req, res) => {
+  const row = db.prepare("SELECT * FROM users WHERE id = ?").get(req.user.sub);
+  if (!row) {
+    return res.status(404).json({ ok: false, error: "User not found" });
+  }
+  return res.json({
+    ok: true,
+    user: buildUserPayload(row)
+  });
+});
+
+export function requireAuth(req, res, next) {
+  const authHeader = req.headers.authorization || "";
+  const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : null;
+  if (!token) {
+    return res.status(401).json({ ok: false, error: "Missing token" });
+  }
+  try {
+    const payload = jwt.verify(token, TOKEN_SECRET);
     req.user = payload;
     next();
-  } catch (e) {
+  } catch (err) {
     return res.status(401).json({ ok: false, error: "Invalid token" });
   }
 }

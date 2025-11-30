@@ -336,8 +336,8 @@ specsRouter.post("/:id/evaluate", async (req, res) => {
     const evalId = `eval_${nanoid(12)}`;
     db.prepare(`
       INSERT INTO evaluations 
-      (id, spec_id, compiled_prompt_id, run_id, model, score, verdict, summary, details, created_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      (id, spec_id, compiled_prompt_id, run_id, model, score, verdict, summary, details, metrics_json, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       evalId,
       row.id,
@@ -348,6 +348,7 @@ specsRouter.post("/:id/evaluate", async (req, res) => {
       evaluation.verdict,
       evaluation.summary,
       evaluation.details,
+      evaluation.metrics ? JSON.stringify(evaluation.metrics) : null,
       now
     );
 
@@ -363,6 +364,7 @@ specsRouter.post("/:id/evaluate", async (req, res) => {
         verdict: evaluation.verdict,
         summary: evaluation.summary,
         details: JSON.parse(evaluation.details),
+        metrics: evaluation.metrics || null,
         created_at: now
       }
     });
@@ -404,8 +406,8 @@ specsRouter.post("/:id/compile-and-evaluate", async (req, res) => {
     const evalNow = new Date().toISOString();
     db.prepare(`
       INSERT INTO evaluations 
-      (id, spec_id, compiled_prompt_id, run_id, model, score, verdict, summary, details, created_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      (id, spec_id, compiled_prompt_id, run_id, model, score, verdict, summary, details, metrics_json, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       evalId,
       row.id,
@@ -416,6 +418,7 @@ specsRouter.post("/:id/compile-and-evaluate", async (req, res) => {
       evaluation.verdict,
       evaluation.summary,
       evaluation.details,
+      evaluation.metrics ? JSON.stringify(evaluation.metrics) : null,
       evalNow
     );
 
@@ -436,6 +439,7 @@ specsRouter.post("/:id/compile-and-evaluate", async (req, res) => {
         verdict: evaluation.verdict,
         summary: evaluation.summary,
         details: JSON.parse(evaluation.details),
+        metrics: evaluation.metrics || null,
         created_at: evalNow
       }
     });
@@ -478,6 +482,7 @@ specsRouter.get("/:id/evaluations", (req, res) => {
     verdict: ev.verdict,
     summary: ev.summary,
     details: ev.details ? JSON.parse(ev.details) : null,
+    metrics: ev.metrics_json ? JSON.parse(ev.metrics_json) : null,
     created_at: ev.created_at
   }));
 

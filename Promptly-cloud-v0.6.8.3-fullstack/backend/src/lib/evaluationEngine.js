@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { chatJson } from "./openaiClient.js";
 import { createRun, completeRunSuccess, completeRunFailure } from "./runLogger.js";
+import { buildEvaluationMetrics, buildRunMetrics } from "./metricsEngine.js";
 
 /**
  * Zod schema for Evaluator agent output
@@ -39,6 +40,20 @@ const EvaluatorOutputSchema = z.object({
  * @param {string} [options.model] - Model to use for evaluation (defaults to env var)
  * @returns {Promise<{score: number, verdict: string, summary: string, details: string, runId: string}>}
  */
+function extractTestStats(parsed) {
+  if (!parsed) return null;
+  if (parsed.test_stats) return parsed.test_stats;
+  if (parsed.test_summary) return parsed.test_summary;
+  if (parsed.metrics?.test_stats) return parsed.metrics.test_stats;
+  if (Array.isArray(parsed.metrics)) {
+    const metricWithStats = parsed.metrics.find(m => m.test_stats || m.details?.test_stats);
+    if (metricWithStats) {
+      return metricWithStats.test_stats || metricWithStats.details?.test_stats || null;
+    }
+  }
+  return null;
+}
+
 export async function evaluatePrompt({ spec, compiledPrompt, model }) {
   const system = [
     "You are the Evaluator agent in Promptly's prompt evaluation system.",
@@ -86,8 +101,10 @@ export async function evaluatePrompt({ spec, compiledPrompt, model }) {
   });
 
   try {
-    const raw = await chatJson({ system, user, model: evalModel });
-    completeRunSuccess(runId, raw);
+    const start = Date.now();
+    const { data: raw, usage } = await chatJson({ system, user, model: evalModel });
+    const runMetrics = buildRunMetrics({ latencyMs: Date.now() - start, usage });
+    completeRunSuccess(runId, raw, { metrics: runMetrics });
 
     const parsed = EvaluatorOutputSchema.parse(raw);
 
@@ -99,11 +116,20 @@ export async function evaluatePrompt({ spec, compiledPrompt, model }) {
       weaknesses: parsed.weaknesses || []
     };
 
+    const targetHints = spec?.target_metrics || spec?.targets || parsed.target_metrics || null;
+    const evaluationMetrics = buildEvaluationMetrics({
+      testStats: extractTestStats(parsed),
+      usage,
+      targets: targetHints
+    });
+    details.metrics = evaluationMetrics;
+
     return {
       score: parsed.score,
       verdict: parsed.verdict,
       summary: parsed.summary,
       details: JSON.stringify(details),
+      metrics: evaluationMetrics,
       runId
     };
   } catch (err) {

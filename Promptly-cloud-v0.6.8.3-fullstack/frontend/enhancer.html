@@ -32,6 +32,19 @@
         Paste any prompt you currently use with models. The enhancer will keep your intent but improve structure, tone, and clarity.
       </p>
       <textarea id="rawPrompt" rows="10" placeholder="Paste your existing prompt here..."></textarea>
+      
+      <!-- ATTACHMENT FEATURE: File attachment UI -->
+      <div class="enhancer-attachment-section">
+        <button type="button" id="attachBtn" class="enhancer-button-attach" title="Attach images, videos, or files">
+          📎 Attach files
+        </button>
+        <input type="file" id="fileInput" multiple accept="*/*" hidden />
+        <span class="enhancer-attach-hint">Supports images, videos, PDFs, and more</span>
+      </div>
+      
+      <!-- ATTACHMENT FEATURE: Selected files preview list -->
+      <div id="attachmentList" class="attachment-list"></div>
+      
       <div class="enhancer-mode-row">
         <label class="enhancer-mode-label">
           Mode

@@ -3,6 +3,7 @@ import { nanoid } from "nanoid";
 import { db } from "./db.js";
 import { chatJson, LlmDisabledError } from "./openaiClient.js";
 import { createRun, completeRunSuccess, completeRunFailure } from "./runLogger.js";
+import { buildOutcomeMetrics, buildRunMetrics } from "./metricsEngine.js";
 
 /**
  * Zod schema for Outcome Judge agent output
@@ -173,13 +174,21 @@ export async function runOutcomeCheck({ runId, outcomeSpecId, modelOverride }) {
   });
 
   let outcomeResult;
+  let outcomeMetrics = null;
   try {
     // 5. Call LLM Outcome Judge
-    const rawResponse = await chatJson({ system, user, model });
-    completeRunSuccess(judgeRunId, rawResponse);
+    const start = Date.now();
+    const response = await chatJson({ system, user, model });
+    const rawResponse = response.data;
+    const runMetrics = buildRunMetrics({ latencyMs: Date.now() - start, usage: response.usage });
+    completeRunSuccess(judgeRunId, rawResponse, { metrics: runMetrics });
 
     // 6. Parse and validate with Zod
     outcomeResult = OutcomeResultSchema.parse(rawResponse);
+    outcomeMetrics = buildOutcomeMetrics({
+      outcomeScore: outcomeResult.score,
+      metrics: outcomeResult.metrics || []
+    });
   } catch (err) {
     completeRunFailure(judgeRunId, "runtime_exception", err.message || err.toString(), "system");
     
@@ -204,6 +213,7 @@ export async function runOutcomeCheck({ runId, outcomeSpecId, modelOverride }) {
   // Build details JSON including metrics
   const detailsObj = {
     metrics: outcomeResult.metrics || [],
+    aggregated_metrics: outcomeMetrics,
     raw_llm_output: outcomeResult,
     ...outcomeResult.details
   };
@@ -292,7 +302,8 @@ export async function runOutcomeCheck({ runId, outcomeSpecId, modelOverride }) {
       score: m.score,
       passed: m.passed,
       details: m.details
-    }))
+    })),
+    metricsSummary: outcomeMetrics
   };
 }
 

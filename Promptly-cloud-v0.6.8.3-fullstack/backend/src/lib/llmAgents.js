@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { chatJson } from "./openaiClient.js";
 import { createRun, completeRunSuccess, completeRunFailure } from "./runLogger.js";
+import { buildRunMetrics } from "./metricsEngine.js";
 
 const BroadQuestionSchema = z.object({
   id: z.string().optional(),
@@ -101,8 +102,11 @@ export async function generateBroadQuestions({ initialDescription, kind }) {
   // Retry loop for stability
   while (retryCount <= MAX_RETRIES) {
     try {
-      raw = await chatJson({ system, user });
-      
+      const start = Date.now();
+      const response = await chatJson({ system, user });
+      raw = response.data;
+      const runMetrics = buildRunMetrics({ latencyMs: Date.now() - start, usage: response.usage });
+
       // Auto-fix: Clean and normalize the response
       if (raw && raw.broad_questions && Array.isArray(raw.broad_questions)) {
         raw.broad_questions = raw.broad_questions.map(q => ({
@@ -113,7 +117,7 @@ export async function generateBroadQuestions({ initialDescription, kind }) {
         }));
       }
       
-      completeRunSuccess(runId, raw);
+      completeRunSuccess(runId, raw, { metrics: runMetrics });
       parsed = AgentAOutputSchema.parse(raw);
       break; // Success, exit retry loop
     } catch (err) {
@@ -320,7 +324,10 @@ export async function generateChoiceQuestions({ initialDescription, kind, broadQ
   // Retry loop for stability
   while (retryCount <= MAX_RETRIES) {
     try {
-      raw = await chatJson({ system, user });
+      const start = Date.now();
+      const response = await chatJson({ system, user });
+      raw = response.data;
+      const runMetrics = buildRunMetrics({ latencyMs: Date.now() - start, usage: response.usage });
       
       // Auto-fix: Clean and normalize the response
       if (raw && raw.choice_questions && Array.isArray(raw.choice_questions)) {
@@ -348,7 +355,7 @@ export async function generateChoiceQuestions({ initialDescription, kind, broadQ
         });
       }
       
-      completeRunSuccess(runId, raw);
+      completeRunSuccess(runId, raw, { metrics: runMetrics });
       parsed = AgentBOutputSchema.parse(raw);
       break; // Success, exit retry loop
     } catch (err) {
@@ -602,8 +609,11 @@ export async function generateRawSpec({ initialDescription, kind, qaPairs }) {
   // Retry loop for stability
   while (retryCount <= MAX_RETRIES) {
     try {
-      raw = await chatJson({ system, user });
-      
+      const start = Date.now();
+      const response = await chatJson({ system, user });
+      raw = response.data;
+      const runMetrics = buildRunMetrics({ latencyMs: Date.now() - start, usage: response.usage });
+
       // Auto-fix: Clean and normalize the response
       if (raw) {
         // Ensure spec exists
@@ -624,7 +634,7 @@ export async function generateRawSpec({ initialDescription, kind, qaPairs }) {
         }
       }
       
-      completeRunSuccess(runId, raw);
+      completeRunSuccess(runId, raw, { metrics: runMetrics });
       parsed = AgentCOutputSchema.parse(raw);
       break; // Success, exit retry loop
     } catch (err) {

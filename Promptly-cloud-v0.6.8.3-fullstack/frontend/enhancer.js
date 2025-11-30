@@ -12,6 +12,15 @@
   const validationResultEl = document.getElementById("validationResult");
   const logEl = document.getElementById("enhancerLog");
 
+  /**
+   * ATTACHMENT FEATURE
+   * Global state to track selected attachments
+   */
+  let attachments = [];
+  const attachBtn = document.getElementById("attachBtn");
+  const fileInput = document.getElementById("fileInput");
+  const attachmentList = document.getElementById("attachmentList");
+
   function log(line) {
     const ts = new Date().toISOString().slice(11, 19);
     logEl.textContent += `[${ts}] ${line}\n`;
@@ -32,6 +41,12 @@
     inputError.classList.add("hidden");
   }
 
+  /**
+   * ATTACHMENT FEATURE
+   * Call enhancer API with prompt and optional attachments
+   * Current: Sends attachments as JSON with base64 dataURL
+   * Future: Can switch to multipart/form-data for larger files
+   */
   async function callEnhancer(path) {
     const prompt = getPrompt();
     if (!prompt) {
@@ -40,11 +55,23 @@
     }
     clearError();
     try {
-      log(`POST ${path} ...`);
+      log(`POST ${path} ${attachments.length > 0 ? `(with ${attachments.length} attachment${attachments.length > 1 ? 's' : ''})` : ''}...`);
+      
+      // Build request body with attachments
+      const body = {
+        prompt,
+        attachments: attachments.map(att => ({
+          name: att.name,
+          size: att.size,
+          type: att.type,
+          dataURL: att.dataURL
+        }))
+      };
+      
       const res = await fetch(`/api/enhance${path}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt })
+        body: JSON.stringify(body)
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok || !data.ok) {
@@ -52,6 +79,10 @@
         return null;
       }
       log(`Enhancer OK on ${path}`);
+      
+      // Clear attachments after successful request
+      clearAttachments();
+      
       return data.result;
     } catch (err) {
       console.error(err);
@@ -160,6 +191,124 @@
     );
   }
 
+  /**
+   * ATTACHMENT FEATURE
+   * Utility functions for attachment management
+   */
+  
+  // Get icon based on MIME type
+  function getFileIcon(type) {
+    if (type.startsWith('image/')) return '🖼️';
+    if (type.startsWith('video/')) return '🎬';
+    if (type.startsWith('audio/')) return '🎵';
+    if (type.includes('pdf')) return '📄';
+    if (type.includes('text')) return '📝';
+    if (type.includes('zip') || type.includes('compressed')) return '📦';
+    return '📎';
+  }
+
+  // Format file size for display
+  function formatSize(bytes) {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+  }
+
+  // Render attachment list
+  function renderAttachments() {
+    if (!attachmentList) return;
+    
+    if (attachments.length === 0) {
+      attachmentList.innerHTML = '';
+      return;
+    }
+
+    attachmentList.innerHTML = attachments.map((att, index) => `
+      <div class="attachment-item" data-index="${index}">
+        <span class="attachment-icon">${getFileIcon(att.type)}</span>
+        <div class="attachment-info">
+          <div class="attachment-name" title="${att.name}">${att.name}</div>
+          <div class="attachment-size">${formatSize(att.size)}</div>
+        </div>
+        <button class="attachment-remove" data-index="${index}" title="Remove attachment">×</button>
+      </div>
+    `).join('');
+
+    // Add event listeners to remove buttons
+    attachmentList.querySelectorAll('.attachment-remove').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const index = parseInt(e.target.getAttribute('data-index'), 10);
+        removeAttachment(index);
+      });
+    });
+
+    log(`${attachments.length} file(s) attached`);
+  }
+
+  // Add attachment
+  function addAttachment(file) {
+    // Warn for large files (>10MB)
+    if (file.size > 10 * 1024 * 1024) {
+      const confirmLarge = confirm(
+        `"${file.name}" is ${formatSize(file.size)}. Large files may take time to upload. Continue?`
+      );
+      if (!confirmLarge) return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      attachments.push({
+        name: file.name,
+        size: file.size,
+        type: file.type || 'application/octet-stream',
+        dataURL: e.target.result
+      });
+      renderAttachments();
+    };
+    reader.onerror = () => {
+      log(`Error reading file: ${file.name}`);
+      showError(`Failed to read file: ${file.name}`);
+    };
+    reader.readAsDataURL(file);
+  }
+
+  // Remove attachment
+  function removeAttachment(index) {
+    if (index >= 0 && index < attachments.length) {
+      const removed = attachments.splice(index, 1)[0];
+      log(`Removed: ${removed.name}`);
+      renderAttachments();
+    }
+  }
+
+  // Clear all attachments
+  function clearAttachments() {
+    attachments = [];
+    renderAttachments();
+  }
+
+  // Handle file selection
+  function onFileSelect(e) {
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+
+    log(`Selected ${files.length} file(s)`);
+    files.forEach(file => addAttachment(file));
+
+    // Reset file input so same file can be selected again
+    if (fileInput) fileInput.value = '';
+  }
+
+  /**
+   * ATTACHMENT FEATURE
+   * Event listeners
+   */
+  attachBtn?.addEventListener('click', () => {
+    fileInput?.click();
+  });
+  fileInput?.addEventListener('change', onFileSelect);
+
+  // Standard event listeners
   runEnhanceBtn?.addEventListener("click", onRunEnhance);
   runScoreBtn?.addEventListener("click", onRunScore);
   runValidateBtn?.addEventListener("click", onRunValidate);

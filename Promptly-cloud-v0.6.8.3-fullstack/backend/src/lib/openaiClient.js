@@ -32,5 +32,36 @@ export async function chatJson({ system, user, model }) {
     ]
   });
   const content = completion.choices?.[0]?.message?.content || "{}";
-  return JSON.parse(content);
+  let parsed;
+  try {
+    parsed = JSON.parse(content);
+  } catch {
+    parsed = {};
+  }
+  return {
+    data: parsed,
+    usage: completion.usage || {}
+  };
+}
+
+/**
+ * ATTACHMENT FEATURE - Text completion
+ * Similar to chatJson but returns plain text instead of JSON
+ */
+export async function chatText({ system, user, model }) {
+  if (!client) {
+    throw new LlmDisabledError();
+  }
+  const usedModel = model || process.env.OPENAI_MODEL || "gpt-4o-mini";
+  const completion = await client.chat.completions.create({
+    model: usedModel,
+    messages: [
+      { role: "system", content: system },
+      { role: "user", content: user }
+    ]
+  });
+  return {
+    text: completion.choices?.[0]?.message?.content || "",
+    usage: completion.usage || {}
+  };
 }

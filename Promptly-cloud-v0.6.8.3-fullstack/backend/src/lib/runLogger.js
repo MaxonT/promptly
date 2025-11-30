@@ -36,12 +36,14 @@ export function createRun({ specId, specVersion, model, inputBlocks }) {
  * @param {string} runId - The run ID
  * @param {any} rawOutput - The raw LLM output (will be JSON stringified)
  */
-export function completeRunSuccess(runId, rawOutput) {
+export function completeRunSuccess(runId, rawOutput, options = {}) {
+  const now = new Date().toISOString();
+  const metricsJson = options.metrics ? JSON.stringify(options.metrics) : null;
   db.prepare(
     `UPDATE runs 
-     SET status = ?, raw_output = ? 
+     SET status = ?, raw_output = ?, metrics_json = ?, completed_at = ?
      WHERE id = ?`
-  ).run("success", JSON.stringify(rawOutput), runId);
+  ).run("success", JSON.stringify(rawOutput), metricsJson, now, runId);
 }
 
 /**
@@ -58,9 +60,9 @@ export function completeRunFailure(runId, errorType, details, detectedBy = "syst
   // Update run status
   db.prepare(
     `UPDATE runs 
-     SET status = ? 
+     SET status = ?, completed_at = ?
      WHERE id = ?`
-  ).run("failed", runId);
+  ).run("failed", now, runId);
 
   // Insert error record
   db.prepare(

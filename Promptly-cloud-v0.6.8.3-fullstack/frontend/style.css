@@ -29,16 +29,42 @@ header.topbar{position:sticky;top:0;display:flex;align-items:center;justify-cont
 @media(max-width:1020px){.grid-2{grid-template-columns:1fr}.grid-4{grid-template-columns:1fr 1fr}}
 @media(max-width:640px){.grid-4{grid-template-columns:1fr}}
 
-.card{background:var(--card);border:1px solid var(--border);border-radius:16px;box-shadow:var(--shadow);padding:18px}
+.card{
+  background:var(--card);
+  border:1.5px solid var(--border);
+  border-radius:20px;
+  box-shadow:var(--shadow);
+  padding:18px;
+  margin-bottom:12px;
+  position:relative;
+}
 .card h2,.card h3{margin:6px 0 12px 0}
 
 .layer-card{
   background:var(--card);
-  border:1px solid var(--border);
+  border:1.5px solid var(--border);
   border-radius:20px;
   padding:22px;
   margin-bottom:20px;
+  position: relative;
 }
+.layer-card.layer-default{
+  box-shadow:0 20px 40px rgba(0,0,0,0.15);
+}
+.layer-card .layer-toggle{
+  border:1.5px solid rgba(124,58,237,0.25);
+}
+.layer-panel{
+  border-color:rgba(255,255,255,0.2);
+  animation:fadeIn 0.25s ease;
+}
+@keyframes fadeIn{
+  from{opacity:0;transform:translateY(-6px)}
+  to{opacity:1;transform:translateY(0)}
+}
+.highlight-text{color:#E0AFFF;font-weight:600;}
+.highlight-accent{color:#8EF2FF;font-weight:600;}
+.keyword{font-weight:600;color:#fff;}
 .layer-default{
   display:grid;
   grid-template-columns:repeat(auto-fit,minmax(280px,1fr));
@@ -69,6 +95,42 @@ header.topbar{position:sticky;top:0;display:flex;align-items:center;justify-cont
   flex-direction:column;
   gap:6px;
   font-size:0.9rem;
+}
+details.layer-field{
+  border:1px solid var(--border);
+  border-radius:10px;
+  padding:10px 12px;
+  background:rgba(15,23,42,0.25);
+}
+details.layer-field[open]{
+  background:rgba(15,23,42,0.4);
+}
+details.layer-field summary{
+  cursor:pointer;
+  font-weight:500;
+  color:var(--text);
+  list-style:none;
+  display:flex;
+  align-items:center;
+  gap:8px;
+}
+details.layer-field summary::-webkit-details-marker{
+  display:none;
+}
+details.layer-field summary::before{
+  content:"▸";
+  font-size:0.8em;
+  transition:transform 0.2s ease;
+}
+details.layer-field[open] summary::before{
+  transform:rotate(90deg);
+}
+details.layer-field summary:hover{
+  color:var(--primary);
+}
+details.layer-field > textarea,
+details.layer-field > small.help{
+  margin-top:10px;
 }
 .layer-field textarea{
   min-height:110px;
@@ -1472,4 +1534,34 @@ html[data-theme="light"] .topbar .navlinks a:visited{
   -webkit-text-fill-color: #0B0D13 !important;
   color: #0B0D13 !important;
   text-shadow: none !important;
+}
+
+/* === Wizard Label Styles (imported from wizard.css for index.html) === */
+.wizard-label{
+  display:flex;
+  flex-direction:column;
+  gap:0.35rem;
+  margin-top:0.75rem;
+  font-size:0.85rem;
+}
+.wizard-label textarea,
+.wizard-label select{
+  border-radius:0.5rem;
+  border:1px solid rgba(148,163,184,0.6);
+  padding:0.5rem 0.6rem;
+  background:rgba(15,23,42,0.8);
+  color:inherit;
+  resize:vertical;
+  transition:all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.wizard-label textarea{
+  caret-color:#7C3AED;
+}
+.wizard-label textarea:focus,
+.wizard-label select:focus{
+  outline:none;
+  border-color:rgba(124,58,237,0.8);
+  background:rgba(15,23,42,0.95);
+  box-shadow:0 0 0 3px rgba(124,58,237,0.2), 0 0 20px rgba(124,58,237,0.15);
+  transform:translateY(-2px);
 }

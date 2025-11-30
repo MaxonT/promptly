@@ -10,6 +10,9 @@ const TOKEN_SECRET = process.env.JWT_SECRET || "dev";
 const TOKEN_EXPIRES_IN = process.env.JWT_EXPIRES_IN || "7d";
 const PASSWORD_MIN_LENGTH = 8;
 
+// Email validation regex pattern (RFC 5322 simplified)
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 function normalizeEmail(email = "") {
   return email.trim().toLowerCase();
 }
@@ -47,7 +50,7 @@ authRouter.post("/register", async (req, res) => {
       return res.status(400).json({ ok: false, error: "Email is required" });
     }
     const normalizedEmail = normalizeEmail(email);
-    if (!normalizedEmail.includes("@")) {
+    if (!EMAIL_REGEX.test(normalizedEmail)) {
       return res.status(400).json({ ok: false, error: "Email is invalid" });
     }
     if (!password || typeof password !== "string" || password.length < PASSWORD_MIN_LENGTH) {

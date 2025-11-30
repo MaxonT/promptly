@@ -44,10 +44,54 @@ function formatSize(bytes) {
   return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
 }
 
+// Maximum allowed length for sanitized attachment names
+const MAX_FILENAME_LENGTH = 100;
+
+/**
+ * Sanitize attachment name for safe inclusion in LLM prompts
+ * 
+ * - Removes or escapes special characters that could be used for prompt injection
+ * - Limits filename length to prevent overly long inputs
+ * - Preserves readability while ensuring safety
+ */
+function sanitizeAttachmentName(name) {
+  if (!name || typeof name !== 'string') {
+    return 'unnamed_file';
+  }
+  
+  // Remove control characters and null bytes
+  let sanitized = name.replace(/[\x00-\x1f\x7f]/g, '');
+  
+  // Replace characters that could be used for prompt injection or confusion
+  // This includes: backticks, brackets, pipes, and multiple dashes
+  sanitized = sanitized
+    .replace(/[`[\]{}|<>]/g, '_')
+    .replace(/---+/g, '-')  // Prevent delimiter-like sequences
+    .replace(/\.\.\./g, '.')  // Collapse ellipsis
+    .replace(/\s+/g, ' ')  // Normalize whitespace
+    .trim();
+  
+  // Truncate to maximum length, preserving file extension if possible
+  if (sanitized.length > MAX_FILENAME_LENGTH) {
+    const lastDot = sanitized.lastIndexOf('.');
+    if (lastDot > 0 && lastDot > sanitized.length - 10) {
+      // Preserve extension
+      const ext = sanitized.substring(lastDot);
+      const baseName = sanitized.substring(0, MAX_FILENAME_LENGTH - ext.length - 3);
+      sanitized = baseName + '...' + ext;
+    } else {
+      sanitized = sanitized.substring(0, MAX_FILENAME_LENGTH - 3) + '...';
+    }
+  }
+  
+  return sanitized || 'unnamed_file';
+}
+
 /**
  * Build attachment context for LLM
  * 
  * Current: Generates text descriptions of attached files
+ * Security: Sanitizes filenames to prevent prompt injection
  * Future: 
  *   - For images: Use vision API to analyze content
  *   - For PDFs: Extract and include text content
@@ -61,13 +105,16 @@ function buildAttachmentContext(attachments) {
   const descriptions = attachments.map((att, i) => {
     const category = getAttachmentCategory(att.type);
     const size = formatSize(att.size);
-    return `  ${i + 1}. [${category}] ${att.name} (${size})`;
+    const sanitizedName = sanitizeAttachmentName(att.name);
+    return `  ${i + 1}. [${category}] "${sanitizedName}" (${size})`;
   });
 
-  return "\n\n--- Attached Files ---\n" +
+  // Use clear, distinctive boundaries that are unlikely to be confused
+  // with user content or system instructions
+  return "\n\n[ATTACHMENT_METADATA_START]\n" +
+    "The following is a list of attached files (metadata only, contents not parsed):\n" +
     descriptions.join("\n") +
-    "\n\nNote: File contents are not yet parsed. References are for context only.\n" +
-    "--- End of Attachments ---";
+    "\n[ATTACHMENT_METADATA_END]";
 }
 
 /**
@@ -80,7 +127,8 @@ function logAttachments(attachments, endpoint) {
   attachments.forEach((att, i) => {
     const category = getAttachmentCategory(att.type);
     const size = formatSize(att.size);
-    console.log(`  ${i + 1}. ${att.name} - ${category} - ${size}`);
+    const sanitizedName = sanitizeAttachmentName(att.name);
+    console.log(`  ${i + 1}. ${sanitizedName} - ${category} - ${size}`);
   });
 }
 

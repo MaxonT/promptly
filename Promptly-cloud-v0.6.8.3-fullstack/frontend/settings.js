@@ -178,18 +178,43 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
 
       modelListEl.innerHTML = "";
       const modelDisplayName = "Promptly Refined LLM Model";
-      const rows = [
-        ["Default model", modelDisplayName],
-        ["Outcome model", s.outcomeModel ? modelDisplayName : "(uses default)"],
-        ["Max candidates", String(s.maxCandidates ?? 8)]
+      const modelItems = [
+        { icon: "🤖", label: "Default model", value: modelDisplayName, badge: "Primary" },
+        { icon: "🎯", label: "Outcome model", value: s.outcomeModel ? modelDisplayName : "(uses default)", badge: null },
+        { icon: "📊", label: "Max candidates", value: String(s.maxCandidates ?? 8), badge: "Optimized" }
       ];
-      for (const [label, value] of rows) {
-        const dt = document.createElement("dt");
-        dt.textContent = label;
-        const dd = document.createElement("dd");
-        dd.textContent = value;
-        modelListEl.appendChild(dt);
-        modelListEl.appendChild(dd);
+      for (const item of modelItems) {
+        const div = document.createElement("div");
+        div.className = "model-item";
+        
+        const iconSpan = document.createElement("span");
+        iconSpan.className = "model-icon";
+        iconSpan.textContent = item.icon;
+        
+        const detailsDiv = document.createElement("div");
+        detailsDiv.className = "model-details";
+        
+        const labelSpan = document.createElement("span");
+        labelSpan.className = "model-label";
+        labelSpan.textContent = item.label;
+        
+        const valueSpan = document.createElement("span");
+        valueSpan.className = "model-value";
+        valueSpan.textContent = item.value;
+        
+        detailsDiv.appendChild(labelSpan);
+        detailsDiv.appendChild(valueSpan);
+        div.appendChild(iconSpan);
+        div.appendChild(detailsDiv);
+        
+        if (item.badge) {
+          const badgeSpan = document.createElement("span");
+          badgeSpan.className = "model-badge";
+          badgeSpan.textContent = item.badge;
+          div.appendChild(badgeSpan);
+        }
+        
+        modelListEl.appendChild(div);
       }
 
       featuresListEl.innerHTML = "";
@@ -197,31 +222,53 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
       const featureIcons = {
         questionWizard: "🧙",
         promptEnhancer: "✨",
-        outcomeRunner: "🎯"
+        outcomeRunner: "🎯",
+        uniqueLLMAlgorithm: "🚀"
       };
       const featureLabels = {
         questionWizard: "Question Wizard",
         promptEnhancer: "Prompt Enhancer",
-        outcomeRunner: "Outcome Runner"
+        outcomeRunner: "Outcome Runner",
+        uniqueLLMAlgorithm: "Promptly Unique LLMs Prompt Algorithm"
       };
-      Object.keys(features).forEach((key) => {
+      const featureDescs = {
+        questionWizard: "Smart clarifying questions",
+        promptEnhancer: "AI-powered optimization",
+        outcomeRunner: "Best result selection",
+        uniqueLLMAlgorithm: "Our proprietary algorithm power"
+      };
+      
+      // Add our special algorithm feature (always on)
+      const allFeatures = { ...features, uniqueLLMAlgorithm: true };
+      
+      Object.keys(allFeatures).forEach((key) => {
         const li = document.createElement("li");
-        const isOn = features[key];
+        const isOn = allFeatures[key];
         
         const iconSpan = document.createElement("span");
         iconSpan.className = "feature-icon";
         iconSpan.textContent = featureIcons[key] || "⚡";
         
+        const contentDiv = document.createElement("div");
+        contentDiv.style.flex = "1";
+        
         const nameSpan = document.createElement("span");
         nameSpan.className = "feature-name";
         nameSpan.textContent = featureLabels[key] || key;
+        
+        const descSpan = document.createElement("div");
+        descSpan.className = "feature-desc";
+        descSpan.textContent = featureDescs[key] || "";
+        
+        contentDiv.appendChild(nameSpan);
+        contentDiv.appendChild(descSpan);
         
         const statusSpan = document.createElement("span");
         statusSpan.className = `feature-status ${isOn ? "on" : "off"}`;
         statusSpan.textContent = isOn ? "Active" : "Inactive";
         
         li.appendChild(iconSpan);
-        li.appendChild(nameSpan);
+        li.appendChild(contentDiv);
         li.appendChild(statusSpan);
         featuresListEl.appendChild(li);
       });

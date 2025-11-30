@@ -11,7 +11,11 @@ db.exec(`
 CREATE TABLE IF NOT EXISTS users (
   id TEXT PRIMARY KEY,
   email TEXT UNIQUE NOT NULL,
-  created_at TEXT NOT NULL
+  password_hash TEXT,
+  subscription_tier TEXT DEFAULT 'free',
+  subscription_active INTEGER DEFAULT 1,
+  created_at TEXT NOT NULL,
+  updated_at TEXT
 );
 
 CREATE TABLE IF NOT EXISTS docs (
@@ -206,6 +210,10 @@ function ensureColumnExists(table, column, definition) {
 ensureColumnExists("runs", "completed_at", "TEXT");
 ensureColumnExists("runs", "metrics_json", "TEXT");
 ensureColumnExists("evaluations", "metrics_json", "TEXT");
+ensureColumnExists("users", "password_hash", "TEXT");
+ensureColumnExists("users", "subscription_tier", "TEXT DEFAULT 'free'");
+ensureColumnExists("users", "subscription_active", "INTEGER DEFAULT 1");
+ensureColumnExists("users", "updated_at", "TEXT");
 
 // Ensure demo user exists (for question sessions without authentication)
 // This runs every time the server starts
@@ -228,8 +236,16 @@ export function ensureUser(userId, email = null) {
   try {
     const userEmail = email || `${userId}@promptly.local`;
     db.prepare(`
-      INSERT OR IGNORE INTO users (id, email, created_at)
-      VALUES (?, ?, datetime('now'))
+      INSERT OR IGNORE INTO users (
+        id,
+        email,
+        password_hash,
+        subscription_tier,
+        subscription_active,
+        created_at,
+        updated_at
+      )
+      VALUES (?, ?, NULL, 'free', 1, datetime('now'), datetime('now'))
     `).run(userId, userEmail);
   } catch (err) {
     console.error(`[promptly] Failed to ensure user ${userId}:`, err);

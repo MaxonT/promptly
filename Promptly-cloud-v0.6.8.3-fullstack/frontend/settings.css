@@ -59,6 +59,70 @@
 .settings-panel--log{
   grid-column:1/3;
 }
+.settings-panel--account{
+  grid-column:1/3;
+}
+.account-status{
+  font-size:0.9rem;
+  margin:0 0 0.5rem;
+  color:var(--muted);
+}
+.account-message{
+  font-size:0.8rem;
+  min-height:1.2rem;
+  color:var(--accent,#0ea5e9);
+  margin-bottom:0.5rem;
+}
+.account-forms{
+  display:flex;
+  gap:1rem;
+  flex-wrap:wrap;
+  margin-bottom:0.5rem;
+}
+.account-form{
+  flex:1;
+  min-width:220px;
+  border:1px dashed var(--border);
+  border-radius:0.6rem;
+  padding:0.75rem;
+  display:flex;
+  flex-direction:column;
+  gap:0.45rem;
+  background:rgba(15,23,42,0.4);
+}
+.account-form h3{
+  margin:0;
+  font-size:0.95rem;
+}
+.account-form label{
+  display:flex;
+  flex-direction:column;
+  font-size:0.82rem;
+  gap:0.3rem;
+}
+.account-form input{
+  border-radius:0.5rem;
+  border:1px solid var(--border);
+  padding:0.4rem 0.5rem;
+  background:var(--surface,rgba(15,23,42,0.92));
+  color:inherit;
+}
+.account-form button,
+.account-logout{
+  border:none;
+  border-radius:999px;
+  padding:0.5rem 0.9rem;
+  font-size:0.85rem;
+  cursor:pointer;
+  background:linear-gradient(120deg,#7C3AED,#06B6D4);
+  color:#fff;
+}
+.account-logout{
+  margin-top:0.25rem;
+}
+.hidden{
+  display:none !important;
+}
 .settings-summary{
   font-size:0.85rem;
   color:var(--muted);
@@ -110,7 +174,8 @@
   .settings-panel--env,
   .settings-panel--features,
   .settings-panel--raw,
-  .settings-panel--log{
+  .settings-panel--log,
+  .settings-panel--account{
     grid-column:1/2;
   }
 }

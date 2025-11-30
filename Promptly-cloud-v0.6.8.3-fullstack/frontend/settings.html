@@ -26,6 +26,39 @@
   </header>
 
   <main class="settings-main">
+    <section class="settings-panel settings-panel--account" id="accountPanel">
+      <h2>Account</h2>
+      <p id="authStatus" class="account-status">Not signed in.</p>
+      <div id="authMessage" class="account-message"></div>
+      <div id="authForms" class="account-forms">
+        <form id="loginForm" class="account-form">
+          <h3>Sign in</h3>
+          <label>
+            Email
+            <input type="email" name="loginEmail" autocomplete="email" required />
+          </label>
+          <label>
+            Password
+            <input type="password" name="loginPassword" autocomplete="current-password" required minlength="8" />
+          </label>
+          <button type="submit">Login</button>
+        </form>
+        <form id="registerForm" class="account-form">
+          <h3>Create account</h3>
+          <label>
+            Email
+            <input type="email" name="registerEmail" autocomplete="email" required />
+          </label>
+          <label>
+            Password
+            <input type="password" name="registerPassword" autocomplete="new-password" required minlength="8" />
+          </label>
+          <button type="submit">Register</button>
+        </form>
+      </div>
+      <button id="logoutBtn" class="account-logout hidden">Log out</button>
+    </section>
+
     <section class="settings-panel settings-panel--env">
       <h2>Environment & models</h2>
       <div id="envSummary" class="settings-summary"></div>

@@ -24,6 +24,10 @@ const DUMMY_HASH = bcrypt.hashSync("dummy-password-for-timing-attack-prevention"
 // Email validation regex pattern (more restrictive per RFC standards)
 const EMAIL_REGEX = /^[a-zA-Z0-9_%+-]+(\.[a-zA-Z0-9_%+-]+)*@[a-zA-Z0-9-]+(\.[a-zA-Z0-9-]+)*\.[a-zA-Z]{2,}$/;
 
+// Generate dummy hash at startup for constant-time comparison when user is not found
+// This prevents timing attacks by ensuring bcrypt.compare() is always called
+const DUMMY_HASH = bcrypt.hashSync("dummy_password_for_timing", 10);
+
 function normalizeEmail(email = "") {
   return email.trim().toLowerCase();
 }

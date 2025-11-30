@@ -6,9 +6,23 @@ import { nanoid } from "nanoid";
 
 export const authRouter = Router();
 
-const TOKEN_SECRET = process.env.JWT_SECRET || "dev";
+let TOKEN_SECRET = process.env.JWT_SECRET;
+if (!TOKEN_SECRET) {
+  if (process.env.NODE_ENV === "development") {
+    console.warn("[promptly] WARNING: JWT_SECRET is not set. Using default insecure development secret.");
+    TOKEN_SECRET = "dev";
+  } else {
+    throw new Error("[promptly] FATAL: JWT_SECRET environment variable must be set in production.");
+  }
+}
 const TOKEN_EXPIRES_IN = process.env.JWT_EXPIRES_IN || "7d";
 const PASSWORD_MIN_LENGTH = 8;
+const BCRYPT_ROUNDS = 10;
+// Dummy hash generated with same cost factor to ensure constant-time comparison (prevents timing attacks)
+const DUMMY_HASH = bcrypt.hashSync("dummy-password-for-timing-attack-prevention", BCRYPT_ROUNDS);
+
+// Email validation regex pattern (more restrictive per RFC standards)
+const EMAIL_REGEX = /^[a-zA-Z0-9_%+-]+(\.[a-zA-Z0-9_%+-]+)*@[a-zA-Z0-9-]+(\.[a-zA-Z0-9-]+)*\.[a-zA-Z]{2,}$/;
 
 // Generate dummy hash at startup for constant-time comparison when user is not found
 // This prevents timing attacks by ensuring bcrypt.compare() is always called
@@ -51,7 +65,7 @@ authRouter.post("/register", async (req, res) => {
       return res.status(400).json({ ok: false, error: "Email is required" });
     }
     const normalizedEmail = normalizeEmail(email);
-    if (!normalizedEmail.includes("@")) {
+    if (!EMAIL_REGEX.test(normalizedEmail)) {
       return res.status(400).json({ ok: false, error: "Email is invalid" });
     }
     if (!password || typeof password !== "string" || password.length < PASSWORD_MIN_LENGTH) {
@@ -66,7 +80,7 @@ authRouter.post("/register", async (req, res) => {
       return res.status(409).json({ ok: false, error: "Email already registered" });
     }
 
-    const passwordHash = await bcrypt.hash(password, 10);
+    const passwordHash = await bcrypt.hash(password, BCRYPT_ROUNDS);
     const userId = nanoid(16);
     const now = new Date().toISOString();
     db.prepare(`
@@ -88,19 +102,26 @@ authRouter.post("/login", async (req, res) => {
     if (!email || typeof email !== "string") {
       return res.status(400).json({ ok: false, error: "Email is required" });
     }
+    const normalizedEmail = normalizeEmail(email);
+    if (!EMAIL_REGEX.test(normalizedEmail)) {
+      return res.status(400).json({ ok: false, error: "Email is invalid" });
+    }
     if (!password || typeof password !== "string") {
       return res.status(400).json({ ok: false, error: "Password is required" });
     }
 
-    const normalizedEmail = normalizeEmail(email);
     const row = db.prepare("SELECT * FROM users WHERE email = ?").get(normalizedEmail);
     
-    // Always perform bcrypt comparison to prevent timing attacks
-    // If user not found, compare against dummy hash to maintain constant time
+    // Always perform bcrypt.compare() to prevent timing attacks
+    // Use dummy hash when user not found to ensure constant-time comparison
     const hashToCompare = row?.password_hash || DUMMY_HASH;
     const valid = await bcrypt.compare(password, hashToCompare);
     
-    if (!row || !row.password_hash || !valid) {
+    // Combine conditions using bitwise AND to avoid short-circuit evaluation and timing leaks
+    const userExists = !!row;
+    const credentialsValid = userExists & valid;
+    
+    if (!credentialsValid) {
       return res.status(401).json({ ok: false, error: "Invalid credentials" });
     }
 

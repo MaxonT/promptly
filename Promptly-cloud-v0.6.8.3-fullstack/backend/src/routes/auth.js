@@ -87,11 +87,14 @@ authRouter.post("/login", async (req, res) => {
     if (!email || typeof email !== "string") {
       return res.status(400).json({ ok: false, error: "Email is required" });
     }
+    const normalizedEmail = normalizeEmail(email);
+    if (!EMAIL_REGEX.test(normalizedEmail)) {
+      return res.status(400).json({ ok: false, error: "Email is invalid" });
+    }
     if (!password || typeof password !== "string") {
       return res.status(400).json({ ok: false, error: "Password is required" });
     }
 
-    const normalizedEmail = normalizeEmail(email);
     const row = db.prepare("SELECT * FROM users WHERE email = ?").get(normalizedEmail);
     if (!row || !row.password_hash) {
       return res.status(401).json({ ok: false, error: "Invalid credentials" });

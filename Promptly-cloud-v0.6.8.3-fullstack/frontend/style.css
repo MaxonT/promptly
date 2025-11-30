@@ -5,8 +5,8 @@
   --shadow:0 12px 30px rgba(0,0,0,.35);
 }
 [data-theme="light"]{
-  --bg:#f6f8fb;--bg-soft:#ffffff;--card:#ffffff;--text:#0b0d13;--muted:#4b5565;
-  --border:#e6e9f2;--primary:#6d28d9;--accent:#0ea5b7;--ok:#059669;--warn:#b45309;--err:#b91c1c;
+  --bg:#f6f8fb;--bg-soft:#ffffff;--card:#ffffff;--text:#05070c;--muted:#2f3744;
+  --border:#dfe3ef;--primary:#6d28d9;--accent:#0ea5b7;--ok:#059669;--warn:#b45309;--err:#b91c1c;
   --shadow:0 10px 26px rgba(0,0,0,.08);
 }
 *{box-sizing:border-box}
@@ -251,7 +251,7 @@ main, header, footer, .container, .card, .grid{ position: relative; z-index: 1; 
 
 /* === v0.5.6 Option B: Nav gradient underline + softer glow + sizing === */
 .topbar{
-  border-bottom: 1px solid transparent;
+  border-bottom: 1.5px solid transparent;
   border-image: linear-gradient(90deg,var(--brand-a, #6366F1), var(--brand-b, #06B6D4), var(--brand-c, #22D3EE)) 1;
 }
 .brand-logo img{ height: 42px; }

@@ -1367,6 +1367,7 @@ document.addEventListener('DOMContentLoaded', () => {
   function clearActive() {
     stages.forEach((el) => el.classList.remove("pipe-active"));
   }
+  let isAnimating = false;
   async function animatePipeline() {
     console.log('[Promptly] Starting pipeline animation...');
     clearActive();

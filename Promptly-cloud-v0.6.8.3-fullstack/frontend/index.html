@@ -472,29 +472,6 @@ temperature: 0.5</textarea>
       </div>
     </section>
 
-    <section class="card" id="wizardLanding">
-  <h2 class="gradient-text">Question Wizard</h2>
-      <p class="subtitle">Go from a one-line idea to a structured spec and compiled prompt blocks.</p>
-  <label class="wizard-label">
-    <span>Project idea *</span>
-    <textarea id="landingIdeaInput" rows="3" placeholder="Example: Build a prompt to summarize YouTube videos into 5 bullet points." required minlength="10"></textarea>
-    <small class="help" style="display:block;margin-top:4px;color:var(--text-low);">Minimum 10 characters required</small>
-  </label>
-  <label class="wizard-label">
-    <span>Project type</span>
-    <select id="landingKindSelect">
-      <option value="">Auto-detect</option>
-      <option value="coding">Coding / engineering</option>
-      <option value="writing">Writing / content</option>
-      <option value="analysis">Analysis / research</option>
-      <option value="product">Product / UX design</option>
-      <option value="custom">Custom / other</option>
-    </select>
-  </label>
-  <button id="landingStartBtn" class="btn" disabled title="Please enter your project idea first">Start Question Wizard</button>
-  <p class="help">This will open the Question Wizard and guide you step by step.</p>
-    </section>
-
     <section class="grid grid-4" style="margin-top:16px">
       <div class="card kpi" id="kAcc">
         <span class="label metric-with-tooltip" data-i18n="kpi_accuracy">
@@ -556,6 +533,29 @@ temperature: 0.5</textarea>
         <h3 class="gradient-text" data-i18n="gauge">Progress Meter (%)</h3>
         <canvas id="gaugeProg" class="canvas"></canvas>
       </div>
+    </section>
+
+    <section class="card" id="wizardLanding">
+  <h2 class="gradient-text">Question Wizard</h2>
+      <p class="subtitle">Go from a one-line idea to a structured spec and compiled prompt blocks.</p>
+  <label class="wizard-label">
+    <span>Project idea *</span>
+    <textarea id="landingIdeaInput" rows="3" placeholder="Example: Build a prompt to summarize YouTube videos into 5 bullet points." required minlength="10"></textarea>
+    <small class="help" style="display:block;margin-top:4px;color:var(--text-low);">Minimum 10 characters required</small>
+  </label>
+  <label class="wizard-label">
+    <span>Project type</span>
+    <select id="landingKindSelect">
+      <option value="">Auto-detect</option>
+      <option value="coding">Coding / engineering</option>
+      <option value="writing">Writing / content</option>
+      <option value="analysis">Analysis / research</option>
+      <option value="product">Product / UX design</option>
+      <option value="custom">Custom / other</option>
+    </select>
+  </label>
+  <button id="landingStartBtn" class="btn" disabled title="Please enter your project idea first">Start Question Wizard</button>
+  <p class="help">This will open the Question Wizard and guide you step by step.</p>
     </section>
 
     <section class="card example-gallery" id="exampleGallery">

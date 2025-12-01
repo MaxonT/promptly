@@ -387,6 +387,115 @@ html[data-theme="light"] .grey-gradient-text{
     </div>
 
 
+    <div class="modes-panel" aria-label="Choose mode" role="radiogroup">
+      <div class="modes-intro" id="modesIntro">Choose a mode: <strong>Quick Start</strong> for experienced users; <strong>Wizard</strong> if you need step-by-step help.</div>
+
+      <div class="modes-grid" aria-describedby="modesIntro">
+        <div class="mode-card mode-card--selected" id="modeQuick" role="radio" aria-checked="true" aria-describedby="modeQuickDesc" tabindex="0" data-mode="quick">
+          <div class="mode-card__header">
+            <div class="mode-card__title-row">
+              <h4 class="mode-card__title">Quick Start</h4>
+              <span class="mode-card__check" aria-hidden="true">✓</span>
+            </div>
+            <p class="mode-card__desc" id="modeQuickDesc">Have a clear task? Paste a one-line task and get a Best Prompt fast. (For experienced users.)</p>
+          </div>
+          <div class="mode-card__meta">Instant focus on task input</div>
+        </div>
+
+        <div class="mode-card" id="modeWizard" role="radio" aria-checked="false" aria-describedby="modeWizardDesc" tabindex="-1" data-mode="wizard">
+          <div class="mode-card__header">
+            <div class="mode-card__title-row">
+              <h4 class="mode-card__title">Wizard (Guided)</h4>
+              <span class="mode-card__check" aria-hidden="true">✓</span>
+            </div>
+            <p class="mode-card__desc" id="modeWizardDesc">New to prompt engineering? Use the guided Wizard to build the task step-by-step.</p>
+          </div>
+          <div class="mode-card__meta">Opens the guided wizard flow</div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // Modes panel with radio semantics and light analytics
+      document.addEventListener('DOMContentLoaded', () => {
+        const modeCards = Array.from(document.querySelectorAll('.mode-card'));
+        const taskEl = document.getElementById('task');
+
+        if (!modeCards.length) return;
+
+        function trackMode(mode) {
+          try {
+            window.trackEvent && window.trackEvent(`mode_select_${mode}`);
+          } catch (e) { /* ignore */ }
+          try {
+            console.log('mode_selected:', mode);
+          } catch (e) { /* ignore */ }
+        }
+
+        function focusTask() {
+          if (taskEl && typeof taskEl.focus === 'function') {
+            taskEl.focus({ preventScroll: false });
+          }
+        }
+
+        function openWizard() {
+          try {
+            if (typeof window.openQuestionWizard === 'function') {
+              window.openQuestionWizard();
+              return;
+            }
+          } catch (e) { /* ignore */ }
+          try {
+            window.location.href = '/wizard.html';
+          } catch (e) { /* ignore */ }
+        }
+
+        function selectMode(nextIndex, triggerAction = false) {
+          modeCards.forEach((card, idx) => {
+            const isSelected = idx === nextIndex;
+            card.setAttribute('aria-checked', isSelected ? 'true' : 'false');
+            card.classList.toggle('mode-card--selected', isSelected);
+            card.tabIndex = isSelected ? 0 : -1;
+          });
+
+          const selectedCard = modeCards[nextIndex];
+          if (selectedCard) {
+            selectedCard.focus({ preventScroll: true });
+            if (triggerAction) {
+              const mode = selectedCard.dataset.mode;
+              trackMode(mode);
+              if (mode === 'quick') {
+                focusTask();
+              } else if (mode === 'wizard') {
+                openWizard();
+              }
+            }
+          }
+        }
+
+        modeCards.forEach((card, index) => {
+          card.addEventListener('click', () => selectMode(index, true));
+          card.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              selectMode(index, true);
+            }
+
+            if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+              e.preventDefault();
+              selectMode((index + 1) % modeCards.length);
+            }
+
+            if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+              e.preventDefault();
+              selectMode((index - 1 + modeCards.length) % modeCards.length);
+            }
+          });
+        });
+      });
+    </script>
+
+
     <section class="layer-card layer-default" id="layerDefault">
       <div class="layer-default__column">
         <span class="layer-badge">Layer 1 · Magic Mode</span>

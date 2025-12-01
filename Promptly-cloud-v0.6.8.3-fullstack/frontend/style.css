@@ -706,7 +706,111 @@ footer.footer{margin:28px 0;text-align:center;color:var(--muted)}
 }
 @keyframes pulse-border{
   0%,100%{border-color:var(--border);box-shadow:var(--shadow);}
-  50%{border-color:#3b82f6;box-shadow:0 0 0 4px rgba(59,130,246,0.3),var(--shadow);}
+  50%{border-color:#3b82f6;box-shadow:0 0 0 4px rgba(59,130,246,0.3),var(--shadow);}  
+}
+
+/* ====== Modes panel styles (radio-group semantics) ====== */
+
+.modes-panel{
+  margin: 20px 0 10px;
+  padding: 10px 8px;
+  border-radius: 14px;
+}
+
+.modes-intro{
+  font-size: .95rem;
+  color: var(--text-med);
+  margin-bottom: 12px;
+  display:block;
+}
+
+.modes-grid{
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 12px;
+}
+
+.mode-card{
+  background: linear-gradient(var(--surface-2), var(--surface-2));
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,.08);
+  padding: 14px;
+  display:flex;
+  flex-direction:column;
+  gap: 8px;
+  cursor: pointer;
+  min-height: 122px;
+  transition: transform .14s ease, box-shadow .14s ease, border-color .14s ease;
+  position: relative;
+  outline: none;
+}
+
+.mode-card__title-row{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap: 10px;
+}
+
+.mode-card__title{
+  font-weight:800;
+  margin:0;
+}
+
+.mode-card__desc{
+  color: var(--text-med);
+  font-size: .92rem;
+  margin: 6px 0 0 0;
+}
+
+.mode-card__meta{
+  font-size:.88rem;
+  color: var(--text-low);
+}
+
+.mode-card__check{
+  width: 22px;
+  height: 22px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  border-radius:50%;
+  border:1.5px solid rgba(255,255,255,.18);
+  color: transparent;
+  background: rgba(255,255,255,.04);
+  transition: all .14s ease;
+}
+
+.mode-card:hover{
+  transform: translateY(-2px);
+  box-shadow: 0 10px 28px rgba(6,182,212,.08);
+  border-color: rgba(255,255,255,.12);
+}
+
+.mode-card:focus-visible{
+  box-shadow: 0 0 0 3px rgba(6,182,212,.22);
+}
+
+.mode-card--selected{
+  border-color: var(--ok);
+  box-shadow: 0 12px 34px rgba(34,197,94,0.10);
+}
+
+.mode-card--selected .mode-card__check{
+  background: var(--ok);
+  border-color: var(--ok);
+  color: #0b0f14;
+  font-weight: 800;
+}
+
+@media (max-width: 480px){
+  .modes-grid{ grid-template-columns: 1fr; }
+  .mode-card{ min-height: auto; }
+}
+
+@media (prefers-reduced-motion: reduce){
+  .mode-card{ transition: none; }
+  .mode-card:hover{ transform: none; box-shadow: none; }
 }
 
 

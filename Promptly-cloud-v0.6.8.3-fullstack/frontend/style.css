@@ -173,9 +173,15 @@ details.layer-field > small.help{
   transition:box-shadow 0.3s ease, transform 0.3s ease, border-color 0.3s ease;
 }
 .algorithm-step-enhanced.pipeline-stage.pipe-active{
-  box-shadow:0 0 20px rgba(124,58,237,0.35);
-  transform:translateY(-3px);
-  border-color:rgba(124,58,237,0.8);
+  box-shadow:0 0 30px rgba(124,58,237,0.6), 0 0 60px rgba(124,58,237,0.3);
+  transform:translateY(-5px) scale(1.02);
+  border-color:rgba(124,58,237,1);
+  background:linear-gradient(135deg,rgba(124,58,237,0.15),rgba(6,182,212,0.1));
+  animation:pulse-glow 0.5s ease-in-out;
+}
+@keyframes pulse-glow{
+  0%,100%{box-shadow:0 0 30px rgba(124,58,237,0.6), 0 0 60px rgba(124,58,237,0.3);}
+  50%{box-shadow:0 0 40px rgba(124,58,237,0.8), 0 0 80px rgba(124,58,237,0.5);}
 }
 .layer-toggle__chevron{
   transition:transform 0.2s ease;

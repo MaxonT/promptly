@@ -1934,72 +1934,46 @@ html[data-theme="light"] .text-keyword {
 
 /* ============================================
    Compact Metrics Section (Closer to Hero)
+   - Increased vertical height for metric cards
    ============================================ */
 
 .metrics-compact {
   margin-top: 8px !important;
   margin-bottom: 16px !important;
-  max-width: 100%;
-  width: 100%;
 }
 
+/* Increased vertical height (padding) for metric cards */
 .metrics-compact .card.kpi {
-  padding: 14px 16px;
-  min-width: 180px;
+  padding: 24px 20px;
+  min-height: 140px;
 }
 
-/* Make metrics grid use 5 columns to show all metrics in a row */
-#metricsSection.grid.grid-4 {
-  grid-template-columns: repeat(5, 1fr) !important;
-  gap: 16px;
-  width: 100%;
+.metrics-compact .card.kpi .value {
+  font-size: 2rem;
+  margin: 12px 0;
 }
 
-@media (max-width: 1200px) {
-  #metricsSection.grid.grid-4 {
-    grid-template-columns: repeat(3, 1fr) !important;
-  }
-}
-
-@media (max-width: 768px) {
-  #metricsSection.grid.grid-4 {
-    grid-template-columns: repeat(2, 1fr) !important;
-  }
-}
-
-@media (max-width: 480px) {
-  #metricsSection.grid.grid-4 {
-    grid-template-columns: 1fr !important;
-  }
+.metrics-compact .card.kpi .label {
+  font-size: 1rem;
 }
 
 /* ============================================
-   Layer 2 & Layer 3 Compact Width
+   Layer 2 & Layer 3 Compact Height
+   - Reduced vertical padding, full horizontal width
    ============================================ */
 
 .layer-card {
-  max-width: 85%;
-  margin-left: auto;
-  margin-right: auto;
+  padding: 14px 22px !important;
+  margin-bottom: 12px !important;
 }
 
-/* Keep layer-expert (Layer 3) same width as Layer 2 */
-.layer-card.layer-expert {
-  max-width: 85%;
+.layer-card .layer-toggle {
+  padding: 8px 12px;
 }
 
-@media (max-width: 1024px) {
-  .layer-card,
-  .layer-card.layer-expert {
-    max-width: 95%;
-  }
-}
-
-@media (max-width: 768px) {
-  .layer-card,
-  .layer-card.layer-expert {
-    max-width: 100%;
-  }
+/* Reduce height when collapsed */
+.layer-card .layer-toggle__label {
+  font-size: 0.95rem;
 }
 
 /* ============================================

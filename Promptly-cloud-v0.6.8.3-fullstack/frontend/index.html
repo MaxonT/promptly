@@ -1391,7 +1391,16 @@ temperature: 0.5</textarea>
   }
   const runBtn = document.getElementById("runBtn");
   if (runBtn) {
-    runBtn.addEventListener("click", animatePipeline);
+    runBtn.addEventListener("click", async () => {
+      if (typeof refreshMetrics === "function") {
+        // Await refreshMetrics if it returns a Promise, otherwise just call it
+        const result = refreshMetrics();
+        if (result && typeof result.then === "function") {
+          await result;
+        }
+      }
+      await animatePipeline();
+    });
   }
 })();
 </script>

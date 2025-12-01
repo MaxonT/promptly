@@ -1583,17 +1583,147 @@ html[data-theme="light"] .topbar .navlinks a:visited{
   transform:translateY(-2px);
 }
 
-/* Advanced status display animation styles */
-#bestPrompt[style*="font-family: Monaco"]{
-  background:linear-gradient(135deg,rgba(15,23,42,0.95),rgba(11,12,16,0.98))!important;
-  border:1.5px solid rgba(124,58,237,0.4)!important;
-  box-shadow:0 0 30px rgba(124,58,237,0.2),inset 0 0 20px rgba(124,58,237,0.05)!important;
-  color:#a5b4fc!important;
-  white-space:pre!important;
-  overflow-x:auto!important;
-  animation:status-pulse 2s ease-in-out infinite!important;
+/* Processing animation for Best Prompt area */
+.processing-animation {
+  animation: pulse-text 1.5s infinite alternate;
+  color: var(--muted);
 }
-@keyframes status-pulse{
-  0%,100%{box-shadow:0 0 30px rgba(124,58,237,0.2),inset 0 0 20px rgba(124,58,237,0.05);}
-  50%{box-shadow:0 0 40px rgba(124,58,237,0.3),inset 0 0 25px rgba(124,58,237,0.1);}
+@keyframes pulse-text {
+  from { opacity: 0.6; }
+  to { opacity: 1; }
+}
+
+/* ============================================
+   Global Button Click Animation Styles
+   ============================================ */
+
+/* Base styles for all animated buttons */
+button.button-animated,
+.btn.button-animated,
+[role="button"].button-animated {
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+              box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+              background 0.2s ease;
+  cursor: pointer;
+  user-select: none;
+}
+
+/* Hover effect */
+button.button-animated:hover:not(:disabled),
+.btn.button-animated:hover:not(:disabled),
+[role="button"].button-animated:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(124, 58, 237, 0.3),
+              0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+/* Active/Clicked state */
+button.button-animated.button-clicked,
+.btn.button-animated.button-clicked,
+[role="button"].button-animated.button-clicked {
+  transform: scale(0.96) translateY(0);
+  transition: transform 0.1s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Disabled state */
+button.button-animated:disabled,
+.btn.button-animated:disabled,
+[role="button"].button-animated:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none !important;
+  pointer-events: none;
+}
+
+/* Ripple effect element */
+.button-ripple {
+  position: absolute;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.6);
+  transform: scale(0);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+/* Ripple animation */
+.button-ripple.ripple-active {
+  animation: ripple-expand 0.6s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+@keyframes ripple-expand {
+  0% {
+    transform: scale(0);
+    opacity: 0.8;
+  }
+  50% {
+    opacity: 0.6;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 0;
+  }
+}
+
+/* Special styling for primary action buttons */
+.btn.layer-primary-action.button-animated {
+  background: linear-gradient(90deg, rgba(124, 58, 237, 0.95), rgba(6, 182, 212, 0.95));
+}
+
+.btn.layer-primary-action.button-animated:hover:not(:disabled) {
+  background: linear-gradient(90deg, rgba(124, 58, 237, 1), rgba(6, 182, 212, 1));
+  box-shadow: 0 6px 20px rgba(124, 58, 237, 0.4),
+              0 2px 6px rgba(6, 182, 212, 0.3);
+}
+
+.btn.layer-primary-action.button-animated.button-clicked {
+  background: linear-gradient(90deg, rgba(124, 58, 237, 0.85), rgba(6, 182, 212, 0.85));
+}
+
+/* Copy button special styling */
+.copy-btn.button-animated:hover:not(:disabled) {
+  background: rgba(124, 58, 237, 0.2);
+  border-color: rgba(124, 58, 237, 0.5);
+}
+
+/* Navigation and link buttons */
+.navlinks a.button-animated,
+.navlinks button.button-animated {
+  transition: color 0.2s ease, transform 0.2s ease;
+}
+
+.navlinks a.button-animated:hover,
+.navlinks button.button-animated:hover:not(:disabled) {
+  transform: translateX(2px);
+}
+
+/* Wizard buttons */
+.wizard-button.button-animated:hover:not(:disabled) {
+  box-shadow: 0 4px 16px rgba(124, 58, 237, 0.25);
+}
+
+/* Ensure buttons maintain their original styles */
+button.button-animated:not(.btn),
+.btn.button-animated {
+  /* Preserve existing button styles */
+}
+
+/* Accessibility: Reduce motion for users who prefer it */
+@media (prefers-reduced-motion: reduce) {
+  button.button-animated,
+  .btn.button-animated,
+  [role="button"].button-animated {
+    transition: none;
+  }
+  
+  .button-ripple {
+    display: none;
+  }
+  
+  button.button-animated.button-clicked,
+  .btn.button-animated.button-clicked {
+    transform: none;
+  }
 }

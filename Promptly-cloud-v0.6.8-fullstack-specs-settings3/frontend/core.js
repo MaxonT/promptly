@@ -70,6 +70,32 @@
       <div style="color:var(--muted);font-size:12px;margin-top:4px">${h.prompt}</div></div>
       <button class="btn" onclick='document.getElementById("bestPrompt").value=${JSON.stringify(h.prompt)}'>Apply</button>`;list.appendChild(li);});}
   function onRun(){step();rKPIs();rCharts();rVersions();document.getElementById("bestPrompt").value=state.history[0].prompt;}
+  function logModeSelection(mode){
+    const detail={mode, ts:Date.now()};
+    if(window.dispatchEvent){window.dispatchEvent(new CustomEvent('promptly:mode_selected',{detail}));}
+    if(window.promptlyLogEvent){try{window.promptlyLogEvent('mode_selected', detail);}catch(e){}}
+    console.info('mode_selected', detail);
+  }
+  function focusQuickStart(){
+    const task=document.getElementById("task"), run=document.getElementById("runBtn");
+    if(task){task.focus({preventScroll:false});task.scrollIntoView({behavior:'smooth',block:'center'});}    
+    if(run){run.classList.add('pulse');run.focus({preventScroll:false});setTimeout(()=>run.classList.remove('pulse'),1200);}  
+  }
+  function navigateWizard(){ window.location.href="wizard.html"; }
+  function bindModes(){
+    const quick=document.getElementById("modeQuickCta"), wizard=document.getElementById("modeWizardCta");
+    if(quick){quick.addEventListener('click',()=>{focusQuickStart();logModeSelection('quick');});}
+    if(wizard){wizard.addEventListener('click',()=>{logModeSelection('wizard');navigateWizard();});}
+    document.querySelectorAll('.mode-card').forEach(card=>{
+      card.addEventListener('keydown',e=>{
+        if(e.key==='Enter' || e.key===' '){
+          e.preventDefault();
+          const target=card.querySelector('button');
+          if(target){target.click();}
+        }
+      });
+    });
+  }
   document.addEventListener("DOMContentLoaded",()=>{ // init
     // header
     const themeSel=document.getElementById("themeSelect"), langSel=document.getElementById("langSelect");
@@ -77,6 +103,7 @@
     if(themeSel){const saved=localStorage.getItem(THEME_KEY)||"auto";themeSel.value=saved;applyTheme(saved);themeSel.addEventListener("change",()=>{const v=themeSel.value;localStorage.setItem(THEME_KEY,v);applyTheme(v)});prefersDark.addEventListener("change",()=>{if((localStorage.getItem(THEME_KEY)||"auto")==="auto")applyTheme("auto")});}
     consentBanner();
     const run=document.getElementById("runBtn"); if(run) run.addEventListener("click", onRun);
+    bindModes();
     rKPIs(); rCharts(); rVersions();
     const ro=new ResizeObserver(()=>rCharts()); ["lineGrowth","barContrib","piePass","gaugeProg"].forEach(id=>{const c=document.getElementById(id); if(c) ro.observe(c);});
   });

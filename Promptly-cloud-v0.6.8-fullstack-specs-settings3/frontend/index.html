@@ -240,6 +240,32 @@ html[data-theme="light"] .grey-gradient-text{
       </div>
     </div>
 
+    <section class="mode-banner" aria-label="Prompt setup modes">
+      <div class="mode-banner__head">
+        <div>
+          <p class="eyebrow">Modes</p>
+          <h2 class="mode-banner__title">Choose how you want to start</h2>
+          <p class="mode-banner__subtitle">Pick the path that fits your flow: jump straight into a task or follow the guided wizard.</p>
+        </div>
+      </div>
+      <div class="mode-card__group">
+        <article class="mode-card" data-mode="quick" tabindex="0" aria-label="Quick Start mode">
+          <div class="mode-card__badge">Quick Start</div>
+          <h3 class="mode-card__title">Quick Start</h3>
+          <p class="mode-card__desc">Have a clear task? Paste a one-line task and get a Best Prompt fast. (For experienced users.)</p>
+          <div class="mode-card__meta">Ideal for: users who already know the outcome they want.</div>
+          <button class="btn mode-card__cta" id="modeQuickCta">Start Quick</button>
+        </article>
+        <article class="mode-card" data-mode="wizard" tabindex="0" aria-label="Wizard mode">
+          <div class="mode-card__badge mode-card__badge--alt">Wizard (Guided)</div>
+          <h3 class="mode-card__title">Wizard (Guided)</h3>
+          <p class="mode-card__desc">New to prompt engineering? Use the guided Wizard to build the task step-by-step.</p>
+          <div class="mode-card__meta">Ideal for: teams onboarding or exploring prompt experiments.</div>
+          <button class="btn mode-card__cta btn-alt" id="modeWizardCta">Try Wizard</button>
+        </article>
+      </div>
+    </section>
+
     <section class="grid grid-2">
       <div class="card">
         <h3 data-i18n="task_label">Task</h3>

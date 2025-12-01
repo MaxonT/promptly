@@ -87,19 +87,41 @@
     if (pie) drawPie(pie, [Math.round((metrics.pass_rate ?? metrics.passRate ?? 0) * 100), Math.round((1 - (metrics.pass_rate ?? metrics.passRate ?? 0)) * 100)]);
     if (gauge) drawGauge(gauge, progress);
   }
-  async function fetchRunMetrics() {
+  async function fetchLatestRun() {
     try {
       const res = await fetch(getRunUrl());
-      const data = await res.json();
-      return data.metrics || null;
+      return await res.json();
     } catch (err) {
-      console.error("[promptly] fetchRunMetrics error", err);
+      console.error("[promptly] fetchLatestRun error", err);
       return null;
     }
   }
+  function formatBestPrompt(rawOutput) {
+    if (!rawOutput) return "";
+    if (typeof rawOutput === "string") return rawOutput;
+    try {
+      return JSON.stringify(rawOutput, null, 2);
+    } catch {
+      return String(rawOutput);
+    }
+  }
+
   async function refreshMetrics() {
-    const metrics = await fetchRunMetrics();
-    renderMetrics(metrics);
+    const data = await fetchLatestRun();
+    if (!data) {
+      console.warn("[promptly] refreshMetrics: No data returned from fetchLatestRun()");
+      return;
+    }
+    const run = data.run || null;
+    if (!run) {
+      console.warn("[promptly] refreshMetrics: No 'run' property in fetched data");
+      return;
+    }
+    renderMetrics(run.metrics);
+    const bestPromptEl = document.getElementById("bestPrompt");
+    if (bestPromptEl) {
+      bestPromptEl.value = formatBestPrompt(run.raw_output);
+    }
   }
   document.addEventListener("DOMContentLoaded", () => {
     const themeSel = document.getElementById("themeSelect");

@@ -603,7 +603,7 @@ temperature: 0.5</textarea>
       </div>
       <div class="algorithm-grid-enhanced">
         <div class="algorithm-steps-enhanced">
-          <article class="algorithm-step-enhanced">
+          <article class="algorithm-step-enhanced pipeline-stage" data-pipeline-stage="spec">
             <div class="step-header">
               <span class="step-number-enhanced">1</span>
               <h4 class="step-title">Spec Builder</h4>
@@ -859,13 +859,13 @@ temperature: 0.5</textarea>
         <div><img src="assets/placeholder_gauge.png" alt="Progress gauge" style="width:100%;border-radius:12px;box-shadow:0 4px 24px rgba(0,0,0,.25)"><p style="opacity:.7;margin-top:6px">Progress Gauge</p></div>
       </div>
       <h3 style="margin-top:16px" class="gradient-animated">Glossary</h3>
-      <ul class="glossary-list glossy">
+<ul class="glossary-list glossy">
         <li><span class="glossary-term" data-i18n-key="accuracy">Accuracy</span><span class="glossary-def">Correct outputs / total cases.</span></li>
         <li><span class="glossary-term" data-i18n-key="f1">F1</span><span class="glossary-def">2 × precision × recall ÷ (precision + recall).</span></li>
         <li><span class="glossary-term" data-i18n-key="pass_rate">Pass Rate</span><span class="glossary-def">Passed constraints / total constraints.</span></li>
         <li><span class="glossary-term" data-i18n-key="token_cost">Token Cost</span><span class="glossary-def">prompt_tokens + completion_tokens.</span></li>
         <li><span class="glossary-term" data-i18n-key="progress">Progress %</span><span class="glossary-def">average(accuracy/target_accuracy, f1/target_f1, pass_rate/target_pass_rate, ideal_token_cost/token_cost) × 100.</span></li>
-      </ul>
+</ul>
     `;
     document.body.appendChild(section);
   }
@@ -1364,6 +1364,47 @@ temperature: 0.5</textarea>
       }
     });
   });
+})();
+</script>
+
+<script>
+(() => {
+  const stepNames = ["spec","question","agent","metrics","outcome"];
+  const baseStages = Array.from(document.querySelectorAll(".algorithm-step-enhanced"));
+  baseStages.forEach((el, idx) => {
+    el.dataset.pipelineStage = stepNames[idx] || `stage-${idx}`;
+    el.classList.add("pipeline-stage");
+  });
+  const stages = Array.from(document.querySelectorAll(".pipeline-stage"));
+  const delayMs = 350;
+  function clearActive() {
+    stages.forEach((el) => el.classList.remove("pipe-active"));
+  }
+  let isAnimating = false;
+  async function animatePipeline() {
+    if (isAnimating) return;
+    isAnimating = true;
+    clearActive();
+    for (let i = 0; i < stages.length; i++) {
+      stages[i].classList.add("pipe-active");
+      await new Promise((resolve) => setTimeout(resolve, delayMs));
+      stages[i].classList.remove("pipe-active");
+    }
+    isAnimating = false;
+  }
+  const runBtn = document.getElementById("runBtn");
+  if (runBtn) {
+    runBtn.addEventListener("click", async () => {
+      if (typeof refreshMetrics === "function") {
+        // Await refreshMetrics if it returns a Promise, otherwise just call it
+        const result = refreshMetrics();
+        if (result && typeof result.then === "function") {
+          await result;
+        }
+      }
+      await animatePipeline();
+    });
+  }
 })();
 </script>
 

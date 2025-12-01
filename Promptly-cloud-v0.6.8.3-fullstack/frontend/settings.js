@@ -301,6 +301,42 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
     }
   }
 
-  loadSettings();
-  loadAccount();
+  // Show skeleton loaders immediately for faster perceived loading
+  function showSkeletonLoaders() {
+    // Environment skeleton
+    if (modelListEl) {
+      modelListEl.innerHTML = `
+        <div class="model-item skeleton-item">
+          <span class="model-icon skeleton-pulse">🤖</span>
+          <div class="model-details"><div class="skeleton-text" style="width:70%"></div><div class="skeleton-text" style="width:90%"></div></div>
+        </div>
+        <div class="model-item skeleton-item">
+          <span class="model-icon skeleton-pulse">🎯</span>
+          <div class="model-details"><div class="skeleton-text" style="width:60%"></div><div class="skeleton-text" style="width:85%"></div></div>
+        </div>
+        <div class="model-item skeleton-item">
+          <span class="model-icon skeleton-pulse">📊</span>
+          <div class="model-details"><div class="skeleton-text" style="width:50%"></div><div class="skeleton-text" style="width:75%"></div></div>
+        </div>
+      `;
+    }
+    // Features skeleton
+    if (featuresListEl) {
+      featuresListEl.innerHTML = `
+        <li class="skeleton-item"><span class="feature-icon skeleton-pulse">🧙</span><div style="flex:1"><div class="skeleton-text" style="width:60%"></div><div class="skeleton-text" style="width:80%"></div></div></li>
+        <li class="skeleton-item"><span class="feature-icon skeleton-pulse">✨</span><div style="flex:1"><div class="skeleton-text" style="width:55%"></div><div class="skeleton-text" style="width:75%"></div></div></li>
+        <li class="skeleton-item"><span class="feature-icon skeleton-pulse">🎯</span><div style="flex:1"><div class="skeleton-text" style="width:65%"></div><div class="skeleton-text" style="width:70%"></div></div></li>
+        <li class="skeleton-item"><span class="feature-icon skeleton-pulse">🚀</span><div style="flex:1"><div class="skeleton-text" style="width:70%"></div><div class="skeleton-text" style="width:85%"></div></div></li>
+      `;
+    }
+    if (envSummaryEl) {
+      envSummaryEl.innerHTML = '<span class="skeleton-text" style="width:200px;display:inline-block"></span>';
+    }
+  }
+
+  // Show skeletons first, then load data in parallel
+  showSkeletonLoaders();
+  Promise.all([loadSettings(), loadAccount()]).catch(err => {
+    console.error("Error loading settings page:", err);
+  });
 })();

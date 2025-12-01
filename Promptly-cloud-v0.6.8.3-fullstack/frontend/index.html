@@ -378,14 +378,44 @@ html[data-theme="light"] .grey-gradient-text{
     </nav>
   </header>
 
-  <main class="container">
+  <main class="container launch-shell">
     <div class="hero">
+      <div class="hero-eyebrow">Promptly · Workflow Modes</div>
       <div>
         <div class="title gradient-text hero-title" data-i18n="hero_title">Promptly — Prompt Optimizer <span class="title-pill">Studio</span></div>
-        <div class="subtitle hero-subtitle" data-i18n="hero_subtitle">Visualization-first workflow. <span class="text-spotlight">See every gain</span>, <span class="text-spotlight">every cost</span>, every version.</div>
+        <div class="subtitle hero-subtitle" data-i18n="hero_subtitle">Visualization-first workflow. See every gain, every cost, every version.</div>
       </div>
     </div>
 
+
+
+
+    <section class="mode-selector" aria-labelledby="modeSelectorTitle">
+      <div class="mode-selector__header">
+        <p class="mode-selector__eyebrow">Promptly — Prompt Optimizer Studio</p>
+        <h2 id="modeSelectorTitle">How would you like to start?</h2>
+        <p id="modeSelectorHint" class="mode-selector__hint">Pick a workflow mode. Switch anytime.</p>
+      </div>
+      <div class="mode-selector__options" role="radiogroup" aria-describedby="modeSelectorHint">
+        <div class="mode-card is-selected" role="radio" aria-checked="true" aria-describedby="modeQuickDesc" tabindex="0" data-mode="quick">
+          <div class="mode-card__icon">⚡</div>
+          <div class="mode-card__body">
+            <h3 class="mode-card__title">Quick Start</h3>
+            <p id="modeQuickDesc" class="mode-card__desc">Describe your goal and generate an optimized prompt instantly</p>
+          </div>
+          <div class="mode-card__check" aria-hidden="true">✔</div>
+        </div>
+
+        <div class="mode-card" role="radio" aria-checked="false" aria-describedby="modeWizardDesc" tabindex="-1" data-mode="wizard">
+          <div class="mode-card__icon">🧙‍♂️</div>
+          <div class="mode-card__body">
+            <h3 class="mode-card__title">Wizard</h3>
+            <p id="modeWizardDesc" class="mode-card__desc">Guided step-by-step flow to refine your project idea</p>
+          </div>
+          <div class="mode-card__check" aria-hidden="true">✔</div>
+        </div>
+      </div>
+    </section>
 
     <section class="layer-card layer-default" id="layerDefault">
       <div class="layer-default__column">
@@ -671,6 +701,90 @@ temperature: 0.5</textarea>
   </footer>
 
   <script src="core.js"></script>
+
+
+<script>
+(function(){
+  const selector = document.querySelector('.mode-selector__options');
+  if (!selector) return;
+
+  const taskInput = document.getElementById('task');
+  const cards = Array.from(selector.querySelectorAll('[role="radio"]'));
+  let activeIndex = Math.max(cards.findIndex(c => c.classList.contains('is-selected')), 0);
+
+  function updateSelection(card){
+    cards.forEach((c, idx) => {
+      const isActive = c === card;
+      c.classList.toggle('is-selected', isActive);
+      c.setAttribute('aria-checked', isActive ? 'true' : 'false');
+      c.tabIndex = isActive ? 0 : -1;
+      if (isActive) activeIndex = idx;
+    });
+  }
+
+  function focusTask(){
+    if (!taskInput) return;
+    try {
+      taskInput.focus({ preventScroll: true });
+    } catch {
+      taskInput.focus();
+    }
+    taskInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+
+  function track(mode){
+    if (typeof window.trackEvent === 'function') {
+      window.trackEvent(mode === 'wizard' ? 'mode_select_wizard' : 'mode_select_quick');
+    }
+  }
+
+  function openWizard(){
+    const go = () => { window.location.href = 'wizard.html'; };
+    if (typeof window.openQuestionWizard === 'function') {
+      try { window.openQuestionWizard(); return; } catch (err) { console.warn('[Promptly] openQuestionWizard failed, falling back', err); }
+    }
+    go();
+  }
+
+  function handleSelection(card){
+    const mode = card?.dataset.mode || 'quick';
+    updateSelection(card);
+    track(mode);
+    if (mode === 'wizard') {
+      openWizard();
+      return;
+    }
+    focusTask();
+  }
+
+  function moveFocus(delta){
+    if (!cards.length) return;
+    activeIndex = (activeIndex + delta + cards.length) % cards.length;
+    cards[activeIndex].focus();
+  }
+
+  cards.forEach(card => {
+    card.addEventListener('click', () => handleSelection(card));
+    card.addEventListener('keydown', (e) => {
+      const { key } = e;
+      if (key === ' ' || key === 'Enter') {
+        e.preventDefault();
+        handleSelection(card);
+        return;
+      }
+      if (key === 'ArrowRight' || key === 'ArrowDown') {
+        e.preventDefault();
+        moveFocus(1);
+        return;
+      }
+      if (key === 'ArrowLeft' || key === 'ArrowUp') {
+        e.preventDefault();
+        moveFocus(-1);
+      }
+    });
+  });
+})();
+</script>
 
 <script>
 (function(){

@@ -604,7 +604,7 @@ details.layer-field > small.help{
 }
 
 .launch-shell{position:relative;}
-.hero{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;margin-bottom:16px;text-align:center;}
+.hero{display:flex;flex-direction:column;align-items:flex-start;justify-content:flex-start;gap:10px;margin-bottom:16px;text-align:left;}
 .title{font-size:32px;font-weight:1000;letter-spacing:0.2px;}
 .hero-title{letter-spacing:0.2px;text-shadow:0 10px 32px rgba(34,211,238,0.25),0 10px 38px rgba(139,92,246,0.35);}
 .title-pill{display:inline-flex;align-items:center;gap:6px;padding:2px 10px;border-radius:12px;background:linear-gradient(120deg,rgba(124,58,237,0.92),rgba(34,211,238,0.85));color:#0b0f14;box-shadow:0 10px 28px rgba(34,211,238,0.32);}

@@ -21,7 +21,13 @@
         consent_text:"我们使用 Cookie 改善体验并记住偏好。",consent_btn:"同意",
         placeholder_task:"例如：判断句子情感，仅输出 POS 或 NEG。",
         placeholder_examples:"POS || I love this!\nNEG || This is terrible."},
-    es:{language:"Español",processing:"Procesando...",success_message:"¡El mejor Prompt ha sido actualizado!"},fr:{language:"Français",processing:"Traitement...",success_message:"Le meilleur Prompt a été mis à jour !"},ja:{language:"日本語",processing:"処理中...",success_message:"ベストプロンプトが更新されました！"},ko:{language:"한국어",processing:"처리 중...",success_message:"최적의 프롬프트가 업데이트되었습니다!"},ar:{language:"العربية",processing:"جاري المعالجة...",success_message:"تم تحديث أفضل Prompt!"},pt:{language:"Português",processing:"Processando...",success_message:"O melhor Prompt foi atualizado!"},hi:{language:"हिन्दी",processing:"प्रोसेसिंग...",success_message:"सर्वोत्तम प्रॉम्प्ट अपडेट हो गया!"}
+    es:{language:"Español",processing:"Procesando...",success_message:"¡El mejor Prompt ha sido actualizado!"},
+    fr:{language:"Français",processing:"Traitement...",success_message:"Le meilleur Prompt a été mis à jour !"},
+    ja:{language:"日本語",processing:"処理中...",success_message:"ベストプロンプトが更新されました！"},
+    ko:{language:"한국어",processing:"처리 중...",success_message:"최적의 프롬프트가 업데이트되었습니다!"},
+    ar:{language:"العربية",processing:"جاري المعالجة...",success_message:"تم تحديث أفضل Prompt!"},
+    pt:{language:"Português",processing:"Processando...",success_message:"O melhor Prompt foi atualizado!"},
+    hi:{language:"हिन्दी",processing:"प्रोसेसिंग...",success_message:"सर्वोत्तम प्रॉम्प्ट अपडेट हो गया!"}
   };
   const LANG_OPTIONS=[["en","English"],["zh","中文"],["es","Español"],["fr","Français"],["ja","日本語"],["ko","한국어"],["ar","العربية"],["pt","Português"],["hi","हिन्दी"]];
   function $(s){return document.querySelector(s)} function $all(s){return Array.from(document.querySelectorAll(s))}

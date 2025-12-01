@@ -1334,11 +1334,34 @@ temperature: 0.5</textarea>
 </script>
 
 <script>
+<<<<<<< Updated upstream
 (() => {
   // Use global window.showToast for toast notifications
+=======
+document.addEventListener('DOMContentLoaded', () => {
+  console.log('[Promptly] Initializing pipeline animation and Run Optimization button...');
+  
+  // Toast function
+  function showToast(msg, type = 'info') {
+    const toastEl = document.getElementById('toast');
+    if (!toastEl) {
+      console.warn('[Promptly] Toast element not found');
+      return;
+    }
+    toastEl.textContent = msg;
+    toastEl.className = `toast toast--${type} toast--show`;
+    const duration = 3000;
+    setTimeout(() => {
+      toastEl.className = 'toast';
+    }, duration);
+  }
+
+>>>>>>> Stashed changes
   // Pipeline animation setup
   const stepNames = ["spec","question","agent","metrics","outcome"];
   const baseStages = Array.from(document.querySelectorAll(".algorithm-step-enhanced"));
+  console.log(`[Promptly] Found ${baseStages.length} algorithm steps for animation`);
+  
   baseStages.forEach((el, idx) => {
     el.dataset.pipelineStage = stepNames[idx] || `stage-${idx}`;
     el.classList.add("pipeline-stage");
@@ -1351,21 +1374,31 @@ temperature: 0.5</textarea>
   }
   let isAnimating = false;
   async function animatePipeline() {
+<<<<<<< Updated upstream
     if (isAnimating) return;
     isAnimating = true;
+=======
+    console.log('[Promptly] Starting pipeline animation...');
+>>>>>>> Stashed changes
     clearActive();
     for (let i = 0; i < stages.length; i++) {
       stages[i].classList.add("pipe-active");
+      console.log(`[Promptly] Animating stage ${i + 1}/${stages.length}: ${stepNames[i]}`);
       await new Promise((resolve) => setTimeout(resolve, delayMs));
       stages[i].classList.remove("pipe-active");
     }
+<<<<<<< Updated upstream
     isAnimating = false;
+=======
+    console.log('[Promptly] Pipeline animation complete');
+>>>>>>> Stashed changes
   }
 
   // Integrated click handler: animation → API → toast → scroll
   const runBtn = document.getElementById("runBtn");
   const bestPromptEl = document.getElementById('bestPrompt');
   
+<<<<<<< Updated upstream
   if (runBtn) {
     runBtn.addEventListener("click", async () => {
       // Save original button text for restoration
@@ -1384,6 +1417,51 @@ temperature: 0.5</textarea>
         // 2. Call API to refresh metrics and best prompt
         if (window.promptlyRefreshMetrics) {
           await window.promptlyRefreshMetrics();
+=======
+  if (!runBtn) {
+    console.error('[Promptly] Run Optimization button (#runBtn) not found!');
+    return;
+  }
+  
+  console.log('[Promptly] Run Optimization button found, attaching event listener...');
+  
+  runBtn.addEventListener("click", async function() {
+    console.log('[Promptly] Run Optimization button clicked!');
+    
+    // Disable button during processing
+    runBtn.disabled = true;
+    runBtn.textContent = "Processing...";
+    
+    try {
+      // 1. Play pipeline animation
+      await animatePipeline();
+      
+      // 2. Call API to refresh metrics and best prompt
+      if (window.promptlyRefreshMetrics) {
+        console.log('[Promptly] Calling refreshMetrics API...');
+        await window.promptlyRefreshMetrics();
+      } else {
+        console.warn('[Promptly] window.promptlyRefreshMetrics not available');
+      }
+      
+      // 3. Show success toast
+      showToast('✓ Best Prompt has been updated!', 'success');
+      
+      // 4. Scroll to best prompt section
+      if (bestPromptEl) {
+        const bestPromptCard = bestPromptEl.closest('.card');
+        if (bestPromptCard) {
+          bestPromptCard.scrollIntoView({
+            behavior: 'smooth',
+            block: 'start'
+          });
+          
+          // Add highlight pulse animation
+          bestPromptCard.classList.add('highlight-pulse');
+          setTimeout(() => {
+            bestPromptCard.classList.remove('highlight-pulse');
+          }, 2000);
+>>>>>>> Stashed changes
         }
         
         // 3. Show success toast
@@ -1405,9 +1483,25 @@ temperature: 0.5</textarea>
         runBtn.removeAttribute('aria-busy');
         runBtn.textContent = window.promptlyGetText ? window.promptlyGetText('run_btn') : originalText;
       }
+<<<<<<< Updated upstream
     });
   }
 })();
+=======
+    } catch (error) {
+      console.error('[Promptly] Error during optimization:', error);
+      showToast('⚠ An error occurred. Please check console.', 'error');
+    } finally {
+      // Re-enable button
+      runBtn.disabled = false;
+      const lang = localStorage.getItem('promptly.lang') || 'en';
+      runBtn.textContent = lang === 'zh' ? '运行优化' : 'Run Optimization';
+    }
+  });
+  
+  console.log('[Promptly] Pipeline animation initialization complete!');
+});
+>>>>>>> Stashed changes
 </script>
 
 </body>

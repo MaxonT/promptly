@@ -1388,7 +1388,8 @@ temperature: 0.5</textarea>
         
         // 3. Show success toast
         if (window.showToast) {
-          window.showToast('Best Prompt has been updated!', 'success');
+          const successMsg = window.promptlyGetText ? window.promptlyGetText('success_message') : 'Best Prompt has been updated!';
+          window.showToast(successMsg, 'success');
         }
         
         // 4. Scroll to best prompt section

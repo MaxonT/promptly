@@ -29,6 +29,23 @@ header.topbar{position:sticky;top:0;display:flex;align-items:center;justify-cont
 @media(max-width:1020px){.grid-2{grid-template-columns:1fr}.grid-4{grid-template-columns:1fr 1fr}}
 @media(max-width:640px){.grid-4{grid-template-columns:1fr}}
 
+.mode-selector{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;margin:14px 0 22px;align-items:stretch}
+.mode-card{position:relative;display:flex;flex-direction:column;gap:10px;padding:16px;border:1.5px solid var(--border);border-radius:16px;background:linear-gradient(145deg,rgba(255,255,255,0.04),rgba(255,255,255,0.02)),var(--card);box-shadow:var(--shadow);cursor:pointer;transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease,background .18s ease;outline:none;min-height:150px}
+.mode-card:hover{transform:translateY(-2px);border-color:rgba(124,58,237,0.45);box-shadow:0 14px 30px rgba(0,0,0,0.35)}
+.mode-card:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+.mode-card__header{display:flex;align-items:center;gap:12px;justify-content:space-between}
+.mode-card__icon{font-size:1.3rem}
+.mode-card__title{font-weight:800;font-size:1.08rem;letter-spacing:0.2px}
+.mode-card__check{width:22px;height:22px;border-radius:999px;border:2px solid var(--ok);display:inline-flex;align-items:center;justify-content:center;font-size:0.9rem;color:var(--ok);background:rgba(34,197,94,0.12);opacity:0;transform:scale(0.85);transition:opacity .18s ease,transform .18s ease}
+.mode-card__desc{margin:4px 0 0;font-size:0.92rem;line-height:1.5;color:var(--muted)}
+.mode-card__hint{font-size:0.85rem;color:var(--text);opacity:0.9;font-weight:600}
+.mode-card--selected{border-color:rgba(34,197,94,0.7);box-shadow:0 16px 32px rgba(34,197,94,0.25);background:linear-gradient(120deg,rgba(124,58,237,0.1),rgba(6,182,212,0.12)),var(--card)}
+.mode-card--selected .mode-card__check{opacity:1;transform:scale(1)}
+html[data-theme="light"] .mode-card{background:linear-gradient(145deg,rgba(255,255,255,0.92),rgba(255,255,255,0.82));box-shadow:0 10px 24px rgba(0,0,0,0.08)}
+html[data-theme="light"] .mode-card--selected{background:linear-gradient(120deg,rgba(124,58,237,0.12),rgba(6,182,212,0.16)),var(--card)}
+@media(max-width:480px){.mode-selector{grid-template-columns:1fr}}
+@media(prefers-reduced-motion:reduce){.mode-card,.mode-card__check{transition:none}}
+
 .card{
   background:var(--card);
   border:1.5px solid var(--border);

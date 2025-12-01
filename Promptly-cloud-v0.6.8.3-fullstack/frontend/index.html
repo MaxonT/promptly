@@ -378,16 +378,37 @@ html[data-theme="light"] .grey-gradient-text{
     </nav>
   </header>
 
-  <main class="container">
-    <div class="hero">
-      <div>
-        <div class="title gradient-text hero-title" data-i18n="hero_title">Promptly — Prompt Optimizer <span class="title-pill">Studio</span></div>
-        <div class="subtitle hero-subtitle" data-i18n="hero_subtitle">Visualization-first workflow. <span class="text-spotlight">See every gain</span>, <span class="text-spotlight">every cost</span>, every version.</div>
+    <main class="container">
+      <div class="hero">
+        <div>
+          <div class="title gradient-text hero-title" data-i18n="hero_title">Promptly — Prompt Optimizer <span class="title-pill">Studio</span></div>
+          <div class="subtitle hero-subtitle" data-i18n="hero_subtitle">Visualization-first workflow. <span class="text-spotlight">See every gain</span>, <span class="text-spotlight">every cost</span>, every version.</div>
+        </div>
       </div>
-    </div>
 
+      <section class="mode-selector" role="radiogroup" aria-label="Workflow mode" data-mode-selector>
+        <div class="mode-card mode-card--selected" role="radio" aria-checked="true" tabindex="0" data-mode="quick" aria-describedby="mode-quick-desc">
+          <div class="mode-card__header">
+            <span class="mode-card__icon">⚡</span>
+            <span class="mode-card__title">Quick Start</span>
+            <span class="mode-card__check" aria-hidden="true">✓</span>
+          </div>
+          <p id="mode-quick-desc" class="mode-card__desc">Describe your goal and generate an optimized prompt instantly.</p>
+          <div class="mode-card__hint">Focus jumps to task input</div>
+        </div>
 
-    <section class="layer-card layer-default" id="layerDefault">
+        <div class="mode-card" role="radio" aria-checked="false" tabindex="-1" data-mode="wizard" aria-describedby="mode-wizard-desc">
+          <div class="mode-card__header">
+            <span class="mode-card__icon">🧙‍♂️</span>
+            <span class="mode-card__title">Wizard</span>
+            <span class="mode-card__check" aria-hidden="true">✓</span>
+          </div>
+          <p id="mode-wizard-desc" class="mode-card__desc">Guided step-by-step flow to refine your project idea.</p>
+          <div class="mode-card__hint">Opens Question Wizard</div>
+        </div>
+      </section>
+
+      <section class="layer-card layer-default" id="layerDefault">
       <div class="layer-default__column">
         <span class="layer-badge">Layer 1 · Magic Mode</span>
         <h2>Describe your goal</h2>
@@ -777,11 +798,115 @@ temperature: 0.5</textarea>
       }
     });
   }
-})();
-</script>
-<script>
-// === v0.5.3 UI Patch (non-invasive) ===
-(function(){
+  })();
+  </script>
+  <script>
+  // Mode selector: Quick Start vs Wizard
+  (function(){
+    const selector = document.querySelector('[data-mode-selector]');
+    if (!selector) return;
+
+    const cards = Array.from(selector.querySelectorAll('[role="radio"][data-mode]'));
+    const taskInput = document.getElementById('task');
+    let selectedIndex = Math.max(0, cards.findIndex(card => card.classList.contains('mode-card--selected')));
+
+    function handleActivation(mode) {
+      if (mode === 'quick') {
+        if (typeof window.trackEvent === 'function') {
+          window.trackEvent('mode_select_quick');
+        }
+        if (taskInput) {
+          taskInput.focus({ preventScroll: true });
+          taskInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+        return;
+      }
+
+      if (typeof window.trackEvent === 'function') {
+        window.trackEvent('mode_select_wizard');
+      }
+      if (typeof window.openQuestionWizard === 'function') {
+        window.openQuestionWizard();
+      } else {
+        window.location.href = 'wizard.html';
+      }
+    }
+
+    function updateSelection(nextIndex, options = {}) {
+      const { focus = true, activate = false } = options;
+      if (nextIndex < 0 || nextIndex >= cards.length) return;
+
+      cards.forEach((card, idx) => {
+        const isSelected = idx === nextIndex;
+        card.classList.toggle('mode-card--selected', isSelected);
+        card.setAttribute('aria-checked', isSelected ? 'true' : 'false');
+        card.tabIndex = isSelected ? 0 : -1;
+        if (isSelected && focus) {
+          card.focus({ preventScroll: true });
+        }
+      });
+
+      selectedIndex = nextIndex;
+
+      if (activate) {
+        handleActivation(cards[nextIndex].dataset.mode);
+      }
+    }
+
+    cards.forEach((card, index) => {
+      card.addEventListener('click', () => {
+        updateSelection(index, { focus: false, activate: true });
+      });
+
+      card.addEventListener('keydown', (event) => {
+        switch (event.key) {
+          case 'ArrowRight':
+          case 'ArrowDown': {
+            event.preventDefault();
+            const next = (index + 1) % cards.length;
+            cards[next].focus();
+            break;
+          }
+          case 'ArrowLeft':
+          case 'ArrowUp': {
+            event.preventDefault();
+            const prev = (index - 1 + cards.length) % cards.length;
+            cards[prev].focus();
+            break;
+          }
+          case 'Home': {
+            event.preventDefault();
+            cards[0]?.focus();
+            break;
+          }
+          case 'End': {
+            event.preventDefault();
+            cards[cards.length - 1]?.focus();
+            break;
+          }
+          case ' ': // Space
+          case 'Enter': {
+            event.preventDefault();
+            updateSelection(index, { focus: false, activate: true });
+            break;
+          }
+          default:
+            break;
+        }
+      });
+    });
+
+    updateSelection(selectedIndex, { focus: false, activate: false });
+
+    // Default path focuses task input for immediate use
+    if (selectedIndex === 0 && taskInput) {
+      taskInput.focus({ preventScroll: true });
+    }
+  })();
+  </script>
+  <script>
+  // === v0.5.3 UI Patch (non-invasive) ===
+  (function(){
   const TITLES = [
     {key:'accuracy', labels:['Accuracy']},
     {key:'f1', labels:['F1']},

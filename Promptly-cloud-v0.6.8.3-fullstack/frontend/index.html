@@ -1594,11 +1594,11 @@ document.addEventListener('DOMContentLoaded', () => {
       // 2. Call Outcome Runner API
       console.log('[Promptly] Calling Outcome Runner API...');
       const apiBase = window.PROMPTLY_API_BASE || '';
-      const examples = (examplesEl?.value || '').trim();
+      // Note: examples text field is not sent to backend as 'input'
+      // Users should include examples directly in the task description if needed
       
       const requestBody = {
         task: task,
-        input: examples || undefined,
         n: DEFAULT_CANDIDATE_COUNT
       };
       

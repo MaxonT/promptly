@@ -387,6 +387,34 @@ html[data-theme="light"] .grey-gradient-text{
     </div>
 
 
+    <section class="mode-selector" aria-label="Choose a workflow mode" role="radiogroup">
+      <div class="mode-selector__header">
+        <div class="mode-selector__eyebrow">How would you like to start?</div>
+        <p class="mode-selector__subtext">Quick Start generates instantly, Wizard guides you step-by-step.</p>
+      </div>
+      <div class="mode-selector__grid">
+        <button type="button" class="mode-card is-selected" data-mode="quick" role="radio" aria-checked="true" aria-describedby="mode-quick-desc" tabindex="0">
+          <div class="mode-card__icon" aria-hidden="true">⚡</div>
+          <div class="mode-card__body">
+            <div class="mode-card__title">Quick Start</div>
+            <p class="mode-card__desc" id="mode-quick-desc">Describe your goal and generate an optimized prompt instantly.</p>
+            <span class="mode-card__hint">Focuses the task input for immediate use.</span>
+          </div>
+          <span class="mode-card__check" aria-hidden="true">✓</span>
+        </button>
+        <button type="button" class="mode-card" data-mode="wizard" role="radio" aria-checked="false" aria-describedby="mode-wizard-desc" tabindex="-1">
+          <div class="mode-card__icon" aria-hidden="true">🧙</div>
+          <div class="mode-card__body">
+            <div class="mode-card__title">Wizard</div>
+            <p class="mode-card__desc" id="mode-wizard-desc">Guided step-by-step flow to refine your prompt idea.</p>
+            <span class="mode-card__hint">Opens the Question Wizard experience.</span>
+          </div>
+          <span class="mode-card__check" aria-hidden="true">✓</span>
+        </button>
+      </div>
+    </section>
+
+
     <section class="layer-card layer-default" id="layerDefault">
       <div class="layer-default__column">
         <span class="layer-badge">Layer 1 · Magic Mode</span>
@@ -1423,6 +1451,81 @@ document.addEventListener('DOMContentLoaded', () => {
       toastEl.className = 'toast';
     }, duration);
   };
+
+  // ============================================
+  // Mode Selector (Quick Start vs Wizard)
+  // ============================================
+  const modeCards = Array.from(document.querySelectorAll('.mode-card'));
+  const prefersReducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  function selectMode(card, { activate = false } = {}) {
+    if (!card) return;
+    const mode = card.dataset.mode;
+
+    modeCards.forEach((option) => {
+      const isSelected = option === card;
+      option.classList.toggle('is-selected', isSelected);
+      option.setAttribute('aria-checked', isSelected ? 'true' : 'false');
+      option.tabIndex = isSelected ? 0 : -1;
+      if (isSelected) {
+        option.focus({ preventScroll: true });
+      }
+    });
+
+    if (!activate) return;
+
+    if (mode === 'quick') {
+      if (typeof window.trackEvent === 'function') {
+        window.trackEvent('mode_select_quick');
+      }
+
+      const taskInput = document.getElementById('task');
+      if (taskInput) {
+        const behavior = prefersReducedMotion ? 'auto' : 'smooth';
+        taskInput.scrollIntoView({ behavior, block: 'center' });
+        taskInput.focus({ preventScroll: prefersReducedMotion });
+      }
+    } else if (mode === 'wizard') {
+      if (typeof window.trackEvent === 'function') {
+        window.trackEvent('mode_select_wizard');
+      }
+
+      if (typeof window.openQuestionWizard === 'function') {
+        window.openQuestionWizard();
+      } else {
+        window.location.href = 'wizard.html';
+      }
+    }
+  }
+
+  function moveModeFocus(delta) {
+    if (!modeCards.length) return;
+    const currentIndex = modeCards.findIndex((card) => card.getAttribute('aria-checked') === 'true');
+    const startIndex = currentIndex >= 0 ? currentIndex : 0;
+    const nextIndex = (startIndex + delta + modeCards.length) % modeCards.length;
+    selectMode(modeCards[nextIndex]);
+  }
+
+  if (modeCards.length) {
+    const initialCard = modeCards.find((card) => card.classList.contains('is-selected')) || modeCards[0];
+    selectMode(initialCard);
+
+    modeCards.forEach((card) => {
+      card.addEventListener('click', () => selectMode(card, { activate: true }));
+      card.addEventListener('keydown', (event) => {
+        if (event.key === 'ArrowRight' || event.key === 'ArrowDown') {
+          event.preventDefault();
+          moveModeFocus(1);
+        } else if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') {
+          event.preventDefault();
+          moveModeFocus(-1);
+        } else if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          selectMode(card, { activate: true });
+        }
+      });
+    });
+  }
 
   // ============================================
   // Metrics Loading State Functions

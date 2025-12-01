@@ -92,7 +92,7 @@
       const res = await fetch(getRunUrl());
       return await res.json();
     } catch (err) {
-      console.error("[promptly] fetchRunMetrics error", err);
+      console.error("[promptly] fetchLatestRun error", err);
       return null;
     }
   }

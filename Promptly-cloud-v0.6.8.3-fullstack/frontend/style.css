@@ -1875,11 +1875,17 @@ html[data-theme="light"] .layer-card {
 
 /* Keyword emphasis */
 .text-keyword {
-  color: #fff;
+  color: var(--text-high, #fff);
   font-weight: 700;
   background: rgba(124, 58, 237, 0.15);
   padding: 0 4px;
   border-radius: 4px;
+}
+
+/* Light theme adjustment for keyword text */
+html[data-theme="light"] .text-keyword {
+  color: var(--text-high, #0B0F14);
+  background: rgba(124, 58, 237, 0.1);
 }
 
 /* Underline animation effect */
@@ -1902,6 +1908,12 @@ html[data-theme="light"] .layer-card {
 @keyframes underline-flow {
   0%, 100% { transform: scaleX(0.8); opacity: 0.6; }
   50% { transform: scaleX(1); opacity: 1; }
+}
+
+/* Section highlight for smooth scroll target */
+.section-highlight {
+  box-shadow: 0 0 30px rgba(124, 58, 237, 0.5) !important;
+  transition: box-shadow 0.3s ease;
 }
 
 /* ============================================

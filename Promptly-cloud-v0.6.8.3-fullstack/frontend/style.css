@@ -1802,7 +1802,7 @@ button.button-animated:not(.btn),
   top: 8px;
   right: 10px;
   font-size: 0.85rem;
-  color: #10b981;
+  color: var(--ok);
   font-weight: bold;
 }
 

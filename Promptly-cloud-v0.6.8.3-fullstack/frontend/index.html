@@ -1751,20 +1751,25 @@ if (document.readyState === 'loading') {
       }
     });
     
-    // Keyboard navigation (arrow keys for radio group)
+    // Keyboard navigation (arrow keys move focus, Enter/Space selects)
     function handleKeyDown(event) {
       if (event.key === 'ArrowRight' || event.key === 'ArrowDown') {
         event.preventDefault();
         if (document.activeElement === quickStartBtn) {
           wizardBtn.focus();
-          wizardBtn.click();
+        } else if (document.activeElement === wizardBtn) {
+          quickStartBtn.focus();
         }
       } else if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') {
         event.preventDefault();
         if (document.activeElement === wizardBtn) {
           quickStartBtn.focus();
-          quickStartBtn.click();
+        } else if (document.activeElement === quickStartBtn) {
+          wizardBtn.focus();
         }
+      } else if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        document.activeElement.click();
       }
     }
     

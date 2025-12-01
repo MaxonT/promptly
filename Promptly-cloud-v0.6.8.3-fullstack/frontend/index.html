@@ -385,6 +385,38 @@ html[data-theme="light"] .grey-gradient-text{
       </div>
     </div>
 
+    <!-- Mode Selector: Quick Start vs Wizard -->
+    <section class="mode-selector" id="modeSelector" role="group" aria-label="Choose your workflow mode">
+      <h3 class="mode-selector__title">How would you like to start?</h3>
+      <div class="mode-selector__cards">
+        <button 
+          type="button"
+          class="mode-card mode-card--selected" 
+          id="modeQuickStart"
+          role="radio"
+          aria-checked="true"
+          aria-describedby="quickStartDesc"
+          tabindex="0"
+        >
+          <span class="mode-card__icon">⚡</span>
+          <span class="mode-card__label">Quick Start</span>
+          <span class="mode-card__desc" id="quickStartDesc">Describe your goal and generate an optimized prompt instantly</span>
+        </button>
+        <button 
+          type="button"
+          class="mode-card" 
+          id="modeWizard"
+          role="radio"
+          aria-checked="false"
+          aria-describedby="wizardDesc"
+          tabindex="-1"
+        >
+          <span class="mode-card__icon">🧙</span>
+          <span class="mode-card__label">Wizard</span>
+          <span class="mode-card__desc" id="wizardDesc">Guided step-by-step flow to refine your project idea</span>
+        </button>
+      </div>
+    </section>
 
     <section class="layer-card layer-default" id="layerDefault">
       <div class="layer-default__column">
@@ -1649,6 +1681,97 @@ if (document.readyState === 'loading') {
     console.warn('[Promptly] Button not found immediately - may need to wait');
   }
 }
+</script>
+
+<script>
+// === Mode Selector: Quick Start vs Wizard ===
+(function() {
+  document.addEventListener('DOMContentLoaded', function() {
+    const quickStartBtn = document.getElementById('modeQuickStart');
+    const wizardBtn = document.getElementById('modeWizard');
+    const taskSection = document.getElementById('layerDefault');
+    const taskInput = document.getElementById('task');
+    
+    if (!quickStartBtn || !wizardBtn) {
+      console.warn('[Promptly] Mode selector buttons not found');
+      return;
+    }
+    
+    console.log('[Promptly] Mode selector initialized');
+    
+    // Analytics helper (safe call)
+    function trackEvent(eventName) {
+      if (typeof window.trackEvent === 'function') {
+        window.trackEvent(eventName);
+      }
+      console.log('[Promptly] Analytics:', eventName);
+    }
+    
+    // Update aria states for radio group behavior
+    function setSelected(selectedBtn, otherBtn) {
+      selectedBtn.classList.add('mode-card--selected');
+      selectedBtn.setAttribute('aria-checked', 'true');
+      selectedBtn.setAttribute('tabindex', '0');
+      
+      otherBtn.classList.remove('mode-card--selected');
+      otherBtn.setAttribute('aria-checked', 'false');
+      otherBtn.setAttribute('tabindex', '-1');
+    }
+    
+    // Quick Start mode: show task section, focus input
+    quickStartBtn.addEventListener('click', function() {
+      setSelected(quickStartBtn, wizardBtn);
+      trackEvent('mode_select_quick');
+      
+      // Ensure task section is visible
+      if (taskSection) {
+        taskSection.style.display = '';
+        taskSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+      
+      // Focus the task input after a brief delay
+      setTimeout(function() {
+        if (taskInput) {
+          taskInput.focus();
+        }
+      }, 300);
+    });
+    
+    // Wizard mode: open wizard page or call openQuestionWizard
+    wizardBtn.addEventListener('click', function() {
+      setSelected(wizardBtn, quickStartBtn);
+      trackEvent('mode_select_wizard');
+      
+      // Try to call openQuestionWizard if available
+      if (typeof window.openQuestionWizard === 'function') {
+        window.openQuestionWizard();
+      } else {
+        // Fallback: navigate to wizard.html
+        window.location.href = 'wizard.html';
+      }
+    });
+    
+    // Keyboard navigation (arrow keys for radio group)
+    function handleKeyDown(event) {
+      if (event.key === 'ArrowRight' || event.key === 'ArrowDown') {
+        event.preventDefault();
+        if (document.activeElement === quickStartBtn) {
+          wizardBtn.focus();
+          wizardBtn.click();
+        }
+      } else if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') {
+        event.preventDefault();
+        if (document.activeElement === wizardBtn) {
+          quickStartBtn.focus();
+          quickStartBtn.click();
+        }
+      }
+    }
+    
+    quickStartBtn.addEventListener('keydown', handleKeyDown);
+    wizardBtn.addEventListener('keydown', handleKeyDown);
+  });
+})();
 </script>
 
 </body>

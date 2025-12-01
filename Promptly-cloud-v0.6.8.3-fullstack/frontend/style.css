@@ -1597,3 +1597,34 @@ html[data-theme="light"] .topbar .navlinks a:visited{
   0%,100%{box-shadow:0 0 30px rgba(124,58,237,0.2),inset 0 0 20px rgba(124,58,237,0.05);}
   50%{box-shadow:0 0 40px rgba(124,58,237,0.3),inset 0 0 25px rgba(124,58,237,0.1);}
 }
+
+/* Button click animation - Ripple effect */
+@keyframes ripple{
+  to{
+    transform:scale(4);
+    opacity:0;
+  }
+}
+
+/* Ensure buttons can have relative positioning for ripple */
+button,.btn{
+  position:relative;
+  overflow:hidden;
+  transition:transform 0.2s ease,box-shadow 0.2s ease;
+}
+
+button:active,.btn:active{
+  transform:scale(0.97);
+}
+
+/* Enhanced button hover effects */
+button:hover:not(:disabled),.btn:hover:not(:disabled){
+  transform:translateY(-1px);
+  box-shadow:0 4px 12px rgba(124,58,237,0.3);
+}
+
+button:disabled,.btn:disabled{
+  opacity:0.6;
+  cursor:not-allowed;
+  transform:none!important;
+}

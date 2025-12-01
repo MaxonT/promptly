@@ -40,7 +40,7 @@ header.topbar{position:sticky;top:0;display:flex;align-items:center;justify-cont
 
 .card{
   background:var(--card);
-  border:1.5px solid var(--border);
+  border:1px solid var(--border);
   border-radius:20px;
   box-shadow:var(--shadow);
   padding:18px;
@@ -63,7 +63,7 @@ header.topbar{position:sticky;top:0;display:flex;align-items:center;justify-cont
 
 .mode-selector{
   background:linear-gradient(160deg,rgba(17,24,39,0.9),rgba(11,16,32,0.92));
-  border:1px solid rgba(124,58,237,0.45);
+  border:0.75px solid rgba(124,58,237,0.45);
   border-radius:28px;
   padding:22px 22px 12px;
   box-shadow:var(--glow);
@@ -94,7 +94,7 @@ header.topbar{position:sticky;top:0;display:flex;align-items:center;justify-cont
   align-items:center;
   justify-content:center;
   padding:22px 18px 20px;
-  border:1.5px solid rgba(255,255,255,0.08);
+  border:1px solid rgba(255,255,255,0.08);
   border-radius:22px;
   background:radial-gradient(120% 120% at 50% 10%,rgba(68,84,130,0.18),transparent 55%),
              linear-gradient(160deg,rgba(14,20,40,0.92),rgba(14,20,40,0.78));
@@ -1918,7 +1918,7 @@ html[data-theme="light"] .error-state {
 
 /* Apply gradient border to Layer 2 and Layer 3 cards */
 .layer-card {
-  border: 1.5px solid transparent;
+  border: 1px solid transparent;
   background: linear-gradient(var(--surface-2, #0f141b), var(--surface-2, #0f141b)) padding-box,
               linear-gradient(90deg, var(--brand-a, #7C3AED), var(--brand-b, #06B6D4), var(--brand-c, #22D3EE)) border-box;
   border-radius: 20px;
@@ -1927,6 +1927,7 @@ html[data-theme="light"] .error-state {
 
 /* Light theme adjustment for layer cards */
 html[data-theme="light"] .layer-card {
+  border: 1px solid transparent;
   background: linear-gradient(var(--surface-2, #FFFFFF), var(--surface-2, #FFFFFF)) padding-box,
               linear-gradient(90deg, var(--brand-a, #7C3AED), var(--brand-b, #06B6D4), var(--brand-c, #22D3EE)) border-box;
   box-shadow: 0 6px 22px rgba(20, 23, 35, 0.08);

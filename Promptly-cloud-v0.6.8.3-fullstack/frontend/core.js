@@ -5,7 +5,7 @@
   const translations={
     en:{nav_home:"Dashboard",nav_privacy:"Privacy",nav_terms:"Terms",nav_cookies:"Cookies",nav_account:"Account",appearance:"System",auto:"System",light:"Light",dark:"Dark",language:"English",
         hero_title:"Promptly — Prompt Optimizer Studio",hero_subtitle:"Visualization-first workflow. See every gain, every cost, every version.",
-        task_label:"Task",examples_label:"Examples (optional)",best_prompt:"Best Prompt",run_btn:"Run Optimization",
+        task_label:"Task",examples_label:"Examples (optional)",best_prompt:"Best Prompt",run_btn:"Run Optimization",processing:"Processing...",success_message:"Best Prompt has been updated!",
         kpi_accuracy:"Accuracy",kpi_f1:"F1",kpi_pass:"Pass Rate",kpi_cost:"Token Cost",kpi_prog:"Progress %",
         growth_chart:"Growth Over Iterations",contrib_chart:"Change Contribution",pass_pie:"Pass vs Fail (%)",gauge:"Progress Meter (%)",
         versions:"Prompt Versions",footer_rights:"No trackers. Preferences saved only after consent.",footer_contact:"Support",
@@ -14,14 +14,20 @@
         placeholder_examples:"POS || I love this!\nNEG || This is terrible."},
     zh:{nav_home:"仪表盘",nav_privacy:"隐私政策",nav_terms:"服务条款",nav_cookies:"Cookie 政策",nav_account:"账号",appearance:"系统",auto:"系统",light:"浅色",dark:"深色",language:"中文",
         hero_title:"Promptly — 提示优化工作室",hero_subtitle:"可视化优先：每次提升、每分成本、每个版本都一目了然。",
-        task_label:"任务",examples_label:"示例（可选）",best_prompt:"最佳 Prompt",run_btn:"运行优化",
+        task_label:"任务",examples_label:"示例（可选）",best_prompt:"最佳 Prompt",run_btn:"运行优化",processing:"处理中...",success_message:"最佳 Prompt 已更新！",
         kpi_accuracy:"准确率",kpi_f1:"F1",kpi_pass:"通过率",kpi_cost:"Token 成本",kpi_prog:"进度 %",
         growth_chart:"迭代增长曲线",contrib_chart:"改动贡献",pass_pie:"通过 vs 失败（%）",gauge:"进度仪表（%）",
         versions:"Prompt 版本",footer_rights:"无追踪；仅在同意后保存偏好。",footer_contact:"支持",
         consent_text:"我们使用 Cookie 改善体验并记住偏好。",consent_btn:"同意",
         placeholder_task:"例如：判断句子情感，仅输出 POS 或 NEG。",
         placeholder_examples:"POS || I love this!\nNEG || This is terrible."},
-    es:{language:"Español"},fr:{language:"Français"},ja:{language:"日本語"},ko:{language:"한국어"},ar:{language:"العربية"},pt:{language:"Português"},hi:{language:"हिन्दी"}
+    es:{language:"Español",processing:"Procesando...",success_message:"¡El mejor Prompt ha sido actualizado!"},
+    fr:{language:"Français",processing:"Traitement...",success_message:"Le meilleur Prompt a été mis à jour !"},
+    ja:{language:"日本語",processing:"処理中...",success_message:"ベストプロンプトが更新されました！"},
+    ko:{language:"한국어",processing:"처리 중...",success_message:"최적의 프롬프트가 업데이트되었습니다!"},
+    ar:{language:"العربية",processing:"جاري المعالجة...",success_message:"تم تحديث أفضل Prompt!"},
+    pt:{language:"Português",processing:"Processando...",success_message:"O melhor Prompt foi atualizado!"},
+    hi:{language:"हिन्दी",processing:"प्रोसेसिंग...",success_message:"सर्वोत्तम प्रॉम्प्ट अपडेट हो गया!"}
   };
   const LANG_OPTIONS=[["en","English"],["zh","中文"],["es","Español"],["fr","Français"],["ja","日本語"],["ko","한국어"],["ar","العربية"],["pt","Português"],["hi","हिन्दी"]];
   function $(s){return document.querySelector(s)} function $all(s){return Array.from(document.querySelectorAll(s))}
@@ -123,6 +129,15 @@
       bestPromptEl.value = formatBestPrompt(run.raw_output);
     }
   }
+  // Expose refreshMetrics globally so other scripts can call it
+  window.promptlyRefreshMetrics = refreshMetrics;
+  // Expose function to get localized text for cross-script access
+  window.promptlyGetText = function(key) {
+    const lang = localStorage.getItem(LANG_KEY) || "en";
+    const dict = translations[lang] || translations.en;
+    return dict[key] || translations.en[key] || key;
+  };
+
   document.addEventListener("DOMContentLoaded", () => {
     const themeSel = document.getElementById("themeSelect");
     const langSel = document.getElementById("langSelect");
@@ -153,12 +168,7 @@
       });
     }
     consentBanner();
-    const run = document.getElementById("runBtn");
-    if (run) {
-      run.addEventListener("click", () => {
-        refreshMetrics();
-      });
-    }
+    // Note: runBtn click handler is now in index.html to coordinate with animation
     refreshMetrics();
     const ro = new ResizeObserver(() => renderCharts());
     ["lineGrowth", "barContrib", "piePass", "gaugeProg"].forEach(id => {

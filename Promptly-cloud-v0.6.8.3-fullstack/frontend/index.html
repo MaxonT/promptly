@@ -1222,41 +1222,7 @@ temperature: 0.5</textarea>
     }, duration);
   };
 
-  // FIX 3.2: Hook into "Run Optimization" button to show toast and scroll
-  const runBtn = document.getElementById('runBtn');
-  const bestPromptEl = document.getElementById('bestPrompt');
-
-  if (runBtn && bestPromptEl) {
-    const originalClickHandler = runBtn.onclick;
-
-    runBtn.addEventListener('click', function(e) {
-      // Run original handler if exists
-      if (originalClickHandler) {
-        originalClickHandler.call(this, e);
-      }
-
-      // Wait a moment for optimization to "complete" (simulated)
-      setTimeout(() => {
-        // Show toast
-        showToast('✓ Best Prompt has been updated!', 'success');
-
-        // Scroll to best prompt section
-        const bestPromptCard = bestPromptEl.closest('.card');
-        if (bestPromptCard) {
-          bestPromptCard.scrollIntoView({
-            behavior: 'smooth',
-            block: 'start'
-          });
-
-          // Add highlight pulse animation
-          bestPromptCard.classList.add('highlight-pulse');
-          setTimeout(() => {
-            bestPromptCard.classList.remove('highlight-pulse');
-          }, 2000);
-        }
-      }, 1500); // Simulate optimization time
-    });
-  }
+  // Removed: now integrated below with pipeline animation
 })();
 </script>
 
@@ -1368,44 +1334,174 @@ temperature: 0.5</textarea>
 </script>
 
 <script>
+<<<<<<< Updated upstream
 (() => {
+  // Use global window.showToast for toast notifications
+=======
+document.addEventListener('DOMContentLoaded', () => {
+  console.log('[Promptly] Initializing pipeline animation and Run Optimization button...');
+  
+  // Toast function
+  function showToast(msg, type = 'info') {
+    const toastEl = document.getElementById('toast');
+    if (!toastEl) {
+      console.warn('[Promptly] Toast element not found');
+      return;
+    }
+    toastEl.textContent = msg;
+    toastEl.className = `toast toast--${type} toast--show`;
+    const duration = 3000;
+    setTimeout(() => {
+      toastEl.className = 'toast';
+    }, duration);
+  }
+
+>>>>>>> Stashed changes
+  // Pipeline animation setup
   const stepNames = ["spec","question","agent","metrics","outcome"];
   const baseStages = Array.from(document.querySelectorAll(".algorithm-step-enhanced"));
+  console.log(`[Promptly] Found ${baseStages.length} algorithm steps for animation`);
+  
   baseStages.forEach((el, idx) => {
     el.dataset.pipelineStage = stepNames[idx] || `stage-${idx}`;
     el.classList.add("pipeline-stage");
   });
   const stages = Array.from(document.querySelectorAll(".pipeline-stage"));
   const delayMs = 350;
+  
   function clearActive() {
     stages.forEach((el) => el.classList.remove("pipe-active"));
   }
   let isAnimating = false;
   async function animatePipeline() {
+<<<<<<< Updated upstream
     if (isAnimating) return;
     isAnimating = true;
+=======
+    console.log('[Promptly] Starting pipeline animation...');
+>>>>>>> Stashed changes
     clearActive();
     for (let i = 0; i < stages.length; i++) {
       stages[i].classList.add("pipe-active");
+      console.log(`[Promptly] Animating stage ${i + 1}/${stages.length}: ${stepNames[i]}`);
       await new Promise((resolve) => setTimeout(resolve, delayMs));
       stages[i].classList.remove("pipe-active");
     }
+<<<<<<< Updated upstream
     isAnimating = false;
+=======
+    console.log('[Promptly] Pipeline animation complete');
+>>>>>>> Stashed changes
   }
+
+  // Integrated click handler: animation → API → toast → scroll
   const runBtn = document.getElementById("runBtn");
+  const bestPromptEl = document.getElementById('bestPrompt');
+  
+<<<<<<< Updated upstream
   if (runBtn) {
     runBtn.addEventListener("click", async () => {
-      if (typeof refreshMetrics === "function") {
-        // Await refreshMetrics if it returns a Promise, otherwise just call it
-        const result = refreshMetrics();
-        if (result && typeof result.then === "function") {
-          await result;
-        }
-      }
+      // Save original button text for restoration
+      const originalText = runBtn.textContent;
+      
+      // Disable button and show processing state with accessibility support
+      runBtn.disabled = true;
+      runBtn.setAttribute('aria-busy', 'true');
+      // Use localized "Processing..." text
+      runBtn.textContent = window.promptlyGetText ? window.promptlyGetText('processing') : 'Processing...';
+      
+      try {
+        // 1. Play pipeline animation
+        await animatePipeline();
+        
+        // 2. Call API to refresh metrics and best prompt
+        if (window.promptlyRefreshMetrics) {
+          await window.promptlyRefreshMetrics();
+=======
+  if (!runBtn) {
+    console.error('[Promptly] Run Optimization button (#runBtn) not found!');
+    return;
+  }
+  
+  console.log('[Promptly] Run Optimization button found, attaching event listener...');
+  
+  runBtn.addEventListener("click", async function() {
+    console.log('[Promptly] Run Optimization button clicked!');
+    
+    // Disable button during processing
+    runBtn.disabled = true;
+    runBtn.textContent = "Processing...";
+    
+    try {
+      // 1. Play pipeline animation
       await animatePipeline();
+      
+      // 2. Call API to refresh metrics and best prompt
+      if (window.promptlyRefreshMetrics) {
+        console.log('[Promptly] Calling refreshMetrics API...');
+        await window.promptlyRefreshMetrics();
+      } else {
+        console.warn('[Promptly] window.promptlyRefreshMetrics not available');
+      }
+      
+      // 3. Show success toast
+      showToast('✓ Best Prompt has been updated!', 'success');
+      
+      // 4. Scroll to best prompt section
+      if (bestPromptEl) {
+        const bestPromptCard = bestPromptEl.closest('.card');
+        if (bestPromptCard) {
+          bestPromptCard.scrollIntoView({
+            behavior: 'smooth',
+            block: 'start'
+          });
+          
+          // Add highlight pulse animation
+          bestPromptCard.classList.add('highlight-pulse');
+          setTimeout(() => {
+            bestPromptCard.classList.remove('highlight-pulse');
+          }, 2000);
+>>>>>>> Stashed changes
+        }
+        
+        // 3. Show success toast
+        if (window.showToast) {
+          const successMsg = window.promptlyGetText ? window.promptlyGetText('success_message') : 'Best Prompt has been updated!';
+          window.showToast(successMsg, 'success');
+        }
+        
+        // 4. Scroll to best prompt section
+        if (bestPromptEl) {
+          const bestPromptCard = bestPromptEl.closest('.card');
+          if (bestPromptCard) {
+            bestPromptCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+        }
+      } finally {
+        // Restore button state with localized text
+        runBtn.disabled = false;
+        runBtn.removeAttribute('aria-busy');
+        runBtn.textContent = window.promptlyGetText ? window.promptlyGetText('run_btn') : originalText;
+      }
+<<<<<<< Updated upstream
     });
   }
 })();
+=======
+    } catch (error) {
+      console.error('[Promptly] Error during optimization:', error);
+      showToast('⚠ An error occurred. Please check console.', 'error');
+    } finally {
+      // Re-enable button
+      runBtn.disabled = false;
+      const lang = localStorage.getItem('promptly.lang') || 'en';
+      runBtn.textContent = lang === 'zh' ? '运行优化' : 'Run Optimization';
+    }
+  });
+  
+  console.log('[Promptly] Pipeline animation initialization complete!');
+});
+>>>>>>> Stashed changes
 </script>
 
 </body>

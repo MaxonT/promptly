@@ -1341,8 +1341,15 @@ console.log('[Promptly] Pipeline animation script loaded!');
 document.addEventListener('DOMContentLoaded', () => {
   console.log('[Promptly] DOMContentLoaded fired - Initializing pipeline animation and Run Optimization button...');
   
-  // Toast function
-  function showToast(msg, type = 'info') {
+  // ============================================
+  // Constants for metric calculations
+  // ============================================
+  const SCORE_MAX = 10;  // Maximum score for finalScore and llmScore (0-10 scale)
+  const TOKENS_PER_CANDIDATE = 500;  // Estimated tokens per candidate
+  const DEFAULT_CANDIDATE_COUNT = 4;  // Default number of candidates to generate
+  
+  // Use global showToast if available, otherwise create a local one
+  const showToast = window.showToast || function(msg, type = 'info') {
     const toastEl = document.getElementById('toast');
     if (!toastEl) {
       console.warn('[Promptly] Toast element not found');
@@ -1354,7 +1361,7 @@ document.addEventListener('DOMContentLoaded', () => {
     setTimeout(() => {
       toastEl.className = 'toast';
     }, duration);
-  }
+  };
 
   // ============================================
   // Metrics Loading State Functions
@@ -1395,20 +1402,20 @@ document.addEventListener('DOMContentLoaded', () => {
     
     const best = result.best;
     
-    // Accuracy - based on finalScore (0-10 scale -> percentage)
+    // Accuracy - based on finalScore (0-SCORE_MAX scale -> percentage)
     const valAcc = document.getElementById('valAcc');
     if (valAcc) {
       const accuracy = best.finalScore != null 
-        ? ((best.finalScore / 10) * 100).toFixed(1) + '%'
+        ? ((best.finalScore / SCORE_MAX) * 100).toFixed(1) + '%'
         : '—';
       valAcc.textContent = accuracy;
     }
     
-    // F1 Score - based on llmScore (0-10 scale -> 0-1)
+    // F1 Score - based on llmScore (0-SCORE_MAX scale -> 0-1)
     const valF1 = document.getElementById('valF1');
     if (valF1) {
       const f1 = best.llmScore != null 
-        ? (best.llmScore / 10).toFixed(2)
+        ? (best.llmScore / SCORE_MAX).toFixed(2)
         : '—';
       valF1.textContent = f1;
     }
@@ -1429,7 +1436,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (valCost) {
       const candidateCount = result.candidates?.length || 0;
       const tokenCost = candidateCount > 0 
-        ? (candidateCount * 500).toLocaleString()
+        ? (candidateCount * TOKENS_PER_CANDIDATE).toLocaleString()
         : '—';
       valCost.textContent = tokenCost;
     }
@@ -1489,7 +1496,7 @@ document.addEventListener('DOMContentLoaded', () => {
   
   async function showRealProcessingStages(bestPromptEl, candidateCount) {
     processingCancelled = false;
-    const n = candidateCount || 4;
+    const n = candidateCount || DEFAULT_CANDIDATE_COUNT;
     const stages = [
       { text: "⏳ 正在生成最佳 Prompt...\n\n处理中：\n1. ⏳ 生成候选 prompts...", delay: 600 },
       { text: `⏳ 正在生成最佳 Prompt...\n\n处理中：\n1. ✓ 已生成 ${n} 个候选\n2. ⏳ LLM 评分中...`, delay: 800 },
@@ -1592,7 +1599,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const requestBody = {
         task: task,
         input: examples || undefined,
-        n: 4
+        n: DEFAULT_CANDIDATE_COUNT
       };
       
       try {
@@ -1604,11 +1611,36 @@ document.addEventListener('DOMContentLoaded', () => {
           body: JSON.stringify(requestBody)
         });
         
-        const data = await response.json();
-        console.log('[Promptly] API response:', data);
-        
         // ✅ Cancel the processing animation before updating content
         cancelProcessingAnimation();
+        
+        // ✅ Validate response status before parsing JSON
+        if (!response.ok) {
+          // Try to parse error message from response body
+          let errorMsg = `HTTP ${response.status}: ${response.statusText}`;
+          try {
+            const errorData = await response.json();
+            errorMsg = errorData.error || errorMsg;
+          } catch {
+            // Ignore JSON parse error, use default error message
+          }
+          
+          console.warn('[Promptly] API returned HTTP error:', errorMsg);
+          
+          if (bestPromptEl) {
+            bestPromptEl.value = `❌ 服务器错误\n\n${errorMsg}\n\n请稍后重试`;
+            bestPromptEl.classList.remove('processing-animation', 'success-highlight');
+            bestPromptEl.classList.add('error-state');
+            bestPromptEl.style.borderColor = '#EF4444';
+          }
+          
+          resetMetrics();
+          showToast(`⚠ ${errorMsg}`, 'error');
+          return;
+        }
+        
+        const data = await response.json();
+        console.log('[Promptly] API response:', data);
         
         // ✅ Process API response
         if (data.ok && data.result && data.result.best) {

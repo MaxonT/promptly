@@ -1927,7 +1927,6 @@ html[data-theme="light"] .error-state {
 
 /* Light theme adjustment for layer cards */
 html[data-theme="light"] .layer-card {
-  border: 1px solid transparent;
   background: linear-gradient(var(--surface-2, #FFFFFF), var(--surface-2, #FFFFFF)) padding-box,
               linear-gradient(90deg, var(--brand-a, #7C3AED), var(--brand-b, #06B6D4), var(--brand-c, #22D3EE)) border-box;
   box-shadow: 0 6px 22px rgba(20, 23, 35, 0.08);

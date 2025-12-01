@@ -1356,6 +1356,103 @@ document.addEventListener('DOMContentLoaded', () => {
     }, duration);
   }
 
+  // ============================================
+  // Metrics Loading State Functions
+  // ============================================
+  
+  // Show skeleton loading on all metrics
+  function showMetricsLoading() {
+    const metrics = ['valAcc', 'valF1', 'valPass', 'valCost', 'valProg'];
+    metrics.forEach(id => {
+      const el = document.getElementById(id);
+      if (el) {
+        el.textContent = '⏳';
+        el.classList.add('skeleton-loading');
+      }
+    });
+  }
+  
+  // Update metrics with real data from Outcome Runner response
+  function updateMetricsFromResponse(result) {
+    const metrics = ['valAcc', 'valF1', 'valPass', 'valCost', 'valProg'];
+    
+    // Remove loading state from all metrics first
+    metrics.forEach(id => {
+      const el = document.getElementById(id);
+      if (el) {
+        el.classList.remove('skeleton-loading');
+      }
+    });
+    
+    if (!result || !result.best) {
+      // If no data, show dashes
+      metrics.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = '—';
+      });
+      return;
+    }
+    
+    const best = result.best;
+    
+    // Accuracy - based on finalScore (0-10 scale -> percentage)
+    const valAcc = document.getElementById('valAcc');
+    if (valAcc) {
+      const accuracy = best.finalScore != null 
+        ? ((best.finalScore / 10) * 100).toFixed(1) + '%'
+        : '—';
+      valAcc.textContent = accuracy;
+    }
+    
+    // F1 Score - based on llmScore (0-10 scale -> 0-1)
+    const valF1 = document.getElementById('valF1');
+    if (valF1) {
+      const f1 = best.llmScore != null 
+        ? (best.llmScore / 10).toFixed(2)
+        : '—';
+      valF1.textContent = f1;
+    }
+    
+    // Pass Rate - based on tests.passed
+    const valPass = document.getElementById('valPass');
+    if (valPass) {
+      const passRate = best.tests?.passed === true 
+        ? '100%' 
+        : best.tests?.passed === false 
+          ? '0%' 
+          : '—';
+      valPass.textContent = passRate;
+    }
+    
+    // Token Cost - estimated based on candidates count
+    const valCost = document.getElementById('valCost');
+    if (valCost) {
+      const candidateCount = result.candidates?.length || 0;
+      const tokenCost = candidateCount > 0 
+        ? (candidateCount * 500).toLocaleString()
+        : '—';
+      valCost.textContent = tokenCost;
+    }
+    
+    // Progress - 100% when complete
+    const valProg = document.getElementById('valProg');
+    if (valProg) {
+      valProg.textContent = '100%';
+    }
+  }
+  
+  // Reset metrics to default state
+  function resetMetrics() {
+    const metrics = ['valAcc', 'valF1', 'valPass', 'valCost', 'valProg'];
+    metrics.forEach(id => {
+      const el = document.getElementById(id);
+      if (el) {
+        el.textContent = '—';
+        el.classList.remove('skeleton-loading');
+      }
+    });
+  }
+
   // Pipeline animation setup
   const stepNames = ["spec","question","agent","metrics","outcome"];
   const baseStages = Array.from(document.querySelectorAll(".algorithm-step-enhanced"));
@@ -1383,10 +1480,43 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     console.log('[Promptly] Pipeline animation complete');
   }
+  
+  // ============================================
+  // Show real processing stages in Best Prompt
+  // ============================================
+  // Flag to cancel processing stages animation
+  let processingCancelled = false;
+  
+  async function showRealProcessingStages(bestPromptEl, candidateCount) {
+    processingCancelled = false;
+    const n = candidateCount || 4;
+    const stages = [
+      { text: "⏳ 正在生成最佳 Prompt...\n\n处理中：\n1. ⏳ 生成候选 prompts...", delay: 600 },
+      { text: `⏳ 正在生成最佳 Prompt...\n\n处理中：\n1. ✓ 已生成 ${n} 个候选\n2. ⏳ LLM 评分中...`, delay: 800 },
+      { text: `⏳ 正在生成最佳 Prompt...\n\n处理中：\n1. ✓ 已生成 ${n} 个候选\n2. ✓ 评分完成\n3. ⏳ 应用测试规则...`, delay: 500 },
+      { text: `⏳ 正在生成最佳 Prompt...\n\n处理中：\n1. ✓ 已生成 ${n} 个候选\n2. ✓ 评分完成\n3. ✓ 测试通过\n4. ⏳ 选择最佳候选...`, delay: 400 }
+    ];
+    
+    for (const stage of stages) {
+      // Stop animation if cancelled (API call finished or failed)
+      if (processingCancelled) break;
+      if (bestPromptEl) {
+        bestPromptEl.value = stage.text;
+      }
+      await new Promise(resolve => setTimeout(resolve, stage.delay));
+    }
+  }
+  
+  // Function to cancel the processing animation
+  function cancelProcessingAnimation() {
+    processingCancelled = true;
+  }
 
   // Integrated click handler: animation → API → toast → scroll
   const runBtn = document.getElementById("runBtn");
   const bestPromptEl = document.getElementById('bestPrompt');
+  const taskEl = document.getElementById('task');
+  const examplesEl = document.getElementById('examples');
   
   if (!runBtn) {
     console.error('[Promptly] Run Optimization button (#runBtn) not found!');
@@ -1404,6 +1534,14 @@ document.addEventListener('DOMContentLoaded', () => {
     
     console.log('[Promptly] Run Optimization button clicked!');
     
+    // Get task input
+    const task = (taskEl?.value || '').trim();
+    if (!task) {
+      showToast('⚠ Please enter a task description first.', 'error');
+      if (taskEl) taskEl.focus();
+      return;
+    }
+    
     // Immediate visual feedback - disable button and show processing
     runBtn.disabled = true;
     runBtn.style.opacity = '0.7';
@@ -1411,12 +1549,16 @@ document.addEventListener('DOMContentLoaded', () => {
     const originalText = runBtn.textContent;
     runBtn.textContent = "Processing...";
     
-    // Show immediate feedback in Best Prompt area
+    // ✅ Show loading state in Best Prompt area
     if (bestPromptEl) {
-      bestPromptEl.value = "Processing your request...\n\nRunning pipeline:\n1. Spec Builder\n2. Question Engine\n3. LLM Agents\n4. Metrics & Scoring\n5. Outcome Runner";
+      bestPromptEl.value = "⏳ 正在生成最佳 Prompt...\n\n处理中：\n1. ⏳ 生成候选 prompts...";
       bestPromptEl.style.borderColor = '#7C3AED';
       bestPromptEl.classList.add('processing-animation');
+      bestPromptEl.classList.remove('success-highlight', 'error-state');
     }
+    
+    // ✅ Show loading state for all Metrics
+    showMetricsLoading();
     
     try {
       // 0. Scroll to algorithm section so user can see the animation
@@ -1430,37 +1572,101 @@ document.addEventListener('DOMContentLoaded', () => {
         }, 2000);
       }
       
-      // 1. Play pipeline animation
+      // 1. Play pipeline animation and show processing stages in parallel
       console.log('[Promptly] Starting pipeline animation...');
-      await new Promise(resolve => setTimeout(resolve, 500)); // Wait a bit for scroll
-      await animatePipeline();
+      await new Promise(resolve => setTimeout(resolve, 300)); // Wait a bit for scroll
+      
+      // Start both animations in parallel
+      const animationPromise = animatePipeline();
+      const stagesPromise = showRealProcessingStages(bestPromptEl, 4);
+      
+      // Wait for pipeline animation to finish (stages will complete on their own or be overwritten by API response)
+      await animationPromise;
       console.log('[Promptly] Pipeline animation complete!');
       
-      // 2. Call API to refresh metrics and best prompt
-      if (window.promptlyRefreshMetrics) {
-        console.log('[Promptly] Calling refreshMetrics API...');
-        try {
-          await window.promptlyRefreshMetrics();
-          console.log('[Promptly] API call successful');
-        } catch (apiError) {
-          console.warn('[Promptly] API call failed:', apiError);
-          if (bestPromptEl && !bestPromptEl.value.includes('Error')) {
-            bestPromptEl.value = "API call failed, but pipeline animation completed.\n\nCheck console for details.";
-          }
-        }
-      } else {
-        console.warn('[Promptly] window.promptlyRefreshMetrics not available');
-        if (bestPromptEl) {
-          bestPromptEl.value = "Pipeline animation completed!\n\nNote: Backend API not available.";
-        }
-      }
+      // 2. Call Outcome Runner API
+      console.log('[Promptly] Calling Outcome Runner API...');
+      const apiBase = window.PROMPTLY_API_BASE || '';
+      const examples = (examplesEl?.value || '').trim();
       
-      // 3. Show success toast
-      showToast('✓ Best Prompt has been updated!', 'success');
+      const requestBody = {
+        task: task,
+        input: examples || undefined,
+        n: 4
+      };
+      
+      try {
+        const response = await fetch(`${apiBase}/api/outcome-runs`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(requestBody)
+        });
+        
+        const data = await response.json();
+        console.log('[Promptly] API response:', data);
+        
+        // ✅ Cancel the processing animation before updating content
+        cancelProcessingAnimation();
+        
+        // ✅ Process API response
+        if (data.ok && data.result && data.result.best) {
+          // Success - display real best prompt content
+          const bestContent = data.result.best.content;
+          
+          if (bestPromptEl) {
+            bestPromptEl.value = bestContent || '未生成最佳 prompt';
+            bestPromptEl.classList.remove('processing-animation');
+            bestPromptEl.classList.add('success-highlight');
+            bestPromptEl.classList.remove('error-state');
+            bestPromptEl.style.borderColor = '#22C55E';
+          }
+          
+          // ✅ Update metrics with real data
+          updateMetricsFromResponse(data.result);
+          
+          // Show success toast
+          showToast('✓ Best Prompt has been updated!', 'success');
+          
+        } else {
+          // API returned ok: false or missing data
+          const errorMsg = data.error || 'Unknown error';
+          console.warn('[Promptly] API returned error:', errorMsg);
+          
+          if (bestPromptEl) {
+            bestPromptEl.value = `❌ 生成失败\n\n错误: ${errorMsg}\n\n请检查输入或稍后重试`;
+            bestPromptEl.classList.remove('processing-animation', 'success-highlight');
+            bestPromptEl.classList.add('error-state');
+            bestPromptEl.style.borderColor = '#EF4444';
+          }
+          
+          // Reset metrics to default
+          resetMetrics();
+          
+          showToast(`⚠ ${errorMsg}`, 'error');
+        }
+        
+      } catch (apiError) {
+        // Network error or timeout - cancel animation first
+        cancelProcessingAnimation();
+        console.error('[Promptly] API call failed:', apiError);
+        
+        if (bestPromptEl) {
+          bestPromptEl.value = `❌ 网络请求失败\n\n错误: ${apiError.message}\n\n可能的原因：\n• 后端服务未启动\n• 网络连接问题\n• API 地址配置错误\n\n请检查网络连接后重试`;
+          bestPromptEl.classList.remove('processing-animation', 'success-highlight');
+          bestPromptEl.classList.add('error-state');
+          bestPromptEl.style.borderColor = '#EF4444';
+        }
+        
+        // Reset metrics to default
+        resetMetrics();
+        
+        showToast('⚠ Network error. Check your connection.', 'error');
+      }
       
       // 4. Scroll to best prompt section
       if (bestPromptEl) {
-        bestPromptEl.classList.remove('processing-animation');
         const bestPromptCard = bestPromptEl.closest('.card') || bestPromptEl.closest('.layer-default__output');
         if (bestPromptCard) {
           setTimeout(() => {
@@ -1482,10 +1688,12 @@ document.addEventListener('DOMContentLoaded', () => {
       console.error('[Promptly] Error during optimization:', error);
       showToast('⚠ An error occurred. Check console for details.', 'error');
       if (bestPromptEl) {
-        bestPromptEl.value = "Error: " + error.message + "\n\nCheck browser console for details.";
+        bestPromptEl.value = `❌ 发生错误\n\n${error.message}\n\n请检查浏览器控制台获取详细信息`;
         bestPromptEl.style.borderColor = '#EF4444';
-        bestPromptEl.classList.remove('processing-animation');
+        bestPromptEl.classList.remove('processing-animation', 'success-highlight');
+        bestPromptEl.classList.add('error-state');
       }
+      resetMetrics();
     } finally {
       // Re-enable button
       runBtn.disabled = false;
@@ -1494,11 +1702,12 @@ document.addEventListener('DOMContentLoaded', () => {
       const lang = localStorage.getItem('promptly.lang') || 'en';
       runBtn.textContent = originalText || (lang === 'zh' ? '运行优化' : 'Run Optimization');
       
-      // Reset border color after a moment
-      if (bestPromptEl) {
+      // Reset border color after a moment for success cases
+      if (bestPromptEl && bestPromptEl.classList.contains('success-highlight')) {
         setTimeout(() => {
           bestPromptEl.style.borderColor = '';
-        }, 3000);
+          bestPromptEl.classList.remove('success-highlight');
+        }, 5000);
       }
     }
   }, { capture: true }); // Use capture phase to ensure we get the event

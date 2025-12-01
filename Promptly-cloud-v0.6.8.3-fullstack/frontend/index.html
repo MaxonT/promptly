@@ -1380,13 +1380,17 @@ temperature: 0.5</textarea>
   function clearActive() {
     stages.forEach((el) => el.classList.remove("pipe-active"));
   }
+  let isAnimating = false;
   async function animatePipeline() {
+    if (isAnimating) return;
+    isAnimating = true;
     clearActive();
     for (let i = 0; i < stages.length; i++) {
       stages[i].classList.add("pipe-active");
       await new Promise((resolve) => setTimeout(resolve, delayMs));
       stages[i].classList.remove("pipe-active");
     }
+    isAnimating = false;
   }
   const runBtn = document.getElementById("runBtn");
   if (runBtn) {

@@ -1356,6 +1356,49 @@ document.addEventListener('DOMContentLoaded', () => {
     }, duration);
   }
 
+  // Fast scroll helper function - faster than browser smooth scroll
+  function fastScrollTo(element, block = 'center', duration = 200) {
+    if (!element) return Promise.resolve();
+    
+    const rect = element.getBoundingClientRect();
+    const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+    
+    let targetY;
+    if (block === 'center') {
+      targetY = scrollTop + rect.top - (window.innerHeight / 2) + (rect.height / 2);
+    } else if (block === 'start') {
+      targetY = scrollTop + rect.top;
+    } else {
+      targetY = scrollTop + rect.bottom - window.innerHeight;
+    }
+    
+    // Ensure targetY is within valid bounds
+    targetY = Math.max(0, targetY);
+    
+    const startY = scrollTop;
+    const distance = targetY - startY;
+    const startTime = performance.now();
+    
+    return new Promise(resolve => {
+      function step(currentTime) {
+        const elapsed = currentTime - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+        
+        // Ease-out cubic for smooth deceleration
+        const easeOut = 1 - Math.pow(1 - progress, 3);
+        
+        window.scrollTo(0, startY + distance * easeOut);
+        
+        if (progress < 1) {
+          requestAnimationFrame(step);
+        } else {
+          resolve();
+        }
+      }
+      requestAnimationFrame(step);
+    });
+  }
+
   // Pipeline animation setup
   const stepNames = ["spec","question","agent","metrics","outcome"];
   const stepLabels = ["Spec Builder", "Question Engine", "LLM Agents", "Metrics & Scoring", "Outcome Runner"];
@@ -1640,10 +1683,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     try {
-      // 0. Scroll to algorithm section so user can see the animation
+      // 0. Scroll to algorithm section so user can see the animation (fast scroll - 200ms)
       const algorithmSection = document.querySelector('.algorithm-section-enhanced');
       if (algorithmSection) {
-        algorithmSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        await fastScrollTo(algorithmSection, 'center', 200);
         algorithmSection.style.transition = 'all 0.3s ease';
         algorithmSection.style.boxShadow = '0 0 40px rgba(124, 58, 237, 0.4)';
         setTimeout(() => {
@@ -1746,22 +1789,19 @@ document.addEventListener('DOMContentLoaded', () => {
       // 4. Show success toast
       showToast('✓ Optimization complete! Check Best Prompt below.', 'success');
       
-      // 4. Scroll to best prompt section
+      // 4. Scroll to best prompt section (fast scroll - 200ms)
       if (bestPromptEl) {
         const bestPromptCard = bestPromptEl.closest('.card') || bestPromptEl.closest('.layer-default__output');
         if (bestPromptCard) {
           setTimeout(() => {
-            bestPromptCard.scrollIntoView({
-              behavior: 'smooth',
-              block: 'center'
+            fastScrollTo(bestPromptCard, 'center', 200).then(() => {
+              // Add highlight pulse animation
+              bestPromptCard.style.transition = 'all 0.3s ease';
+              bestPromptCard.style.boxShadow = '0 0 30px rgba(124, 58, 237, 0.5)';
+              setTimeout(() => {
+                bestPromptCard.style.boxShadow = '';
+              }, 2000);
             });
-            
-            // Add highlight pulse animation
-            bestPromptCard.style.transition = 'all 0.3s ease';
-            bestPromptCard.style.boxShadow = '0 0 30px rgba(124, 58, 237, 0.5)';
-            setTimeout(() => {
-              bestPromptCard.style.boxShadow = '';
-            }, 2000);
           }, 100);
         }
       }

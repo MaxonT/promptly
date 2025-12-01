@@ -1932,6 +1932,93 @@ html[data-theme="light"] .text-keyword {
   transition: box-shadow 0.3s ease;
 }
 
+/* ====== Modes panel styles (add near other UI helpers) ====== */
+
+.modes-panel{
+  margin: 18px 0 8px;
+  padding: 8px 6px;
+  border-radius: 12px;
+}
+
+.modes-intro{
+  font-size: .95rem;
+  color: var(--text-med);
+  margin-bottom: 10px;
+  display:block;
+}
+
+.modes-grid{
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 12px;
+}
+
+/* card */
+.mode-card{
+  background: linear-gradient(var(--surface-2), var(--surface-2));
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,.06);
+  padding: 12px;
+  display:flex;
+  flex-direction:column;
+  justify-content:space-between;
+  cursor: pointer;
+  min-height: 120px;
+  transition: transform .12s ease, box-shadow .12s ease;
+}
+.mode-card:focus,
+.mode-card:hover{
+  transform: translateY(-4px);
+  box-shadow: 0 8px 28px rgba(6,182,212,.06);
+  outline: none;
+}
+.mode-card__title{
+  font-weight:800;
+  margin:0 0 8px 0;
+}
+.mode-card__desc{
+  color: var(--text-med);
+  font-size: .92rem;
+  margin-bottom: 10px;
+}
+.mode-card__cta{
+  align-self:flex-start;
+  padding:.4rem .7rem;
+  border-radius:10px;
+}
+
+/* small highlight class applied to the existing task card when Quick Start is used */
+.mode-focused{
+  box-shadow: 0 6px 20px rgba(124,58,237,0.12) !important;
+  border-color: rgba(124,58,237,.9) !important;
+  transition: box-shadow .18s ease, border-color .18s ease;
+}
+
+/* small visual cue for run button focus when mode selected */
+.mode-focused-run{
+  animation: runPulse 1.8s ease-in-out;
+  outline: 2px solid rgba(6,182,212,0.18);
+  outline-offset: 3px;
+}
+@keyframes runPulse{
+  0% { transform: scale(1); box-shadow: none; }
+  50% { transform: scale(1.03); box-shadow: 0 8px 30px rgba(6,182,212,0.08); }
+  100% { transform: scale(1); box-shadow: none; }
+}
+
+/* guided highlight */
+.mode-guided-highlight{
+  animation: guidedFlash 2.6s ease-in-out;
+}
+@keyframes guidedFlash{
+  0% { box-shadow: 0 0 0 0 rgba(6,182,212,0); }
+  50% { box-shadow: 0 0 0 8px rgba(6,182,212,0.06); }
+  100% { box-shadow: 0 0 0 0 rgba(6,182,212,0); }
+}
+
+/* accessibility: make sure card text readable when focused */
+.mode-card:focus .mode-card__desc { color: var(--text-high); }
+
 /* ============================================
    Compact Metrics Section (Closer to Hero)
    - Increased vertical height for metric cards

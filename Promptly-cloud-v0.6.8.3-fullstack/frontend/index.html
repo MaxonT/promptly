@@ -1801,6 +1801,136 @@ document.addEventListener('DOMContentLoaded', () => {
   }, { capture: true }); // Use capture phase to ensure we get the event
   
   console.log('[Promptly] Pipeline animation initialization complete!');
+  
+  // ============================================
+  // Global Button Click Animation System
+  // ============================================
+  console.log('[Promptly] Initializing global button click animation system...');
+  
+  /**
+   * Add click animation to a button element
+   * Includes: ripple effect, scale animation, and visual feedback
+   */
+  function addButtonClickAnimation(button) {
+    // Skip if already processed or disabled
+    if (!button || button.dataset.animationAdded === 'true') return;
+    if (button.disabled) return;
+    
+    button.dataset.animationAdded = 'true';
+    
+    // Ensure button has relative positioning for ripple effect
+    const computedStyle = window.getComputedStyle(button);
+    if (computedStyle.position === 'static') {
+      button.style.position = 'relative';
+    }
+    if (computedStyle.overflow === 'visible') {
+      button.style.overflow = 'hidden';
+    }
+    
+    // Add click event listener
+    button.addEventListener('click', function(e) {
+      // Skip if button is disabled
+      if (button.disabled) return;
+      
+      // Create ripple effect
+      const ripple = document.createElement('span');
+      ripple.className = 'button-ripple';
+      
+      // Get click position relative to button
+      const rect = button.getBoundingClientRect();
+      const size = Math.max(rect.width, rect.height) * 2;
+      const x = e.clientX - rect.left - size / 2;
+      const y = e.clientY - rect.top - size / 2;
+      
+      ripple.style.width = ripple.style.height = size + 'px';
+      ripple.style.left = x + 'px';
+      ripple.style.top = y + 'px';
+      
+      button.appendChild(ripple);
+      
+      // Trigger ripple animation
+      requestAnimationFrame(() => {
+        ripple.classList.add('ripple-active');
+      });
+      
+      // Add scale-down effect
+      button.classList.add('button-clicked');
+      
+      // Clean up after animation
+      setTimeout(() => {
+        ripple.remove();
+        button.classList.remove('button-clicked');
+      }, 600);
+      
+    }, { passive: true, capture: false });
+    
+    // Add hover effect class
+    button.classList.add('button-animated');
+  }
+  
+  /**
+   * Initialize all buttons on the page
+   */
+  function initializeAllButtons() {
+    // Select all buttons (including those with .btn class)
+    const allButtons = document.querySelectorAll('button, .btn, [role="button"]:not([role="button"][tabindex="-1"])');
+    console.log(`[Promptly] Found ${allButtons.length} buttons to animate`);
+    
+    allButtons.forEach(btn => {
+      // Skip certain buttons that might have special handling
+      if (btn.id === 'runBtn') {
+        // runBtn has its own handler, but we can still add visual feedback
+        addButtonClickAnimation(btn);
+      } else {
+        addButtonClickAnimation(btn);
+      }
+    });
+    
+    console.log(`[Promptly] Applied animations to ${allButtons.length} buttons`);
+  }
+  
+  // Initialize buttons immediately
+  initializeAllButtons();
+  
+  // Watch for dynamically added buttons
+  const buttonObserver = new MutationObserver(mutations => {
+    let newButtonsFound = false;
+    
+    mutations.forEach(mutation => {
+      mutation.addedNodes.forEach(node => {
+        if (node.nodeType === 1) { // Element node
+          // Check if the node itself is a button
+          if (node.tagName === 'BUTTON' || 
+              node.classList?.contains('btn') || 
+              node.getAttribute('role') === 'button') {
+            addButtonClickAnimation(node);
+            newButtonsFound = true;
+          }
+          
+          // Check for buttons in children
+          if (node.querySelectorAll) {
+            const childButtons = node.querySelectorAll('button, .btn, [role="button"]');
+            if (childButtons.length > 0) {
+              childButtons.forEach(btn => addButtonClickAnimation(btn));
+              newButtonsFound = true;
+            }
+          }
+        }
+      });
+    });
+    
+    if (newButtonsFound) {
+      console.log('[Promptly] New buttons detected and animated');
+    }
+  });
+  
+  // Start observing
+  buttonObserver.observe(document.body, {
+    childList: true,
+    subtree: true
+  });
+  
+  console.log('[Promptly] Global button animation system initialized!');
 });
 
 // Backup: Try to bind immediately if DOM is already loaded

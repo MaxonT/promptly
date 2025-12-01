@@ -386,6 +386,31 @@ html[data-theme="light"] .grey-gradient-text{
       </div>
     </div>
 
+    <section class="mode-selector" aria-labelledby="modeSelectorTitle">
+      <div class="mode-selector__header">
+        <p id="modeSelectorTitle" class="mode-selector__title">How would you like to start?</p>
+        <p class="mode-selector__subtitle">Pick a workflow: jump straight into a task or get guided help.</p>
+      </div>
+      <div class="mode-selector__grid" role="radiogroup" aria-label="Choose how to start">
+        <article class="mode-card is-selected" data-mode="quick" role="radio" aria-checked="true" tabindex="0" aria-describedby="modeQuickDesc">
+          <div class="mode-card__icon" aria-hidden="true">⚡</div>
+          <div class="mode-card__body">
+            <div class="mode-card__title">Quick Start</div>
+            <p id="modeQuickDesc" class="mode-card__description">Describe your goal and generate an optimized prompt instantly.</p>
+          </div>
+          <span class="mode-card__check" aria-hidden="true">✔</span>
+        </article>
+        <article class="mode-card" data-mode="wizard" role="radio" aria-checked="false" tabindex="-1" aria-describedby="modeWizardDesc">
+          <div class="mode-card__icon" aria-hidden="true">🧙‍♂️</div>
+          <div class="mode-card__body">
+            <div class="mode-card__title">Wizard</div>
+            <p id="modeWizardDesc" class="mode-card__description">Guided step-by-step flow to refine your project idea.</p>
+          </div>
+          <span class="mode-card__check" aria-hidden="true">✔</span>
+        </article>
+      </div>
+    </section>
+
 
     <section class="layer-card layer-default" id="layerDefault">
       <div class="layer-default__column">
@@ -1584,7 +1609,90 @@ document.addEventListener('DOMContentLoaded', () => {
   const runBtn = document.getElementById("runBtn");
   const bestPromptEl = document.getElementById('bestPrompt');
   const taskEl = document.getElementById('task');
-  
+  const modeCards = Array.from(document.querySelectorAll('.mode-card'));
+  let selectedMode = modeCards.find(card => card.classList.contains('is-selected'))?.dataset.mode || 'quick';
+
+  function trackModeSelection(mode) {
+    const eventName = mode === 'wizard' ? 'mode_select_wizard' : 'mode_select_quick';
+    if (window.trackEvent) {
+      window.trackEvent(eventName);
+    }
+  }
+
+  function focusTaskInput() {
+    if (taskEl) {
+      taskEl.focus({ preventScroll: false });
+      taskEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }
+
+  function openWizardFlow() {
+    if (typeof window.openQuestionWizard === 'function') {
+      window.openQuestionWizard();
+      return;
+    }
+
+    const wizardUrl = new URL('wizard.html', window.location.href);
+    window.location.href = wizardUrl.toString();
+  }
+
+  function updateModeSelection(targetCard, { activate = false, track = true } = {}) {
+    if (!targetCard) return;
+
+    selectedMode = targetCard.dataset.mode || 'quick';
+
+    modeCards.forEach(card => {
+      const isActive = card === targetCard;
+      card.classList.toggle('is-selected', isActive);
+      card.setAttribute('aria-checked', isActive ? 'true' : 'false');
+      card.tabIndex = isActive ? 0 : -1;
+    });
+
+    if (track) {
+      trackModeSelection(selectedMode);
+    }
+
+    if (activate) {
+      if (selectedMode === 'wizard') {
+        openWizardFlow();
+      } else {
+        focusTaskInput();
+      }
+    }
+  }
+
+  if (modeCards.length) {
+    const initialCard = modeCards.find(card => card.dataset.mode === selectedMode) || modeCards[0];
+    updateModeSelection(initialCard, { track: false, activate: false });
+
+    modeCards.forEach((card, index) => {
+      card.addEventListener('click', () => updateModeSelection(card, { activate: true }));
+
+      card.addEventListener('keydown', (event) => {
+        const { key } = event;
+        if (key === 'Enter' || key === ' ') {
+          event.preventDefault();
+          updateModeSelection(card, { activate: true });
+          return;
+        }
+
+        if (key === 'ArrowRight' || key === 'ArrowDown') {
+          event.preventDefault();
+          const nextCard = modeCards[(index + 1) % modeCards.length];
+          updateModeSelection(nextCard);
+          nextCard.focus({ preventScroll: true });
+        }
+
+        if (key === 'ArrowLeft' || key === 'ArrowUp') {
+          event.preventDefault();
+          const prevCard = modeCards[(index - 1 + modeCards.length) % modeCards.length];
+          updateModeSelection(prevCard);
+          prevCard.focus({ preventScroll: true });
+        }
+      });
+    });
+  }
+
   if (!runBtn) {
     console.error('[Promptly] Run Optimization button (#runBtn) not found!');
     return;

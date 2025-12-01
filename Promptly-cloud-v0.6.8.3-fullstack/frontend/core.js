@@ -92,7 +92,7 @@
       const res = await fetch(getRunUrl());
       return await res.json();
     } catch (err) {
-      console.error("[promptly] fetchRunMetrics error", err);
+      console.error("[promptly] fetchLatestRun error", err);
       return null;
     }
   }
@@ -108,8 +108,15 @@
 
   async function refreshMetrics() {
     const data = await fetchLatestRun();
-    const run = data?.run || null;
-    if (!run) return;
+    if (!data) {
+      console.warn("[promptly] refreshMetrics: No data returned from fetchLatestRun()");
+      return;
+    }
+    const run = data.run || null;
+    if (!run) {
+      console.warn("[promptly] refreshMetrics: No 'run' property in fetched data");
+      return;
+    }
     renderMetrics(run.metrics);
     const bestPromptEl = document.getElementById("bestPrompt");
     if (bestPromptEl) {

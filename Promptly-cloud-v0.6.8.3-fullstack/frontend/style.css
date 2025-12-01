@@ -1958,22 +1958,29 @@ html[data-theme="light"] .text-keyword {
 }
 
 /* ============================================
-   Layer 2 & Layer 3 Compact Height
-   - Reduced vertical padding, full horizontal width
+   Layer 2 & Layer 3 Compact Height (Collapsed State Only)
+   - Reduced vertical padding when folded/collapsed
+   - Normal padding when expanded/unfolded
    ============================================ */
 
-.layer-card {
+/* Default compact style for collapsed state */
+.layer-card:has(.layer-panel:not(.layer-panel--open)) {
   padding: 14px 22px !important;
   margin-bottom: 12px !important;
 }
 
-.layer-card .layer-toggle {
+.layer-card:has(.layer-panel:not(.layer-panel--open)) .layer-toggle {
   padding: 8px 12px;
 }
 
-/* Reduce height when collapsed */
-.layer-card .layer-toggle__label {
+.layer-card:has(.layer-panel:not(.layer-panel--open)) .layer-toggle__label {
   font-size: 0.95rem;
+}
+
+/* Normal padding when expanded - ensure original styling */
+.layer-card:has(.layer-panel--open) {
+  padding: 22px !important;
+  margin-bottom: 20px !important;
 }
 
 /* ============================================

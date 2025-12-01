@@ -386,6 +386,28 @@ html[data-theme="light"] .grey-gradient-text{
       </div>
     </div>
 
+    <section class="mode-selector" id="modeSelector" role="radiogroup" aria-label="Choose how you want to start">
+      <div class="mode-selector__title">How would you like to start?</div>
+      <div class="mode-selector__grid">
+        <button class="mode-card is-selected" type="button" role="radio" aria-checked="true" tabindex="0" data-mode="quick" aria-describedby="mode-quick-desc">
+          <div class="mode-card__check" aria-hidden="true">✓</div>
+          <div class="mode-card__content">
+            <span class="mode-card__eyebrow">⚡ Quick Start</span>
+            <h3 class="mode-card__title">Describe your goal and generate an optimized prompt instantly.</h3>
+            <p class="mode-card__desc" id="mode-quick-desc">Keeps you on this page and focuses the task input so you can type and run optimization right away.</p>
+          </div>
+        </button>
+        <button class="mode-card" type="button" role="radio" aria-checked="false" tabindex="-1" data-mode="wizard" aria-describedby="mode-wizard-desc">
+          <div class="mode-card__check" aria-hidden="true">✓</div>
+          <div class="mode-card__content">
+            <span class="mode-card__eyebrow">🧭 Wizard</span>
+            <h3 class="mode-card__title">Guided step-by-step flow to refine your project idea.</h3>
+            <p class="mode-card__desc" id="mode-wizard-desc">Opens the Question Wizard experience (fallbacks to wizard.html) to walk you through clarifying context.</p>
+          </div>
+        </button>
+      </div>
+    </section>
+
 
     <section class="layer-card layer-default" id="layerDefault">
       <div class="layer-default__column">
@@ -671,6 +693,101 @@ temperature: 0.5</textarea>
   </footer>
 
   <script src="core.js"></script>
+
+<script>
+(function(){
+  const selector = document.getElementById('modeSelector');
+  if (!selector) return;
+
+  const cards = Array.from(selector.querySelectorAll('.mode-card'));
+  const taskInput = document.getElementById('task');
+
+  if (!cards.length) return;
+
+  let selectedCard = cards.find(card => card.classList.contains('is-selected')) || cards[0];
+
+  function refreshTabIndexes(focusTarget){
+    cards.forEach(el => {
+      const isSelected = el === selectedCard;
+      const isFocused = el === focusTarget;
+      el.tabIndex = (isSelected || isFocused) ? 0 : -1;
+    });
+  }
+
+  function updateSelection(card){
+    selectedCard = card;
+    cards.forEach(el => {
+      const isActive = el === card;
+      el.classList.toggle('is-selected', isActive);
+      el.setAttribute('aria-checked', isActive ? 'true' : 'false');
+    });
+    refreshTabIndexes(card);
+  }
+
+  function focusTaskInput(){
+    if (taskInput) {
+      taskInput.focus({ preventScroll: true });
+      taskInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }
+
+  function trackEvent(name){
+    if (typeof window.trackEvent === 'function') {
+      try { window.trackEvent(name); } catch (err) { console.warn('[Promptly] trackEvent failed', err); }
+    }
+  }
+
+  function goToWizard(){
+    trackEvent('mode_select_wizard');
+    if (typeof window.openQuestionWizard === 'function') {
+      window.openQuestionWizard();
+      return;
+    }
+    window.location.href = 'wizard.html';
+  }
+
+  function handleSelection(card){
+    const mode = card.dataset.mode;
+    updateSelection(card);
+
+    if (mode === 'quick') {
+      trackEvent('mode_select_quick');
+      focusTaskInput();
+    } else if (mode === 'wizard') {
+      goToWizard();
+    }
+  }
+
+  function focusCard(card){
+    refreshTabIndexes(card);
+    card?.focus();
+  }
+
+  updateSelection(selectedCard);
+
+  cards.forEach((card) => {
+    card.addEventListener('click', () => handleSelection(card));
+
+    card.addEventListener('keydown', (event) => {
+      const { key } = event;
+      if (key === 'Enter' || key === ' ') {
+        event.preventDefault();
+        handleSelection(card);
+        return;
+      }
+
+      if (['ArrowRight', 'ArrowDown', 'ArrowLeft', 'ArrowUp'].includes(key)) {
+        event.preventDefault();
+        const currentIndex = cards.indexOf(document.activeElement);
+        const safeIndex = currentIndex >= 0 ? currentIndex : cards.indexOf(card);
+        const direction = (key === 'ArrowRight' || key === 'ArrowDown') ? 1 : -1;
+        const nextIndex = (safeIndex + direction + cards.length) % cards.length;
+        focusCard(cards[nextIndex]);
+      }
+    });
+  });
+})();
+</script>
 
 <script>
 (function(){

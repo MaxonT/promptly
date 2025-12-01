@@ -29,6 +29,22 @@ header.topbar{position:sticky;top:0;display:flex;align-items:center;justify-cont
 @media(max-width:1020px){.grid-2{grid-template-columns:1fr}.grid-4{grid-template-columns:1fr 1fr}}
 @media(max-width:640px){.grid-4{grid-template-columns:1fr}}
 
+.mode-selector{display:flex;flex-direction:column;gap:12px;margin:12px 0 22px;}
+.mode-selector__title{font-weight:800;letter-spacing:-0.01em;font-size:1.05rem;}
+.mode-selector__grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;}
+.mode-card{position:relative;display:flex;align-items:flex-start;gap:12px;padding:16px;border:1.5px solid var(--border);border-radius:18px;background:linear-gradient(120deg,rgba(124,58,237,0.08),rgba(6,182,212,0.08));color:inherit;cursor:pointer;text-align:left;transition:transform .15s ease,border-color .2s ease,box-shadow .2s ease,background .2s ease;}
+.mode-card:hover{transform:translateY(-1px);border-color:rgba(124,58,237,0.45);box-shadow:0 10px 30px rgba(0,0,0,0.28);}
+.mode-card:focus-visible{outline:3px solid rgba(124,58,237,0.65);outline-offset:3px;}
+.mode-card.is-selected{border-color:var(--ok);box-shadow:0 12px 34px rgba(34,197,94,0.15);background:linear-gradient(135deg,rgba(34,197,94,0.15),rgba(124,58,237,0.08));}
+.mode-card__content{display:flex;flex-direction:column;gap:6px;}
+.mode-card__eyebrow{display:inline-flex;align-items:center;gap:6px;font-weight:800;color:var(--text);padding:6px 10px;border-radius:999px;background:rgba(255,255,255,0.08);box-shadow:inset 0 0 0 1px rgba(255,255,255,0.08);width:max-content;}
+.mode-card__title{margin:0;font-size:1rem;line-height:1.4;}
+.mode-card__desc{margin:0;color:var(--muted);font-size:0.9rem;}
+.mode-card__check{width:22px;height:22px;border-radius:50%;border:2px solid rgba(255,255,255,0.2);display:inline-flex;align-items:center;justify-content:center;font-weight:800;color:var(--ok);background:rgba(34,197,94,0.1);} 
+.mode-card.is-selected .mode-card__check{background:var(--ok);color:#0b0f14;border-color:var(--ok);box-shadow:0 4px 12px rgba(34,197,94,0.35);}
+@media(max-width:480px){.mode-selector__grid{grid-template-columns:1fr;}}
+@media(prefers-reduced-motion:reduce){.mode-card{transition:none;}}
+
 .card{
   background:var(--card);
   border:1.5px solid var(--border);

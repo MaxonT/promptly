@@ -1802,3 +1802,162 @@ html[data-theme="light"] .error-state {
   color: transparent !important;
   -webkit-text-fill-color: transparent;
 }
+
+/* ============================================
+   Layer 2 & Layer 3 Gradient Border Styles
+   ============================================ */
+
+/* Apply gradient border to Layer 2 and Layer 3 cards */
+.layer-card {
+  border: 1.5px solid transparent;
+  background: linear-gradient(var(--surface-2, #0f141b), var(--surface-2, #0f141b)) padding-box,
+              linear-gradient(90deg, var(--brand-a, #7C3AED), var(--brand-b, #06B6D4), var(--brand-c, #22D3EE)) border-box;
+  border-radius: 20px;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.25);
+}
+
+/* Light theme adjustment for layer cards */
+html[data-theme="light"] .layer-card {
+  background: linear-gradient(var(--surface-2, #FFFFFF), var(--surface-2, #FFFFFF)) padding-box,
+              linear-gradient(90deg, var(--brand-a, #7C3AED), var(--brand-b, #06B6D4), var(--brand-c, #22D3EE)) border-box;
+  box-shadow: 0 6px 22px rgba(20, 23, 35, 0.08);
+}
+
+/* ============================================
+   Question Wizard Navigation Link Styles
+   ============================================ */
+
+.nav-wizard-link {
+  background: linear-gradient(90deg, #7C3AED, #06B6D4);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  font-weight: 600 !important;
+  position: relative;
+}
+
+.nav-wizard-link::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background: linear-gradient(90deg, #7C3AED, #06B6D4);
+  transform: scaleX(0);
+  transition: transform 0.3s ease;
+}
+
+.nav-wizard-link:hover::after {
+  transform: scaleX(1);
+}
+
+/* ============================================
+   Text Enhancement Styles
+   ============================================ */
+
+/* Highlighted text with gradient underline */
+.text-highlight {
+  position: relative;
+  font-weight: 600;
+  background: linear-gradient(90deg, #7C3AED, #06B6D4);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* Accent text with cyan glow */
+.text-accent {
+  color: #22D3EE;
+  font-weight: 600;
+  text-shadow: 0 0 10px rgba(34, 211, 238, 0.3);
+}
+
+/* Keyword emphasis */
+.text-keyword {
+  color: #fff;
+  font-weight: 700;
+  background: rgba(124, 58, 237, 0.15);
+  padding: 0 4px;
+  border-radius: 4px;
+}
+
+/* Underline animation effect */
+.text-underline-animated {
+  position: relative;
+  display: inline-block;
+}
+
+.text-underline-animated::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background: linear-gradient(90deg, #7C3AED, #06B6D4, #22D3EE);
+  animation: underline-flow 2s ease-in-out infinite;
+}
+
+@keyframes underline-flow {
+  0%, 100% { transform: scaleX(0.8); opacity: 0.6; }
+  50% { transform: scaleX(1); opacity: 1; }
+}
+
+/* ============================================
+   Compact Metrics Section (Closer to Hero)
+   ============================================ */
+
+.metrics-compact {
+  margin-top: 8px !important;
+  margin-bottom: 16px !important;
+}
+
+.metrics-compact .card.kpi {
+  padding: 14px 16px;
+}
+
+/* ============================================
+   Question Wizard Status Indicator
+   ============================================ */
+
+.wizard-status-indicator {
+  display: none;
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  padding: 12px 20px;
+  background: linear-gradient(135deg, rgba(124, 58, 237, 0.95), rgba(6, 182, 212, 0.95));
+  border-radius: 12px;
+  color: #fff;
+  font-size: 0.9rem;
+  font-weight: 600;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+  z-index: 1000;
+  animation: pulse-glow 2s ease-in-out infinite;
+  cursor: pointer;
+}
+
+.wizard-status-indicator.active {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.wizard-status-indicator .spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 8px 24px rgba(124, 58, 237, 0.4); }
+  50% { box-shadow: 0 8px 32px rgba(6, 182, 212, 0.6); }
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}

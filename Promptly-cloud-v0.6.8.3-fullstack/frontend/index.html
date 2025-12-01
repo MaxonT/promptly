@@ -363,6 +363,7 @@ html[data-theme="light"] .grey-gradient-text{
     <nav class="controls">
       <div class="navlinks">
         <a href="index.html" data-i18n="nav_home">Dashboard</a>
+        <a href="#wizardLanding" data-i18n="nav_wizard" class="nav-wizard-link">Question Wizard</a>
         <a href="privacy.html" data-i18n="nav_privacy">Privacy</a>
         <a href="terms.html" data-i18n="nav_terms">Terms</a>
         <a href="cookies.html" data-i18n="nav_cookies">Cookies</a>
@@ -412,6 +413,50 @@ html[data-theme="light"] .grey-gradient-text{
         </div>
         <textarea id="bestPrompt" class="codeblock" rows="14" placeholder="Click “Generate optimized prompt” to see the strongest prompt for your goal."></textarea>
         <p class="layer-output-hint">We run Spec → Questions → LLM agents → Metrics → Outcome Runner before surfacing this prompt.</p>
+      </div>
+    </section>
+
+    <!-- Metrics Section - Moved up to be visible without scrolling -->
+    <section class="grid grid-4 metrics-compact" id="metricsSection">
+      <div class="card kpi" id="kAcc">
+        <span class="label metric-with-tooltip" data-i18n="kpi_accuracy">
+          <span class="text-highlight">Accuracy</span>
+          <span class="metric-tooltip">Percentage of test cases that passed with correct outputs</span>
+        </span>
+        <span class="value" id="valAcc">—</span>
+        <span class="delta" id="deltaAcc">+0.00%</span>
+      </div>
+      <div class="card kpi">
+        <span class="label metric-with-tooltip" data-i18n="kpi_f1">
+          <span class="text-highlight">F1</span>
+          <span class="metric-tooltip">Balance between precision and recall (higher is better)</span>
+        </span>
+        <span class="value" id="valF1">—</span>
+        <span class="delta">&nbsp;</span>
+      </div>
+      <div class="card kpi">
+        <span class="label metric-with-tooltip" data-i18n="kpi_pass">
+          <span class="text-highlight">Pass Rate</span>
+          <span class="metric-tooltip">Ratio of successful runs to total attempts</span>
+        </span>
+        <span class="value" id="valPass">—</span>
+        <span class="delta">&nbsp;</span>
+      </div>
+      <div class="card kpi">
+        <span class="label metric-with-tooltip" data-i18n="kpi_cost">
+          <span class="text-highlight">Token Cost</span>
+          <span class="metric-tooltip">Average tokens used per request (lower is better for cost)</span>
+        </span>
+        <span class="value" id="valCost">—</span>
+        <span class="delta">&nbsp;</span>
+      </div>
+      <div class="card kpi">
+        <span class="label metric-with-tooltip" data-i18n="kpi_prog">
+          <span class="text-highlight">Progress %</span>
+          <span class="metric-tooltip">Completion percentage towards target accuracy</span>
+        </span>
+        <span class="value" id="valProg">—</span>
+        <span class="delta">&nbsp;</span>
       </div>
     </section>
 
@@ -495,49 +540,6 @@ temperature: 0.5</textarea>
   <p class="help">This will open the Question Wizard and guide you step by step.</p>
     </section>
 
-    <section class="grid grid-4" style="margin-top:16px">
-      <div class="card kpi" id="kAcc">
-        <span class="label metric-with-tooltip" data-i18n="kpi_accuracy">
-          Accuracy
-          <span class="metric-tooltip">Percentage of test cases that passed with correct outputs</span>
-        </span>
-        <span class="value" id="valAcc">—</span>
-        <span class="delta" id="deltaAcc">+0.00%</span>
-      </div>
-      <div class="card kpi">
-        <span class="label metric-with-tooltip" data-i18n="kpi_f1">
-          F1
-          <span class="metric-tooltip">Balance between precision and recall (higher is better)</span>
-        </span>
-        <span class="value" id="valF1">—</span>
-        <span class="delta">&nbsp;</span>
-      </div>
-      <div class="card kpi">
-        <span class="label metric-with-tooltip" data-i18n="kpi_pass">
-          Pass Rate
-          <span class="metric-tooltip">Ratio of successful runs to total attempts</span>
-        </span>
-        <span class="value" id="valPass">—</span>
-        <span class="delta">&nbsp;</span>
-      </div>
-      <div class="card kpi">
-        <span class="label metric-with-tooltip" data-i18n="kpi_cost">
-          Token Cost
-          <span class="metric-tooltip">Average tokens used per request (lower is better for cost)</span>
-        </span>
-        <span class="value" id="valCost">—</span>
-        <span class="delta">&nbsp;</span>
-      </div>
-      <div class="card kpi">
-        <span class="label metric-with-tooltip" data-i18n="kpi_prog">
-          Progress %
-          <span class="metric-tooltip">Completion percentage towards target accuracy</span>
-        </span>
-        <span class="value" id="valProg">—</span>
-        <span class="delta">&nbsp;</span>
-      </div>
-    </section>
-    <p class="help" style="margin-top:6px;">Arrows reflect change since the last run. Accuracy, F1, and Pass Rate are “higher is better,” while Token Cost is “lower is better.” Progress % tracks how close you are to your target accuracy.</p>
 
     <section class="grid grid-2" style="margin-top:16px">
       <div class="card">
@@ -656,6 +658,12 @@ temperature: 0.5</textarea>
         🚀 Every enhancement passes through the <span class="pipeline-step">Spec</span> → <span class="pipeline-step">Question</span> → <span class="pipeline-step">Agent</span> → <span class="pipeline-step">Outcome</span> pipeline so the result you copy is the <span class="highlight-text">top-ranked candidate</span> after multi-metric scoring.
       </p>
     </section>
+
+    <!-- Question Wizard Status Indicator (shows when running in background) -->
+    <div id="wizardStatusIndicator" class="wizard-status-indicator" onclick="window.location.href='wizard.html'">
+      <span class="spinner"></span>
+      <span>Question Wizard Running...</span>
+    </div>
   </main>
 
   <footer class="footer">
@@ -714,8 +722,43 @@ temperature: 0.5</textarea>
     const url = new URL("wizard.html", window.location.href);
     url.searchParams.set("idea", idea);
     if (kind) url.searchParams.set("kind", kind);
+    
+    // Mark wizard as running in localStorage for background state persistence
+    localStorage.setItem("wizardRunning", "true");
+    localStorage.setItem("wizardStartTime", Date.now().toString());
+    
     window.location.href = url.toString();
   });
+  
+  // Check and show wizard status indicator if wizard is running in background
+  function checkWizardStatus() {
+    const wizardRunning = localStorage.getItem("wizardRunning");
+    const statusIndicator = document.getElementById("wizardStatusIndicator");
+    
+    if (wizardRunning === "true" && statusIndicator) {
+      statusIndicator.classList.add("active");
+    }
+  }
+  
+  // Check wizard status on page load
+  checkWizardStatus();
+  
+  // Smooth scroll for Question Wizard nav link
+  const wizardNavLink = document.querySelector('.nav-wizard-link');
+  if (wizardNavLink) {
+    wizardNavLink.addEventListener('click', function(e) {
+      e.preventDefault();
+      const wizardSection = document.getElementById('wizardLanding');
+      if (wizardSection) {
+        wizardSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        // Highlight the section briefly
+        wizardSection.style.boxShadow = '0 0 30px rgba(124, 58, 237, 0.5)';
+        setTimeout(() => {
+          wizardSection.style.boxShadow = '';
+        }, 2000);
+      }
+    });
+  }
 })();
 </script>
 <script>

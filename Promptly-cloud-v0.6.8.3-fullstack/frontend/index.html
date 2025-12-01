@@ -1683,10 +1683,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     try {
-      // 0. Scroll to algorithm section so user can see the animation (fast scroll - 200ms)
+      // 0. Scroll to algorithm section so user can see the animation
       const algorithmSection = document.querySelector('.algorithm-section-enhanced');
       if (algorithmSection) {
-        await fastScrollTo(algorithmSection, 'center', 200);
+        algorithmSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
         algorithmSection.style.transition = 'all 0.3s ease';
         algorithmSection.style.boxShadow = '0 0 40px rgba(124, 58, 237, 0.4)';
         setTimeout(() => {

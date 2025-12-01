@@ -1334,6 +1334,10 @@ temperature: 0.5</textarea>
 </script>
 
 <script>
+<<<<<<< Updated upstream
+(() => {
+  // Use global window.showToast for toast notifications
+=======
 document.addEventListener('DOMContentLoaded', () => {
   console.log('[Promptly] Initializing pipeline animation and Run Optimization button...');
   
@@ -1352,6 +1356,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }, duration);
   }
 
+>>>>>>> Stashed changes
   // Pipeline animation setup
   const stepNames = ["spec","question","agent","metrics","outcome"];
   const baseStages = Array.from(document.querySelectorAll(".algorithm-step-enhanced"));
@@ -1367,8 +1372,14 @@ document.addEventListener('DOMContentLoaded', () => {
   function clearActive() {
     stages.forEach((el) => el.classList.remove("pipe-active"));
   }
+  let isAnimating = false;
   async function animatePipeline() {
+<<<<<<< Updated upstream
+    if (isAnimating) return;
+    isAnimating = true;
+=======
     console.log('[Promptly] Starting pipeline animation...');
+>>>>>>> Stashed changes
     clearActive();
     for (let i = 0; i < stages.length; i++) {
       stages[i].classList.add("pipe-active");
@@ -1376,13 +1387,37 @@ document.addEventListener('DOMContentLoaded', () => {
       await new Promise((resolve) => setTimeout(resolve, delayMs));
       stages[i].classList.remove("pipe-active");
     }
+<<<<<<< Updated upstream
+    isAnimating = false;
+=======
     console.log('[Promptly] Pipeline animation complete');
+>>>>>>> Stashed changes
   }
 
   // Integrated click handler: animation → API → toast → scroll
   const runBtn = document.getElementById("runBtn");
   const bestPromptEl = document.getElementById('bestPrompt');
   
+<<<<<<< Updated upstream
+  if (runBtn) {
+    runBtn.addEventListener("click", async () => {
+      // Save original button text for restoration
+      const originalText = runBtn.textContent;
+      
+      // Disable button and show processing state with accessibility support
+      runBtn.disabled = true;
+      runBtn.setAttribute('aria-busy', 'true');
+      // Use localized "Processing..." text
+      runBtn.textContent = window.promptlyGetText ? window.promptlyGetText('processing') : 'Processing...';
+      
+      try {
+        // 1. Play pipeline animation
+        await animatePipeline();
+        
+        // 2. Call API to refresh metrics and best prompt
+        if (window.promptlyRefreshMetrics) {
+          await window.promptlyRefreshMetrics();
+=======
   if (!runBtn) {
     console.error('[Promptly] Run Optimization button (#runBtn) not found!');
     return;
@@ -1426,6 +1461,7 @@ document.addEventListener('DOMContentLoaded', () => {
           setTimeout(() => {
             bestPromptCard.classList.remove('highlight-pulse');
           }, 2000);
+>>>>>>> Stashed changes
         }
         
         // 3. Show success toast
@@ -1447,6 +1483,11 @@ document.addEventListener('DOMContentLoaded', () => {
         runBtn.removeAttribute('aria-busy');
         runBtn.textContent = window.promptlyGetText ? window.promptlyGetText('run_btn') : originalText;
       }
+<<<<<<< Updated upstream
+    });
+  }
+})();
+=======
     } catch (error) {
       console.error('[Promptly] Error during optimization:', error);
       showToast('⚠ An error occurred. Please check console.', 'error');
@@ -1460,6 +1501,7 @@ document.addEventListener('DOMContentLoaded', () => {
   
   console.log('[Promptly] Pipeline animation initialization complete!');
 });
+>>>>>>> Stashed changes
 </script>
 
 </body>

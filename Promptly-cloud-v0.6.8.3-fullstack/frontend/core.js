@@ -116,6 +116,9 @@
       bestPromptEl.value = formatBestPrompt(run.raw_output);
     }
   }
+  // Expose refreshMetrics globally so other scripts can call it
+  window.promptlyRefreshMetrics = refreshMetrics;
+
   document.addEventListener("DOMContentLoaded", () => {
     const themeSel = document.getElementById("themeSelect");
     const langSel = document.getElementById("langSelect");
@@ -146,12 +149,7 @@
       });
     }
     consentBanner();
-    const run = document.getElementById("runBtn");
-    if (run) {
-      run.addEventListener("click", () => {
-        refreshMetrics();
-      });
-    }
+    // Note: runBtn click handler is now in index.html to coordinate with animation
     refreshMetrics();
     const ro = new ResizeObserver(() => renderCharts());
     ["lineGrowth", "barContrib", "piePass", "gaugeProg"].forEach(id => {

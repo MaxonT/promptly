@@ -1223,41 +1223,7 @@ temperature: 0.5</textarea>
     }, duration);
   };
 
-  // FIX 3.2: Hook into "Run Optimization" button to show toast and scroll
-  const runBtn = document.getElementById('runBtn');
-  const bestPromptEl = document.getElementById('bestPrompt');
-
-  if (runBtn && bestPromptEl) {
-    const originalClickHandler = runBtn.onclick;
-
-    runBtn.addEventListener('click', function(e) {
-      // Run original handler if exists
-      if (originalClickHandler) {
-        originalClickHandler.call(this, e);
-      }
-
-      // Wait a moment for optimization to "complete" (simulated)
-      setTimeout(() => {
-        // Show toast
-        showToast('✓ Best Prompt has been updated!', 'success');
-
-        // Scroll to best prompt section
-        const bestPromptCard = bestPromptEl.closest('.card');
-        if (bestPromptCard) {
-          bestPromptCard.scrollIntoView({
-            behavior: 'smooth',
-            block: 'start'
-          });
-
-          // Add highlight pulse animation
-          bestPromptCard.classList.add('highlight-pulse');
-          setTimeout(() => {
-            bestPromptCard.classList.remove('highlight-pulse');
-          }, 2000);
-        }
-      }, 1500); // Simulate optimization time
-    });
-  }
+  // Removed: now integrated below with pipeline animation
 })();
 </script>
 
@@ -1370,6 +1336,19 @@ temperature: 0.5</textarea>
 
 <script>
 (() => {
+  // Toast function
+  function showToast(msg, type = 'info') {
+    const toastEl = document.getElementById('toast');
+    if (!toastEl) return;
+    toastEl.textContent = msg;
+    toastEl.className = `toast toast--${type} toast--show`;
+    const duration = 3000;
+    setTimeout(() => {
+      toastEl.className = 'toast';
+    }, duration);
+  }
+
+  // Pipeline animation setup
   const stepNames = ["spec","question","agent","metrics","outcome"];
   const baseStages = Array.from(document.querySelectorAll(".algorithm-step-enhanced"));
   baseStages.forEach((el, idx) => {
@@ -1378,9 +1357,11 @@ temperature: 0.5</textarea>
   });
   const stages = Array.from(document.querySelectorAll(".pipeline-stage"));
   const delayMs = 350;
+  
   function clearActive() {
     stages.forEach((el) => el.classList.remove("pipe-active"));
   }
+  
   async function animatePipeline() {
     clearActive();
     for (let i = 0; i < stages.length; i++) {
@@ -1389,9 +1370,50 @@ temperature: 0.5</textarea>
       stages[i].classList.remove("pipe-active");
     }
   }
+
+  // Integrated click handler: animation → API → toast → scroll
   const runBtn = document.getElementById("runBtn");
+  const bestPromptEl = document.getElementById('bestPrompt');
+  
   if (runBtn) {
-    runBtn.addEventListener("click", animatePipeline);
+    runBtn.addEventListener("click", async function() {
+      // Disable button during processing
+      runBtn.disabled = true;
+      runBtn.textContent = "Processing...";
+      
+      // 1. Play pipeline animation
+      await animatePipeline();
+      
+      // 2. Call API to refresh metrics and best prompt
+      if (window.promptlyRefreshMetrics) {
+        await window.promptlyRefreshMetrics();
+      }
+      
+      // 3. Show success toast
+      showToast('✓ Best Prompt has been updated!', 'success');
+      
+      // 4. Scroll to best prompt section
+      if (bestPromptEl) {
+        const bestPromptCard = bestPromptEl.closest('.card');
+        if (bestPromptCard) {
+          bestPromptCard.scrollIntoView({
+            behavior: 'smooth',
+            block: 'start'
+          });
+          
+          // Add highlight pulse animation
+          bestPromptCard.classList.add('highlight-pulse');
+          setTimeout(() => {
+            bestPromptCard.classList.remove('highlight-pulse');
+          }, 2000);
+        }
+      }
+      
+      // Re-enable button
+      runBtn.disabled = false;
+      const lang = localStorage.getItem('promptly.lang') || 'en';
+      runBtn.textContent = lang === 'zh' ? '运行优化' : 'Generate optimized prompt';
+    });
   }
 })();
 </script>

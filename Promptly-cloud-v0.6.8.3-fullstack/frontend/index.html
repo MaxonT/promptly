@@ -387,6 +387,32 @@ html[data-theme="light"] .grey-gradient-text{
     </div>
 
 
+    <div class="modes-panel" aria-label="Choose mode" role="region">
+      <div class="modes-intro">Choose a mode: <strong>Quick Start</strong> for experienced users; <strong>Wizard</strong> if you need step-by-step help.</div>
+
+      <div class="modes-grid">
+        <div class="mode-card" id="modeQuick" role="button" tabindex="0" aria-label="Quick Start mode">
+          <div class="mode-card__header">
+            <h4 class="mode-card__title">Quick Start</h4>
+          </div>
+          <div class="mode-card__body">
+            <p class="mode-card__desc">Have a clear task? Paste a one-line task and get a Best Prompt fast. (For experienced users.)</p>
+            <button class="mode-card__cta btn" id="startQuickBtn" type="button">Start Quick</button>
+          </div>
+        </div>
+
+        <div class="mode-card" id="modeWizard" role="button" tabindex="0" aria-label="Wizard guided mode">
+          <div class="mode-card__header">
+            <h4 class="mode-card__title">Wizard (Guided)</h4>
+          </div>
+          <div class="mode-card__body">
+            <p class="mode-card__desc">New to prompt engineering? Use the guided Wizard to build the task step-by-step.</p>
+            <button class="mode-card__cta btn" id="tryWizardBtn" type="button">Try Wizard</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <section class="layer-card layer-default" id="layerDefault">
       <div class="layer-default__column">
         <span class="layer-badge">Layer 1 · Magic Mode</span>
@@ -669,6 +695,76 @@ temperature: 0.5</textarea>
     <p>© Promptly v0.5.3-fusion PRO · <span data-i18n="footer_rights">No trackers. Preferences saved only after consent.</span> · <span data-i18n="footer_contact">Support</span>:
       <a href="mailto:ming.t.yang@vanderbilt.edu">ming.t.yang@vanderbilt.edu</a></p>
   </footer>
+
+  <script>
+    // Modes panel behavior (non-invasive - uses existing DOM ids)
+    (function(){
+      const startQuickBtn = document.getElementById('startQuickBtn');
+      const tryWizardBtn = document.getElementById('tryWizardBtn');
+      const taskEl = document.getElementById('task'); // existing textarea
+      const runBtn = document.getElementById('runBtn');
+
+      function emitModeSelected(mode){
+        try{ console.log('mode_selected:', mode); }catch(e){}
+        try{ window.analytics && window.analytics.track && window.analytics.track('mode_selected', { mode }); }catch(e){}
+      }
+
+      function flashFocus(targetEl, highlightClass, duration = 2000){
+        if(!targetEl) return;
+        const container = targetEl.closest('.card, .layer-card') || targetEl.parentElement;
+        if(container) container.classList.add(highlightClass);
+        if(targetEl.focus) targetEl.focus({preventScroll:true});
+        setTimeout(()=>{
+          if(container) container.classList.remove(highlightClass);
+        }, duration);
+      }
+
+      // Quick Start: focus existing task textarea and highlight run button
+      if(startQuickBtn){
+        startQuickBtn.addEventListener('click', (e)=>{
+          emitModeSelected('quick');
+          // Focus task textarea
+          if(taskEl){
+            flashFocus(taskEl, 'mode-focused', 2000);
+          }
+          // Visually cue run button
+          if(runBtn){
+            runBtn.classList.add('mode-focused-run');
+            try{ runBtn.focus(); }catch(e){}
+            setTimeout(()=> runBtn.classList.remove('mode-focused-run'), 2000);
+          }
+          // small accessibility hint for screenreaders
+          try{ startQuickBtn.setAttribute('aria-pressed', 'true'); setTimeout(()=> startQuickBtn.removeAttribute('aria-pressed'), 600); }catch(e){}
+        });
+        // keyboard activation
+        document.getElementById('modeQuick').addEventListener('keydown', function(e){ if(e.key === 'Enter' || e.key === ' ') { e.preventDefault(); startQuickBtn.click(); }});
+      }
+
+      // Wizard: scroll to #user-guide if present, else try app hook, else navigate
+      if(tryWizardBtn){
+        tryWizardBtn.addEventListener('click', async (e)=>{
+          emitModeSelected('wizard');
+          // 1) If on same page there is a user-guide section, scroll to it
+          const guide = document.querySelector('#user-guide');
+          if(guide){
+            guide.scrollIntoView({behavior:'smooth', block:'center'});
+            // brief highlight
+            guide.classList.add('mode-guided-highlight');
+            setTimeout(()=> guide.classList.remove('mode-guided-highlight'), 2500);
+            return;
+          }
+          // 2) Try to call an existing startWizard hook if available
+          if(window.startWizard && typeof window.startWizard === 'function'){
+            try{ window.startWizard(); return; } catch(e){ /* ignore */ }
+          }
+          // 3) fallback navigate to wizard page
+          try{ window.location.href = '/wizard.html'; } catch(e){}
+        });
+        // keyboard activation
+        document.getElementById('modeWizard').addEventListener('keydown', function(e){ if(e.key === 'Enter' || e.key === ' ') { e.preventDefault(); tryWizardBtn.click(); }});
+      }
+    })();
+  </script>
 
   <script src="core.js"></script>
 

@@ -603,14 +603,15 @@ temperature: 0.5</textarea>
       </div>
       <div class="algorithm-grid-enhanced">
         <div class="algorithm-steps-enhanced">
-          <article class="algorithm-step-enhanced pipeline-stage" data-pipeline-stage="spec">
+          <article class="algorithm-step-enhanced" data-pipeline-stage="spec">
             <div class="step-header">
               <span class="step-number-enhanced">1</span>
               <h4 class="step-title">Spec Builder</h4>
             </div>
             <p>Turn your <span class="keyword">raw idea</span> into a <span class="highlight-text">structured spec</span> so every requirement is explicit before we touch an LLM.</p>
           </article>
-          <article class="algorithm-step-enhanced">
+          <article class="algorithm-step-enhanced pipeline-stage" data-pipeline-stage="spec">
+            <div class="pipeline-indicator"></div>
             <div class="step-header">
               <span class="step-number-enhanced">2</span>
               <h4 class="step-title">Question Engine</h4>
@@ -1334,8 +1335,11 @@ temperature: 0.5</textarea>
 </script>
 
 <script>
+// Immediate test to verify script is loading
+console.log('[Promptly] Pipeline animation script loaded!');
+
 document.addEventListener('DOMContentLoaded', () => {
-  console.log('[Promptly] Initializing pipeline animation and Run Optimization button...');
+  console.log('[Promptly] DOMContentLoaded fired - Initializing pipeline animation and Run Optimization button...');
   
   // Toast function
   function showToast(msg, type = 'info') {
@@ -1367,6 +1371,7 @@ document.addEventListener('DOMContentLoaded', () => {
   function clearActive() {
     stages.forEach((el) => el.classList.remove("pipe-active"));
   }
+  
   async function animatePipeline() {
     console.log('[Promptly] Starting pipeline animation...');
     clearActive();
@@ -1390,77 +1395,132 @@ document.addEventListener('DOMContentLoaded', () => {
   
   console.log('[Promptly] Run Optimization button found, attaching event listener...');
   
-  runBtn.addEventListener("click", async function() {
+  // Store original button text before i18n potentially changes it
+  const originalButtonText = runBtn.textContent;
+  
+  runBtn.addEventListener("click", async function(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    
     console.log('[Promptly] Run Optimization button clicked!');
     
-    // Disable button during processing
+    // Immediate visual feedback - disable button and show processing
     runBtn.disabled = true;
+    runBtn.style.opacity = '0.7';
+    runBtn.style.cursor = 'not-allowed';
+    const originalText = runBtn.textContent;
     runBtn.textContent = "Processing...";
     
+    // Show immediate feedback in Best Prompt area
+    if (bestPromptEl) {
+      bestPromptEl.value = "Processing your request...\n\nRunning pipeline:\n1. Spec Builder\n2. Question Engine\n3. LLM Agents\n4. Metrics & Scoring\n5. Outcome Runner";
+      bestPromptEl.style.borderColor = '#7C3AED';
+    }
+    
     try {
-      // 1. Play pipeline animation
+      // 0. Scroll to algorithm section so user can see the animation
+      const algorithmSection = document.querySelector('.algorithm-section-enhanced');
+      if (algorithmSection) {
+        algorithmSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        // Add a highlight to draw attention
+        algorithmSection.style.transition = 'all 0.3s ease';
+        algorithmSection.style.boxShadow = '0 0 40px rgba(124, 58, 237, 0.4)';
+        setTimeout(() => {
+          algorithmSection.style.boxShadow = '';
+        }, 2000);
+      }
+      
+      // 1. Play pipeline animation (this should be visible!)
+      console.log('[Promptly] Starting animation...');
+      await new Promise(resolve => setTimeout(resolve, 500)); // Wait a bit for scroll
       await animatePipeline();
+      console.log('[Promptly] Animation complete!');
       
       // 2. Call API to refresh metrics and best prompt
       if (window.promptlyRefreshMetrics) {
         console.log('[Promptly] Calling refreshMetrics API...');
-        await window.promptlyRefreshMetrics();
+        try {
+          await window.promptlyRefreshMetrics();
+          console.log('[Promptly] API call successful');
+        } catch (apiError) {
+          console.warn('[Promptly] API call failed:', apiError);
+          // Even if API fails, show that we tried
+          if (bestPromptEl && !bestPromptEl.value.includes('Error')) {
+            bestPromptEl.value = "API call failed, but pipeline animation completed.\n\nCheck console for details.\n\n" + (bestPromptEl.value || '');
+          }
+        }
       } else {
         console.warn('[Promptly] window.promptlyRefreshMetrics not available');
+        if (bestPromptEl) {
+          bestPromptEl.value = "Pipeline animation completed!\n\nNote: Backend API not available.\n\n" + (bestPromptEl.value || '');
+        }
       }
       
       // 3. Show success toast
-      showToast('✓ Best Prompt has been updated!', 'success');
+      showToast('✓ Pipeline completed! Check Best Prompt area.', 'success');
       
       // 4. Scroll to best prompt section
       if (bestPromptEl) {
-        const bestPromptCard = bestPromptEl.closest('.card');
+        const bestPromptCard = bestPromptEl.closest('.card') || bestPromptEl.closest('.layer-default__output');
         if (bestPromptCard) {
-          bestPromptCard.scrollIntoView({
-            behavior: 'smooth',
-            block: 'start'
-          });
-          
-          // Add highlight pulse animation
-          bestPromptCard.classList.add('highlight-pulse');
           setTimeout(() => {
-            bestPromptCard.classList.remove('highlight-pulse');
-          }, 2000);
+            bestPromptCard.scrollIntoView({
+              behavior: 'smooth',
+              block: 'center'
+            });
+            
+            // Add highlight pulse animation
+            bestPromptCard.style.transition = 'all 0.3s ease';
+            bestPromptCard.style.boxShadow = '0 0 30px rgba(124, 58, 237, 0.5)';
+            setTimeout(() => {
+              bestPromptCard.style.boxShadow = '';
+            }, 2000);
+          }, 100);
         }
-        
-        // 3. Show success toast
-        if (window.showToast) {
-          const successMsg = window.promptlyGetText ? window.promptlyGetText('success_message') : 'Best Prompt has been updated!';
-          window.showToast(successMsg, 'success');
-        }
-        
-        // 4. Scroll to best prompt section
-        if (bestPromptEl) {
-          const bestPromptCard = bestPromptEl.closest('.card');
-          if (bestPromptCard) {
-            bestPromptCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          }
-        }
-      } finally {
-        // Restore button state with localized text
-        runBtn.disabled = false;
-        runBtn.removeAttribute('aria-busy');
-        runBtn.textContent = window.promptlyGetText ? window.promptlyGetText('run_btn') : originalText;
       }
     } catch (error) {
       console.error('[Promptly] Error during optimization:', error);
-      showToast('⚠ An error occurred. Please check console.', 'error');
+      showToast('⚠ An error occurred. Check console for details.', 'error');
+      if (bestPromptEl) {
+        bestPromptEl.value = "Error: " + error.message + "\n\nCheck browser console for details.";
+        bestPromptEl.style.borderColor = '#EF4444';
+      }
     } finally {
       // Re-enable button
       runBtn.disabled = false;
+      runBtn.style.opacity = '';
+      runBtn.style.cursor = '';
+      // Restore original text (or use i18n if available)
       const lang = localStorage.getItem('promptly.lang') || 'en';
-      runBtn.textContent = lang === 'zh' ? '运行优化' : 'Run Optimization';
+      runBtn.textContent = originalText || (lang === 'zh' ? '运行优化' : 'Run Optimization');
+      
+      // Reset border color after a moment
+      if (bestPromptEl) {
+        setTimeout(() => {
+          bestPromptEl.style.borderColor = '';
+        }, 3000);
+      }
     }
-  });
+  }, { capture: true }); // Use capture phase to ensure we get the event
   
   console.log('[Promptly] Pipeline animation initialization complete!');
 });
+
+// Backup: Try to bind immediately if DOM is already loaded
+if (document.readyState === 'loading') {
+  console.log('[Promptly] DOM still loading, waiting for DOMContentLoaded...');
+} else {
+  console.log('[Promptly] DOM already loaded, attempting immediate initialization...');
+  // If DOM is already loaded, try to initialize immediately
+  const runBtnNow = document.getElementById("runBtn");
+  if (runBtnNow) {
+    console.log('[Promptly] Button found immediately, but will be handled by DOMContentLoaded handler above');
+  } else {
+    console.warn('[Promptly] Button not found immediately - may need to wait');
+  }
+}
 </script>
 
 </body>
 </html>
+

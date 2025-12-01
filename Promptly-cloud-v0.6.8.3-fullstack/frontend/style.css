@@ -1939,10 +1939,67 @@ html[data-theme="light"] .text-keyword {
 .metrics-compact {
   margin-top: 8px !important;
   margin-bottom: 16px !important;
+  max-width: 100%;
+  width: 100%;
 }
 
 .metrics-compact .card.kpi {
   padding: 14px 16px;
+  min-width: 180px;
+}
+
+/* Make metrics grid use 5 columns to show all metrics in a row */
+#metricsSection.grid.grid-4 {
+  grid-template-columns: repeat(5, 1fr) !important;
+  gap: 16px;
+  width: 100%;
+}
+
+@media (max-width: 1200px) {
+  #metricsSection.grid.grid-4 {
+    grid-template-columns: repeat(3, 1fr) !important;
+  }
+}
+
+@media (max-width: 768px) {
+  #metricsSection.grid.grid-4 {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+}
+
+@media (max-width: 480px) {
+  #metricsSection.grid.grid-4 {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* ============================================
+   Layer 2 & Layer 3 Compact Width
+   ============================================ */
+
+.layer-card {
+  max-width: 85%;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* Keep layer-expert (Layer 3) same width as Layer 2 */
+.layer-card.layer-expert {
+  max-width: 85%;
+}
+
+@media (max-width: 1024px) {
+  .layer-card,
+  .layer-card.layer-expert {
+    max-width: 95%;
+  }
+}
+
+@media (max-width: 768px) {
+  .layer-card,
+  .layer-card.layer-expert {
+    max-width: 100%;
+  }
 }
 
 /* ============================================

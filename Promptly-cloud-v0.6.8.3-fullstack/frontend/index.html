@@ -1358,8 +1358,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Pipeline animation setup
   const stepNames = ["spec","question","agent","metrics","outcome"];
-  const stepLabels = ["Spec Builder", "Question Engine", "LLM Agents", "Metrics & Scoring", "Outcome Runner"];
-  const stepIcons = ["🔧", "❓", "🤖", "📊", "🎯"];
   const baseStages = Array.from(document.querySelectorAll(".algorithm-step-enhanced"));
   console.log(`[Promptly] Found ${baseStages.length} algorithm steps for animation`);
   
@@ -1384,223 +1382,6 @@ document.addEventListener('DOMContentLoaded', () => {
       stages[i].classList.remove("pipe-active");
     }
     console.log('[Promptly] Pipeline animation complete');
-  }
-
-  // Advanced real-time status display system
-  let statusPollInterval = null;
-  let currentRunId = null;
-
-  function generateStatusDisplay(stageIndex, status, details = {}) {
-    const stages = [
-      { name: "Spec Builder", icon: "🔧", desc: "Converting your idea into structured requirements" },
-      { name: "Question Engine", icon: "❓", desc: "Asking clarifying questions to refine context" },
-      { name: "LLM Agents", icon: "🤖", desc: "Specialized agents crafting candidate prompts" },
-      { name: "Metrics & Scoring", icon: "📊", desc: "Evaluating quality, coherence, and efficiency" },
-      { name: "Outcome Runner", icon: "🎯", desc: "Selecting best candidate via Outcome-First selection" }
-    ];
-
-    let display = "╔════════════════════════════════════════╗\n";
-    display += "║  🚀 Promptly Optimization Pipeline  ║\n";
-    display += "╚════════════════════════════════════════╝\n\n";
-    
-    const spinnerFrames = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
-    const spinner = spinnerFrames[Math.floor(Date.now() / 100) % spinnerFrames.length];
-    
-    stages.forEach((stage, idx) => {
-      let line = "";
-      if (idx < stageIndex) {
-        // Completed
-        line = `✅ ${stage.icon} ${stage.name}`;
-        if (details[stage.name]) {
-          line += ` - ${details[stage.name]}`;
-        }
-      } else if (idx === stageIndex) {
-        // Active
-        line = `${spinner} ${stage.icon} ${stage.name} ${spinner}`;
-        line += `\n   └─ ${stage.desc}`;
-        if (details[stage.name]) {
-          line += `\n   └─ ${details[stage.name]}`;
-        }
-        // Add progress bar
-        const progress = status === 'processing' ? Math.floor(Math.random() * 30 + 20) : 100;
-        const barLength = 20;
-        const filled = Math.floor((progress / 100) * barLength);
-        const bar = "█".repeat(filled) + "░".repeat(barLength - filled);
-        line += `\n   └─ [${bar}] ${progress}%`;
-      } else {
-        // Pending
-        line = `⏳ ${stage.icon} ${stage.name}`;
-      }
-      display += line + "\n\n";
-    });
-
-    if (status === 'complete') {
-      display += "╔════════════════════════════════════════╗\n";
-      display += "║  ✨ Optimization Complete!            ║\n";
-      display += "╚════════════════════════════════════════╝\n\n";
-      display += "📋 Best Prompt ready below ↓\n";
-    } else if (status === 'error') {
-      display += "╔════════════════════════════════════════╗\n";
-      display += "║  ⚠️  Error occurred                    ║\n";
-      display += "╚════════════════════════════════════════╝\n\n";
-      if (details.error) {
-        display += `Error: ${details.error}\n`;
-      }
-    }
-
-    return display;
-  }
-
-  async function pollRunStatus(runId) {
-    if (!runId) return null;
-    
-    try {
-      const res = await fetch(`/api/runs/${runId}`);
-      if (!res.ok) return null;
-      const data = await res.json();
-      return data.run || null;
-    } catch (err) {
-      console.warn('[Promptly] Status poll error:', err);
-      return null;
-    }
-  }
-
-  function inferPipelineStage(run, evaluations, outcomes) {
-    // Infer current stage based on data availability
-    if (!run) return 0; // No run yet
-    
-    // Check if spec exists (stage 1 complete)
-    if (!run.spec_id) return 0;
-    
-    // Check if questions were asked (stage 2 - we can't easily check this, so assume it happened)
-    // Stage 2 is usually quick, so if we have spec, assume stage 2 is done or in progress
-    
-    // Check if evaluations exist (stage 3-4 complete)
-    if (evaluations && evaluations.length > 0) {
-      // Check if outcomes exist (stage 5)
-      if (outcomes && outcomes.length > 0) {
-        return 5; // All complete
-      }
-      return 4; // Metrics done, outcome pending
-    }
-    
-    // If we have raw_output, agents are working
-    if (run.raw_output) {
-      return 3; // Agents done, metrics pending
-    }
-    
-    // If status is pending and we have spec, assume stage 2
-    if (run.status === 'pending' && run.spec_id) {
-      return 2;
-    }
-    
-    return 1; // Spec building
-  }
-
-  async function startStatusPolling(runId) {
-    if (statusPollInterval) {
-      clearInterval(statusPollInterval);
-    }
-    
-    currentRunId = runId;
-    let lastStage = -1;
-    let updateCount = 0;
-    
-    statusPollInterval = setInterval(async () => {
-      updateCount++;
-      const run = await pollRunStatus(runId);
-      
-      if (!run && updateCount > 10) {
-        // Stop polling if no run found after 10 attempts
-        stopStatusPolling();
-        return;
-      }
-      
-      if (!run) {
-        // Simulate progress while waiting for run
-        const simulatedStage = Math.min(Math.floor(updateCount / 3), 4);
-        if (simulatedStage !== lastStage) {
-          lastStage = simulatedStage;
-          const statusText = generateStatusDisplay(simulatedStage, 'processing', {
-            [stepLabels[simulatedStage]]: 'Initializing...'
-          });
-          if (bestPromptEl) {
-            bestPromptEl.value = statusText;
-          }
-        }
-        return;
-      }
-      
-      // Try to get evaluations and outcomes
-      let evaluations = [];
-      let outcomes = [];
-      try {
-        const evalRes = await fetch(`/api/evaluations?run_id=${runId}`);
-        if (evalRes.ok) {
-          const evalData = await evalRes.json();
-          evaluations = evalData.evaluations || [];
-        }
-      } catch (e) {
-        // Ignore
-      }
-      
-      try {
-        const outcomeRes = await fetch(`/api/outcome-runs?run_id=${runId}`);
-        if (outcomeRes.ok) {
-          const outcomeData = await outcomeRes.json();
-          outcomes = outcomeData.outcome_runs || [];
-        }
-      } catch (e) {
-        // Ignore
-      }
-      
-      const currentStage = inferPipelineStage(run, evaluations, outcomes);
-      const status = run.status === 'failed' ? 'error' : 
-                    (currentStage >= 5 ? 'complete' : 'processing');
-      
-      const details = {};
-      if (run.status === 'failed') {
-        details.error = 'Processing failed. Check console for details.';
-      }
-      if (evaluations.length > 0) {
-        details['Metrics & Scoring'] = `${evaluations.length} evaluations completed`;
-      }
-      if (outcomes.length > 0) {
-        details['Outcome Runner'] = 'Best candidate selected';
-      }
-      
-      if (currentStage !== lastStage || updateCount % 3 === 0) {
-        lastStage = currentStage;
-        const statusText = generateStatusDisplay(currentStage, status, details);
-        if (bestPromptEl) {
-          bestPromptEl.value = statusText;
-        }
-        
-        // Update visual stages
-        if (currentStage < stages.length) {
-          clearActive();
-          for (let i = 0; i < currentStage && i < stages.length; i++) {
-            stages[i].classList.add("pipe-active");
-            setTimeout(() => stages[i].classList.remove("pipe-active"), 100);
-          }
-        }
-      }
-      
-      // Stop polling if complete or failed
-      if (status === 'complete' || status === 'error') {
-        stopStatusPolling();
-        if (status === 'complete' && window.promptlyRefreshMetrics) {
-          await window.promptlyRefreshMetrics();
-        }
-      }
-    }, 800); // Poll every 800ms
-  }
-
-  function stopStatusPolling() {
-    if (statusPollInterval) {
-      clearInterval(statusPollInterval);
-      statusPollInterval = null;
-    }
   }
 
   // Integrated click handler: animation → API → toast → scroll
@@ -1630,13 +1411,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const originalText = runBtn.textContent;
     runBtn.textContent = "Processing...";
     
-    // Show immediate feedback in Best Prompt area with animated status
+    // Show immediate feedback in Best Prompt area
     if (bestPromptEl) {
-      bestPromptEl.value = generateStatusDisplay(0, 'processing');
+      bestPromptEl.value = "Processing your request...\n\nRunning pipeline:\n1. Spec Builder\n2. Question Engine\n3. LLM Agents\n4. Metrics & Scoring\n5. Outcome Runner";
       bestPromptEl.style.borderColor = '#7C3AED';
-      bestPromptEl.style.fontFamily = 'Monaco, "Courier New", monospace';
-      bestPromptEl.style.fontSize = '13px';
-      bestPromptEl.style.lineHeight = '1.6';
+      bestPromptEl.classList.add('processing-animation');
     }
     
     try {
@@ -1651,103 +1430,37 @@ document.addEventListener('DOMContentLoaded', () => {
         }, 2000);
       }
       
-      // 1. Start real-time status polling
-      console.log('[Promptly] Starting real-time status monitoring...');
+      // 1. Play pipeline animation
+      console.log('[Promptly] Starting pipeline animation...');
+      await new Promise(resolve => setTimeout(resolve, 500)); // Wait a bit for scroll
+      await animatePipeline();
+      console.log('[Promptly] Pipeline animation complete!');
       
-      // Try to create a new run or get the latest run ID
-      let runId = null;
-      try {
-        // Get task input
-        const taskInput = document.getElementById('task');
-        const examplesInput = document.getElementById('examples');
-        const taskText = taskInput ? taskInput.value.trim() : '';
-        
-        if (taskText) {
-          // Create a new run
-          const createRes = await fetch('/api/runs', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              model: 'gpt-4',
-              input_blocks: JSON.stringify({ task: taskText, examples: examplesInput?.value || '' })
-            })
-          });
-          
-          if (createRes.ok) {
-            const createData = await createRes.json();
-            runId = createData.run?.id;
-            console.log('[Promptly] Created new run:', runId);
-          }
-        }
-        
-        // If no new run, try to get latest
-        if (!runId) {
-          const latestRes = await fetch('/api/runs/latest');
-          if (latestRes.ok) {
-            const latestData = await latestRes.json();
-            runId = latestData.run?.id;
-            console.log('[Promptly] Using latest run:', runId);
-          }
-        }
-      } catch (err) {
-        console.warn('[Promptly] Could not get run ID, will simulate:', err);
-      }
-      
-      // Start polling for status updates
-      if (runId) {
-        await startStatusPolling(runId);
-      } else {
-        // Simulate progress if we can't get a real run ID
-        console.log('[Promptly] Simulating progress...');
-        for (let stage = 0; stage <= 5; stage++) {
-          await new Promise(resolve => setTimeout(resolve, 1500));
-          if (bestPromptEl) {
-            bestPromptEl.value = generateStatusDisplay(stage, stage === 5 ? 'complete' : 'processing');
-          }
-          // Animate visual stages
-          if (stage < stages.length) {
-            clearActive();
-            stages[stage].classList.add("pipe-active");
-            await new Promise(resolve => setTimeout(resolve, 300));
-            stages[stage].classList.remove("pipe-active");
-          }
-        }
-        
-        // After simulation, try to refresh metrics
-        if (window.promptlyRefreshMetrics) {
+      // 2. Call API to refresh metrics and best prompt
+      if (window.promptlyRefreshMetrics) {
+        console.log('[Promptly] Calling refreshMetrics API...');
+        try {
           await window.promptlyRefreshMetrics();
+          console.log('[Promptly] API call successful');
+        } catch (apiError) {
+          console.warn('[Promptly] API call failed:', apiError);
+          if (bestPromptEl && !bestPromptEl.value.includes('Error')) {
+            bestPromptEl.value = "API call failed, but pipeline animation completed.\n\nCheck console for details.";
+          }
+        }
+      } else {
+        console.warn('[Promptly] window.promptlyRefreshMetrics not available');
+        if (bestPromptEl) {
+          bestPromptEl.value = "Pipeline animation completed!\n\nNote: Backend API not available.";
         }
       }
       
-      // 2. Play pipeline animation in background (visual feedback)
-      console.log('[Promptly] Starting visual pipeline animation...');
-      animatePipeline().catch(console.error);
-      
-      // 3. Wait for status polling to complete (or timeout after 30s)
-      let pollingComplete = false;
-      const maxWaitTime = 30000; // 30 seconds
-      const startTime = Date.now();
-      
-      while (!pollingComplete && (Date.now() - startTime) < maxWaitTime) {
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        pollingComplete = !statusPollInterval; // Check if polling stopped
-      }
-      
-      // Final status update
-      if (runId) {
-        const finalRun = await pollRunStatus(runId);
-        if (finalRun && finalRun.raw_output && bestPromptEl) {
-          const finalStatus = generateStatusDisplay(5, 'complete');
-          bestPromptEl.value = finalStatus + "\n\n" + "=".repeat(42) + "\n\n" + 
-            (typeof finalRun.raw_output === 'string' ? finalRun.raw_output : JSON.stringify(finalRun.raw_output, null, 2));
-        }
-      }
-      
-      // 4. Show success toast
-      showToast('✓ Optimization complete! Check Best Prompt below.', 'success');
+      // 3. Show success toast
+      showToast('✓ Best Prompt has been updated!', 'success');
       
       // 4. Scroll to best prompt section
       if (bestPromptEl) {
+        bestPromptEl.classList.remove('processing-animation');
         const bestPromptCard = bestPromptEl.closest('.card') || bestPromptEl.closest('.layer-default__output');
         if (bestPromptCard) {
           setTimeout(() => {
@@ -1767,35 +1480,25 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     } catch (error) {
       console.error('[Promptly] Error during optimization:', error);
-      stopStatusPolling();
-      
       showToast('⚠ An error occurred. Check console for details.', 'error');
       if (bestPromptEl) {
-        const errorStatus = generateStatusDisplay(0, 'error', { error: error.message });
-        bestPromptEl.value = errorStatus;
+        bestPromptEl.value = "Error: " + error.message + "\n\nCheck browser console for details.";
         bestPromptEl.style.borderColor = '#EF4444';
+        bestPromptEl.classList.remove('processing-animation');
       }
     } finally {
-      // Stop polling if still running
-      stopStatusPolling();
+      // Re-enable button
+      runBtn.disabled = false;
+      runBtn.style.opacity = '';
+      runBtn.style.cursor = '';
+      const lang = localStorage.getItem('promptly.lang') || 'en';
+      runBtn.textContent = originalText || (lang === 'zh' ? '运行优化' : 'Run Optimization');
       
-      // Re-enable button after a delay
-      setTimeout(() => {
-        runBtn.disabled = false;
-        runBtn.style.opacity = '';
-        runBtn.style.cursor = '';
-        const lang = localStorage.getItem('promptly.lang') || 'en';
-        runBtn.textContent = originalText || (lang === 'zh' ? '运行优化' : 'Run Optimization');
-      }, 2000);
-      
-      // Reset border color and styles after completion
+      // Reset border color after a moment
       if (bestPromptEl) {
         setTimeout(() => {
           bestPromptEl.style.borderColor = '';
-          bestPromptEl.style.fontFamily = '';
-          bestPromptEl.style.fontSize = '';
-          bestPromptEl.style.lineHeight = '';
-        }, 5000);
+        }, 3000);
       }
     }
   }, { capture: true }); // Use capture phase to ensure we get the event

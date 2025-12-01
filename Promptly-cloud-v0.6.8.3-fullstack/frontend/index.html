@@ -1335,18 +1335,7 @@ temperature: 0.5</textarea>
 
 <script>
 (() => {
-  // Toast function
-  function showToast(msg, type = 'info') {
-    const toastEl = document.getElementById('toast');
-    if (!toastEl) return;
-    toastEl.textContent = msg;
-    toastEl.className = `toast toast--${type} toast--show`;
-    const duration = 3000;
-    setTimeout(() => {
-      toastEl.className = 'toast';
-    }, duration);
-  }
-
+  // Use global window.showToast for toast notifications
   // Pipeline animation setup
   const stepNames = ["spec","question","agent","metrics","outcome"];
   const baseStages = Array.from(document.querySelectorAll(".algorithm-step-enhanced"));

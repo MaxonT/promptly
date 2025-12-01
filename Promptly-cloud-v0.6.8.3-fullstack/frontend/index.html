@@ -387,6 +387,129 @@ html[data-theme="light"] .grey-gradient-text{
     </div>
 
 
+    <div class="modes-panel" aria-label="Choose mode" role="radiogroup">
+      <div class="modes-intro" id="modesIntro">Choose a mode: <strong>Quick Start</strong> for experienced users; <strong>Wizard</strong> if you need step-by-step help.</div>
+
+      <div class="modes-grid">
+        <div class="mode-card mode-card--active" id="modeQuick" role="radio" aria-checked="true" tabindex="0" aria-describedby="modesIntro modeQuickDesc" data-mode-card data-mode="quick">
+          <div class="mode-card__header">
+            <div class="mode-card__title-row">
+              <h4 class="mode-card__title">Quick Start</h4>
+              <span class="mode-card__check" aria-hidden="true">✓</span>
+            </div>
+          </div>
+          <div class="mode-card__body">
+            <p class="mode-card__desc" id="modeQuickDesc">Have a clear task? Paste a one-line task and get a Best Prompt fast. (For experienced users.)</p>
+            <button class="mode-card__cta btn" id="startQuickBtn" type="button">Start Quick</button>
+          </div>
+        </div>
+
+        <div class="mode-card" id="modeWizard" role="radio" aria-checked="false" tabindex="-1" aria-describedby="modesIntro modeWizardDesc" data-mode-card data-mode="wizard">
+          <div class="mode-card__header">
+            <div class="mode-card__title-row">
+              <h4 class="mode-card__title">Wizard (Guided)</h4>
+              <span class="mode-card__check" aria-hidden="true">✓</span>
+            </div>
+          </div>
+          <div class="mode-card__body">
+            <p class="mode-card__desc" id="modeWizardDesc">New to prompt engineering? Use the guided Wizard to build the task step-by-step.</p>
+            <button class="mode-card__cta btn" id="tryWizardBtn" type="button">Try Wizard</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // Modes panel behavior (accessible radio-style selector)
+      document.addEventListener('DOMContentLoaded', () => {
+        const startQuickBtn = document.getElementById('startQuickBtn');
+        const tryWizardBtn = document.getElementById('tryWizardBtn');
+        const taskEl = document.getElementById('task');
+        const modeCards = Array.from(document.querySelectorAll('[data-mode-card]'));
+
+        function emitModeSelected(mode){
+          try { window.trackEvent && window.trackEvent(mode === 'quick' ? 'mode_select_quick' : 'mode_select_wizard'); } catch(e) {}
+        }
+
+        function setSelectedCard(targetCard){
+          modeCards.forEach(card => {
+            const isActive = card === targetCard;
+            card.classList.toggle('mode-card--active', isActive);
+            card.setAttribute('aria-checked', isActive ? 'true' : 'false');
+            card.tabIndex = isActive ? 0 : -1;
+          });
+        }
+
+        function selectQuick(){
+          emitModeSelected('quick');
+          if(taskEl){
+            try { taskEl.focus({ preventScroll: true }); } catch(e) { taskEl.focus(); }
+          }
+        }
+
+        function selectWizard(){
+          emitModeSelected('wizard');
+          let navigated = false;
+          try { window.location.href = '/wizard.html'; navigated = true; } catch(e) {}
+          if(!navigated && typeof window.openQuestionWizard === 'function'){
+            try { window.openQuestionWizard(); } catch(e) {}
+          }
+        }
+
+        function handleSelect(mode){
+          if(mode === 'quick') return selectQuick();
+          return selectWizard();
+        }
+
+        function focusCardByDelta(delta){
+          const currentIndex = modeCards.findIndex(card => card === document.activeElement);
+          const nextIndex = (currentIndex + delta + modeCards.length) % modeCards.length;
+          const nextCard = modeCards[nextIndex];
+          if(nextCard){
+            nextCard.focus();
+          }
+        }
+
+        modeCards.forEach(card => {
+          card.addEventListener('click', () => {
+            setSelectedCard(card);
+            handleSelect(card.dataset.mode);
+          });
+
+          card.addEventListener('keydown', (e) => {
+            if(e.key === 'Enter' || e.key === ' '){
+              e.preventDefault();
+              setSelectedCard(card);
+              handleSelect(card.dataset.mode);
+            }
+            if(e.key === 'ArrowRight' || e.key === 'ArrowDown'){
+              e.preventDefault();
+              focusCardByDelta(1);
+            }
+            if(e.key === 'ArrowLeft' || e.key === 'ArrowUp'){
+              e.preventDefault();
+              focusCardByDelta(-1);
+            }
+          });
+        });
+
+        if(startQuickBtn){
+          startQuickBtn.addEventListener('click', (e) => {
+            setSelectedCard(document.getElementById('modeQuick'));
+            selectQuick();
+          });
+        }
+
+        if(tryWizardBtn){
+          tryWizardBtn.addEventListener('click', (e) => {
+            setSelectedCard(document.getElementById('modeWizard'));
+            selectWizard();
+          });
+        }
+      });
+    </script>
+
+
     <section class="layer-card layer-default" id="layerDefault">
       <div class="layer-default__column">
         <span class="layer-badge">Layer 1 · Magic Mode</span>

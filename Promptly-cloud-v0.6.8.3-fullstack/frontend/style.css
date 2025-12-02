@@ -323,7 +323,7 @@ details.layer-field > small.help{
 }
 
 .algorithm-section{
-  border:1px solid var(--border);
+  border:0.5px solid var(--border);
   background:linear-gradient(var(--surface-2),var(--surface-2)) padding-box,
              linear-gradient(90deg,var(--brand-a,#7C3AED),var(--brand-b,#06B6D4),var(--brand-c,#22D3EE)) border-box;
   padding:24px;
@@ -410,7 +410,7 @@ details.layer-field > small.help{
 
 /* Enhanced Algorithm Section - Attractive & Readable */
 .algorithm-section-enhanced{
-  border:2px solid transparent;
+  border:1px solid transparent;
   background:linear-gradient(var(--card),var(--card)) padding-box,
              linear-gradient(135deg,#7C3AED,#06B6D4,#22D3EE,#7C3AED) border-box;
   padding:28px;
@@ -1918,7 +1918,7 @@ html[data-theme="light"] .error-state {
 
 /* Apply gradient border to Layer 2 and Layer 3 cards */
 .layer-card {
-  border: 1px solid transparent;
+  border: 0.5px solid transparent;
   background: linear-gradient(var(--surface-2, #0f141b), var(--surface-2, #0f141b)) padding-box,
               linear-gradient(90deg, var(--brand-a, #7C3AED), var(--brand-b, #06B6D4), var(--brand-c, #22D3EE)) border-box;
   border-radius: 20px;

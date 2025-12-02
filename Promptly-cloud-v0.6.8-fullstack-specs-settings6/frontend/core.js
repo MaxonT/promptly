@@ -3,7 +3,7 @@
   const THEME_KEY="promptly.theme", LANG_KEY="promptly.lang", CONSENT_KEY="promptly.consent";
   const prefersDark=window.matchMedia("(prefers-color-scheme: dark)");
   const translations={
-    en:{nav_home:"Dashboard",nav_privacy:"Privacy",nav_terms:"Terms",nav_cookies:"Cookies",appearance:"System",auto:"System",light:"Light",dark:"Dark",language:"English",
+    en:{nav_home:"Dashboard",nav_wizard:"Question Wizard",nav_privacy:"Privacy",nav_terms:"Terms",nav_cookies:"Cookies",appearance:"System",auto:"System",light:"Light",dark:"Dark",language:"English",
         hero_title:"Promptly — Prompt Optimizer Studio",hero_subtitle:"Visualization-first workflow. See every gain, every cost, every version.",
         task_label:"Task",examples_label:"Examples (optional)",best_prompt:"Best Prompt",run_btn:"Run Optimization",
         kpi_accuracy:"Accuracy",kpi_f1:"F1",kpi_pass:"Pass Rate",kpi_cost:"Token Cost",kpi_prog:"Progress %",
@@ -12,7 +12,7 @@
         consent_text:"We use cookies to improve your experience and remember preferences.",consent_btn:"Accept",
         placeholder_task:"e.g., Classify sentiment of a sentence; output POS or NEG only.",
         placeholder_examples:"POS || I love this!\nNEG || This is terrible."},
-    zh:{nav_home:"仪表盘",nav_privacy:"隐私政策",nav_terms:"服务条款",nav_cookies:"Cookie 政策",appearance:"系统",auto:"系统",light:"浅色",dark:"深色",language:"中文",
+    zh:{nav_home:"仪表盘",nav_wizard:"问题向导",nav_privacy:"隐私政策",nav_terms:"服务条款",nav_cookies:"Cookie 政策",appearance:"系统",auto:"系统",light:"浅色",dark:"深色",language:"中文",
         hero_title:"Promptly — 提示优化工作室",hero_subtitle:"可视化优先：每次提升、每分成本、每个版本都一目了然。",
         task_label:"任务",examples_label:"示例（可选）",best_prompt:"最佳 Prompt",run_btn:"运行优化",
         kpi_accuracy:"准确率",kpi_f1:"F1",kpi_pass:"通过率",kpi_cost:"Token 成本",kpi_prog:"进度 %",

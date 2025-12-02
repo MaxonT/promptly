@@ -25,11 +25,11 @@
   opacity:0.8;
 }
 .wizard-header-meta{
-  font-size:0.8rem;
-  opacity:0.8;
+  font-size:0.85rem;
   display:flex;
   align-items:center;
-  gap:0.6rem;
+  gap:0.75rem;
+  color:#e2e8f0;
 }
 .wizard-tag{
   padding:0.2rem 0.5rem;
@@ -45,11 +45,12 @@
   gap:0.35rem;
   padding:0.25rem 0.6rem;
   border-radius:999px;
-  border:1px solid rgba(148,163,184,0.7);
-  background:rgba(15,23,42,0.85);
+  border:1px solid rgba(148,163,184,0.8);
+  background:linear-gradient(120deg,rgba(15,23,42,0.95),rgba(30,41,59,0.9));
   color:inherit;
   font-size:0.8rem;
   cursor:pointer;
+  box-shadow:0 6px 16px rgba(0,0,0,0.28);
 }
 .wizard-model-button:hover{
   border-color:rgba(148,163,184,1);

@@ -377,14 +377,43 @@ html[data-theme="light"] .grey-gradient-text{
     </nav>
   </header>
 
-  <main class="container">
+  <main class="container launch-shell">
     <div class="hero">
+      <div class="hero-eyebrow">Promptly · Workflow Modes</div>
       <div>
-        <div class="title gradient-text" data-i18n="hero_title">Promptly — Prompt Optimizer Studio</div>
-        <div class="subtitle" data-i18n="hero_subtitle">Visualization-first workflow. See every gain, every cost, every version.</div>
+        <div class="title gradient-text hero-title" data-i18n="hero_title">Promptly — Prompt Optimizer <span class="title-pill">Studio</span></div>
+        <div class="subtitle hero-subtitle" data-i18n="hero_subtitle">Visualization-first workflow. See every gain, every cost, every version.</div>
       </div>
     </div>
 
+
+
+
+    <section class="mode-selector" aria-labelledby="modeSelectorTitle">
+      <div class="mode-selector__header">
+        <h2 id="modeSelectorTitle">How would you like to start?</h2>
+        <p id="modeSelectorHint" class="mode-selector__hint">Pick a workflow mode. Switch anytime.</p>
+      </div>
+      <div class="mode-selector__options" role="radiogroup" aria-describedby="modeSelectorHint">
+        <div class="mode-card is-selected" role="radio" aria-checked="true" aria-describedby="modeQuickDesc" tabindex="0" data-mode="quick">
+          <div class="mode-card__icon">⚡</div>
+          <div class="mode-card__body">
+            <h3 class="mode-card__title">Quick Start</h3>
+            <p id="modeQuickDesc" class="mode-card__desc">Describe your goal and generate an optimized prompt instantly</p>
+          </div>
+          <div class="mode-card__check" aria-hidden="true">✔</div>
+        </div>
+
+        <div class="mode-card" role="radio" aria-checked="false" aria-describedby="modeWizardDesc" tabindex="-1" data-mode="wizard">
+          <div class="mode-card__icon">🧙‍♂️</div>
+          <div class="mode-card__body">
+            <h3 class="mode-card__title">Wizard</h3>
+            <p id="modeWizardDesc" class="mode-card__desc">Guided step-by-step flow to refine your project idea</p>
+          </div>
+          <div class="mode-card__check" aria-hidden="true">✔</div>
+        </div>
+      </div>
+    </section>
 
     <section class="layer-card layer-default" id="layerDefault">
       <div class="layer-default__column">
@@ -417,11 +446,11 @@ html[data-theme="light"] .grey-gradient-text{
 
     <section class="layer-card">
       <button class="layer-toggle" type="button" data-layer-toggle="advancedPanel" aria-expanded="false">
-        <span>Layer 2 · Blueprint sync (Advance)</span>
+        <span class="layer-toggle__label">Layer 2 · <span class="layer-chip">Blueprint sync</span> (Advance)</span>
         <span class="layer-toggle__chevron">▾</span>
       </button>
       <div id="advancedPanel" class="layer-panel">
-        <p class="layer-note">Fine-tune the structural instructions and constraints that guide the agents behind the magic.</p>
+        <p class="layer-note layer-note--accent">Fine-tune the structural instructions and constraints that guide the agents behind the magic.</p>
         <div class="layer-panel__grid">
           <details class="layer-field" open>
             <summary>Instruction blueprint (Optional)</summary>
@@ -444,11 +473,11 @@ html[data-theme="light"] .grey-gradient-text{
 
     <section class="layer-card layer-expert">
       <button class="layer-toggle" type="button" data-layer-toggle="expertPanel" aria-expanded="false">
-        <span>Layer 3 · Expert lab (Advance)</span>
+        <span class="layer-toggle__label">Layer 3 · <span class="layer-chip layer-chip--glow">Expert lab</span> (Advance)</span>
         <span class="layer-toggle__chevron">▾</span>
       </button>
       <div id="expertPanel" class="layer-panel">
-        <p class="layer-note">Only open this when you want dataset-style control over samples, schema, and optimization knobs.</p>
+        <p class="layer-note layer-note--accent">Only open this when you want dataset-style control over samples, schema, and optimization knobs.</p>
         <div class="layer-panel__grid">
           <details class="layer-field">
             <summary>POS / NEG dataset snippets (Optional)</summary>
@@ -472,10 +501,11 @@ temperature: 0.5</textarea>
       </div>
     </section>
 
-    <section class="grid grid-4" style="margin-top:16px">
+    <!-- Metrics Section - Between Layer 3 and Question Wizard -->
+    <section class="grid grid-4 metrics-compact" id="metricsSection" style="margin-top:16px">
       <div class="card kpi" id="kAcc">
         <span class="label metric-with-tooltip" data-i18n="kpi_accuracy">
-          Accuracy
+          <span class="text-highlight">Accuracy</span>
           <span class="metric-tooltip">Percentage of test cases that passed with correct outputs</span>
         </span>
         <span class="value" id="valAcc">—</span>
@@ -483,7 +513,7 @@ temperature: 0.5</textarea>
       </div>
       <div class="card kpi">
         <span class="label metric-with-tooltip" data-i18n="kpi_f1">
-          F1
+          <span class="text-highlight">F1</span>
           <span class="metric-tooltip">Balance between precision and recall (higher is better)</span>
         </span>
         <span class="value" id="valF1">—</span>
@@ -491,7 +521,7 @@ temperature: 0.5</textarea>
       </div>
       <div class="card kpi">
         <span class="label metric-with-tooltip" data-i18n="kpi_pass">
-          Pass Rate
+          <span class="text-highlight">Pass Rate</span>
           <span class="metric-tooltip">Ratio of successful runs to total attempts</span>
         </span>
         <span class="value" id="valPass">—</span>
@@ -499,7 +529,7 @@ temperature: 0.5</textarea>
       </div>
       <div class="card kpi">
         <span class="label metric-with-tooltip" data-i18n="kpi_cost">
-          Token Cost
+          <span class="text-highlight">Token Cost</span>
           <span class="metric-tooltip">Average tokens used per request (lower is better for cost)</span>
         </span>
         <span class="value" id="valCost">—</span>
@@ -507,14 +537,13 @@ temperature: 0.5</textarea>
       </div>
       <div class="card kpi">
         <span class="label metric-with-tooltip" data-i18n="kpi_prog">
-          Progress %
+          <span class="text-highlight">Progress %</span>
           <span class="metric-tooltip">Completion percentage towards target accuracy</span>
         </span>
         <span class="value" id="valProg">—</span>
         <span class="delta">&nbsp;</span>
       </div>
     </section>
-    <p class="help" style="margin-top:6px;">Arrows reflect change since the last run. Accuracy, F1, and Pass Rate are “higher is better,” while Token Cost is “lower is better.” Progress % tracks how close you are to your target accuracy.</p>
 
     <section class="grid grid-2" style="margin-top:16px">
       <div class="card">
@@ -533,29 +562,6 @@ temperature: 0.5</textarea>
         <h3 class="gradient-text" data-i18n="gauge">Progress Meter (%)</h3>
         <canvas id="gaugeProg" class="canvas"></canvas>
       </div>
-    </section>
-
-    <section class="card" id="wizardLanding">
-  <h2 class="gradient-text">Question Wizard</h2>
-      <p class="subtitle">Go from a one-line idea to a structured spec and compiled prompt blocks.</p>
-  <label class="wizard-label">
-    <span>Project idea *</span>
-    <textarea id="landingIdeaInput" rows="3" placeholder="Example: Build a prompt to summarize YouTube videos into 5 bullet points." required minlength="10"></textarea>
-    <small class="help" style="display:block;margin-top:4px;color:var(--text-low);">Minimum 10 characters required</small>
-  </label>
-  <label class="wizard-label">
-    <span>Project type</span>
-    <select id="landingKindSelect">
-      <option value="">Auto-detect</option>
-      <option value="coding">Coding / engineering</option>
-      <option value="writing">Writing / content</option>
-      <option value="analysis">Analysis / research</option>
-      <option value="product">Product / UX design</option>
-      <option value="custom">Custom / other</option>
-    </select>
-  </label>
-  <button id="landingStartBtn" class="btn" disabled title="Please enter your project idea first">Start Question Wizard</button>
-  <p class="help">This will open the Question Wizard and guide you step by step.</p>
     </section>
 
     <section class="card example-gallery" id="exampleGallery">
@@ -656,6 +662,12 @@ temperature: 0.5</textarea>
         🚀 Every enhancement passes through the <span class="pipeline-step">Spec</span> → <span class="pipeline-step">Question</span> → <span class="pipeline-step">Agent</span> → <span class="pipeline-step">Outcome</span> pipeline so the result you copy is the <span class="highlight-text">top-ranked candidate</span> after multi-metric scoring.
       </p>
     </section>
+
+    <!-- Question Wizard Status Indicator (shows when running in background) -->
+    <div id="wizardStatusIndicator" class="wizard-status-indicator" onclick="window.location.href='wizard.html'">
+      <span class="spinner"></span>
+      <span>Question Wizard Running...</span>
+    </div>
   </main>
 
   <footer class="footer">
@@ -665,59 +677,90 @@ temperature: 0.5</textarea>
 
   <script src="core.js"></script>
 
+
 <script>
 (function(){
-  const ideaEl = document.getElementById("landingIdeaInput");
-  const kindEl = document.getElementById("landingKindSelect");
-  const btn = document.getElementById("landingStartBtn");
-  if (!btn || !ideaEl) return;
+  const selector = document.querySelector('.mode-selector__options');
+  if (!selector) return;
 
-  // FIX 1.1: Real-time validation to enable/disable button
-  function validateInput() {
-    const idea = (ideaEl.value || "").trim();
-    const isValid = idea.length >= 10;
-    btn.disabled = !isValid;
-    btn.title = isValid ? "" : "Please enter at least 10 characters";
+  const taskInput = document.getElementById('task');
+  const cards = Array.from(selector.querySelectorAll('[role="radio"]'));
+  let activeIndex = Math.max(cards.findIndex(c => c.classList.contains('is-selected')), 0);
 
-    // Visual feedback
-    if (idea.length > 0 && idea.length < 10) {
-      ideaEl.style.borderColor = "#F59E0B"; // warning color
-    } else if (isValid) {
-      ideaEl.style.borderColor = "#10b981"; // success color
-    } else {
-      ideaEl.style.borderColor = ""; // default
+  function updateSelection(card){
+    cards.forEach((c, idx) => {
+      const isActive = c === card;
+      c.classList.toggle('is-selected', isActive);
+      c.setAttribute('aria-checked', isActive ? 'true' : 'false');
+      c.tabIndex = isActive ? 0 : -1;
+      if (isActive) activeIndex = idx;
+    });
+  }
+
+  function focusTask(){
+    if (!taskInput) return;
+    try {
+      taskInput.focus({ preventScroll: true });
+    } catch {
+      taskInput.focus();
+    }
+    taskInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+
+  function track(mode){
+    if (typeof window.trackEvent === 'function') {
+      window.trackEvent(mode === 'wizard' ? 'mode_select_wizard' : 'mode_select_quick');
     }
   }
 
-  // Listen for input changes
-  ideaEl.addEventListener("input", validateInput);
-  ideaEl.addEventListener("blur", validateInput);
+  function openWizard(){
+    const go = () => { window.location.href = 'wizard.html'; };
+    if (typeof window.openQuestionWizard === 'function') {
+      try { window.openQuestionWizard(); return; } catch (err) { console.warn('[Promptly] openQuestionWizard failed, falling back', err); }
+    }
+    go();
+  }
 
-  // Initial validation
-  validateInput();
-
-  btn.addEventListener("click", function(){
-    const idea = (ideaEl.value || "").trim();
-    if (!idea || idea.length < 10) {
-      ideaEl.focus();
-      ideaEl.style.borderColor = "#EF4444"; // error color
+  function handleSelection(card){
+    const mode = card?.dataset.mode || 'quick';
+    updateSelection(card);
+    track(mode);
+    if (mode === 'wizard') {
+      openWizard();
       return;
     }
-    const kind = (kindEl && kindEl.value) || "";
+    focusTask();
+  }
 
-    // FIX 1.2: Store data in sessionStorage for wizard to read
-    sessionStorage.setItem("projectIdea", idea);
-    if (kind) {
-      sessionStorage.setItem("projectKind", kind);
-    }
+  function moveFocus(delta){
+    if (!cards.length) return;
+    activeIndex = (activeIndex + delta + cards.length) % cards.length;
+    cards[activeIndex].focus();
+  }
 
-    const url = new URL("wizard.html", window.location.href);
-    url.searchParams.set("idea", idea);
-    if (kind) url.searchParams.set("kind", kind);
-    window.location.href = url.toString();
+  cards.forEach(card => {
+    card.addEventListener('click', () => handleSelection(card));
+    card.addEventListener('keydown', (e) => {
+      const { key } = e;
+      if (key === ' ' || key === 'Enter') {
+        e.preventDefault();
+        handleSelection(card);
+        return;
+      }
+      if (key === 'ArrowRight' || key === 'ArrowDown') {
+        e.preventDefault();
+        moveFocus(1);
+        return;
+      }
+      if (key === 'ArrowLeft' || key === 'ArrowUp') {
+        e.preventDefault();
+        moveFocus(-1);
+      }
+    });
   });
 })();
 </script>
+
 <script>
 // === v0.5.3 UI Patch (non-invasive) ===
 (function(){
@@ -1341,8 +1384,15 @@ console.log('[Promptly] Pipeline animation script loaded!');
 document.addEventListener('DOMContentLoaded', () => {
   console.log('[Promptly] DOMContentLoaded fired - Initializing pipeline animation and Run Optimization button...');
   
-  // Toast function
-  function showToast(msg, type = 'info') {
+  // ============================================
+  // Constants for metric calculations
+  // ============================================
+  const SCORE_MAX = 10;  // Maximum score for finalScore and llmScore (0-10 scale)
+  const TOKENS_PER_CANDIDATE = 500;  // Estimated tokens per candidate
+  const DEFAULT_CANDIDATE_COUNT = 4;  // Default number of candidates to generate
+  
+  // Use global showToast if available, otherwise create a local one
+  const showToast = window.showToast || function(msg, type = 'info') {
     const toastEl = document.getElementById('toast');
     if (!toastEl) {
       console.warn('[Promptly] Toast element not found');
@@ -1354,6 +1404,103 @@ document.addEventListener('DOMContentLoaded', () => {
     setTimeout(() => {
       toastEl.className = 'toast';
     }, duration);
+  };
+
+  // ============================================
+  // Metrics Loading State Functions
+  // ============================================
+  
+  // Show skeleton loading on all metrics
+  function showMetricsLoading() {
+    const metrics = ['valAcc', 'valF1', 'valPass', 'valCost', 'valProg'];
+    metrics.forEach(id => {
+      const el = document.getElementById(id);
+      if (el) {
+        el.textContent = '⏳';
+        el.classList.add('skeleton-loading');
+      }
+    });
+  }
+  
+  // Update metrics with real data from Outcome Runner response
+  function updateMetricsFromResponse(result) {
+    const metrics = ['valAcc', 'valF1', 'valPass', 'valCost', 'valProg'];
+    
+    // Remove loading state from all metrics first
+    metrics.forEach(id => {
+      const el = document.getElementById(id);
+      if (el) {
+        el.classList.remove('skeleton-loading');
+      }
+    });
+    
+    if (!result || !result.best) {
+      // If no data, show dashes
+      metrics.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = '—';
+      });
+      return;
+    }
+    
+    const best = result.best;
+    
+    // Accuracy - based on finalScore (0-SCORE_MAX scale -> percentage)
+    const valAcc = document.getElementById('valAcc');
+    if (valAcc) {
+      const accuracy = best.finalScore != null 
+        ? ((best.finalScore / SCORE_MAX) * 100).toFixed(1) + '%'
+        : '—';
+      valAcc.textContent = accuracy;
+    }
+    
+    // F1 Score - based on llmScore (0-SCORE_MAX scale -> 0-1)
+    const valF1 = document.getElementById('valF1');
+    if (valF1) {
+      const f1 = best.llmScore != null 
+        ? (best.llmScore / SCORE_MAX).toFixed(2)
+        : '—';
+      valF1.textContent = f1;
+    }
+    
+    // Pass Rate - based on tests.passed
+    const valPass = document.getElementById('valPass');
+    if (valPass) {
+      const passRate = best.tests?.passed === true 
+        ? '100%' 
+        : best.tests?.passed === false 
+          ? '0%' 
+          : '—';
+      valPass.textContent = passRate;
+    }
+    
+    // Token Cost - estimated based on candidates count
+    const valCost = document.getElementById('valCost');
+    if (valCost) {
+      const candidateCount = result.candidates?.length || 0;
+      const tokenCost = candidateCount > 0 
+        ? (candidateCount * TOKENS_PER_CANDIDATE).toLocaleString()
+        : '—';
+      valCost.textContent = tokenCost;
+    }
+    
+    // Progress - 100% when complete
+    const valProg = document.getElementById('valProg');
+    if (valProg) {
+      valProg.textContent = '100%';
+    }
+  }
+  
+  // Reset metrics to default state
+  function resetMetrics() {
+    const metrics = ['valAcc', 'valF1', 'valPass', 'valCost', 'valProg'];
+    metrics.forEach(id => {
+      const el = document.getElementById(id);
+      if (el) {
+        el.textContent = '—';
+        el.classList.remove('skeleton-loading');
+      }
+    });
   }
 
   // Pipeline animation setup
@@ -1383,10 +1530,42 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     console.log('[Promptly] Pipeline animation complete');
   }
+  
+  // ============================================
+  // Show real processing stages in Best Prompt
+  // ============================================
+  // Flag to cancel processing stages animation
+  let processingCancelled = false;
+  
+  async function showRealProcessingStages(bestPromptEl, candidateCount) {
+    processingCancelled = false;
+    const n = candidateCount || DEFAULT_CANDIDATE_COUNT;
+    const stages = [
+      { text: "⏳ 正在生成最佳 Prompt...\n\n处理中：\n1. ⏳ 生成候选 prompts...", delay: 600 },
+      { text: `⏳ 正在生成最佳 Prompt...\n\n处理中：\n1. ✓ 已生成 ${n} 个候选\n2. ⏳ LLM 评分中...`, delay: 800 },
+      { text: `⏳ 正在生成最佳 Prompt...\n\n处理中：\n1. ✓ 已生成 ${n} 个候选\n2. ✓ 评分完成\n3. ⏳ 应用测试规则...`, delay: 500 },
+      { text: `⏳ 正在生成最佳 Prompt...\n\n处理中：\n1. ✓ 已生成 ${n} 个候选\n2. ✓ 评分完成\n3. ✓ 测试通过\n4. ⏳ 选择最佳候选...`, delay: 400 }
+    ];
+    
+    for (const stage of stages) {
+      // Stop animation if cancelled (API call finished or failed)
+      if (processingCancelled) break;
+      if (bestPromptEl) {
+        bestPromptEl.value = stage.text;
+      }
+      await new Promise(resolve => setTimeout(resolve, stage.delay));
+    }
+  }
+  
+  // Function to cancel the processing animation
+  function cancelProcessingAnimation() {
+    processingCancelled = true;
+  }
 
   // Integrated click handler: animation → API → toast → scroll
   const runBtn = document.getElementById("runBtn");
   const bestPromptEl = document.getElementById('bestPrompt');
+  const taskEl = document.getElementById('task');
   
   if (!runBtn) {
     console.error('[Promptly] Run Optimization button (#runBtn) not found!');
@@ -1404,6 +1583,14 @@ document.addEventListener('DOMContentLoaded', () => {
     
     console.log('[Promptly] Run Optimization button clicked!');
     
+    // Get task input
+    const task = (taskEl?.value || '').trim();
+    if (!task) {
+      showToast('⚠ Please enter a task description first.', 'error');
+      if (taskEl) taskEl.focus();
+      return;
+    }
+    
     // Immediate visual feedback - disable button and show processing
     runBtn.disabled = true;
     runBtn.style.opacity = '0.7';
@@ -1411,12 +1598,16 @@ document.addEventListener('DOMContentLoaded', () => {
     const originalText = runBtn.textContent;
     runBtn.textContent = "Processing...";
     
-    // Show immediate feedback in Best Prompt area
+    // ✅ Show loading state in Best Prompt area
     if (bestPromptEl) {
-      bestPromptEl.value = "Processing your request...\n\nRunning pipeline:\n1. Spec Builder\n2. Question Engine\n3. LLM Agents\n4. Metrics & Scoring\n5. Outcome Runner";
+      bestPromptEl.value = "⏳ 正在生成最佳 Prompt...\n\n处理中：\n1. ⏳ 生成候选 prompts...";
       bestPromptEl.style.borderColor = '#7C3AED';
       bestPromptEl.classList.add('processing-animation');
+      bestPromptEl.classList.remove('success-highlight', 'error-state');
     }
+    
+    // ✅ Show loading state for all Metrics
+    showMetricsLoading();
     
     try {
       // 0. Scroll to algorithm section so user can see the animation
@@ -1430,37 +1621,126 @@ document.addEventListener('DOMContentLoaded', () => {
         }, 2000);
       }
       
-      // 1. Play pipeline animation
+      // 1. Play pipeline animation and show processing stages in parallel
       console.log('[Promptly] Starting pipeline animation...');
-      await new Promise(resolve => setTimeout(resolve, 500)); // Wait a bit for scroll
-      await animatePipeline();
+      await new Promise(resolve => setTimeout(resolve, 300)); // Wait a bit for scroll
+      
+      // Start both animations in parallel
+      const animationPromise = animatePipeline();
+      const stagesPromise = showRealProcessingStages(bestPromptEl, 4);
+      
+      // Wait for pipeline animation to finish (stages will complete on their own or be overwritten by API response)
+      await animationPromise;
       console.log('[Promptly] Pipeline animation complete!');
       
-      // 2. Call API to refresh metrics and best prompt
-      if (window.promptlyRefreshMetrics) {
-        console.log('[Promptly] Calling refreshMetrics API...');
-        try {
-          await window.promptlyRefreshMetrics();
-          console.log('[Promptly] API call successful');
-        } catch (apiError) {
-          console.warn('[Promptly] API call failed:', apiError);
-          if (bestPromptEl && !bestPromptEl.value.includes('Error')) {
-            bestPromptEl.value = "API call failed, but pipeline animation completed.\n\nCheck console for details.";
-          }
-        }
-      } else {
-        console.warn('[Promptly] window.promptlyRefreshMetrics not available');
-        if (bestPromptEl) {
-          bestPromptEl.value = "Pipeline animation completed!\n\nNote: Backend API not available.";
-        }
-      }
+      // 2. Call Outcome Runner API
+      console.log('[Promptly] Calling Outcome Runner API...');
+      const apiBase = window.PROMPTLY_API_BASE || '';
+      // Note: examples text field is not sent to backend as 'input'
+      // Users should include examples directly in the task description if needed
       
-      // 3. Show success toast
-      showToast('✓ Best Prompt has been updated!', 'success');
+      const requestBody = {
+        task: task,
+        n: DEFAULT_CANDIDATE_COUNT
+      };
+      
+      try {
+        const response = await fetch(`${apiBase}/api/outcome-runs`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(requestBody)
+        });
+        
+        // ✅ Cancel the processing animation before updating content
+        cancelProcessingAnimation();
+        
+        // ✅ Validate response status before parsing JSON
+        if (!response.ok) {
+          // Try to parse error message from response body
+          let errorMsg = `HTTP ${response.status}: ${response.statusText}`;
+          try {
+            const errorData = await response.json();
+            errorMsg = errorData.error || errorMsg;
+          } catch {
+            // Ignore JSON parse error, use default error message
+          }
+          
+          console.warn('[Promptly] API returned HTTP error:', errorMsg);
+          
+          if (bestPromptEl) {
+            bestPromptEl.value = `❌ 服务器错误\n\n${errorMsg}\n\n请稍后重试`;
+            bestPromptEl.classList.remove('processing-animation', 'success-highlight');
+            bestPromptEl.classList.add('error-state');
+            bestPromptEl.style.borderColor = '#EF4444';
+          }
+          
+          resetMetrics();
+          showToast(`⚠ ${errorMsg}`, 'error');
+          return;
+        }
+        
+        const data = await response.json();
+        console.log('[Promptly] API response:', data);
+        
+        // ✅ Process API response
+        if (data.ok && data.result && data.result.best) {
+          // Success - display real best prompt content
+          const bestContent = data.result.best.content;
+          
+          if (bestPromptEl) {
+            bestPromptEl.value = bestContent || '未生成最佳 prompt';
+            bestPromptEl.classList.remove('processing-animation');
+            bestPromptEl.classList.add('success-highlight');
+            bestPromptEl.classList.remove('error-state');
+            bestPromptEl.style.borderColor = '#22C55E';
+          }
+          
+          // ✅ Update metrics with real data
+          updateMetricsFromResponse(data.result);
+          
+          // Show success toast
+          showToast('✓ Best Prompt has been updated!', 'success');
+          
+        } else {
+          // API returned ok: false or missing data
+          const errorMsg = data.error || 'Unknown error';
+          console.warn('[Promptly] API returned error:', errorMsg);
+          
+          if (bestPromptEl) {
+            bestPromptEl.value = `❌ 生成失败\n\n错误: ${errorMsg}\n\n请检查输入或稍后重试`;
+            bestPromptEl.classList.remove('processing-animation', 'success-highlight');
+            bestPromptEl.classList.add('error-state');
+            bestPromptEl.style.borderColor = '#EF4444';
+          }
+          
+          // Reset metrics to default
+          resetMetrics();
+          
+          showToast(`⚠ ${errorMsg}`, 'error');
+        }
+        
+      } catch (apiError) {
+        // Network error or timeout - cancel animation first
+        cancelProcessingAnimation();
+        console.error('[Promptly] API call failed:', apiError);
+        
+        if (bestPromptEl) {
+          bestPromptEl.value = `❌ 网络请求失败\n\n错误: ${apiError.message}\n\n可能的原因：\n• 后端服务未启动\n• 网络连接问题\n• API 地址配置错误\n\n请检查网络连接后重试`;
+          bestPromptEl.classList.remove('processing-animation', 'success-highlight');
+          bestPromptEl.classList.add('error-state');
+          bestPromptEl.style.borderColor = '#EF4444';
+        }
+        
+        // Reset metrics to default
+        resetMetrics();
+        
+        showToast('⚠ Network error. Check your connection.', 'error');
+      }
       
       // 4. Scroll to best prompt section
       if (bestPromptEl) {
-        bestPromptEl.classList.remove('processing-animation');
         const bestPromptCard = bestPromptEl.closest('.card') || bestPromptEl.closest('.layer-default__output');
         if (bestPromptCard) {
           setTimeout(() => {
@@ -1482,10 +1762,12 @@ document.addEventListener('DOMContentLoaded', () => {
       console.error('[Promptly] Error during optimization:', error);
       showToast('⚠ An error occurred. Check console for details.', 'error');
       if (bestPromptEl) {
-        bestPromptEl.value = "Error: " + error.message + "\n\nCheck browser console for details.";
+        bestPromptEl.value = `❌ 发生错误\n\n${error.message}\n\n请检查浏览器控制台获取详细信息`;
         bestPromptEl.style.borderColor = '#EF4444';
-        bestPromptEl.classList.remove('processing-animation');
+        bestPromptEl.classList.remove('processing-animation', 'success-highlight');
+        bestPromptEl.classList.add('error-state');
       }
+      resetMetrics();
     } finally {
       // Re-enable button
       runBtn.disabled = false;
@@ -1494,11 +1776,12 @@ document.addEventListener('DOMContentLoaded', () => {
       const lang = localStorage.getItem('promptly.lang') || 'en';
       runBtn.textContent = originalText || (lang === 'zh' ? '运行优化' : 'Run Optimization');
       
-      // Reset border color after a moment
-      if (bestPromptEl) {
+      // Reset border color after a moment for success cases
+      if (bestPromptEl && bestPromptEl.classList.contains('success-highlight')) {
         setTimeout(() => {
           bestPromptEl.style.borderColor = '';
-        }, 3000);
+          bestPromptEl.classList.remove('success-highlight');
+        }, 5000);
       }
     }
   }, { capture: true }); // Use capture phase to ensure we get the event

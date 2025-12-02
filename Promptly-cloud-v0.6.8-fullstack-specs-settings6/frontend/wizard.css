@@ -27,11 +27,68 @@
 .wizard-header-meta{
   font-size:0.8rem;
   opacity:0.8;
+  display:flex;
+  align-items:center;
+  gap:0.6rem;
 }
 .wizard-tag{
   padding:0.2rem 0.5rem;
   border-radius:999px;
   border:1px solid rgba(148,163,184,0.6);
+}
+.wizard-model-control{
+  position:relative;
+}
+.wizard-model-button{
+  display:inline-flex;
+  align-items:center;
+  gap:0.35rem;
+  padding:0.25rem 0.6rem;
+  border-radius:999px;
+  border:1px solid rgba(148,163,184,0.7);
+  background:rgba(15,23,42,0.85);
+  color:inherit;
+  font-size:0.8rem;
+  cursor:pointer;
+}
+.wizard-model-button:hover{
+  border-color:rgba(148,163,184,1);
+}
+.wizard-model-label{
+  opacity:0.8;
+}
+.wizard-model-selected{
+  font-weight:600;
+}
+.wizard-model-options{
+  position:absolute;
+  right:0;
+  margin-top:0.25rem;
+  min-width:220px;
+  background:rgba(15,23,42,0.98);
+  border:1px solid rgba(148,163,184,0.7);
+  border-radius:0.6rem;
+  box-shadow:0 10px 30px rgba(0,0,0,0.35);
+  z-index:10;
+  padding:0.35rem;
+  display:flex;
+  flex-direction:column;
+  gap:0.25rem;
+}
+.wizard-model-option{
+  text-align:left;
+  padding:0.35rem 0.45rem;
+  border-radius:0.5rem;
+  border:none;
+  background:transparent;
+  color:inherit;
+  cursor:pointer;
+  font-size:0.85rem;
+}
+.wizard-model-option:hover,
+.wizard-model-option.is-selected{
+  background:linear-gradient(120deg,#7C3AED,#06B6D4);
+  color:white;
 }
 .wizard-main{
   display:grid;

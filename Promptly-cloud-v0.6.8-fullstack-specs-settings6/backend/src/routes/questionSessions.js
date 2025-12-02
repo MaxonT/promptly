@@ -8,9 +8,41 @@ import { LlmDisabledError } from "../lib/openaiClient.js";
 
 export const questionSessionRouter = Router();
 
+const ModelSchema = z.enum([
+  "promptly-mini",
+  "promptly",
+  "promptly-plus",
+  "promptly-pro",
+  "promptly-pro-max",
+  "promptly-code-mini",
+  "promptly-code",
+  "promptly-code-plus",
+  "promptly-code-pro",
+  "promptly-code-pro-max"
+]);
+
+const MODEL_TO_OPENAI = {
+  "promptly-mini": "gpt-4.1-mini",
+  "promptly": "gpt-4.1",
+  "promptly-plus": "gpt-4.1",
+  "promptly-pro": "gpt-4.1",
+  "promptly-pro-max": "gpt-4.1",
+  "promptly-code-mini": "gpt-4.1-mini",
+  "promptly-code": "gpt-4.1",
+  "promptly-code-plus": "gpt-4.1",
+  "promptly-code-pro": "gpt-4.1",
+  "promptly-code-pro-max": "gpt-4.1"
+};
+
+function resolveModel(slug) {
+  if (!slug) return undefined;
+  return MODEL_TO_OPENAI[slug] || undefined;
+}
+
 const CreateSessionSchema = z.object({
   initial_description: z.string().min(1),
-  kind: z.string().min(1).max(64).optional()
+  kind: z.string().min(1).max(64).optional(),
+  model: ModelSchema.optional()
 });
 
 const AnswerPayloadSchema = z.object({
@@ -21,7 +53,12 @@ const AnswerPayloadSchema = z.object({
         value: z.any()
       })
     )
-    .min(1)
+    .min(1),
+  model: ModelSchema.optional()
+});
+
+const FinalizeSchema = z.object({
+  model: ModelSchema.optional()
 });
 
 function getUserId(req) {
@@ -34,7 +71,8 @@ questionSessionRouter.post("/", async (req, res) => {
   if (!parsed.success) {
     return res.status(400).json({ ok: false, error: parsed.error.flatten() });
   }
-  const { initial_description, kind } = parsed.data;
+  const { initial_description, kind, model } = parsed.data;
+  const selectedModel = resolveModel(model);
   const userId = getUserId(req);
   const now = new Date().toISOString();
   const sessionId = `sess_${nanoid(16)}`;
@@ -48,12 +86,14 @@ questionSessionRouter.post("/", async (req, res) => {
   try {
     const broadQuestions = await generateBroadQuestions({
       initialDescription: initial_description,
-      kind: kind || null
+      kind: kind || null,
+      model: selectedModel
     });
     const choiceQuestions = await generateChoiceQuestions({
       initialDescription: initial_description,
       kind: kind || null,
-      broadQuestions
+      broadQuestions,
+      model: selectedModel
     });
 
     const insertQuestion = db.prepare(
@@ -175,6 +215,10 @@ questionSessionRouter.post("/:sessionId/answer", (req, res) => {
 });
 
 questionSessionRouter.post("/:sessionId/finalize", async (req, res) => {
+  const parsed = FinalizeSchema.safeParse(req.body || {});
+  if (!parsed.success) {
+    return res.status(400).json({ ok: false, error: parsed.error.flatten() });
+  }
   const { sessionId } = req.params;
   const session = db
     .prepare("SELECT * FROM question_sessions WHERE id = ?")
@@ -210,11 +254,14 @@ questionSessionRouter.post("/:sessionId/finalize", async (req, res) => {
     };
   });
 
+  const selectedModel = resolveModel(parsed.data.model);
+
   try {
     const result = await generateRawSpec({
       initialDescription: session.initial_description,
       kind: session.kind,
-      qaPairs
+      qaPairs,
+      model: selectedModel
     });
 
     const compiled = compileSpecToPrompt(result.spec);

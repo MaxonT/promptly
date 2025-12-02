@@ -18,6 +18,14 @@
       </div>
     </div>
     <div class="wizard-header-meta">
+      <div class="wizard-model-control" title="Select model (quality vs. speed)">
+        <button id="modelToggle" class="wizard-model-button" type="button" aria-haspopup="listbox" aria-expanded="false">
+          <span class="wizard-model-label">Model:</span>
+          <span id="modelSelectedLabel" class="wizard-model-selected">Promptly Mini</span>
+          <span aria-hidden="true">▾</span>
+        </button>
+        <div id="modelOptions" class="wizard-model-options hidden" role="listbox" aria-label="Choose model"></div>
+      </div>
       <span class="wizard-tag">v0.6.5 · backend-powered</span>
     </div>
   </header>

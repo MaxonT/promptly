@@ -36,7 +36,7 @@ const AgentCOutputSchema = z.object({
   explanation: z.string()
 });
 
-export async function generateBroadQuestions({ initialDescription, kind }) {
+export async function generateBroadQuestions({ initialDescription, kind, model }) {
   const system = [
     "You are Agent A in Promptly's Question Engine.",
     "Goal: from a fuzzy project idea, propose 8–15 broad clarification axes.",
@@ -48,7 +48,7 @@ export async function generateBroadQuestions({ initialDescription, kind }) {
     initial_description: initialDescription,
     kind: kind || null
   });
-  const raw = await chatJson({ system, user });
+  const raw = await chatJson({ system, user, model });
   const parsed = AgentAOutputSchema.parse(raw);
   return parsed.broad_questions.map((q, index) => ({
     id: q.id || `axis_${index + 1}`,
@@ -58,7 +58,7 @@ export async function generateBroadQuestions({ initialDescription, kind }) {
   }));
 }
 
-export async function generateChoiceQuestions({ initialDescription, kind, broadQuestions }) {
+export async function generateChoiceQuestions({ initialDescription, kind, broadQuestions, model }) {
   const system = [
     "You are Agent B in Promptly's Question Engine.",
     "Goal: convert Agent A's broad axes into concrete, user-friendly questions.",
@@ -72,7 +72,7 @@ export async function generateChoiceQuestions({ initialDescription, kind, broadQ
     kind: kind || null,
     broad_questions: broadQuestions
   });
-  const raw = await chatJson({ system, user });
+  const raw = await chatJson({ system, user, model });
   const parsed = AgentBOutputSchema.parse(raw);
   return parsed.choice_questions.map((q, index) => ({
     id: q.id || `q_${index + 1}`,
@@ -82,7 +82,7 @@ export async function generateChoiceQuestions({ initialDescription, kind, broadQ
   }));
 }
 
-export async function generateRawSpec({ initialDescription, kind, qaPairs }) {
+export async function generateRawSpec({ initialDescription, kind, qaPairs, model }) {
   const system = [
     "You are Agent C in Promptly's Question Engine.",
     "You receive all questions and answers from a wizard.",
@@ -96,7 +96,7 @@ export async function generateRawSpec({ initialDescription, kind, qaPairs }) {
     kind: kind || null,
     qa_pairs: qaPairs
   });
-  const raw = await chatJson({ system, user });
+  const raw = await chatJson({ system, user, model });
   const parsed = AgentCOutputSchema.parse(raw);
   return parsed;
 }

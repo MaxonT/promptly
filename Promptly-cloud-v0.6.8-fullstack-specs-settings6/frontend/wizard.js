@@ -4,6 +4,20 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
     : "http://localhost:8080");
 
 (() => {
+  const MODEL_OPTIONS = [
+    { value: "promptly-mini", label: "Promptly Mini" },
+    { value: "promptly", label: "Promptly" },
+    { value: "promptly-plus", label: "Promptly Plus" },
+    { value: "promptly-pro", label: "Promptly Pro" },
+    { value: "promptly-pro-max", label: "Promptly Pro Max" },
+    { value: "promptly-code-mini", label: "Promptly Code Mini" },
+    { value: "promptly-code", label: "Promptly Code" },
+    { value: "promptly-code-plus", label: "Promptly Code Plus" },
+    { value: "promptly-code-pro", label: "Promptly Code Pro" },
+    { value: "promptly-code-pro-max", label: "Promptly Code Pro Max" }
+  ];
+  const MODEL_STORAGE_KEY = "promptlyWizardModel";
+
   const ideaInput = document.getElementById("ideaInput");
   const kindSelect = document.getElementById("kindSelect");
   const startBtn = document.getElementById("startWizardBtn");
@@ -22,6 +36,20 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
 
   const logOutput = document.getElementById("logOutput");
 
+  const modelToggle = document.getElementById("modelToggle");
+  const modelOptions = document.getElementById("modelOptions");
+  const modelSelectedLabel = document.getElementById("modelSelectedLabel");
+
+  function getStoredModel() {
+    const stored = sessionStorage.getItem(MODEL_STORAGE_KEY);
+    if (stored && MODEL_OPTIONS.some((opt) => opt.value === stored)) {
+      return stored;
+    }
+    return MODEL_OPTIONS[0].value;
+  }
+
+  let selectedModel = getStoredModel();
+
   let currentSessionId = null;
   let currentQuestions = [];
   let currentSpecId = null;
@@ -32,6 +60,82 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
   const prefillKind = urlParams.get("kind");
 
   const currentAnswers = new Map();
+
+  function updateModelLabel() {
+    const option = MODEL_OPTIONS.find((opt) => opt.value === selectedModel);
+    if (option && modelSelectedLabel) {
+      modelSelectedLabel.textContent = option.label;
+    }
+  }
+
+  function closeModelDropdown() {
+    if (!modelOptions || !modelToggle) return;
+    modelOptions.classList.add("hidden");
+    modelToggle.setAttribute("aria-expanded", "false");
+  }
+
+  function openModelDropdown() {
+    if (!modelOptions || !modelToggle) return;
+    modelOptions.classList.remove("hidden");
+    modelToggle.setAttribute("aria-expanded", "true");
+  }
+
+  function renderModelOptions() {
+    if (!modelOptions) return;
+    modelOptions.innerHTML = "";
+    MODEL_OPTIONS.forEach((opt) => {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "wizard-model-option";
+      btn.textContent = opt.label;
+      btn.setAttribute("role", "option");
+      btn.setAttribute("data-value", opt.value);
+      if (opt.value === selectedModel) {
+        btn.classList.add("is-selected");
+        btn.setAttribute("aria-selected", "true");
+      }
+      btn.addEventListener("click", () => {
+        selectedModel = opt.value;
+        sessionStorage.setItem(MODEL_STORAGE_KEY, selectedModel);
+        updateModelLabel();
+        renderModelOptions();
+        closeModelDropdown();
+      });
+      modelOptions.appendChild(btn);
+    });
+  }
+
+  function toggleModelDropdown() {
+    if (!modelOptions || !modelToggle) return;
+    if (modelOptions.classList.contains("hidden")) {
+      openModelDropdown();
+    } else {
+      closeModelDropdown();
+    }
+  }
+
+  if (modelToggle) {
+    modelToggle.addEventListener("click", (evt) => {
+      evt.stopPropagation();
+      toggleModelDropdown();
+    });
+  }
+
+  document.addEventListener("click", (evt) => {
+    if (!modelOptions || modelOptions.classList.contains("hidden")) return;
+    if (!modelOptions.contains(evt.target) && !modelToggle?.contains(evt.target)) {
+      closeModelDropdown();
+    }
+  });
+
+  document.addEventListener("keydown", (evt) => {
+    if (evt.key === "Escape") {
+      closeModelDropdown();
+    }
+  });
+
+  updateModelLabel();
+  renderModelOptions();
 
   function log(line) {
     const ts = new Date().toISOString().slice(11, 19);
@@ -194,7 +298,8 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           initial_description: idea,
-          kind
+          kind,
+          model: selectedModel
         })
       });
       if (!res.ok) {
@@ -224,7 +329,7 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
       const res = await fetch(`${API_BASE}/api/question-sessions/${encodeURIComponent(currentSessionId)}/answer`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ answers: answersPayload })
+        body: JSON.stringify({ answers: answersPayload, model: selectedModel })
       });
       if (!res.ok) {
         const txt = await res.text();
@@ -251,7 +356,9 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
     try {
       log("Finalizing session and generating spec + compiled prompt...");
       const res = await fetch(`${API_BASE}/api/question-sessions/${encodeURIComponent(currentSessionId)}/finalize`, {
-        method: "POST"
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ model: selectedModel })
       });
       if (!res.ok) {
         const txt = await res.text();

@@ -75,6 +75,7 @@ CREATE TABLE IF NOT EXISTS question_sessions (
   owner_id TEXT,
   initial_description TEXT NOT NULL,
   kind TEXT,
+  mode TEXT DEFAULT 'deep',
   status TEXT NOT NULL,
   intent_json TEXT,
   spec_json TEXT,
@@ -195,6 +196,17 @@ CREATE TABLE IF NOT EXISTS outcome_candidates (
   CONSTRAINT fk_cand_outcome FOREIGN KEY (outcome_run_id) REFERENCES outcome_runs(id)
 );
 `);
+
+function ensureColumn(table, column, definition) {
+  const columns = db.prepare(`PRAGMA table_info(${table})`).all();
+  const exists = columns.some((col) => col.name === column);
+  if (!exists) {
+    db.prepare(`ALTER TABLE ${table} ADD COLUMN ${definition}`).run();
+  }
+}
+
+// Backfill newly added columns when upgrading existing databases
+ensureColumn("question_sessions", "mode", "mode TEXT DEFAULT 'deep'");
 
 // Whitelists for allowed table and column names
 const ALLOWED_TABLES = [

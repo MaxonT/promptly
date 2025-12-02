@@ -15,12 +15,43 @@ export const questionSessionRouter = Router();
 
 const PROJECT_DESCRIPTION_REQUIRED_MESSAGE = "Project description is required.";
 
+const MODE_PROFILES = {
+  fast: {
+    id: "fast",
+    label: "Fast",
+    hierarchy: "A+",
+    chainLength: 2,
+    maxSteps: 3,
+    timeoutMs: 15000,
+    description: "Quick response, minimal reasoning"
+  },
+  deep: {
+    id: "deep",
+    label: "Deep Thinking",
+    hierarchy: "S",
+    chainLength: 4,
+    maxSteps: 6,
+    timeoutMs: 25000,
+    description: "Balanced depth and speed"
+  },
+  ultra: {
+    id: "ultra",
+    label: "Ultra Thinking",
+    hierarchy: "S+",
+    chainLength: 6,
+    maxSteps: 8,
+    timeoutMs: 40000,
+    description: "Maximum depth, slowest response"
+  }
+};
+
 const CreateSessionSchema = z.object({
   initial_description: z
     .string()
     .trim()
     .min(1, { message: PROJECT_DESCRIPTION_REQUIRED_MESSAGE }),
-  kind: z.string().min(1).max(64).optional()
+  kind: z.string().min(1).max(64).optional(),
+  mode: z.enum(["fast", "deep", "ultra"]).optional()
 });
 
 const AnswerPayloadSchema = z.object({
@@ -40,6 +71,27 @@ function getUserId(req) {
   return "demo-user";
 }
 
+function resolveModeProfile(mode) {
+  return MODE_PROFILES[mode] || MODE_PROFILES.deep;
+}
+
+async function runWithTimeout(promise, timeoutMs, label = "task") {
+  if (!timeoutMs) return promise;
+  let timeoutId;
+  const timeoutPromise = new Promise((_, reject) => {
+    timeoutId = setTimeout(() => {
+      reject(new Error(`${label} timed out after ${timeoutMs}ms`));
+    }, timeoutMs);
+  });
+
+  try {
+    const result = await Promise.race([promise, timeoutPromise]);
+    return result;
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
 questionSessionRouter.post("/", async (req, res) => {
   const parsed = CreateSessionSchema.safeParse(req.body);
   if (!parsed.success) {
@@ -53,7 +105,8 @@ questionSessionRouter.post("/", async (req, res) => {
     }
     return res.status(400).json({ ok: false, error: parsed.error.flatten() });
   }
-  const { initial_description, kind } = parsed.data;
+  const { initial_description, kind, mode } = parsed.data;
+  const modeProfile = resolveModeProfile(mode);
   const userId = getUserId(req);
   
   // Ensure the user exists before creating a session
@@ -64,20 +117,30 @@ questionSessionRouter.post("/", async (req, res) => {
 
   db.prepare(
     `INSERT INTO question_sessions
-     (id, owner_id, initial_description, kind, status, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?)`
-  ).run(sessionId, userId, initial_description, kind || null, "active", now, now);
+     (id, owner_id, initial_description, kind, mode, status, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+  ).run(sessionId, userId, initial_description, kind || null, modeProfile.id, "active", now, now);
 
   try {
-    const broadQuestions = await generateBroadQuestions({
-      initialDescription: initial_description,
-      kind: kind || null
-    });
-    const choiceQuestions = await generateChoiceQuestions({
-      initialDescription: initial_description,
-      kind: kind || null,
-      broadQuestions
-    });
+    const broadQuestions = await runWithTimeout(
+      generateBroadQuestions({
+        initialDescription: initial_description,
+        kind: kind || null,
+        modeProfile
+      }),
+      modeProfile.timeoutMs,
+      "generate broad questions"
+    );
+    const choiceQuestions = await runWithTimeout(
+      generateChoiceQuestions({
+        initialDescription: initial_description,
+        kind: kind || null,
+        broadQuestions,
+        modeProfile
+      }),
+      modeProfile.timeoutMs,
+      "generate choice questions"
+    );
 
     const insertQuestion = db.prepare(
       `INSERT INTO question_questions
@@ -115,7 +178,13 @@ questionSessionRouter.post("/", async (req, res) => {
       depth_levels: q.depth_levels || null
     }));
 
-    return res.json({ ok: true, session_id: sessionId, questions: firstBatch });
+    return res.json({
+      ok: true,
+      session_id: sessionId,
+      mode: modeProfile.id,
+      mode_profile: modeProfile,
+      questions: firstBatch
+    });
   } catch (err) {
     console.error("[promptly] question session init failed", err);
     db.prepare(
@@ -170,6 +239,8 @@ questionSessionRouter.get("/:sessionId", (req, res) => {
     session: {
       id: session.id,
       owner_id: session.owner_id,
+      mode: session.mode || "deep",
+      mode_profile: resolveModeProfile(session.mode),
       kind: session.kind,
       status: session.status,
       initial_description: session.initial_description,
@@ -327,10 +398,12 @@ questionSessionRouter.post("/:sessionId/finalize", async (req, res) => {
   });
 
   try {
+    const modeProfile = resolveModeProfile(session.mode);
     const result = await generateRawSpec({
       initialDescription: session.initial_description,
       kind: session.kind,
-      qaPairs
+      qaPairs,
+      modeProfile
     });
 
     const compiled = compileSpecToPrompt(result.spec);

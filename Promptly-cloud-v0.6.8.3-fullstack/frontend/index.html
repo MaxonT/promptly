@@ -363,7 +363,6 @@ html[data-theme="light"] .grey-gradient-text{
     <nav class="controls">
       <div class="navlinks">
         <a href="index.html" data-i18n="nav_home">Dashboard</a>
-        <a href="#wizardLanding" data-i18n="nav_wizard" class="nav-wizard-link">Question Wizard</a>
         <a href="privacy.html" data-i18n="nav_privacy">Privacy</a>
         <a href="terms.html" data-i18n="nav_terms">Terms</a>
         <a href="cookies.html" data-i18n="nav_cookies">Cookies</a>
@@ -378,14 +377,43 @@ html[data-theme="light"] .grey-gradient-text{
     </nav>
   </header>
 
-  <main class="container">
+  <main class="container launch-shell">
     <div class="hero">
+      <div class="hero-eyebrow">Promptly · Workflow Modes</div>
       <div>
         <div class="title gradient-text hero-title" data-i18n="hero_title">Promptly — Prompt Optimizer <span class="title-pill">Studio</span></div>
-        <div class="subtitle hero-subtitle" data-i18n="hero_subtitle">Visualization-first workflow. <span class="text-spotlight">See every gain</span>, <span class="text-spotlight">every cost</span>, every version.</div>
+        <div class="subtitle hero-subtitle" data-i18n="hero_subtitle">Visualization-first workflow. See every gain, every cost, every version.</div>
       </div>
     </div>
 
+
+
+
+    <section class="mode-selector" aria-labelledby="modeSelectorTitle">
+      <div class="mode-selector__header">
+        <h2 id="modeSelectorTitle">How would you like to start?</h2>
+        <p id="modeSelectorHint" class="mode-selector__hint">Pick a workflow mode. Switch anytime.</p>
+      </div>
+      <div class="mode-selector__options" role="radiogroup" aria-describedby="modeSelectorHint">
+        <div class="mode-card is-selected" role="radio" aria-checked="true" aria-describedby="modeQuickDesc" tabindex="0" data-mode="quick">
+          <div class="mode-card__icon">⚡</div>
+          <div class="mode-card__body">
+            <h3 class="mode-card__title">Quick Start</h3>
+            <p id="modeQuickDesc" class="mode-card__desc">Describe your goal and generate an optimized prompt instantly</p>
+          </div>
+          <div class="mode-card__check" aria-hidden="true">✔</div>
+        </div>
+
+        <div class="mode-card" role="radio" aria-checked="false" aria-describedby="modeWizardDesc" tabindex="-1" data-mode="wizard">
+          <div class="mode-card__icon">🧙‍♂️</div>
+          <div class="mode-card__body">
+            <h3 class="mode-card__title">Wizard</h3>
+            <p id="modeWizardDesc" class="mode-card__desc">Guided step-by-step flow to refine your project idea</p>
+          </div>
+          <div class="mode-card__check" aria-hidden="true">✔</div>
+        </div>
+      </div>
+    </section>
 
     <section class="layer-card layer-default" id="layerDefault">
       <div class="layer-default__column">
@@ -515,29 +543,6 @@ temperature: 0.5</textarea>
         <span class="value" id="valProg">—</span>
         <span class="delta">&nbsp;</span>
       </div>
-    </section>
-
-    <section class="card" id="wizardLanding">
-  <h2 class="gradient-text">Question Wizard</h2>
-      <p class="subtitle">Go from a one-line idea to a structured spec and compiled prompt blocks.</p>
-  <label class="wizard-label">
-    <span>Project idea *</span>
-    <textarea id="landingIdeaInput" rows="3" placeholder="Example: Build a prompt to summarize YouTube videos into 5 bullet points." required minlength="10"></textarea>
-    <small class="help" style="display:block;margin-top:4px;color:var(--text-low);">Minimum 10 characters required</small>
-  </label>
-  <label class="wizard-label">
-    <span>Project type</span>
-    <select id="landingKindSelect">
-      <option value="">Auto-detect</option>
-      <option value="coding">Coding / engineering</option>
-      <option value="writing">Writing / content</option>
-      <option value="analysis">Analysis / research</option>
-      <option value="product">Product / UX design</option>
-      <option value="custom">Custom / other</option>
-    </select>
-  </label>
-  <button id="landingStartBtn" class="btn" disabled title="Please enter your project idea first">Start Question Wizard</button>
-  <p class="help">This will open the Question Wizard and guide you step by step.</p>
     </section>
 
     <section class="grid grid-2" style="margin-top:16px">
@@ -672,113 +677,90 @@ temperature: 0.5</textarea>
 
   <script src="core.js"></script>
 
+
 <script>
 (function(){
-  const ideaEl = document.getElementById("landingIdeaInput");
-  const kindEl = document.getElementById("landingKindSelect");
-  const btn = document.getElementById("landingStartBtn");
-  if (!btn || !ideaEl) return;
+  const selector = document.querySelector('.mode-selector__options');
+  if (!selector) return;
 
-  // FIX 1.1: Real-time validation to enable/disable button
-  function validateInput() {
-    const idea = (ideaEl.value || "").trim();
-    const isValid = idea.length >= 10;
-    btn.disabled = !isValid;
-    btn.title = isValid ? "" : "Please enter at least 10 characters";
+  const taskInput = document.getElementById('task');
+  const cards = Array.from(selector.querySelectorAll('[role="radio"]'));
+  let activeIndex = Math.max(cards.findIndex(c => c.classList.contains('is-selected')), 0);
 
-    // Visual feedback
-    if (idea.length > 0 && idea.length < 10) {
-      ideaEl.style.borderColor = "#F59E0B"; // warning color
-    } else if (isValid) {
-      ideaEl.style.borderColor = "#10b981"; // success color
-    } else {
-      ideaEl.style.borderColor = ""; // default
-    }
-  }
-
-  // Listen for input changes
-  ideaEl.addEventListener("input", validateInput);
-  ideaEl.addEventListener("blur", validateInput);
-
-  // Initial validation
-  validateInput();
-
-  btn.addEventListener("click", function(){
-    const idea = (ideaEl.value || "").trim();
-    if (!idea || idea.length < 10) {
-      ideaEl.focus();
-      ideaEl.style.borderColor = "#EF4444"; // error color
-      return;
-    }
-    const kind = (kindEl && kindEl.value) || "";
-
-    // FIX 1.2: Store data in sessionStorage for wizard to read
-    sessionStorage.setItem("projectIdea", idea);
-    if (kind) {
-      sessionStorage.setItem("projectKind", kind);
-    }
-
-    const url = new URL("wizard.html", window.location.href);
-    url.searchParams.set("idea", idea);
-    if (kind) url.searchParams.set("kind", kind);
-    
-    // Mark wizard as running in localStorage for background state persistence
-    localStorage.setItem("wizardRunning", "true");
-    localStorage.setItem("wizardStartTime", Date.now().toString());
-    
-    window.location.href = url.toString();
-  });
-  
-  // Check and show wizard status indicator if wizard is running in background
-  function checkWizardStatus() {
-    const wizardRunning = localStorage.getItem("wizardRunning");
-    const statusIndicator = document.getElementById("wizardStatusIndicator");
-    
-    // Validate and clean up stale wizard state (older than 1 hour)
-    const wizardStartTime = localStorage.getItem("wizardStartTime");
-    const MAX_WIZARD_DURATION = 60 * 60 * 1000; // 1 hour
-    
-    if (wizardStartTime) {
-      const startTime = parseInt(wizardStartTime, 10);
-      if (isNaN(startTime) || Date.now() - startTime > MAX_WIZARD_DURATION) {
-        // Clear stale wizard state
-        localStorage.removeItem("wizardRunning");
-        localStorage.removeItem("wizardStartTime");
-        if (statusIndicator) {
-          statusIndicator.classList.remove("active");
-        }
-        return;
-      }
-    }
-    
-    if (wizardRunning === "true" && statusIndicator) {
-      statusIndicator.classList.add("active");
-    } else if (statusIndicator) {
-      statusIndicator.classList.remove("active");
-    }
-  }
-  
-  // Check wizard status on page load
-  checkWizardStatus();
-  
-  // Smooth scroll for Question Wizard nav link
-  const wizardNavLink = document.querySelector('.nav-wizard-link');
-  if (wizardNavLink) {
-    wizardNavLink.addEventListener('click', function(e) {
-      e.preventDefault();
-      const wizardSection = document.getElementById('wizardLanding');
-      if (wizardSection) {
-        wizardSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        // Highlight the section briefly using CSS class
-        wizardSection.classList.add('section-highlight');
-        setTimeout(() => {
-          wizardSection.classList.remove('section-highlight');
-        }, 2000);
-      }
+  function updateSelection(card){
+    cards.forEach((c, idx) => {
+      const isActive = c === card;
+      c.classList.toggle('is-selected', isActive);
+      c.setAttribute('aria-checked', isActive ? 'true' : 'false');
+      c.tabIndex = isActive ? 0 : -1;
+      if (isActive) activeIndex = idx;
     });
   }
+
+  function focusTask(){
+    if (!taskInput) return;
+    try {
+      taskInput.focus({ preventScroll: true });
+    } catch {
+      taskInput.focus();
+    }
+    taskInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+
+  function track(mode){
+    if (typeof window.trackEvent === 'function') {
+      window.trackEvent(mode === 'wizard' ? 'mode_select_wizard' : 'mode_select_quick');
+    }
+  }
+
+  function openWizard(){
+    const go = () => { window.location.href = 'wizard.html'; };
+    if (typeof window.openQuestionWizard === 'function') {
+      try { window.openQuestionWizard(); return; } catch (err) { console.warn('[Promptly] openQuestionWizard failed, falling back', err); }
+    }
+    go();
+  }
+
+  function handleSelection(card){
+    const mode = card?.dataset.mode || 'quick';
+    updateSelection(card);
+    track(mode);
+    if (mode === 'wizard') {
+      openWizard();
+      return;
+    }
+    focusTask();
+  }
+
+  function moveFocus(delta){
+    if (!cards.length) return;
+    activeIndex = (activeIndex + delta + cards.length) % cards.length;
+    cards[activeIndex].focus();
+  }
+
+  cards.forEach(card => {
+    card.addEventListener('click', () => handleSelection(card));
+    card.addEventListener('keydown', (e) => {
+      const { key } = e;
+      if (key === ' ' || key === 'Enter') {
+        e.preventDefault();
+        handleSelection(card);
+        return;
+      }
+      if (key === 'ArrowRight' || key === 'ArrowDown') {
+        e.preventDefault();
+        moveFocus(1);
+        return;
+      }
+      if (key === 'ArrowLeft' || key === 'ArrowUp') {
+        e.preventDefault();
+        moveFocus(-1);
+      }
+    });
+  });
 })();
 </script>
+
 <script>
 // === v0.5.3 UI Patch (non-invasive) ===
 (function(){

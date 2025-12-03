@@ -167,8 +167,8 @@
       dotsEl.style.display = "none";
       const progress = _clamp(opts.progress ?? 0, 0, 1);
       requestAnimationFrame(() => {
-        fillEl.style.width = `${(progress * 100).toFixed(1)}%`;
-        pctEl.textContent = `${Math.round(progress * 100)}%`;
+        if (fillEl) fillEl.style.width = `${(progress * 100).toFixed(1)}%`;
+        if (pctEl) pctEl.textContent = `${Math.round(progress * 100)}%`;
       });
     }
   }

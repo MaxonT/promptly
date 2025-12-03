@@ -52,7 +52,7 @@ const AgentCOutputSchema = z.object({
   explanation: z.string()
 });
 
-export async function generateBroadQuestions({ initialDescription, kind, modeProfile = null }) {
+export async function generateBroadQuestions({ initialDescription, kind, modeProfile = null, model = null }) {
   const system = [
     "You are Agent A in Promptly's Question Engine.",
     "Goal: from a fuzzy project idea, propose 8-12 broad clarification axes.",
@@ -92,9 +92,9 @@ export async function generateBroadQuestions({ initialDescription, kind, modePro
     mode_profile: modeProfile
   });
 
-  const model = process.env.OPENAI_MODEL || "gpt-4o-mini";
+  const usedModel = model || process.env.OPENAI_MODEL || "gpt-4o-mini";
   const runId = createRun({
-    model,
+    model: usedModel,
     inputBlocks: { agent: "A", initial_description: initialDescription, kind, mode: modeProfile?.id }
   });
 
@@ -107,7 +107,7 @@ export async function generateBroadQuestions({ initialDescription, kind, modePro
   while (retryCount <= MAX_RETRIES) {
     try {
       const start = Date.now();
-      const response = await chatJson({ system, user });
+      const response = await chatJson({ system, user, model: usedModel });
       raw = response.data;
       const runMetrics = buildRunMetrics({
         latencyMs: Date.now() - start,
@@ -201,7 +201,7 @@ function cleanOptionsArray(options) {
   return cleaned;
 }
 
-export async function generateChoiceQuestions({ initialDescription, kind, broadQuestions, modeProfile = null }) {
+export async function generateChoiceQuestions({ initialDescription, kind, broadQuestions, modeProfile = null, model = null }) {
   const system = [
     "You are Agent B in Promptly's Question Engine.",
     "Goal: convert broad axes into concrete, user-friendly questions with depth levels.",
@@ -322,9 +322,9 @@ export async function generateChoiceQuestions({ initialDescription, kind, broadQ
     mode_profile: modeProfile
   });
 
-  const model = process.env.OPENAI_MODEL || "gpt-4o-mini";
+  const usedModel = model || process.env.OPENAI_MODEL || "gpt-4o-mini";
   const runId = createRun({
-    model,
+    model: usedModel,
     inputBlocks: { agent: "B", initial_description: initialDescription, kind, broad_questions: broadQuestions, mode: modeProfile?.id }
   });
 
@@ -337,7 +337,7 @@ export async function generateChoiceQuestions({ initialDescription, kind, broadQ
   while (retryCount <= MAX_RETRIES) {
     try {
       const start = Date.now();
-      const response = await chatJson({ system, user });
+      const response = await chatJson({ system, user, model: usedModel });
       raw = response.data;
       const runMetrics = buildRunMetrics({
         latencyMs: Date.now() - start,
@@ -573,7 +573,7 @@ export async function generateChoiceQuestions({ initialDescription, kind, broadQ
   }
 }
 
-export async function generateRawSpec({ initialDescription, kind, qaPairs, modeProfile = null }) {
+export async function generateRawSpec({ initialDescription, kind, qaPairs, modeProfile = null, model = null }) {
   const system = [
     "You are Agent C in Promptly's Question Engine.",
     "You receive all questions and answers from a wizard.",
@@ -615,9 +615,9 @@ export async function generateRawSpec({ initialDescription, kind, qaPairs, modeP
     mode_profile: modeProfile
   });
 
-  const model = process.env.OPENAI_MODEL || "gpt-4o-mini";
+  const usedModel = model || process.env.OPENAI_MODEL || "gpt-4o-mini";
   const runId = createRun({
-    model,
+    model: usedModel,
     inputBlocks: { agent: "C", initial_description: initialDescription, kind, qa_pairs: qaPairs, mode: modeProfile?.id }
   });
 
@@ -630,7 +630,7 @@ export async function generateRawSpec({ initialDescription, kind, qaPairs, modeP
   while (retryCount <= MAX_RETRIES) {
     try {
       const start = Date.now();
-      const response = await chatJson({ system, user });
+      const response = await chatJson({ system, user, model: usedModel });
       raw = response.data;
       const runMetrics = buildRunMetrics({
         latencyMs: Date.now() - start,

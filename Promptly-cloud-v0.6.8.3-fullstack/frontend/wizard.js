@@ -84,6 +84,27 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
 
   let currentMode = MODE_OPTIONS[sessionStorage.getItem(MODE_STORAGE_KEY)]?.id || "deep";
 
+  // Model selection is managed on the landing hero; the wizard reads that shared choice.
+  const MODEL_STORAGE_KEY = "promptly:model-selection";
+  const AVAILABLE_MODELS = [
+    "promptly-mini",
+    "promptly",
+    "promptly-plus",
+    "promptly-pro",
+    "promptly-pro-max",
+    "promptly-code-mini",
+    "promptly-code",
+    "promptly-code-plus",
+    "promptly-code-pro",
+    "promptly-code-pro-max"
+  ];
+
+  let currentModel = sessionStorage.getItem(MODEL_STORAGE_KEY) || AVAILABLE_MODELS[0];
+  if (!AVAILABLE_MODELS.includes(currentModel)) {
+    currentModel = AVAILABLE_MODELS[0];
+  }
+  sessionStorage.setItem(MODEL_STORAGE_KEY, currentModel);
+
   function log(line) {
     const ts = new Date().toISOString().slice(11, 19);
     logOutput.textContent += `[${ts}] ${line}\n`;
@@ -674,9 +695,11 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
         body: JSON.stringify({
           initial_description: idea,
           kind,
-          mode: currentMode
-        })
-      , signal: startController.signal });
+          mode: currentMode,
+          model: currentModel
+        }),
+        signal: startController.signal
+      });
 
       // Clear timeout if request completes
       clearTimeout(loadingTimeoutRef);
@@ -778,7 +801,7 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
       const res = await fetch(`${API_BASE}/api/question-sessions/${encodeURIComponent(currentSessionId)}/answer`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ answers: answersPayload })
+        body: JSON.stringify({ answers: answersPayload, model: currentModel })
       });
       if (!res.ok) {
         const txt = await res.text();
@@ -809,7 +832,9 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
     try {
       log("Finalizing session and generating spec + compiled prompt...");
       const res = await fetch(`${API_BASE}/api/question-sessions/${encodeURIComponent(currentSessionId)}/finalize`, {
-        method: "POST"
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ model: currentModel })
       });
       if (!res.ok) {
         const txt = await res.text();
@@ -862,9 +887,11 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
       const originalText = saveSnapshotBtn.textContent;
       saveSnapshotBtn.disabled = true;
       saveSnapshotBtn.textContent = "💾 Saving...";
-      
+
       const res = await fetch(`${API_BASE}/api/question-sessions/${encodeURIComponent(currentSessionId)}/snapshot`, {
-        method: "POST"
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ model: currentModel })
       });
       if (!res.ok) {
         const txt = await res.text();
@@ -1003,7 +1030,8 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           answers: [{ question_id: firstQuestionId, value: null }],
-          control: "skip"
+          control: "skip",
+          model: currentModel
         })
       });
       if (!res.ok) {
@@ -1054,7 +1082,11 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
       
       const res = await fetch(
         `${API_BASE}/api/question-sessions/${encodeURIComponent(currentSessionId)}/questions/${encodeURIComponent(questionId)}/regenerate`,
-        { method: "POST" }
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ model: currentModel })
+        }
       );
       if (!res.ok) {
         const txt = await res.text();

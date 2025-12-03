@@ -1609,7 +1609,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function syncModelUI(slug) {
     if (modelToggle) {
-      modelToggle.textContent = `“Model: ${getModelLabel(slug)}”`;
+      modelToggle.textContent = `Model: ${getModelLabel(slug)}`;
     }
     if (modelMenu) {
       modelMenu.querySelectorAll('.model-select__option').forEach((btn) => {

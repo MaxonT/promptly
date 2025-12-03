@@ -161,7 +161,7 @@ html[data-theme="light"] .mode-card{background:linear-gradient(var(--card),var(-
   grid-template-columns:minmax(340px,380px) minmax(0,1fr);
   grid-template-rows:auto auto;
   column-gap:24px;
-  row-gap:12px;
+  row-gap:8px;
   align-items:start;
 }
 .layer-default__column{
@@ -186,6 +186,9 @@ html[data-theme="light"] .mode-card{background:linear-gradient(var(--card),var(-
 .best-prompt-output{
   grid-column:1 / -1;
   grid-row:2;
+}
+.best-prompt-output .layer-output-header h3{
+  font-size:1.5rem;
 }
 @media(max-width:900px){
   .layer-default{

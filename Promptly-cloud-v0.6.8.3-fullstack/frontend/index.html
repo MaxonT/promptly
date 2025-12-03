@@ -366,6 +366,7 @@ html[data-theme="light"] .grey-gradient-text{
         <a href="privacy.html" data-i18n="nav_privacy">Privacy</a>
         <a href="terms.html" data-i18n="nav_terms">Terms</a>
         <a href="cookies.html" data-i18n="nav_cookies">Cookies</a>
+        <a href="wizard.html" class="nav-wizard-link">Question Wizard</a>
         <a href="settings.html#accountPanel" data-i18n="nav_account">Account</a>
       </div>
       <label class="control"><span data-i18n="appearance">Appearance</span>
@@ -424,6 +425,19 @@ html[data-theme="light"] .grey-gradient-text{
           <span>What should the AI do?</span>
           <textarea id="task" rows="4" placeholder="Summarize customer interviews into 5 product requirements."></textarea>
         </label>
+        <details class="layer-field model-select" open>
+          <summary id="modelSummary">“Model: Promptly Mini”</summary>
+          <label class="layer-field" for="modelSelect">
+            <span>Select a model</span>
+            <select id="modelSelect">
+              <option value="promptly-mini" selected>Promptly Mini</option>
+              <option value="promptly-pro">Promptly Pro</option>
+              <option value="gpt-4o-mini">OpenAI GPT-4o mini</option>
+              <option value="gpt-4o">OpenAI GPT-4o</option>
+            </select>
+            <small class="help">Choose the model you want to run before generating your optimized prompt.</small>
+          </label>
+        </details>
         <details class="layer-field">
           <summary>Optional context or source text</summary>
           <textarea id="examples" rows="4" placeholder="Paste key paragraphs, bullet points, or constraints you already have."></textarea>
@@ -680,6 +694,19 @@ temperature: 0.5</textarea>
 
 <script>
 (function(){
+  const modelSelect = document.getElementById('modelSelect');
+  const modelSummary = document.getElementById('modelSummary');
+
+  if (modelSelect && modelSummary) {
+    const updateModelSummary = () => {
+      const label = modelSelect.options[modelSelect.selectedIndex]?.text?.trim() || modelSelect.value;
+      modelSummary.textContent = `“Model: ${label}”`;
+    };
+
+    modelSelect.addEventListener('change', updateModelSummary);
+    updateModelSummary();
+  }
+
   const selector = document.querySelector('.mode-selector__options');
   if (!selector) return;
 

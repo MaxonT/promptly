@@ -233,6 +233,37 @@ details.layer-field > small.help{
 .layer-field textarea{
   min-height:110px;
 }
+
+/* Model selection uses the same expandable pattern as Optional Context */
+.model-select {
+  margin-top: 4px;
+}
+
+.model-select summary {
+  align-items: center;
+  justify-content: space-between;
+}
+
+.model-select select {
+  width: 100%;
+  margin-top: 12px;
+  padding: 12px;
+  background: linear-gradient(#0e1117, #0b0f17);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  color: var(--text-high);
+  font-weight: 600;
+}
+
+.model-select select:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(6, 182, 212, 0.25);
+  border-color: rgba(6, 182, 212, 0.6);
+}
+
+.model-select .help {
+  margin-top: 8px;
+}
 .layer-primary-action{
   width:fit-content;
 }
@@ -1937,28 +1968,23 @@ html[data-theme="light"] .layer-card {
    ============================================ */
 
 .nav-wizard-link {
-  background: linear-gradient(90deg, #7C3AED, #06B6D4);
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-  font-weight: 600 !important;
-  position: relative;
+  color: var(--text-med);
+  text-decoration: none;
+  font-weight: 600;
+  padding: 6px 8px;
+  border-radius: 10px;
+  transition: color 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+  border: 1px solid transparent;
 }
 
-.nav-wizard-link::after {
-  content: '';
-  position: absolute;
-  bottom: -2px;
-  left: 0;
-  width: 100%;
-  height: 2px;
-  background: linear-gradient(90deg, #7C3AED, #06B6D4);
-  transform: scaleX(0);
-  transition: transform 0.3s ease;
+.nav-wizard-link:hover {
+  color: var(--brand-b);
+  border-color: rgba(255, 255, 255, 0.08);
+  box-shadow: 0 0 10px rgba(6, 182, 212, 0.3);
 }
 
-.nav-wizard-link:hover::after {
-  transform: scaleX(1);
+html[data-theme="light"] .nav-wizard-link {
+  color: #334155;
 }
 
 /* ============================================

@@ -1875,9 +1875,15 @@ document.addEventListener('DOMContentLoaded', () => {
   runBtn.addEventListener("click", async function(e) {
     e.preventDefault();
     e.stopPropagation();
-    
+
     console.log('[Promptly] Run Optimization button clicked!');
-    
+
+    // Decide whether to run the optional auto-scroll animation (1% chance)
+    const shouldAutoScroll = Math.random() < 0.01;
+    if (!shouldAutoScroll) {
+      console.log('[Promptly] Skipping auto-scroll animation for this run.');
+    }
+
     // Get task input
     const task = (taskEl?.value || '').trim();
     if (!task) {
@@ -1905,9 +1911,9 @@ document.addEventListener('DOMContentLoaded', () => {
     showMetricsLoading();
     
     try {
-      // 0. Scroll to algorithm section so user can see the animation
+      // 0. Scroll to algorithm section so user can see the animation (1% of the time)
       const algorithmSection = document.querySelector('.algorithm-section-enhanced');
-      if (algorithmSection) {
+      if (algorithmSection && shouldAutoScroll) {
         algorithmSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
         algorithmSection.style.transition = 'all 0.3s ease';
         algorithmSection.style.boxShadow = '0 0 40px rgba(124, 58, 237, 0.4)';
@@ -2041,7 +2047,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
 
       // 4. Scroll to best prompt section
-      if (bestPromptEl) {
+      if (bestPromptEl && shouldAutoScroll) {
         const bestPromptCard = bestPromptEl.closest('.card') || bestPromptEl.closest('.layer-default__output');
         if (bestPromptCard) {
           setTimeout(() => {
@@ -2049,7 +2055,7 @@ document.addEventListener('DOMContentLoaded', () => {
               behavior: 'smooth',
               block: 'center'
             });
-            
+
             // Add highlight pulse animation
             bestPromptCard.style.transition = 'all 0.3s ease';
             bestPromptCard.style.boxShadow = '0 0 30px rgba(124, 58, 237, 0.5)';

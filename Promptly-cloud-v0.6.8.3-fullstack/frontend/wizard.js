@@ -718,6 +718,9 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
       }
       const data = await res.json();
       currentSessionId = data.session_id;
+      if (window.promptlyWizardSession && typeof window.promptlyWizardSession.markRunning === "function") {
+        window.promptlyWizardSession.markRunning(currentSessionId);
+      }
       log(`Session created: ${currentSessionId}`);
       
       // Hide loading overlay
@@ -859,6 +862,10 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
         promptOutput.textContent = "(no compiled prompt blocks returned)";
       }
       explanationOutput.textContent = data.explanation || "(no explanation provided)";
+
+      if (window.promptlyWizardSession && typeof window.promptlyWizardSession.clear === "function") {
+        window.promptlyWizardSession.clear();
+      }
 
       if (resultPageLink && data.spec_id) {
         currentSpecId = data.spec_id;

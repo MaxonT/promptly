@@ -98,6 +98,8 @@ const ModelOnlySchema = z.object({
   model: z.enum(MODEL_IDS).optional()
 });
 
+const RUNNING_STATUSES = ["active", "ready_to_finalize"];
+
 function getUserId(req) {
   if (req.user && req.user.sub) return req.user.sub;
   return "demo-user";
@@ -272,6 +274,67 @@ questionSessionRouter.post("/", async (req, res) => {
       error: `Question engine failed: ${err.message || "Unknown error"}` 
     });
   }
+});
+
+questionSessionRouter.get("/status/active", (req, res) => {
+  const userId = getUserId(req);
+  const requestedSessionId = req.query.session_id;
+
+  let session = null;
+  if (requestedSessionId) {
+    session = db
+      .prepare(
+        `SELECT id, owner_id, kind, status, mode, model, created_at, updated_at
+         FROM question_sessions
+         WHERE id = ?`
+      )
+      .get(requestedSessionId);
+
+    if (session && session.owner_id !== userId) {
+      session = null; // Do not leak other users' sessions
+    }
+  }
+
+  if (!session) {
+    session = db
+      .prepare(
+        `SELECT id, owner_id, kind, status, mode, model, created_at, updated_at
+         FROM question_sessions
+         WHERE owner_id = ?
+         ORDER BY updated_at DESC
+         LIMIT 1`
+      )
+      .get(userId);
+  }
+
+  if (!session || !RUNNING_STATUSES.includes(session.status)) {
+    return res.json({ ok: true, running: false });
+  }
+
+  const totalQuestions = db
+    .prepare("SELECT COUNT(*) as count FROM question_questions WHERE session_id = ?")
+    .get(session.id)?.count;
+  const answeredQuestions = db
+    .prepare("SELECT COUNT(*) as count FROM question_answers WHERE session_id = ?")
+    .get(session.id)?.count;
+
+  return res.json({
+    ok: true,
+    running: true,
+    session: {
+      id: session.id,
+      status: session.status,
+      mode: session.mode || "deep",
+      model: session.model || "promptly",
+      kind: session.kind || null,
+      created_at: session.created_at,
+      updated_at: session.updated_at
+    },
+    progress: {
+      answered: answeredQuestions || 0,
+      total: totalQuestions || 0
+    }
+  });
 });
 
 questionSessionRouter.get("/:sessionId", (req, res) => {

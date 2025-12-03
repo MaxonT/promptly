@@ -5,7 +5,7 @@
   const translations={
     en:{nav_home:"Dashboard",nav_privacy:"Privacy",nav_terms:"Terms",nav_cookies:"Cookies",nav_account:"Account",appearance:"System",auto:"System",light:"Light",dark:"Dark",language:"English",
         hero_title:"Promptly — Prompt Optimizer Studio",hero_subtitle:"Visualization-first workflow. See every gain, every cost, every version.",
-        task_label:"Task",examples_label:"Examples (optional)",best_prompt:"Best Prompt",run_btn:"Run Optimization",processing:"Processing...",success_message:"Best Prompt has been updated!",
+        task_label:"Task",examples_label:"Examples (optional)",best_prompt:"Pipeline Working Status",run_btn:"Run Optimization",processing:"Processing...",success_message:"Best Prompt has been updated!",
         kpi_accuracy:"Accuracy",kpi_f1:"F1",kpi_pass:"Pass Rate",kpi_cost:"Token Cost",kpi_prog:"Progress %",
         growth_chart:"Growth Over Iterations",contrib_chart:"Change Contribution",pass_pie:"Pass vs Fail (%)",gauge:"Progress Meter (%)",
         versions:"Prompt Versions",footer_rights:"No trackers. Preferences saved only after consent.",footer_contact:"Support",
@@ -14,7 +14,7 @@
         placeholder_examples:"POS || I love this!\nNEG || This is terrible."},
     zh:{nav_home:"仪表盘",nav_privacy:"隐私政策",nav_terms:"服务条款",nav_cookies:"Cookie 政策",nav_account:"账号",appearance:"系统",auto:"系统",light:"浅色",dark:"深色",language:"中文",
         hero_title:"Promptly — 提示优化工作室",hero_subtitle:"可视化优先：每次提升、每分成本、每个版本都一目了然。",
-        task_label:"任务",examples_label:"示例（可选）",best_prompt:"最佳 Prompt",run_btn:"运行优化",processing:"处理中...",success_message:"最佳 Prompt 已更新！",
+        task_label:"任务",examples_label:"示例（可选）",best_prompt:"流程运行状态",run_btn:"运行优化",processing:"处理中...",success_message:"最佳 Prompt 已更新！",
         kpi_accuracy:"准确率",kpi_f1:"F1",kpi_pass:"通过率",kpi_cost:"Token 成本",kpi_prog:"进度 %",
         growth_chart:"迭代增长曲线",contrib_chart:"改动贡献",pass_pie:"通过 vs 失败（%）",gauge:"进度仪表（%）",
         versions:"Prompt 版本",footer_rights:"无追踪；仅在同意后保存偏好。",footer_contact:"支持",
@@ -30,6 +30,13 @@
     hi:{language:"हिन्दी",processing:"प्रोसेसिंग...",success_message:"सर्वोत्तम प्रॉम्प्ट अपडेट हो गया!"}
   };
   const LANG_OPTIONS=[["en","English"],["zh","中文"],["es","Español"],["fr","Français"],["ja","日本語"],["ko","한국어"],["ar","العربية"],["pt","Português"],["hi","हिन्दी"]];
+  const API_BASE=(window.PROMPTLY_API_BASE&&window.PROMPTLY_API_BASE.trim())||(window.location&&window.location.origin&&window.location.origin!="null"?window.location.origin:"http://localhost:8080");
+  const WIZARD_SESSION_KEY="promptly.wizard.session";
+  let wizardIndicatorEl=null;
+  let wizardIndicatorLabel=null;
+  let wizardIndicatorDetail=null;
+  let wizardIndicatorProgressBar=null;
+  let wizardStatusTimer=null;
   function $(s){return document.querySelector(s)} function $all(s){return Array.from(document.querySelectorAll(s))}
   function applyTheme(theme){document.documentElement.setAttribute("data-theme", theme==="auto"?(prefersDark.matches?"dark":"light"):theme)}
   function i18nApply(lang){const d=translations[lang]||translations.en;$all("[data-i18n]").forEach(el=>{const k=el.getAttribute("data-i18n");if(d[k])el.textContent=d[k];});
@@ -102,6 +109,134 @@
       return null;
     }
   }
+  function getStoredWizardSession(){try{const raw=localStorage.getItem(WIZARD_SESSION_KEY);return raw?JSON.parse(raw):null;}catch{return null;}}
+  function setStoredWizardSession(sessionId){if(!sessionId)return;try{localStorage.setItem(WIZARD_SESSION_KEY,JSON.stringify({sessionId,startedAt:Date.now()}));}catch{}}
+  function clearStoredWizardSession(){try{localStorage.removeItem(WIZARD_SESSION_KEY);}catch{}}
+  function ensureWizardIndicator(){
+    if(wizardIndicatorEl)return;
+    wizardIndicatorEl=document.getElementById("wizardStatusIndicator");
+    if(!wizardIndicatorEl){
+      wizardIndicatorEl=document.createElement("div");
+      wizardIndicatorEl.id="wizardStatusIndicator";
+      wizardIndicatorEl.className="wizard-status-indicator";
+      document.body.appendChild(wizardIndicatorEl);
+    }
+    if(!wizardIndicatorEl.querySelector(".wizard-status-indicator__content")){
+      wizardIndicatorEl.innerHTML=`
+        <span class="spinner" aria-hidden="true"></span>
+        <div class="wizard-status-indicator__content">
+          <span class="wizard-status-indicator__label">Question Wizard is running...</span>
+          <span class="wizard-status-indicator__detail">Stay on any page — we’ll keep going in the background.</span>
+          <div class="wizard-status-indicator__progress" role="progressbar" aria-label="Wizard progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+            <span class="wizard-status-indicator__progress-fill" style="width:0%"></span>
+            <span class="wizard-status-indicator__progress-glow"></span>
+          </div>
+        </div>`;
+    }
+    wizardIndicatorLabel=wizardIndicatorEl.querySelector(".wizard-status-indicator__label");
+    wizardIndicatorDetail=wizardIndicatorEl.querySelector(".wizard-status-indicator__detail");
+    wizardIndicatorProgressBar=wizardIndicatorEl.querySelector(".wizard-status-indicator__progress-fill");
+    if(!wizardIndicatorLabel){
+      wizardIndicatorLabel=document.createElement("span");
+      wizardIndicatorLabel.className="wizard-status-indicator__label";
+      wizardIndicatorEl.appendChild(wizardIndicatorLabel);
+    }
+    if(!wizardIndicatorDetail){
+      wizardIndicatorDetail=document.createElement("span");
+      wizardIndicatorDetail.className="wizard-status-indicator__detail";
+      wizardIndicatorEl.appendChild(wizardIndicatorDetail);
+    }
+    if(!wizardIndicatorProgressBar){
+      const progressWrap=document.createElement("div");
+      progressWrap.className="wizard-status-indicator__progress";
+      progressWrap.setAttribute("role","progressbar");
+      progressWrap.setAttribute("aria-label","Wizard progress");
+      progressWrap.setAttribute("aria-valuemin","0");
+      progressWrap.setAttribute("aria-valuemax","100");
+      wizardIndicatorProgressBar=document.createElement("span");
+      wizardIndicatorProgressBar.className="wizard-status-indicator__progress-fill";
+      wizardIndicatorProgressBar.style.width="0%";
+      const glow=document.createElement("span");
+      glow.className="wizard-status-indicator__progress-glow";
+      progressWrap.appendChild(wizardIndicatorProgressBar);
+      progressWrap.appendChild(glow);
+      wizardIndicatorEl.appendChild(progressWrap);
+    }
+    if(!wizardIndicatorEl.querySelector(".spinner")){
+      const spin=document.createElement("span");
+      spin.className="spinner";
+      spin.setAttribute("aria-hidden","true");
+      wizardIndicatorEl.prepend(spin);
+    }
+    wizardIndicatorEl.onclick=()=>{window.location.href="wizard.html";};
+  }
+  function hideWizardIndicator(){if(wizardIndicatorEl){wizardIndicatorEl.classList.remove("active");}}
+  function updateWizardProgress(answered,total){
+    if(!wizardIndicatorProgressBar)return;
+    if(!total||total<=0){
+      wizardIndicatorProgressBar.style.width="15%";
+      wizardIndicatorProgressBar.parentElement?.setAttribute("aria-valuenow","0");
+      wizardIndicatorProgressBar.classList.add("is-indeterminate");
+      return;
+    }
+    const pct=Math.max(0,Math.min(100,Math.round((answered/total)*100)));
+    wizardIndicatorProgressBar.style.width=`${Math.max(6,pct)}%`;
+    wizardIndicatorProgressBar.parentElement?.setAttribute("aria-valuenow",String(pct));
+    wizardIndicatorProgressBar.classList.remove("is-indeterminate");
+  }
+  function showWizardIndicator(message, detail, progressInfo){
+    ensureWizardIndicator();
+    if(wizardIndicatorLabel)wizardIndicatorLabel.textContent=message;
+    if(wizardIndicatorDetail)wizardIndicatorDetail.textContent=detail||"Stay on any page — we’ll keep going in the background.";
+    if(progressInfo)updateWizardProgress(progressInfo.answered,progressInfo.total);
+    wizardIndicatorEl.classList.add("active");
+  }
+  function showWizardCheckingFallback(sessionId){
+    showWizardIndicator(
+      "Question Wizard is running...",
+      sessionId ? "Reconnecting to your background wizard session" : "Wizard progress updating...",
+      {answered:0,total:0}
+    );
+  }
+  async function refreshWizardIndicator(){
+    const stored=getStoredWizardSession();
+    const sessionId=stored?.sessionId;
+    if(!sessionId){hideWizardIndicator();return;}
+    // Immediately surface the indicator so the user sees it even while we fetch
+    showWizardCheckingFallback(sessionId);
+    try{
+      const res=await fetch(`${API_BASE}/api/question-sessions/status/active?session_id=${encodeURIComponent(sessionId)}`);
+      if(!res.ok){
+        console.warn("[promptly] wizard status request failed",res.status);
+        return;
+      }
+      const data=await res.json();
+      if(!data.running){
+        clearStoredWizardSession();
+        hideWizardIndicator();
+        return;
+      }
+      const progress=data.progress||{};
+      const answered=Math.min(progress.answered||0,progress.total||0);
+      const total=progress.total||0;
+      const suffix=total>0?` (${answered}/${total} answered)`:"";
+      const detail=total>0?`Progress: ${answered} of ${total} answers collected`:"Working in the background...";
+      showWizardIndicator(`Question Wizard is running${suffix}`,detail,{answered,total});
+    }catch(err){
+      console.warn("[promptly] wizard status refresh error",err);
+      // Keep the indicator visible with a reconnect message so users see it is active
+      showWizardCheckingFallback(sessionId);
+    }
+  }
+  function initWizardStatusIndicator(){
+    ensureWizardIndicator();
+    if(getStoredWizardSession()){
+      showWizardCheckingFallback(getStoredWizardSession()?.sessionId);
+    }
+    refreshWizardIndicator();
+    if(wizardStatusTimer)return;wizardStatusTimer=setInterval(refreshWizardIndicator,10000);
+  }
+  window.promptlyWizardSession={markRunning:(sessionId)=>{setStoredWizardSession(sessionId);showWizardCheckingFallback(sessionId);initWizardStatusIndicator();},clear:()=>{clearStoredWizardSession();hideWizardIndicator();},getActive:getStoredWizardSession};
   function formatBestPrompt(rawOutput) {
     if (!rawOutput) return "";
     if (typeof rawOutput === "string") return rawOutput;
@@ -175,5 +310,6 @@
       const c = document.getElementById(id);
       if (c) ro.observe(c);
     });
+    initWizardStatusIndicator();
   });
 })();

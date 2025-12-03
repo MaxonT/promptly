@@ -457,18 +457,137 @@ html[data-theme="light"] .grey-gradient-text{
         </details>
         <button id="runBtn" class="btn layer-primary-action" data-i18n="run_btn">Generate optimized prompt</button>
       </div>
-      <div class="layer-default__output">
+      <div class="best-prompt-card">
         <div class="layer-output-header">
           <div>
-            <h3 class="gradient-text" data-i18n="best_prompt">Best Prompt</h3>
+            <h3 class="gradient-text" data-i18n="best_prompt">Pipeline Working Status</h3>
             <small>Selected via Outcome Runner (best-of-N evaluation)</small>
+          </div>
+        </div>
+        <div class="best-prompt-pipeline" id="bestPromptPipeline">
+          <div class="pipeline-track">
+            <div class="pipeline-energy" id="pipelineEnergy"></div>
+            <div class="pipeline-node" data-step="spec">
+              <span class="node-icon">1</span>
+              <div class="node-label">
+                <span class="node-title">Spec Builder</span>
+                <small>Structure</small>
+              </div>
+              <span class="node-check">✓</span>
+            </div>
+            <div class="pipeline-node" data-step="question">
+              <span class="node-icon">2</span>
+              <div class="node-label">
+                <span class="node-title">Question Engine</span>
+                <small>Clarify</small>
+              </div>
+              <span class="node-check">✓</span>
+            </div>
+            <div class="pipeline-node" data-step="agents">
+              <span class="node-icon">3</span>
+              <div class="node-label">
+                <span class="node-title">LLM Agents</span>
+                <small>Draft</small>
+              </div>
+              <span class="node-check">✓</span>
+            </div>
+            <div class="pipeline-node" data-step="metrics">
+              <span class="node-icon">4</span>
+              <div class="node-label">
+                <span class="node-title">Metrics &amp; Scoring</span>
+                <small>Score</small>
+              </div>
+              <span class="node-check">✓</span>
+            </div>
+            <div class="pipeline-node" data-step="outcome">
+              <span class="node-icon">5</span>
+              <div class="node-label">
+                <span class="node-title">Outcome Runner</span>
+                <small>Select</small>
+              </div>
+              <span class="node-check">✓</span>
+            </div>
+          </div>
+          <div class="pipeline-visuals">
+            <div class="pipeline-visual spec-visual" data-step="spec">
+              <div class="spec-fragments">
+                <span class="fragment"></span>
+                <span class="fragment"></span>
+                <span class="fragment"></span>
+                <span class="fragment"></span>
+              </div>
+              <div class="spec-card">
+                <div class="spec-line short"></div>
+                <div class="spec-line"></div>
+                <div class="spec-line"></div>
+                <div class="spec-line long"></div>
+              </div>
+            </div>
+            <div class="pipeline-visual question-visual" data-step="question">
+              <div class="spec-card ghost"></div>
+              <div class="question-bubbles">
+                <span class="q-mark">?</span>
+                <span class="bubble question"></span>
+                <span class="bubble answer"></span>
+              </div>
+            </div>
+            <div class="pipeline-visual agents-visual" data-step="agents">
+              <div class="agents-orbit">
+                <span class="agent"></span>
+                <span class="agent"></span>
+                <span class="agent"></span>
+                <span class="agent"></span>
+              </div>
+              <div class="candidate-pool">
+                <span class="candidate">Draft A</span>
+                <span class="candidate">Draft B</span>
+                <span class="candidate">Draft C</span>
+              </div>
+            </div>
+            <div class="pipeline-visual metrics-visual" data-step="metrics">
+              <div class="candidate-card">
+                <div class="metric-bar">
+                  <span class="label">Clarity</span>
+                  <span class="bar"></span>
+                </div>
+                <div class="metric-bar">
+                  <span class="label">Style</span>
+                  <span class="bar"></span>
+                </div>
+                <div class="metric-bar">
+                  <span class="label">Safety</span>
+                  <span class="bar"></span>
+                </div>
+                <div class="metric-bar">
+                  <span class="label">Cost</span>
+                  <span class="bar"></span>
+                </div>
+              </div>
+              <div class="scan-line"></div>
+            </div>
+            <div class="pipeline-visual outcome-visual" data-step="outcome">
+              <div class="race-track">
+                <span class="race-card">Candidate 1</span>
+                <span class="race-card">Candidate 2</span>
+                <span class="race-card best">Top Pick</span>
+              </div>
+            </div>
+          </div>
+          <div class="pipeline-status-text" id="pipelineStatusText">Promptly’s pipeline will show you how your best prompt is chosen.</div>
+        </div>
+      </div>
+      <div class="layer-default__output best-prompt-output">
+        <div class="layer-output-header">
+          <div>
+            <h3 class="gradient-text">Best Prompt Output</h3>
+            <small>We run Spec → Questions → LLM agents → Metrics → Outcome Runner before surfacing this prompt.</small>
           </div>
           <button class="btn copy-btn" type="button" onclick="navigator.clipboard?.writeText(document.getElementById('bestPrompt').value)">Copy</button>
         </div>
         <textarea id="bestPrompt" class="codeblock" rows="14" placeholder="Click “Generate optimized prompt” to see the strongest prompt for your goal."></textarea>
-        <p class="layer-output-hint">We run Spec → Questions → LLM agents → Metrics → Outcome Runner before surfacing this prompt.</p>
       </div>
     </section>
+
 
     <section class="layer-card">
       <button class="layer-toggle" type="button" data-layer-toggle="advancedPanel" aria-expanded="false">
@@ -1529,33 +1648,99 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Pipeline animation setup
-  const stepNames = ["spec","question","agent","metrics","outcome"];
-  const baseStages = Array.from(document.querySelectorAll(".algorithm-step-enhanced"));
-  console.log(`[Promptly] Found ${baseStages.length} algorithm steps for animation`);
-  
-  baseStages.forEach((el, idx) => {
-    el.dataset.pipelineStage = stepNames[idx] || `stage-${idx}`;
-    el.classList.add("pipeline-stage");
-  });
-  const stages = Array.from(document.querySelectorAll(".pipeline-stage"));
-  const delayMs = 350;
-  
-  function clearActive() {
-    stages.forEach((el) => el.classList.remove("pipe-active"));
-  }
-  
-  async function animatePipeline() {
-    console.log('[Promptly] Starting pipeline animation...');
-    clearActive();
-    for (let i = 0; i < stages.length; i++) {
-      stages[i].classList.add("pipe-active");
-      console.log(`[Promptly] Animating stage ${i + 1}/${stages.length}: ${stepNames[i]}`);
-      await new Promise((resolve) => setTimeout(resolve, delayMs));
-      stages[i].classList.remove("pipe-active");
+  // Pipeline animation setup for Best Prompt card
+  const PIPELINE_STEPS = [
+    { key: 'spec', message: 'Structuring your idea into a spec…' },
+    { key: 'question', message: 'Spotting gaps and asking 1–3 clarifying questions…' },
+    { key: 'agents', message: 'Letting multiple agents draft and refine candidate prompts…' },
+    { key: 'metrics', message: 'Scoring candidates on clarity, style, safety, and cost…' },
+    { key: 'outcome', message: 'Selecting the best-of-N outcome for you…' }
+  ];
+
+  const pipelineContainer = document.getElementById('bestPromptPipeline');
+  const pipelineNodes = Array.from(document.querySelectorAll('.best-prompt-pipeline .pipeline-node'));
+  const pipelineVisuals = Array.from(document.querySelectorAll('.best-prompt-pipeline .pipeline-visual'));
+  const pipelineEnergy = document.getElementById('pipelineEnergy');
+  const pipelineStatusText = document.getElementById('pipelineStatusText');
+
+  let pipelineTimer = null;
+  let currentPipelineIndex = 0;
+
+  function setPipelineStep(index) {
+    if (!PIPELINE_STEPS[index]) return;
+    currentPipelineIndex = index;
+
+    pipelineNodes.forEach((node, idx) => {
+      node.classList.toggle('active', idx === index);
+      node.classList.toggle('completed', idx < index);
+    });
+
+    const activeKey = PIPELINE_STEPS[index].key;
+    pipelineVisuals.forEach((visual) => {
+      visual.classList.toggle('active', visual.dataset.step === activeKey);
+    });
+
+    const completionRatio = PIPELINE_STEPS.length > 1 ? index / (PIPELINE_STEPS.length - 1) : 0;
+    if (pipelineEnergy) {
+      pipelineEnergy.style.width = `${Math.max(0, Math.min(1, completionRatio)) * 100}%`;
     }
-    console.log('[Promptly] Pipeline animation complete');
+
+    if (pipelineStatusText) {
+      pipelineStatusText.textContent = PIPELINE_STEPS[index].message;
+    }
   }
+
+  function resetPipelineTimeline() {
+    if (!pipelineContainer) return;
+    pipelineContainer.classList.remove('is-processing', 'is-done');
+    pipelineNodes.forEach((node) => node.classList.remove('active', 'completed'));
+    pipelineVisuals.forEach((visual) => visual.classList.remove('active'));
+    if (pipelineEnergy) pipelineEnergy.style.width = '0%';
+    if (pipelineStatusText) {
+      pipelineStatusText.textContent = 'Promptly’s pipeline will show you how your best prompt is chosen.';
+    }
+    currentPipelineIndex = 0;
+  }
+
+  function startPipelineTimeline() {
+    if (!pipelineContainer) return;
+    resetPipelineTimeline();
+    pipelineContainer.classList.add('is-processing');
+    setPipelineStep(0);
+
+    clearInterval(pipelineTimer);
+    pipelineTimer = setInterval(() => {
+      const nextIndex = currentPipelineIndex + 1;
+      if (nextIndex < PIPELINE_STEPS.length) {
+        setPipelineStep(nextIndex);
+      } else {
+        clearInterval(pipelineTimer);
+      }
+    }, 1200);
+  }
+
+  function completePipelineTimeline() {
+    if (!pipelineContainer) return;
+    clearInterval(pipelineTimer);
+    setPipelineStep(PIPELINE_STEPS.length - 1);
+    pipelineNodes.forEach((node) => node.classList.add('completed'));
+    pipelineContainer.classList.remove('is-processing');
+    pipelineContainer.classList.add('is-done');
+    if (pipelineEnergy) pipelineEnergy.style.width = '100%';
+    if (pipelineStatusText) {
+      pipelineStatusText.textContent = 'Selected by Outcome Runner after multi-metric scoring.';
+    }
+  }
+
+  function stopPipelineTimeline(message) {
+    clearInterval(pipelineTimer);
+    pipelineNodes.forEach((node) => node.classList.remove('active'));
+    pipelineVisuals.forEach((visual) => visual.classList.remove('active'));
+    if (pipelineContainer) pipelineContainer.classList.remove('is-processing');
+    if (message && pipelineStatusText) pipelineStatusText.textContent = message;
+  }
+
+  resetPipelineTimeline();
   
   // ============================================
   // Show real processing stages in Best Prompt
@@ -1586,6 +1771,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // Function to cancel the processing animation
   function cancelProcessingAnimation() {
     processingCancelled = true;
+    stopPipelineTimeline('Pipeline paused while we retry.');
   }
 
   // Integrated click handler: animation → API → toast → scroll
@@ -1697,9 +1883,15 @@ document.addEventListener('DOMContentLoaded', () => {
   runBtn.addEventListener("click", async function(e) {
     e.preventDefault();
     e.stopPropagation();
-    
+
     console.log('[Promptly] Run Optimization button clicked!');
-    
+
+    // Decide whether to run the optional auto-scroll animation (1% chance)
+    const shouldAutoScroll = Math.random() < 0.01;
+    if (!shouldAutoScroll) {
+      console.log('[Promptly] Skipping auto-scroll animation for this run.');
+    }
+
     // Get task input
     const task = (taskEl?.value || '').trim();
     if (!task) {
@@ -1727,9 +1919,9 @@ document.addEventListener('DOMContentLoaded', () => {
     showMetricsLoading();
     
     try {
-      // 0. Scroll to algorithm section so user can see the animation
+      // 0. Scroll to algorithm section so user can see the animation (1% of the time)
       const algorithmSection = document.querySelector('.algorithm-section-enhanced');
-      if (algorithmSection) {
+      if (algorithmSection && shouldAutoScroll) {
         algorithmSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
         algorithmSection.style.transition = 'all 0.3s ease';
         algorithmSection.style.boxShadow = '0 0 40px rgba(124, 58, 237, 0.4)';
@@ -1737,19 +1929,15 @@ document.addEventListener('DOMContentLoaded', () => {
           algorithmSection.style.boxShadow = '';
         }, 2000);
       }
-      
+
       // 1. Play pipeline animation and show processing stages in parallel
       console.log('[Promptly] Starting pipeline animation...');
       await new Promise(resolve => setTimeout(resolve, 300)); // Wait a bit for scroll
-      
+
       // Start both animations in parallel
-      const animationPromise = animatePipeline();
-      const stagesPromise = showRealProcessingStages(bestPromptEl, 4);
-      
-      // Wait for pipeline animation to finish (stages will complete on their own or be overwritten by API response)
-      await animationPromise;
-      console.log('[Promptly] Pipeline animation complete!');
-      
+      startPipelineTimeline();
+      showRealProcessingStages(bestPromptEl, 4);
+
       // 2. Call Outcome Runner API
       console.log('[Promptly] Calling Outcome Runner API...');
       const apiBase = window.PROMPTLY_API_BASE || '';
@@ -1793,7 +1981,9 @@ document.addEventListener('DOMContentLoaded', () => {
             bestPromptEl.classList.add('error-state');
             bestPromptEl.style.borderColor = '#EF4444';
           }
-          
+
+          stopPipelineTimeline('Pipeline stopped due to server error.');
+
           resetMetrics();
           showToast(`⚠ ${errorMsg}`, 'error');
           return;
@@ -1814,13 +2004,16 @@ document.addEventListener('DOMContentLoaded', () => {
             bestPromptEl.classList.remove('error-state');
             bestPromptEl.style.borderColor = '#22C55E';
           }
-          
+
           // ✅ Update metrics with real data
           updateMetricsFromResponse(data.result);
-          
+
+          // Mark pipeline as completed
+          completePipelineTimeline();
+
           // Show success toast
           showToast('✓ Best Prompt has been updated!', 'success');
-          
+
         } else {
           // API returned ok: false or missing data
           const errorMsg = data.error || 'Unknown error';
@@ -1832,10 +2025,12 @@ document.addEventListener('DOMContentLoaded', () => {
             bestPromptEl.classList.add('error-state');
             bestPromptEl.style.borderColor = '#EF4444';
           }
-          
+
           // Reset metrics to default
           resetMetrics();
-          
+
+          stopPipelineTimeline('Pipeline stopped due to error.');
+
           showToast(`⚠ ${errorMsg}`, 'error');
         }
         
@@ -1850,15 +2045,17 @@ document.addEventListener('DOMContentLoaded', () => {
           bestPromptEl.classList.add('error-state');
           bestPromptEl.style.borderColor = '#EF4444';
         }
-        
+
         // Reset metrics to default
         resetMetrics();
-        
+
+        stopPipelineTimeline('Pipeline stopped due to network error.');
+
         showToast('⚠ Network error. Check your connection.', 'error');
       }
-      
+
       // 4. Scroll to best prompt section
-      if (bestPromptEl) {
+      if (bestPromptEl && shouldAutoScroll) {
         const bestPromptCard = bestPromptEl.closest('.card') || bestPromptEl.closest('.layer-default__output');
         if (bestPromptCard) {
           setTimeout(() => {
@@ -1866,7 +2063,7 @@ document.addEventListener('DOMContentLoaded', () => {
               behavior: 'smooth',
               block: 'center'
             });
-            
+
             // Add highlight pulse animation
             bestPromptCard.style.transition = 'all 0.3s ease';
             bestPromptCard.style.boxShadow = '0 0 30px rgba(124, 58, 237, 0.5)';
@@ -1885,6 +2082,7 @@ document.addEventListener('DOMContentLoaded', () => {
         bestPromptEl.classList.remove('processing-animation', 'success-highlight');
         bestPromptEl.classList.add('error-state');
       }
+      stopPipelineTimeline('Pipeline stopped. Something went wrong.');
       resetMetrics();
     } finally {
       // Re-enable button

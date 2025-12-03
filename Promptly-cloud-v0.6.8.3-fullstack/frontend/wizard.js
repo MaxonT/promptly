@@ -61,6 +61,7 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
   let slowWarningTimerRef = null;
 
   const MODE_STORAGE_KEY = "promptly-wizard-mode";
+  const MODEL_STORAGE_KEY = "promptly-wizard-model";
   const MODE_OPTIONS = {
     fast: {
       id: "fast",
@@ -83,6 +84,7 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
   };
 
   let currentMode = MODE_OPTIONS[sessionStorage.getItem(MODE_STORAGE_KEY)]?.id || "deep";
+  let currentModel = sessionStorage.getItem(MODEL_STORAGE_KEY) || null;
 
   function log(line) {
     const ts = new Date().toISOString().slice(11, 19);
@@ -130,6 +132,20 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
 
     if (!silentLog && MODE_OPTIONS[resolvedMode]) {
       log(`Mode set to ${MODE_OPTIONS[resolvedMode].label} (${MODE_OPTIONS[resolvedMode].hierarchy})`);
+    }
+  }
+
+  function setModel(model, { silentLog = false } = {}) {
+    currentModel = model || null;
+    
+    if (model) {
+      sessionStorage.setItem(MODEL_STORAGE_KEY, model);
+    } else {
+      sessionStorage.removeItem(MODEL_STORAGE_KEY);
+    }
+    
+    if (!silentLog && model) {
+      log(`Model set to ${model}`);
     }
   }
 
@@ -674,7 +690,8 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
         body: JSON.stringify({
           initial_description: idea,
           kind,
-          mode: currentMode
+          mode: currentMode,
+          model: currentModel
         })
       , signal: startController.signal });
 
@@ -695,7 +712,13 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
       }
       const data = await res.json();
       currentSessionId = data.session_id;
-      log(`Session created: ${currentSessionId}`);
+      
+      // Store the model used for this session
+      if (data.model) {
+        setModel(data.model, { silentLog: true });
+      }
+      
+      log(`Session created: ${currentSessionId}${data.model ? ` (model: ${data.model})` : ''}`);
       
       // Hide loading overlay
       hideLoadingInQuestionPanel();

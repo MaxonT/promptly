@@ -207,6 +207,7 @@ function ensureColumn(table, column, definition) {
 
 // Backfill newly added columns when upgrading existing databases
 ensureColumn("question_sessions", "mode", "mode TEXT DEFAULT 'deep'");
+ensureColumn("question_sessions", "model", "model TEXT");
 
 // Whitelists for allowed table and column names
 const ALLOWED_TABLES = [

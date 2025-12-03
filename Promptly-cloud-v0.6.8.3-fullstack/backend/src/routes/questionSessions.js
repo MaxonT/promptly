@@ -45,13 +45,21 @@ const MODE_PROFILES = {
   }
 };
 
+const SUPPORTED_MODELS = [
+  "gpt-4o-mini",
+  "gpt-4o",
+  "gpt-4-turbo",
+  "gpt-3.5-turbo"
+];
+
 const CreateSessionSchema = z.object({
   initial_description: z
     .string()
     .trim()
     .min(1, { message: PROJECT_DESCRIPTION_REQUIRED_MESSAGE }),
   kind: z.string().min(1).max(64).optional(),
-  mode: z.enum(["fast", "deep", "ultra"]).optional()
+  mode: z.enum(["fast", "deep", "ultra"]).optional(),
+  model: z.string().min(1).max(64).optional()
 });
 
 const AnswerPayloadSchema = z.object({
@@ -73,6 +81,15 @@ function getUserId(req) {
 
 function resolveModeProfile(mode) {
   return MODE_PROFILES[mode] || MODE_PROFILES.deep;
+}
+
+function resolveModel(model) {
+  // If a model is provided and it's in the supported list, use it
+  if (model && SUPPORTED_MODELS.includes(model)) {
+    return model;
+  }
+  // Otherwise, fall back to environment variable or default
+  return process.env.OPENAI_MODEL || process.env.OPENAI_DEFAULT_MODEL || "gpt-4o-mini";
 }
 
 async function runWithTimeout(promise, timeoutMs, label = "task") {
@@ -105,8 +122,9 @@ questionSessionRouter.post("/", async (req, res) => {
     }
     return res.status(400).json({ ok: false, error: parsed.error.flatten() });
   }
-  const { initial_description, kind, mode } = parsed.data;
+  const { initial_description, kind, mode, model } = parsed.data;
   const modeProfile = resolveModeProfile(mode);
+  const resolvedModel = resolveModel(model);
   const userId = getUserId(req);
   
   // Ensure the user exists before creating a session
@@ -117,16 +135,17 @@ questionSessionRouter.post("/", async (req, res) => {
 
   db.prepare(
     `INSERT INTO question_sessions
-     (id, owner_id, initial_description, kind, mode, status, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
-  ).run(sessionId, userId, initial_description, kind || null, modeProfile.id, "active", now, now);
+     (id, owner_id, initial_description, kind, mode, model, status, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+  ).run(sessionId, userId, initial_description, kind || null, modeProfile.id, resolvedModel, "active", now, now);
 
   try {
     const broadQuestions = await runWithTimeout(
       generateBroadQuestions({
         initialDescription: initial_description,
         kind: kind || null,
-        modeProfile
+        modeProfile,
+        model: resolvedModel
       }),
       modeProfile.timeoutMs,
       "generate broad questions"
@@ -136,7 +155,8 @@ questionSessionRouter.post("/", async (req, res) => {
         initialDescription: initial_description,
         kind: kind || null,
         broadQuestions,
-        modeProfile
+        modeProfile,
+        model: resolvedModel
       }),
       modeProfile.timeoutMs,
       "generate choice questions"
@@ -183,6 +203,7 @@ questionSessionRouter.post("/", async (req, res) => {
       session_id: sessionId,
       mode: modeProfile.id,
       mode_profile: modeProfile,
+      model: resolvedModel,
       questions: firstBatch
     });
   } catch (err) {
@@ -224,7 +245,7 @@ questionSessionRouter.get("/:sessionId", (req, res) => {
   const { sessionId } = req.params;
   const session = db
     .prepare(
-      `SELECT id, owner_id, kind, status, initial_description, created_at, updated_at
+      `SELECT id, owner_id, kind, mode, model, status, initial_description, created_at, updated_at
        FROM question_sessions
        WHERE id = ?`
     )
@@ -241,6 +262,7 @@ questionSessionRouter.get("/:sessionId", (req, res) => {
       owner_id: session.owner_id,
       mode: session.mode || "deep",
       mode_profile: resolveModeProfile(session.mode),
+      model: session.model || resolveModel(null),
       kind: session.kind,
       status: session.status,
       initial_description: session.initial_description,
@@ -399,11 +421,13 @@ questionSessionRouter.post("/:sessionId/finalize", async (req, res) => {
 
   try {
     const modeProfile = resolveModeProfile(session.mode);
+    const sessionModel = session.model || resolveModel(null);
     const result = await generateRawSpec({
       initialDescription: session.initial_description,
       kind: session.kind,
       qaPairs,
-      modeProfile
+      modeProfile,
+      model: sessionModel
     });
 
     const compiled = compileSpecToPrompt(result.spec);
@@ -585,15 +609,23 @@ questionSessionRouter.post("/:sessionId/questions/:questionId/regenerate", async
   }
 
   try {
+    // Use session model for regeneration
+    const sessionModel = session.model || resolveModel(null);
+    const modeProfile = resolveModeProfile(session.mode);
+    
     // Use LLM to generate a new variation of this question
     const broadQuestions = await generateBroadQuestions({
       initialDescription: session.initial_description,
-      kind: session.kind || null
+      kind: session.kind || null,
+      modeProfile,
+      model: sessionModel
     });
     const choiceQuestions = await generateChoiceQuestions({
       initialDescription: session.initial_description,
       kind: session.kind || null,
-      broadQuestions
+      broadQuestions,
+      modeProfile,
+      model: sessionModel
     });
 
     // Pick a new question that's similar in type

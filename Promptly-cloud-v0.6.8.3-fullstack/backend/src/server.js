@@ -34,6 +34,14 @@ app.get("/api/settings", (req, res) => {
   const defaultModel = process.env.OPENAI_DEFAULT_MODEL || "gpt-4o-mini";
   const outcomeModel = process.env.OUTCOME_MODEL || null;
   const maxCandidates = Number(process.env.MAX_CANDIDATES || 8);
+  
+  // List of supported models for wizard sessions
+  const supportedModels = [
+    { id: "gpt-4o-mini", name: "GPT-4o Mini", description: "Fast and cost-effective" },
+    { id: "gpt-4o", name: "GPT-4o", description: "Balanced performance" },
+    { id: "gpt-4-turbo", name: "GPT-4 Turbo", description: "High quality reasoning" },
+    { id: "gpt-3.5-turbo", name: "GPT-3.5 Turbo", description: "Legacy model, fastest" }
+  ];
 
   res.json({
     ok: true,
@@ -43,6 +51,7 @@ app.get("/api/settings", (req, res) => {
       defaultModel,
       outcomeModel,
       maxCandidates,
+      supportedModels,
       features: {
         questionWizard: true,
         promptEnhancer: true,

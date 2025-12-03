@@ -84,24 +84,26 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
 
   let currentMode = MODE_OPTIONS[sessionStorage.getItem(MODE_STORAGE_KEY)]?.id || "deep";
 
-  const MODEL_STORAGE_KEY = "promptly-wizard-model";
-  const MODEL_OPTIONS = [
-    { id: "promptly-mini", label: "Promptly Mini", chip: "Fastest" },
-    { id: "promptly", label: "Promptly", chip: "Balanced" },
-    { id: "promptly-plus", label: "Promptly Plus", chip: "Boosted" },
-    { id: "promptly-pro", label: "Promptly Pro", chip: "Quality" },
-    { id: "promptly-pro-max", label: "Promptly Pro Max", chip: "Max" },
-    { id: "promptly-code-mini", label: "Promptly Code Mini", chip: "Code" },
-    { id: "promptly-code", label: "Promptly Code", chip: "Code" },
-    { id: "promptly-code-plus", label: "Promptly Code Plus", chip: "Code" },
-    { id: "promptly-code-pro", label: "Promptly Code Pro", chip: "Code" },
-    { id: "promptly-code-pro-max", label: "Promptly Code Pro Max", chip: "Code" }
+  // Model selection is managed on the landing hero; the wizard reads that shared choice.
+  const MODEL_STORAGE_KEY = "promptly:model-selection";
+  const AVAILABLE_MODELS = [
+    "promptly-mini",
+    "promptly",
+    "promptly-plus",
+    "promptly-pro",
+    "promptly-pro-max",
+    "promptly-code-mini",
+    "promptly-code",
+    "promptly-code-plus",
+    "promptly-code-pro",
+    "promptly-code-pro-max"
   ];
 
-  const modelButton = document.getElementById("modelButton");
-  const modelButtonLabel = document.getElementById("modelButtonLabel");
-  const modelMenu = document.getElementById("modelMenu");
-  let currentModel = MODEL_OPTIONS.find((m) => m.id === sessionStorage.getItem(MODEL_STORAGE_KEY))?.id || "promptly";
+  let currentModel = sessionStorage.getItem(MODEL_STORAGE_KEY) || AVAILABLE_MODELS[0];
+  if (!AVAILABLE_MODELS.includes(currentModel)) {
+    currentModel = AVAILABLE_MODELS[0];
+  }
+  sessionStorage.setItem(MODEL_STORAGE_KEY, currentModel);
 
   function log(line) {
     const ts = new Date().toISOString().slice(11, 19);
@@ -167,114 +169,6 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
     });
 
     setMode(currentMode, { silentLog: true });
-  }
-
-  function getModelOption(modelId) {
-    return MODEL_OPTIONS.find((option) => option.id === modelId) || MODEL_OPTIONS[1] || MODEL_OPTIONS[0];
-  }
-
-  function setModel(modelId, { silentLog = false } = {}) {
-    const option = getModelOption(modelId);
-    currentModel = option.id;
-
-    if (modelButtonLabel) {
-      modelButtonLabel.textContent = option.label;
-    }
-
-    if (modelButton) {
-      modelButton.setAttribute("aria-label", `Model selector: ${option.label}`);
-    }
-
-    if (modelMenu) {
-      const items = modelMenu.querySelectorAll(".wizard-model-option");
-      items.forEach((item) => {
-        const isActive = item.dataset.model === option.id;
-        item.setAttribute("aria-selected", isActive ? "true" : "false");
-      });
-    }
-
-    sessionStorage.setItem(MODEL_STORAGE_KEY, option.id);
-    if (!silentLog) {
-      log(`Model set to ${option.label}`);
-    }
-  }
-
-  function toggleModelMenu(forceState = null) {
-    if (!modelMenu || !modelButton) return;
-    const shouldOpen = forceState === null ? modelMenu.classList.contains("hidden") : forceState;
-    if (shouldOpen) {
-      modelMenu.classList.remove("hidden");
-      modelButton.setAttribute("aria-expanded", "true");
-      const selected = modelMenu.querySelector(".wizard-model-option[aria-selected='true']");
-      (selected || modelMenu.firstElementChild)?.focus?.();
-    } else {
-      modelMenu.classList.add("hidden");
-      modelButton.setAttribute("aria-expanded", "false");
-    }
-  }
-
-  function initModelSelector() {
-    if (!modelButton || !modelMenu) return;
-
-    modelMenu.innerHTML = "";
-    MODEL_OPTIONS.forEach((option) => {
-      const btn = document.createElement("button");
-      btn.type = "button";
-      btn.className = "wizard-model-option";
-      btn.dataset.model = option.id;
-      btn.setAttribute("role", "option");
-      btn.setAttribute("aria-selected", "false");
-      btn.innerHTML = `
-        <div>
-          <div class="wizard-model-option-label">${option.label}</div>
-          <div class="wizard-model-option-desc">Quality vs. speed balance</div>
-        </div>
-        <span class="wizard-model-chip">${option.chip}</span>
-      `;
-      btn.addEventListener("click", () => {
-        setModel(option.id);
-        toggleModelMenu(false);
-      });
-      btn.addEventListener("keydown", (evt) => {
-        if (evt.key === "Enter" || evt.key === " ") {
-          evt.preventDefault();
-          setModel(option.id);
-          toggleModelMenu(false);
-        } else if (evt.key === "Escape") {
-          toggleModelMenu(false);
-          modelButton?.focus();
-        }
-      });
-      modelMenu.appendChild(btn);
-    });
-
-    modelButton.addEventListener("click", () => toggleModelMenu());
-    modelButton.addEventListener("keydown", (evt) => {
-      if (evt.key === "Enter" || evt.key === " ") {
-        evt.preventDefault();
-        toggleModelMenu();
-      } else if (evt.key === "ArrowDown") {
-        evt.preventDefault();
-        toggleModelMenu(true);
-      }
-    });
-
-    document.addEventListener("click", (evt) => {
-      if (!modelMenu || !modelButton) return;
-      if (modelMenu.classList.contains("hidden")) return;
-      if (!modelMenu.contains(evt.target) && !modelButton.contains(evt.target)) {
-        toggleModelMenu(false);
-      }
-    });
-
-    document.addEventListener("keydown", (evt) => {
-      if (evt.key === "Escape" && !modelMenu?.classList.contains("hidden")) {
-        toggleModelMenu(false);
-        modelButton?.focus();
-      }
-    });
-
-    setModel(currentModel, { silentLog: true });
   }
 
   function syncStartButtonState() {
@@ -1276,7 +1170,6 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
   // Initialize wizard stepper to Describe step
   updateWizardStepper('describe');
   initModeSelector();
-  initModelSelector();
   syncStartButtonState();
 
   // FIX 1.2: Auto-fill idea from sessionStorage (passed from index.html)

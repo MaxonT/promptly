@@ -457,7 +457,7 @@ html[data-theme="light"] .grey-gradient-text{
         </details>
         <button id="runBtn" class="btn layer-primary-action" data-i18n="run_btn">Generate optimized prompt</button>
       </div>
-      <div class="layer-default__output">
+      <div class="layer-default__best">
         <div class="layer-output-header">
           <div>
             <h3 class="gradient-text" data-i18n="best_prompt">Best Prompt</h3>
@@ -575,6 +575,12 @@ html[data-theme="light"] .grey-gradient-text{
             </div>
           </div>
           <div class="pipeline-status-text" id="pipelineStatusText">Promptly’s pipeline will show you how your best prompt is chosen.</div>
+        </div>
+      </div>
+      <div class="layer-default__output">
+        <div class="output-header">
+          <div class="output-header__title">Optimized prompt output</div>
+          <div class="output-header__hint">Appears once generation finishes</div>
         </div>
         <textarea id="bestPrompt" class="codeblock" rows="14" placeholder="Click “Generate optimized prompt” to see the strongest prompt for your goal."></textarea>
         <p class="layer-output-hint">We run Spec → Questions → LLM agents → Metrics → Outcome Runner before surfacing this prompt.</p>

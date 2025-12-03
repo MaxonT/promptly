@@ -187,6 +187,14 @@ html[data-theme="light"] .mode-card{background:linear-gradient(var(--card),var(-
   grid-column:1 / -1;
   grid-row:2;
 }
+
+.best-prompt-output.glow-once {
+  animation: outputGlow 0.6s ease-out;
+}
+
+.codeblock.prompt-reveal {
+  animation: promptReveal 0.45s ease;
+}
 .best-prompt-output .layer-output-header h3{
   font-size:1.5rem;
 }
@@ -377,6 +385,11 @@ details.layer-field > small.help{
 .copy-btn{
   background:rgba(124,58,237,0.25);
   padding:8px 14px;
+}
+
+.copy-btn.copied {
+  background: linear-gradient(135deg, rgba(34,197,94,0.25), rgba(6,182,212,0.25));
+  box-shadow: 0 0 0 2px rgba(34,197,94,0.2), 0 0 18px rgba(34,197,94,0.3);
 }
 .layer-output-hint{
   margin:0;
@@ -2034,6 +2047,17 @@ html[data-theme="light"] .error-state {
   }
 }
 
+@keyframes pipeline-ignite {
+  0% { transform: scale(0.98); box-shadow: 0 0 0 rgba(124,58,237,0.25); }
+  70% { transform: scale(1.01); box-shadow: 0 0 32px rgba(124,58,237,0.35), 0 0 0 2px rgba(124,58,237,0.3); }
+  100% { transform: scale(1); }
+}
+
+@keyframes energy-flow {
+  0% { background-position: 0% 50%; }
+  100% { background-position: 140% 50%; }
+}
+
 /* ==========================================================
    Best Prompt Pipeline (Hero Area) — Advanced Animations
    ========================================================== */
@@ -2045,7 +2069,7 @@ html[data-theme="light"] .error-state {
   margin-bottom: 14px;
   position: relative;
   overflow: hidden;
-  transition: box-shadow 0.4s ease, border-color 0.4s ease;
+  transition: box-shadow 0.4s ease, border-color 0.4s ease, transform 0.3s ease;
 }
 
 .best-prompt-pipeline::after {
@@ -2066,6 +2090,21 @@ html[data-theme="light"] .error-state {
 .best-prompt-pipeline.is-done {
   border-color: rgba(34, 197, 94, 0.5);
   box-shadow: 0 0 26px rgba(34, 197, 94, 0.25);
+}
+
+.best-prompt-pipeline.booting {
+  animation: pipeline-ignite 0.45s ease-out;
+  transform: scale(1);
+  box-shadow: 0 0 36px rgba(124, 58, 237, 0.35), 0 0 0 1px rgba(34, 211, 238, 0.25);
+}
+
+.best-prompt-pipeline.soft-resetting {
+  filter: saturate(0.85);
+  opacity: 0.98;
+}
+
+.best-prompt-pipeline.winner-celebration {
+  box-shadow: 0 0 36px rgba(34, 197, 94, 0.2), 0 0 0 2px rgba(34, 197, 94, 0.25);
 }
 
 .pipeline-track {
@@ -2098,7 +2137,31 @@ html[data-theme="light"] .error-state {
   background: radial-gradient(circle at 30% 50%, #7C3AED, #22D3EE);
   box-shadow: 0 0 18px rgba(124,58,237,0.5), 0 0 28px rgba(34,211,238,0.4);
   border-radius: 999px;
-  transition: width 0.75s cubic-bezier(0.4, 0, 0.2, 1);
+  opacity: 0.8;
+  transition: width 0.75s cubic-bezier(0.4, 0, 0.2, 1), left 0.4s ease;
+}
+
+.pipeline-energy-flow {
+  position: absolute;
+  top: 18px;
+  height: 16px;
+  width: 18%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, rgba(124,58,237,0), rgba(124,58,237,0.45), rgba(34,211,238,0.45), rgba(34,211,238,0));
+  opacity: 0;
+  filter: drop-shadow(0 0 10px rgba(34, 211, 238, 0.45));
+  animation: energy-flow 1s linear infinite;
+  transition: opacity 0.3s ease, left 0.3s ease, width 0.3s ease;
+  pointer-events: none;
+}
+
+.pipeline-track.is-active .pipeline-energy-flow {
+  opacity: 0.55;
+}
+
+.pipeline-track.is-idle .pipeline-energy,
+.pipeline-track.is-idle .pipeline-energy-flow {
+  opacity: 0.35;
 }
 
 .pipeline-node {
@@ -2115,6 +2178,11 @@ html[data-theme="light"] .error-state {
   backdrop-filter: blur(6px);
   transition: transform 0.35s ease, border-color 0.35s ease, box-shadow 0.35s ease, opacity 0.3s ease;
   opacity: 0.8;
+}
+
+.pipeline-node.idle {
+  opacity: 0.62;
+  border-style: dashed;
 }
 
 .pipeline-node .node-icon {
@@ -2153,11 +2221,39 @@ html[data-theme="light"] .error-state {
   transition: opacity 0.3s ease;
 }
 
+.pipeline-node::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  top: -36px;
+  padding: 6px 8px;
+  border-radius: 8px;
+  background: rgba(15, 23, 42, 0.92);
+  border: 1px solid rgba(124,58,237,0.3);
+  color: #E2E8F0;
+  font-size: 11px;
+  opacity: 0;
+  transform: translateY(-6px);
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  pointer-events: none;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.25);
+}
+
+.pipeline-node:hover::after {
+  opacity: 1;
+  transform: translateY(0);
+}
+
 .pipeline-node.active {
   transform: translateY(-4px) scale(1.02);
   border-color: rgba(34, 211, 238, 0.8);
   box-shadow: 0 10px 30px rgba(34, 211, 238, 0.15), 0 0 20px rgba(124,58,237,0.2);
   opacity: 1;
+}
+
+.pipeline-node.active .node-icon {
+  animation: breathe 1.6s ease-in-out infinite;
 }
 
 .pipeline-node.active .node-title {
@@ -2167,10 +2263,25 @@ html[data-theme="light"] .error-state {
 .pipeline-node.completed {
   border-color: rgba(34, 197, 94, 0.55);
   opacity: 1;
+  box-shadow: 0 10px 26px rgba(34,197,94,0.18), 0 0 0 1px rgba(34,197,94,0.25);
 }
 
 .pipeline-node.completed .node-check {
   opacity: 1;
+}
+
+.pipeline-node.completed::before {
+  content: "";
+  position: absolute;
+  inset: -3px;
+  border-radius: 14px;
+  border: 1px solid rgba(34, 197, 94, 0.35);
+  pointer-events: none;
+}
+
+@keyframes breathe {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.06); }
 }
 
 .pipeline-visuals {
@@ -2208,6 +2319,11 @@ html[data-theme="light"] .error-state {
   opacity: 1;
   transform: translateY(-2px) scale(1.01);
   box-shadow: 0 12px 30px rgba(0, 0, 0, 0.25), 0 0 16px rgba(34, 211, 238, 0.25);
+}
+
+.pipeline-visual.completed {
+  opacity: 0.9;
+  border-color: rgba(34,197,94,0.35);
 }
 
 /* Spec Builder visual */
@@ -2383,12 +2499,14 @@ html[data-theme="light"] .error-state {
 }
 
 .candidate-pool {
+  position: relative;
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
   gap: 8px;
 }
 
 .candidate-pool .candidate {
+  position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -2398,17 +2516,63 @@ html[data-theme="light"] .error-state {
   background: rgba(255, 255, 255, 0.03);
   font-size: 12px;
   color: #E2E8F0;
-  opacity: 0;
-  transform: translateY(6px);
-  animation: candidate-pop 2.2s ease forwards;
+  opacity: 0.4;
+  transform: translateY(4px);
+  transition: opacity 0.4s ease, transform 0.4s ease, box-shadow 0.35s ease;
+  overflow: hidden;
+  isolation: isolate;
 }
 
 .candidate-pool .candidate:nth-child(2) { animation-delay: 0.2s; }
 .candidate-pool .candidate:nth-child(3) { animation-delay: 0.4s; }
 
-@keyframes candidate-pop {
-  from { opacity: 0; transform: translateY(6px) scale(0.98); }
-  to { opacity: 1; transform: translateY(0) scale(1); }
+.candidate-pool .candidate::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(120deg, transparent, rgba(255,255,255,0.16), transparent);
+  transform: translateX(-100%);
+  animation: shimmer 1.4s ease-in-out infinite;
+  opacity: 0;
+}
+
+.candidate-pool.draft-idle .candidate {
+  opacity: 0.45;
+  filter: blur(0.15px);
+}
+
+.candidate-pool.draft-loading .candidate {
+  opacity: 0.95;
+  transform: translateY(0);
+  box-shadow: 0 6px 16px rgba(34,211,238,0.18);
+}
+
+.candidate-pool.draft-loading .candidate::after {
+  opacity: 1;
+}
+
+.candidate-pool.draft-scored .candidate::before {
+  content: "";
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #22c55e, rgba(34,197,94,0));
+  box-shadow: 0 0 0 2px rgba(34,197,94,0.35);
+  animation: orb-pop 1s ease-out;
+}
+
+@keyframes shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(140%); }
+}
+
+@keyframes orb-pop {
+  0% { transform: scale(0); opacity: 0; }
+  60% { transform: scale(1.1); opacity: 1; }
+  100% { transform: scale(1); opacity: 0.8; }
 }
 
 /* Metrics & Scoring visual */
@@ -2426,6 +2590,22 @@ html[data-theme="light"] .error-state {
   background: rgba(255, 255, 255, 0.02);
   position: relative;
   overflow: hidden;
+}
+
+.candidate-card.is-evaluating {
+  box-shadow: 0 8px 24px rgba(34,211,238,0.14), 0 0 0 1px rgba(124,58,237,0.22);
+}
+
+.candidate-card.is-complete::after {
+  content: "";
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #22c55e;
+  box-shadow: 0 0 0 2px rgba(34,197,94,0.35), 0 0 14px rgba(34,197,94,0.25);
 }
 
 .metric-bar {
@@ -2515,6 +2695,10 @@ html[data-theme="light"] .error-state {
   transition: transform 0.45s ease, opacity 0.45s ease, box-shadow 0.35s ease;
 }
 
+.race-card.is-waiting {
+  opacity: 0.6;
+}
+
 .race-card.best {
   border-color: rgba(34, 197, 94, 0.7);
   background: linear-gradient(135deg, rgba(34,197,94,0.14), rgba(6,182,212,0.1));
@@ -2530,6 +2714,11 @@ html[data-theme="light"] .error-state {
   font-size: 14px;
 }
 
+.race-card.best.winner {
+  animation: winnerPulse 0.8s ease-out;
+  box-shadow: 0 0 0 1px rgba(34,197,94,0.55), 0 0 20px rgba(34,197,94,0.3);
+}
+
 .pipeline-visual.active .race-card {
   opacity: 0.7;
 }
@@ -2539,12 +2728,32 @@ html[data-theme="light"] .error-state {
   opacity: 1;
 }
 
+@keyframes winnerPulse {
+  0% { transform: translateY(-2px) scale(0.98); }
+  60% { transform: translateY(-6px) scale(1.05); }
+  100% { transform: translateY(-4px) scale(1.02); }
+}
+
+@keyframes outputGlow {
+  0% { box-shadow: 0 0 0 rgba(34,197,94,0.25); }
+  60% { box-shadow: 0 0 26px rgba(34,197,94,0.25), 0 0 0 2px rgba(34,197,94,0.25); }
+  100% { box-shadow: 0 0 0 rgba(34,197,94,0.18); }
+}
+
+@keyframes promptReveal {
+  0% { opacity: 0; filter: blur(1px); }
+  100% { opacity: 1; filter: blur(0); }
+}
+
 .pipeline-status-text {
   position: relative;
   padding: 8px 10px 4px;
   margin-top: 4px;
   font-size: 13px;
   color: #CBD5E1;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .pipeline-status-text::before {
@@ -2556,6 +2765,29 @@ html[data-theme="light"] .error-state {
   height: 1px;
   background: linear-gradient(90deg, rgba(124,58,237,0.25), rgba(34,211,238,0.25));
   opacity: 0.7;
+}
+
+.pipeline-status-text .status-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #475569;
+  box-shadow: 0 0 0 2px rgba(255,255,255,0.06);
+  transition: background 0.3s ease, box-shadow 0.3s ease;
+}
+
+.pipeline-status-text .status-dot.is-active {
+  background: #22D3EE;
+  box-shadow: 0 0 0 2px rgba(34,211,238,0.25), 0 0 14px rgba(34,211,238,0.45);
+}
+
+.pipeline-status-text .status-dot.is-done {
+  background: #22C55E;
+  box-shadow: 0 0 0 2px rgba(34,197,94,0.25), 0 0 14px rgba(34,197,94,0.45);
+}
+
+.pipeline-status-text .status-message {
+  transition: opacity 0.2s ease;
 }
 
 @media (max-width: 840px) {

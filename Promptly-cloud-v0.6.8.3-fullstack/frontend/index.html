@@ -467,7 +467,8 @@ html[data-theme="light"] .grey-gradient-text{
         <div class="best-prompt-pipeline" id="bestPromptPipeline">
           <div class="pipeline-track">
             <div class="pipeline-energy" id="pipelineEnergy"></div>
-            <div class="pipeline-node" data-step="spec">
+            <div class="pipeline-energy-flow" id="pipelineEnergyFlow"></div>
+            <div class="pipeline-node idle" data-step="spec" data-tooltip="We structure your goal into a clean spec.">
               <span class="node-icon">1</span>
               <div class="node-label">
                 <span class="node-title">Spec Builder</span>
@@ -475,7 +476,7 @@ html[data-theme="light"] .grey-gradient-text{
               </div>
               <span class="node-check">✓</span>
             </div>
-            <div class="pipeline-node" data-step="question">
+            <div class="pipeline-node idle" data-step="question" data-tooltip="We ask 1–3 clarifying questions.">
               <span class="node-icon">2</span>
               <div class="node-label">
                 <span class="node-title">Question Engine</span>
@@ -483,7 +484,7 @@ html[data-theme="light"] .grey-gradient-text{
               </div>
               <span class="node-check">✓</span>
             </div>
-            <div class="pipeline-node" data-step="agents">
+            <div class="pipeline-node idle" data-step="agents" data-tooltip="Multiple LLM agents draft candidates in parallel.">
               <span class="node-icon">3</span>
               <div class="node-label">
                 <span class="node-title">LLM Agents</span>
@@ -491,7 +492,7 @@ html[data-theme="light"] .grey-gradient-text{
               </div>
               <span class="node-check">✓</span>
             </div>
-            <div class="pipeline-node" data-step="metrics">
+            <div class="pipeline-node idle" data-step="metrics" data-tooltip="We score for clarity, style, safety, and cost.">
               <span class="node-icon">4</span>
               <div class="node-label">
                 <span class="node-title">Metrics &amp; Scoring</span>
@@ -499,7 +500,7 @@ html[data-theme="light"] .grey-gradient-text{
               </div>
               <span class="node-check">✓</span>
             </div>
-            <div class="pipeline-node" data-step="outcome">
+            <div class="pipeline-node idle" data-step="outcome" data-tooltip="Outcome Runner picks the strongest prompt.">
               <span class="node-icon">5</span>
               <div class="node-label">
                 <span class="node-title">Outcome Runner</span>
@@ -538,14 +539,14 @@ html[data-theme="light"] .grey-gradient-text{
                 <span class="agent"></span>
                 <span class="agent"></span>
               </div>
-              <div class="candidate-pool">
+              <div class="candidate-pool draft-idle" id="candidatePool">
                 <span class="candidate">Draft A</span>
                 <span class="candidate">Draft B</span>
                 <span class="candidate">Draft C</span>
               </div>
             </div>
             <div class="pipeline-visual metrics-visual" data-step="metrics">
-              <div class="candidate-card">
+              <div class="candidate-card" id="metricsCard">
                 <div class="metric-bar">
                   <span class="label">Clarity</span>
                   <span class="bar"></span>
@@ -573,7 +574,10 @@ html[data-theme="light"] .grey-gradient-text{
               </div>
             </div>
           </div>
-          <div class="pipeline-status-text" id="pipelineStatusText">Promptly’s pipeline will show you how your best prompt is chosen.</div>
+          <div class="pipeline-status-text" id="pipelineStatusText">
+            <span class="status-dot" id="pipelineStatusDot"></span>
+            <span class="status-message" id="pipelineStatusMessage">Promptly’s pipeline will show you how your best prompt is chosen.</span>
+          </div>
         </div>
       </div>
       <div class="layer-default__output best-prompt-output">
@@ -582,7 +586,7 @@ html[data-theme="light"] .grey-gradient-text{
             <h3 class="gradient-text">Best Prompt Output</h3>
             <small>We run Spec → Questions → LLM agents → Metrics → Outcome Runner before surfacing this prompt.</small>
           </div>
-          <button class="btn copy-btn" type="button" onclick="navigator.clipboard?.writeText(document.getElementById('bestPrompt').value)">Copy</button>
+          <button class="btn copy-btn" type="button" id="copyBestPromptBtn">Copy</button>
         </div>
         <textarea id="bestPrompt" class="codeblock" rows="14" placeholder="Click “Generate optimized prompt” to see the strongest prompt for your goal."></textarea>
       </div>
@@ -1650,94 +1654,212 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Pipeline animation setup for Best Prompt card
   const PIPELINE_STEPS = [
-    { key: 'spec', message: 'Structuring your idea into a spec…' },
-    { key: 'question', message: 'Spotting gaps and asking 1–3 clarifying questions…' },
-    { key: 'agents', message: 'Letting multiple agents draft and refine candidate prompts…' },
-    { key: 'metrics', message: 'Scoring candidates on clarity, style, safety, and cost…' },
-    { key: 'outcome', message: 'Selecting the best-of-N outcome for you…' }
+    { key: 'spec', message: 'Structuring your goal…' },
+    { key: 'question', message: 'Asking clarifying questions…' },
+    { key: 'agents', message: 'Drafting multiple prompt candidates…' },
+    { key: 'metrics', message: 'Scoring for clarity / style / safety / cost…' },
+    { key: 'outcome', message: 'Picking the strongest prompt for you…' }
   ];
 
   const pipelineContainer = document.getElementById('bestPromptPipeline');
   const pipelineNodes = Array.from(document.querySelectorAll('.best-prompt-pipeline .pipeline-node'));
   const pipelineVisuals = Array.from(document.querySelectorAll('.best-prompt-pipeline .pipeline-visual'));
   const pipelineEnergy = document.getElementById('pipelineEnergy');
+  const pipelineEnergyFlow = document.getElementById('pipelineEnergyFlow');
   const pipelineStatusText = document.getElementById('pipelineStatusText');
+  const pipelineStatusDot = document.getElementById('pipelineStatusDot');
+  const pipelineStatusMessage = document.getElementById('pipelineStatusMessage');
+  const pipelineTrack = document.querySelector('.best-prompt-pipeline .pipeline-track');
+  const candidatePool = document.getElementById('candidatePool');
+  const metricsCard = document.getElementById('metricsCard');
+  const raceTrack = document.querySelector('.race-track');
+  const bestPromptCard = document.querySelector('.best-prompt-output');
+
+  const PIPELINE_DURATIONS = [550, 550, 1350, 950, 550];
+  const stepIndexByKey = PIPELINE_STEPS.reduce((map, step, idx) => ({ ...map, [step.key]: idx }), {});
 
   let pipelineTimer = null;
   let currentPipelineIndex = 0;
+
+  function setStatusMessage(text) {
+    if (pipelineStatusMessage) {
+      pipelineStatusMessage.textContent = text;
+    } else if (pipelineStatusText) {
+      pipelineStatusText.textContent = text;
+    }
+  }
+
+  function updateStatusDot(state) {
+    if (!pipelineStatusDot) return;
+    pipelineStatusDot.classList.remove('is-active', 'is-done');
+    if (state === 'active') {
+      pipelineStatusDot.classList.add('is-active');
+    } else if (state === 'done') {
+      pipelineStatusDot.classList.add('is-done');
+    }
+  }
+
+  function syncDraftVisuals(index) {
+    const activeKey = PIPELINE_STEPS[index]?.key;
+    if (candidatePool) {
+      candidatePool.classList.toggle('draft-idle', index < stepIndexByKey.agents);
+      candidatePool.classList.toggle('draft-loading', activeKey === 'agents');
+      candidatePool.classList.toggle('draft-scored', index >= stepIndexByKey.metrics);
+    }
+    if (metricsCard) {
+      metricsCard.classList.toggle('is-evaluating', activeKey === 'metrics');
+      metricsCard.classList.toggle('is-complete', index >= stepIndexByKey.metrics);
+    }
+    if (raceTrack) {
+      raceTrack.querySelectorAll('.race-card').forEach((card) => {
+        card.classList.toggle('is-waiting', index < stepIndexByKey.outcome);
+      });
+    }
+  }
 
   function setPipelineStep(index) {
     if (!PIPELINE_STEPS[index]) return;
     currentPipelineIndex = index;
 
     pipelineNodes.forEach((node, idx) => {
-      node.classList.toggle('active', idx === index);
-      node.classList.toggle('completed', idx < index);
+      node.classList.remove('idle', 'active', 'completed');
+      const state = idx < index ? 'completed' : idx === index ? 'active' : 'idle';
+      node.classList.add(state);
     });
 
     const activeKey = PIPELINE_STEPS[index].key;
     pipelineVisuals.forEach((visual) => {
+      const visualStepIndex = PIPELINE_STEPS.findIndex((step) => step.key === visual.dataset.step);
       visual.classList.toggle('active', visual.dataset.step === activeKey);
+      visual.classList.toggle('completed', visualStepIndex >= 0 && visualStepIndex < index);
     });
 
     const completionRatio = PIPELINE_STEPS.length > 1 ? index / (PIPELINE_STEPS.length - 1) : 0;
     if (pipelineEnergy) {
-      pipelineEnergy.style.width = `${Math.max(0, Math.min(1, completionRatio)) * 100}%`;
+      const progressWidth = Math.max(0, Math.min(1, completionRatio)) * 100;
+      pipelineEnergy.style.width = `${Math.max(8, progressWidth)}%`;
     }
 
-    if (pipelineStatusText) {
-      pipelineStatusText.textContent = PIPELINE_STEPS[index].message;
+    if (pipelineEnergyFlow) {
+      const segmentPercent = PIPELINE_STEPS.length > 1 ? 100 / (PIPELINE_STEPS.length - 1) : 0;
+      const clampedIndex = Math.min(index, PIPELINE_STEPS.length - 2);
+      pipelineEnergyFlow.style.width = `${segmentPercent}%`;
+      pipelineEnergyFlow.style.left = `calc(${segmentPercent * clampedIndex}% + 12px)`;
+      pipelineEnergyFlow.style.opacity = '0.55';
     }
+
+    syncDraftVisuals(index);
+    setStatusMessage(PIPELINE_STEPS[index].message);
+    updateStatusDot('active');
   }
 
   function resetPipelineTimeline() {
     if (!pipelineContainer) return;
-    pipelineContainer.classList.remove('is-processing', 'is-done');
-    pipelineNodes.forEach((node) => node.classList.remove('active', 'completed'));
-    pipelineVisuals.forEach((visual) => visual.classList.remove('active'));
+    clearTimeout(pipelineTimer);
+    pipelineContainer.classList.remove('is-processing', 'is-done', 'winner-celebration', 'booting');
+    pipelineContainer.classList.add('soft-resetting');
+    setTimeout(() => pipelineContainer.classList.remove('soft-resetting'), 240);
+    pipelineNodes.forEach((node) => {
+      node.classList.remove('active', 'completed');
+      node.classList.add('idle');
+    });
+    pipelineVisuals.forEach((visual) => visual.classList.remove('active', 'completed'));
     if (pipelineEnergy) pipelineEnergy.style.width = '0%';
-    if (pipelineStatusText) {
-      pipelineStatusText.textContent = 'Promptly’s pipeline will show you how your best prompt is chosen.';
+    if (pipelineEnergyFlow) {
+      pipelineEnergyFlow.style.width = '0%';
+      pipelineEnergyFlow.style.opacity = '0';
+      pipelineEnergyFlow.style.left = '12px';
     }
+    if (pipelineTrack) {
+      pipelineTrack.classList.add('is-idle');
+      pipelineTrack.classList.remove('is-active');
+    }
+    if (raceTrack) {
+      raceTrack.querySelectorAll('.race-card').forEach((card) => card.classList.remove('winner'));
+    }
+    syncDraftVisuals(0);
+    setStatusMessage('Promptly’s pipeline will show you how your best prompt is chosen.');
+    updateStatusDot('idle');
+    if (bestPromptCard) bestPromptCard.classList.remove('glow-once');
+    if (bestPromptEl) bestPromptEl.classList.remove('prompt-reveal');
     currentPipelineIndex = 0;
   }
 
   function startPipelineTimeline() {
     if (!pipelineContainer) return;
     resetPipelineTimeline();
-    pipelineContainer.classList.add('is-processing');
+    pipelineContainer.classList.add('is-processing', 'booting');
+    if (pipelineTrack) {
+      pipelineTrack.classList.remove('is-idle');
+      pipelineTrack.classList.add('is-active');
+    }
     setPipelineStep(0);
+    updateStatusDot('active');
 
-    clearInterval(pipelineTimer);
-    pipelineTimer = setInterval(() => {
-      const nextIndex = currentPipelineIndex + 1;
-      if (nextIndex < PIPELINE_STEPS.length) {
-        setPipelineStep(nextIndex);
-      } else {
-        clearInterval(pipelineTimer);
-      }
-    }, 1200);
+    setTimeout(() => pipelineContainer.classList.remove('booting'), 420);
+
+    const scheduleStep = (idx) => {
+      clearTimeout(pipelineTimer);
+      const delay = PIPELINE_DURATIONS[Math.min(idx, PIPELINE_DURATIONS.length - 1)] || 900;
+      pipelineTimer = setTimeout(() => {
+        const nextIndex = idx + 1;
+        if (nextIndex < PIPELINE_STEPS.length) {
+          setPipelineStep(nextIndex);
+          scheduleStep(nextIndex);
+        }
+      }, delay);
+    };
+
+    scheduleStep(0);
   }
 
   function completePipelineTimeline() {
     if (!pipelineContainer) return;
-    clearInterval(pipelineTimer);
+    clearTimeout(pipelineTimer);
     setPipelineStep(PIPELINE_STEPS.length - 1);
     pipelineNodes.forEach((node) => node.classList.add('completed'));
-    pipelineContainer.classList.remove('is-processing');
-    pipelineContainer.classList.add('is-done');
+    pipelineContainer.classList.remove('is-processing', 'booting');
+    pipelineContainer.classList.add('is-done', 'winner-celebration');
     if (pipelineEnergy) pipelineEnergy.style.width = '100%';
-    if (pipelineStatusText) {
-      pipelineStatusText.textContent = 'Selected by Outcome Runner after multi-metric scoring.';
+    if (pipelineEnergyFlow) {
+      const segmentPercent = PIPELINE_STEPS.length > 1 ? 100 / (PIPELINE_STEPS.length - 1) : 0;
+      const finalIndex = Math.max(0, PIPELINE_STEPS.length - 2);
+      pipelineEnergyFlow.style.opacity = '0.45';
+      pipelineEnergyFlow.style.width = `${segmentPercent}%`;
+      pipelineEnergyFlow.style.left = `calc(${segmentPercent * finalIndex}% + 12px)`;
     }
+    if (pipelineTrack) {
+      pipelineTrack.classList.remove('is-active');
+      pipelineTrack.classList.add('is-idle');
+    }
+    syncDraftVisuals(PIPELINE_STEPS.length - 1);
+    if (raceTrack) {
+      const winner = raceTrack.querySelector('.race-card.best');
+      winner?.classList.add('winner');
+    }
+    if (bestPromptCard) {
+      bestPromptCard.classList.add('glow-once');
+      setTimeout(() => bestPromptCard.classList.remove('glow-once'), 900);
+    }
+    if (bestPromptEl) {
+      bestPromptEl.classList.add('prompt-reveal');
+    }
+    updateStatusDot('done');
+    setStatusMessage('Selected by Outcome Runner after multi-metric scoring.');
   }
 
   function stopPipelineTimeline(message) {
-    clearInterval(pipelineTimer);
+    clearTimeout(pipelineTimer);
     pipelineNodes.forEach((node) => node.classList.remove('active'));
     pipelineVisuals.forEach((visual) => visual.classList.remove('active'));
-    if (pipelineContainer) pipelineContainer.classList.remove('is-processing');
-    if (message && pipelineStatusText) pipelineStatusText.textContent = message;
+    if (pipelineContainer) pipelineContainer.classList.remove('is-processing', 'booting');
+    if (pipelineTrack) {
+      pipelineTrack.classList.add('is-idle');
+      pipelineTrack.classList.remove('is-active');
+    }
+    if (pipelineEnergyFlow) pipelineEnergyFlow.style.opacity = '0';
+    if (message) setStatusMessage(message);
+    updateStatusDot('idle');
   }
 
   resetPipelineTimeline();
@@ -1778,6 +1900,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const runBtn = document.getElementById("runBtn");
   const bestPromptEl = document.getElementById('bestPrompt');
   const taskEl = document.getElementById('task');
+  const copyBestPromptBtn = document.getElementById('copyBestPromptBtn');
   const modelToggle = document.getElementById('modelDropdownToggle');
   const modelMenu = document.getElementById('modelDropdownMenu');
   const MODEL_STORAGE_KEY = 'promptly:model-selection';
@@ -1845,6 +1968,35 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Initialize model selector
   syncModelUI(currentModel);
+
+  if (copyBestPromptBtn && bestPromptEl) {
+    copyBestPromptBtn.addEventListener('click', async () => {
+      const text = bestPromptEl.value || '';
+      try {
+        await navigator.clipboard?.writeText(text);
+      } catch (err) {
+        console.warn('[Promptly] Clipboard copy failed', err);
+      }
+
+      const originalLabel = copyBestPromptBtn.dataset.originalLabel || copyBestPromptBtn.textContent || 'Copy';
+      copyBestPromptBtn.dataset.originalLabel = originalLabel;
+      copyBestPromptBtn.textContent = 'Copied ✓';
+      copyBestPromptBtn.classList.add('copied');
+
+      if (bestPromptEl) {
+        bestPromptEl.classList.add('prompt-reveal');
+      }
+      if (bestPromptCard) {
+        bestPromptCard.classList.add('glow-once');
+        setTimeout(() => bestPromptCard.classList.remove('glow-once'), 700);
+      }
+
+      setTimeout(() => {
+        copyBestPromptBtn.textContent = originalLabel;
+        copyBestPromptBtn.classList.remove('copied');
+      }, 850);
+    });
+  }
 
   modelToggle?.addEventListener('click', (e) => {
     e.stopPropagation();

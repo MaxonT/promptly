@@ -191,9 +191,52 @@
     if(progressInfo)updateWizardProgress(progressInfo.answered,progressInfo.total);
     wizardIndicatorEl.classList.add("active");
   }
-  async function refreshWizardIndicator(){const stored=getStoredWizardSession();const sessionId=stored?.sessionId;if(!sessionId){hideWizardIndicator();return;}try{const res=await fetch(`${API_BASE}/api/question-sessions/status/active?session_id=${encodeURIComponent(sessionId)}`);if(!res.ok){console.warn("[promptly] wizard status request failed",res.status);return;}const data=await res.json();if(!data.running){clearStoredWizardSession();hideWizardIndicator();return;}const progress=data.progress||{};const answered=Math.min(progress.answered||0,progress.total||0);const total=progress.total||0;const suffix=total>0?` (${answered}/${total} answered)`:"";const detail=total>0?`Progress: ${answered} of ${total} answers collected`:"Working in the background...";showWizardIndicator(`Question Wizard is running${suffix}`,detail,{answered,total});}catch(err){console.warn("[promptly] wizard status refresh error",err);}}
-  function initWizardStatusIndicator(){ensureWizardIndicator();refreshWizardIndicator();if(wizardStatusTimer)return;wizardStatusTimer=setInterval(refreshWizardIndicator,12000);}
-  window.promptlyWizardSession={markRunning:(sessionId)=>{setStoredWizardSession(sessionId);initWizardStatusIndicator();},clear:()=>{clearStoredWizardSession();hideWizardIndicator();},getActive:getStoredWizardSession};
+  function showWizardCheckingFallback(sessionId){
+    showWizardIndicator(
+      "Question Wizard is running...",
+      sessionId ? "Reconnecting to your background wizard session" : "Wizard progress updating...",
+      {answered:0,total:0}
+    );
+  }
+  async function refreshWizardIndicator(){
+    const stored=getStoredWizardSession();
+    const sessionId=stored?.sessionId;
+    if(!sessionId){hideWizardIndicator();return;}
+    // Immediately surface the indicator so the user sees it even while we fetch
+    showWizardCheckingFallback(sessionId);
+    try{
+      const res=await fetch(`${API_BASE}/api/question-sessions/status/active?session_id=${encodeURIComponent(sessionId)}`);
+      if(!res.ok){
+        console.warn("[promptly] wizard status request failed",res.status);
+        return;
+      }
+      const data=await res.json();
+      if(!data.running){
+        clearStoredWizardSession();
+        hideWizardIndicator();
+        return;
+      }
+      const progress=data.progress||{};
+      const answered=Math.min(progress.answered||0,progress.total||0);
+      const total=progress.total||0;
+      const suffix=total>0?` (${answered}/${total} answered)`:"";
+      const detail=total>0?`Progress: ${answered} of ${total} answers collected`:"Working in the background...";
+      showWizardIndicator(`Question Wizard is running${suffix}`,detail,{answered,total});
+    }catch(err){
+      console.warn("[promptly] wizard status refresh error",err);
+      // Keep the indicator visible with a reconnect message so users see it is active
+      showWizardCheckingFallback(sessionId);
+    }
+  }
+  function initWizardStatusIndicator(){
+    ensureWizardIndicator();
+    if(getStoredWizardSession()){
+      showWizardCheckingFallback(getStoredWizardSession()?.sessionId);
+    }
+    refreshWizardIndicator();
+    if(wizardStatusTimer)return;wizardStatusTimer=setInterval(refreshWizardIndicator,10000);
+  }
+  window.promptlyWizardSession={markRunning:(sessionId)=>{setStoredWizardSession(sessionId);showWizardCheckingFallback(sessionId);initWizardStatusIndicator();},clear:()=>{clearStoredWizardSession();hideWizardIndicator();},getActive:getStoredWizardSession};
   function formatBestPrompt(rawOutput) {
     if (!rawOutput) return "";
     if (typeof rawOutput === "string") return rawOutput;

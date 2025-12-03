@@ -2238,22 +2238,26 @@ html[data-theme="light"] .text-keyword {
   position: fixed;
   bottom: 20px;
   right: 20px;
-  padding: 14px 18px;
+  padding: 16px 20px;
   background: linear-gradient(135deg, rgba(124, 58, 237, 0.98), rgba(6, 182, 212, 0.98));
-  border-radius: 14px;
+  border-radius: 18px;
   color: #fff;
-  font-size: 0.92rem;
+  font-size: 0.95rem;
   font-weight: 700;
-  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.34);
-  z-index: 1000;
-  animation: pulse-glow 2s ease-in-out infinite;
+  box-shadow: 0 16px 30px rgba(0, 0, 0, 0.38), 0 0 0 2px rgba(255, 255, 255, 0.08);
+  z-index: 1200;
+  animation: pulse-glow 2s ease-in-out infinite, floaty 6s ease-in-out infinite;
   cursor: pointer;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(8px);
 }
 
 .wizard-status-indicator.active {
   display: flex;
   align-items: center;
   gap: 12px;
+  transform-origin: center;
+  animation-name: pulse-glow, floaty, pop-in;
 }
 
 .wizard-status-indicator .spinner {
@@ -2269,11 +2273,24 @@ html[data-theme="light"] .text-keyword {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  min-width: 220px;
+  min-width: 240px;
 }
 
 .wizard-status-indicator__label {
   letter-spacing: 0.01em;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.wizard-status-indicator__label::before {
+  content: "";
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 0 0 6px rgba(255, 255, 255, 0.15), 0 0 12px rgba(255, 255, 255, 0.9);
+  animation: ping 1.2s ease-in-out infinite;
 }
 
 .wizard-status-indicator__detail {
@@ -2322,6 +2339,11 @@ html[data-theme="light"] .text-keyword {
   50% { box-shadow: 0 8px 32px rgba(6, 182, 212, 0.6); }
 }
 
+@keyframes floaty {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+
 @keyframes spin {
   to { transform: rotate(360deg); }
 }
@@ -2334,4 +2356,16 @@ html[data-theme="light"] .text-keyword {
 @keyframes shimmer {
   0%, 100% { opacity: 0.6; transform: translateX(0); }
   50% { opacity: 1; transform: translateX(4px); }
+}
+
+@keyframes pop-in {
+  0% { transform: scale(0.9); opacity: 0; }
+  80% { transform: scale(1.03); opacity: 1; }
+  100% { transform: scale(1); }
+}
+
+@keyframes ping {
+  0% { transform: scale(0.95); opacity: 0.9; }
+  60% { transform: scale(1.25); opacity: 0.35; }
+  100% { transform: scale(1); opacity: 1; }
 }

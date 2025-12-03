@@ -10,6 +10,7 @@ import {
 import { compileSpecToPrompt } from "../lib/specCompiler.js";
 import { LlmDisabledError } from "../lib/openaiClient.js";
 import { goBack, skipQuestion } from "../lib/questionNavigator.js";
+import { SUPPORTED_MODEL_IDS, resolveModel } from "../lib/modelConfig.js";
 
 export const questionSessionRouter = Router();
 
@@ -45,13 +46,6 @@ const MODE_PROFILES = {
   }
 };
 
-const SUPPORTED_MODELS = [
-  "gpt-4o-mini",
-  "gpt-4o",
-  "gpt-4-turbo",
-  "gpt-3.5-turbo"
-];
-
 const CreateSessionSchema = z.object({
   initial_description: z
     .string()
@@ -81,15 +75,6 @@ function getUserId(req) {
 
 function resolveModeProfile(mode) {
   return MODE_PROFILES[mode] || MODE_PROFILES.deep;
-}
-
-function resolveModel(model) {
-  // If a model is provided and it's in the supported list, use it
-  if (model && SUPPORTED_MODELS.includes(model)) {
-    return model;
-  }
-  // Otherwise, fall back to environment variable or default
-  return process.env.OPENAI_MODEL || process.env.OPENAI_DEFAULT_MODEL || "gpt-4o-mini";
 }
 
 async function runWithTimeout(promise, timeoutMs, label = "task") {

@@ -427,7 +427,14 @@ html[data-theme="light"] .grey-gradient-text{
           </label>
         <div class="model-select" title="Select model (quality vs. speed)">
           <button id="modelDropdownToggle" class="model-select__toggle" type="button">
-            <span class="model-select__label">Select Model: Promptly Mini</span>
+            <span class="model-select__label">
+              <span class="model-select__title">Choose LLM Model</span>
+              <span class="model-select__name-wrap">
+                <span aria-hidden="true" class="model-select__arrow">👉</span>
+                <span class="model-select__name">Promptly Mini</span>
+                <span aria-hidden="true" class="model-select__arrow">👈</span>
+              </span>
+            </span>
             <span class="model-select__chevron">▾</span>
           </button>
           <div class="model-select__menu" id="modelDropdownMenu" role="menu" aria-hidden="true">
@@ -1614,7 +1621,12 @@ document.addEventListener('DOMContentLoaded', () => {
     if (modelToggle) {
       const labelEl = modelToggle.querySelector('.model-select__label');
       if (labelEl) {
-        labelEl.textContent = `Choose LLM Model👉 ${getModelLabel(slug)} 👈`;
+        const nameEl = labelEl.querySelector('.model-select__name');
+        if (nameEl) {
+          nameEl.textContent = getModelLabel(slug);
+        } else {
+          labelEl.textContent = `Choose LLM Model👉 ${getModelLabel(slug)} 👈`;
+        }
       }
     }
     if (modelMenu) {

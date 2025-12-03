@@ -34,6 +34,8 @@
   const WIZARD_SESSION_KEY="promptly.wizard.session";
   let wizardIndicatorEl=null;
   let wizardIndicatorLabel=null;
+  let wizardIndicatorDetail=null;
+  let wizardIndicatorProgressBar=null;
   let wizardStatusTimer=null;
   function $(s){return document.querySelector(s)} function $all(s){return Array.from(document.querySelectorAll(s))}
   function applyTheme(theme){document.documentElement.setAttribute("data-theme", theme==="auto"?(prefersDark.matches?"dark":"light"):theme)}
@@ -110,10 +112,86 @@
   function getStoredWizardSession(){try{const raw=localStorage.getItem(WIZARD_SESSION_KEY);return raw?JSON.parse(raw):null;}catch{return null;}}
   function setStoredWizardSession(sessionId){if(!sessionId)return;try{localStorage.setItem(WIZARD_SESSION_KEY,JSON.stringify({sessionId,startedAt:Date.now()}));}catch{}}
   function clearStoredWizardSession(){try{localStorage.removeItem(WIZARD_SESSION_KEY);}catch{}}
-  function ensureWizardIndicator(){if(wizardIndicatorEl)return;wizardIndicatorEl=document.getElementById("wizardStatusIndicator");if(!wizardIndicatorEl){wizardIndicatorEl=document.createElement("div");wizardIndicatorEl.id="wizardStatusIndicator";wizardIndicatorEl.className="wizard-status-indicator";wizardIndicatorEl.innerHTML='<span class="spinner"></span><span class="wizard-status-indicator__label">Question Wizard is running...</span>';document.body.appendChild(wizardIndicatorEl);}wizardIndicatorLabel=wizardIndicatorEl.querySelector(".wizard-status-indicator__label");if(!wizardIndicatorLabel){wizardIndicatorLabel=document.createElement("span");wizardIndicatorLabel.className="wizard-status-indicator__label";wizardIndicatorEl.appendChild(wizardIndicatorLabel);}if(!wizardIndicatorEl.querySelector(".spinner")){const spin=document.createElement("span");spin.className="spinner";wizardIndicatorEl.prepend(spin);}wizardIndicatorEl.onclick=()=>{window.location.href="wizard.html";};}
+  function ensureWizardIndicator(){
+    if(wizardIndicatorEl)return;
+    wizardIndicatorEl=document.getElementById("wizardStatusIndicator");
+    if(!wizardIndicatorEl){
+      wizardIndicatorEl=document.createElement("div");
+      wizardIndicatorEl.id="wizardStatusIndicator";
+      wizardIndicatorEl.className="wizard-status-indicator";
+      document.body.appendChild(wizardIndicatorEl);
+    }
+    if(!wizardIndicatorEl.querySelector(".wizard-status-indicator__content")){
+      wizardIndicatorEl.innerHTML=`
+        <span class="spinner" aria-hidden="true"></span>
+        <div class="wizard-status-indicator__content">
+          <span class="wizard-status-indicator__label">Question Wizard is running...</span>
+          <span class="wizard-status-indicator__detail">Stay on any page — we’ll keep going in the background.</span>
+          <div class="wizard-status-indicator__progress" role="progressbar" aria-label="Wizard progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+            <span class="wizard-status-indicator__progress-fill" style="width:0%"></span>
+            <span class="wizard-status-indicator__progress-glow"></span>
+          </div>
+        </div>`;
+    }
+    wizardIndicatorLabel=wizardIndicatorEl.querySelector(".wizard-status-indicator__label");
+    wizardIndicatorDetail=wizardIndicatorEl.querySelector(".wizard-status-indicator__detail");
+    wizardIndicatorProgressBar=wizardIndicatorEl.querySelector(".wizard-status-indicator__progress-fill");
+    if(!wizardIndicatorLabel){
+      wizardIndicatorLabel=document.createElement("span");
+      wizardIndicatorLabel.className="wizard-status-indicator__label";
+      wizardIndicatorEl.appendChild(wizardIndicatorLabel);
+    }
+    if(!wizardIndicatorDetail){
+      wizardIndicatorDetail=document.createElement("span");
+      wizardIndicatorDetail.className="wizard-status-indicator__detail";
+      wizardIndicatorEl.appendChild(wizardIndicatorDetail);
+    }
+    if(!wizardIndicatorProgressBar){
+      const progressWrap=document.createElement("div");
+      progressWrap.className="wizard-status-indicator__progress";
+      progressWrap.setAttribute("role","progressbar");
+      progressWrap.setAttribute("aria-label","Wizard progress");
+      progressWrap.setAttribute("aria-valuemin","0");
+      progressWrap.setAttribute("aria-valuemax","100");
+      wizardIndicatorProgressBar=document.createElement("span");
+      wizardIndicatorProgressBar.className="wizard-status-indicator__progress-fill";
+      wizardIndicatorProgressBar.style.width="0%";
+      const glow=document.createElement("span");
+      glow.className="wizard-status-indicator__progress-glow";
+      progressWrap.appendChild(wizardIndicatorProgressBar);
+      progressWrap.appendChild(glow);
+      wizardIndicatorEl.appendChild(progressWrap);
+    }
+    if(!wizardIndicatorEl.querySelector(".spinner")){
+      const spin=document.createElement("span");
+      spin.className="spinner";
+      spin.setAttribute("aria-hidden","true");
+      wizardIndicatorEl.prepend(spin);
+    }
+    wizardIndicatorEl.onclick=()=>{window.location.href="wizard.html";};
+  }
   function hideWizardIndicator(){if(wizardIndicatorEl){wizardIndicatorEl.classList.remove("active");}}
-  function showWizardIndicator(message){ensureWizardIndicator();if(wizardIndicatorLabel)wizardIndicatorLabel.textContent=message;wizardIndicatorEl.classList.add("active");}
-  async function refreshWizardIndicator(){const stored=getStoredWizardSession();const sessionId=stored?.sessionId;if(!sessionId){hideWizardIndicator();return;}try{const res=await fetch(`${API_BASE}/api/question-sessions/status/active?session_id=${encodeURIComponent(sessionId)}`);if(!res.ok){console.warn("[promptly] wizard status request failed",res.status);return;}const data=await res.json();if(!data.running){clearStoredWizardSession();hideWizardIndicator();return;}const progress=data.progress||{};const answered=Math.min(progress.answered||0,progress.total||0);const total=progress.total||0;const suffix=total>0?` (${answered}/${total} answered)`:"";showWizardIndicator(`Question Wizard is running${suffix}`);}catch(err){console.warn("[promptly] wizard status refresh error",err);}}
+  function updateWizardProgress(answered,total){
+    if(!wizardIndicatorProgressBar)return;
+    if(!total||total<=0){
+      wizardIndicatorProgressBar.style.width="15%";
+      wizardIndicatorProgressBar.parentElement?.setAttribute("aria-valuenow","0");
+      wizardIndicatorProgressBar.classList.add("is-indeterminate");
+      return;
+    }
+    const pct=Math.max(0,Math.min(100,Math.round((answered/total)*100)));
+    wizardIndicatorProgressBar.style.width=`${Math.max(6,pct)}%`;
+    wizardIndicatorProgressBar.parentElement?.setAttribute("aria-valuenow",String(pct));
+    wizardIndicatorProgressBar.classList.remove("is-indeterminate");
+  }
+  function showWizardIndicator(message, detail, progressInfo){
+    ensureWizardIndicator();
+    if(wizardIndicatorLabel)wizardIndicatorLabel.textContent=message;
+    if(wizardIndicatorDetail)wizardIndicatorDetail.textContent=detail||"Stay on any page — we’ll keep going in the background.";
+    if(progressInfo)updateWizardProgress(progressInfo.answered,progressInfo.total);
+    wizardIndicatorEl.classList.add("active");
+  }
+  async function refreshWizardIndicator(){const stored=getStoredWizardSession();const sessionId=stored?.sessionId;if(!sessionId){hideWizardIndicator();return;}try{const res=await fetch(`${API_BASE}/api/question-sessions/status/active?session_id=${encodeURIComponent(sessionId)}`);if(!res.ok){console.warn("[promptly] wizard status request failed",res.status);return;}const data=await res.json();if(!data.running){clearStoredWizardSession();hideWizardIndicator();return;}const progress=data.progress||{};const answered=Math.min(progress.answered||0,progress.total||0);const total=progress.total||0;const suffix=total>0?` (${answered}/${total} answered)`:"";const detail=total>0?`Progress: ${answered} of ${total} answers collected`:"Working in the background...";showWizardIndicator(`Question Wizard is running${suffix}`,detail,{answered,total});}catch(err){console.warn("[promptly] wizard status refresh error",err);}}
   function initWizardStatusIndicator(){ensureWizardIndicator();refreshWizardIndicator();if(wizardStatusTimer)return;wizardStatusTimer=setInterval(refreshWizardIndicator,12000);}
   window.promptlyWizardSession={markRunning:(sessionId)=>{setStoredWizardSession(sessionId);initWizardStatusIndicator();},clear:()=>{clearStoredWizardSession();hideWizardIndicator();},getActive:getStoredWizardSession};
   function formatBestPrompt(rawOutput) {

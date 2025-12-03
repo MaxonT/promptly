@@ -5,7 +5,7 @@
   const translations={
     en:{nav_home:"Dashboard",nav_privacy:"Privacy",nav_terms:"Terms",nav_cookies:"Cookies",nav_account:"Account",appearance:"System",auto:"System",light:"Light",dark:"Dark",language:"English",
         hero_title:"Promptly — Prompt Optimizer Studio",hero_subtitle:"Visualization-first workflow. See every gain, every cost, every version.",
-        task_label:"Task",examples_label:"Examples (optional)",best_prompt:"Best Prompt",run_btn:"Run Optimization",processing:"Processing...",success_message:"Best Prompt has been updated!",
+        task_label:"Task",examples_label:"Examples (optional)",best_prompt:"Pipeline Working Status",run_btn:"Run Optimization",processing:"Processing...",success_message:"Best Prompt has been updated!",
         kpi_accuracy:"Accuracy",kpi_f1:"F1",kpi_pass:"Pass Rate",kpi_cost:"Token Cost",kpi_prog:"Progress %",
         growth_chart:"Growth Over Iterations",contrib_chart:"Change Contribution",pass_pie:"Pass vs Fail (%)",gauge:"Progress Meter (%)",
         versions:"Prompt Versions",footer_rights:"No trackers. Preferences saved only after consent.",footer_contact:"Support",
@@ -14,7 +14,7 @@
         placeholder_examples:"POS || I love this!\nNEG || This is terrible."},
     zh:{nav_home:"仪表盘",nav_privacy:"隐私政策",nav_terms:"服务条款",nav_cookies:"Cookie 政策",nav_account:"账号",appearance:"系统",auto:"系统",light:"浅色",dark:"深色",language:"中文",
         hero_title:"Promptly — 提示优化工作室",hero_subtitle:"可视化优先：每次提升、每分成本、每个版本都一目了然。",
-        task_label:"任务",examples_label:"示例（可选）",best_prompt:"最佳 Prompt",run_btn:"运行优化",processing:"处理中...",success_message:"最佳 Prompt 已更新！",
+        task_label:"任务",examples_label:"示例（可选）",best_prompt:"流水线工作状态",run_btn:"运行优化",processing:"处理中...",success_message:"最佳 Prompt 已更新！",
         kpi_accuracy:"准确率",kpi_f1:"F1",kpi_pass:"通过率",kpi_cost:"Token 成本",kpi_prog:"进度 %",
         growth_chart:"迭代增长曲线",contrib_chart:"改动贡献",pass_pie:"通过 vs 失败（%）",gauge:"进度仪表（%）",
         versions:"Prompt 版本",footer_rights:"无追踪；仅在同意后保存偏好。",footer_contact:"支持",

@@ -136,6 +136,35 @@
   margin-top:0.75rem;
   font-size:0.85rem;
 }
+.wizard-inline-controls{
+  margin-top:0.75rem;
+  display:flex;
+  justify-content:flex-start;
+}
+.wizard-inline-note{
+  display:inline-flex;
+  align-items:center;
+  gap:0.5rem;
+  padding:0.35rem 0.5rem;
+  border:1px dashed rgba(148,163,184,0.6);
+  border-radius:0.6rem;
+  background:rgba(15,23,42,0.45);
+}
+.wizard-inline-label{ opacity:0.8; font-size:0.85rem; }
+.wizard-inline-model{
+  display:inline-flex;
+  align-items:center;
+  gap:0.35rem;
+  padding:0.35rem 0.75rem;
+  border-radius:999px;
+  border:1px solid rgba(124,58,237,0.8);
+  background:linear-gradient(120deg,rgba(124,58,237,0.2),rgba(6,182,212,0.2));
+  color:inherit;
+  cursor:pointer;
+  font-size:0.85rem;
+  box-shadow:0 4px 12px rgba(0,0,0,0.25);
+}
+.wizard-inline-model:hover{ border-color:rgba(124,58,237,1); color:white; background:linear-gradient(120deg,#7C3AED,#06B6D4); }
 .wizard-label textarea,
 .wizard-label select{
   border-radius:0.5rem;

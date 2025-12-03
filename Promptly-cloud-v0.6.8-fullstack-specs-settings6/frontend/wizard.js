@@ -39,6 +39,8 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
   const modelToggle = document.getElementById("modelToggle");
   const modelOptions = document.getElementById("modelOptions");
   const modelSelectedLabel = document.getElementById("modelSelectedLabel");
+  const modelShortcut = document.getElementById("modelShortcut");
+  const modelShortcutLabel = document.getElementById("modelShortcutLabel");
 
   function getStoredModel() {
     const stored = sessionStorage.getItem(MODEL_STORAGE_KEY);
@@ -63,9 +65,9 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
 
   function updateModelLabel() {
     const option = MODEL_OPTIONS.find((opt) => opt.value === selectedModel);
-    if (option && modelSelectedLabel) {
-      modelSelectedLabel.textContent = option.label;
-    }
+    if (!option) return;
+    if (modelSelectedLabel) modelSelectedLabel.textContent = option.label;
+    if (modelShortcutLabel) modelShortcutLabel.textContent = option.label;
   }
 
   function closeModelDropdown() {
@@ -118,6 +120,13 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
     modelToggle.addEventListener("click", (evt) => {
       evt.stopPropagation();
       toggleModelDropdown();
+    });
+  }
+
+  if (modelShortcut) {
+    modelShortcut.addEventListener("click", () => {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      setTimeout(() => openModelDropdown(), 160);
     });
   }
 

@@ -125,6 +125,22 @@ main, header, footer, .container, .card, .grid{ position: relative; z-index: 1; 
 /* v0.5.7: Top-right nav accent (subtle, consistent across pages) */
 .topbar .navlinks a{ color:var(--text-med); text-decoration:none; transition: color .15s ease, text-shadow .25s ease; }
 .topbar .navlinks a:hover{ color:var(--brand-b); text-shadow:0 0 10px rgba(6,182,212,.35); }
+.topbar .navlinks .navlink-cta{
+  padding:6px 12px;
+  border-radius:999px;
+  border:1px solid rgba(124,58,237,.5);
+  background:linear-gradient(120deg,rgba(124,58,237,0.25),rgba(6,182,212,0.25));
+  color:var(--text-high);
+  margin-left:14px;
+  box-shadow:0 6px 14px rgba(0,0,0,.28);
+}
+.topbar .navlinks .navlink-cta:hover,
+.topbar .navlinks .navlink-cta[aria-current="page"]{
+  color:white;
+  border-color:rgba(124,58,237,.9);
+  background:linear-gradient(120deg,#7C3AED,#06B6D4);
+  text-shadow:0 0 12px rgba(6,182,212,.45);
+}
 .topbar label.control span{ color:var(--text-high); transition: all .2s ease; }
 .topbar label.control:hover span{ background:linear-gradient(90deg,var(--brand-a),var(--brand-b)); -webkit-background-clip:text; background-clip:text; color:transparent; }
 .topbar select{ background:linear-gradient(#0e1117,#0b0f17); border:1px solid rgba(255,255,255,.12); border-radius:12px; color:var(--text-high); padding:.36rem .6rem; }

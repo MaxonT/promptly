@@ -426,18 +426,18 @@ html[data-theme="light"] .grey-gradient-text{
           <textarea id="task" rows="4" placeholder="Summarize customer interviews into 5 product requirements."></textarea>
         </label>
         <div class="model-select" title="Select model (quality vs. speed)">
-          <button id="modelDropdownToggle" class="model-select__toggle" type="button">“Model: Promptly Mini”</button>
+          <button id="modelDropdownToggle" class="model-select__toggle" type="button" aria-expanded="false" aria-haspopup="true">Model: Promptly Mini</button>
           <div class="model-select__menu" id="modelDropdownMenu" role="menu" aria-hidden="true">
-            <button type="button" class="model-select__option" data-model="promptly-mini">Promptly Mini</button>
-            <button type="button" class="model-select__option" data-model="promptly">Promptly</button>
-            <button type="button" class="model-select__option" data-model="promptly-plus">Promptly Plus</button>
-            <button type="button" class="model-select__option" data-model="promptly-pro">Promptly Pro</button>
-            <button type="button" class="model-select__option" data-model="promptly-pro-max">Promptly Pro Max</button>
-            <button type="button" class="model-select__option" data-model="promptly-code-mini">Promptly Code Mini</button>
-            <button type="button" class="model-select__option" data-model="promptly-code">Promptly Code</button>
-            <button type="button" class="model-select__option" data-model="promptly-code-plus">Promptly Code Plus</button>
-            <button type="button" class="model-select__option" data-model="promptly-code-pro">Promptly Code Pro</button>
-            <button type="button" class="model-select__option" data-model="promptly-code-pro-max">Promptly Code Pro Max</button>
+            <button type="button" class="model-select__option" data-model="promptly-mini" role="menuitem">Promptly Mini</button>
+            <button type="button" class="model-select__option" data-model="promptly" role="menuitem">Promptly</button>
+            <button type="button" class="model-select__option" data-model="promptly-plus" role="menuitem">Promptly Plus</button>
+            <button type="button" class="model-select__option" data-model="promptly-pro" role="menuitem">Promptly Pro</button>
+            <button type="button" class="model-select__option" data-model="promptly-pro-max" role="menuitem">Promptly Pro Max</button>
+            <button type="button" class="model-select__option" data-model="promptly-code-mini" role="menuitem">Promptly Code Mini</button>
+            <button type="button" class="model-select__option" data-model="promptly-code" role="menuitem">Promptly Code</button>
+            <button type="button" class="model-select__option" data-model="promptly-code-plus" role="menuitem">Promptly Code Plus</button>
+            <button type="button" class="model-select__option" data-model="promptly-code-pro" role="menuitem">Promptly Code Pro</button>
+            <button type="button" class="model-select__option" data-model="promptly-code-pro-max" role="menuitem">Promptly Code Pro Max</button>
           </div>
         </div>
         <details class="layer-field">
@@ -1609,7 +1609,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function syncModelUI(slug) {
     if (modelToggle) {
-      modelToggle.textContent = `“Model: ${getModelLabel(slug)}”`;
+      modelToggle.textContent = `Model: ${getModelLabel(slug)}`;
     }
     if (modelMenu) {
       modelMenu.querySelectorAll('.model-select__option').forEach((btn) => {
@@ -1622,11 +1622,17 @@ document.addEventListener('DOMContentLoaded', () => {
     if (modelMenu) {
       modelMenu.setAttribute('aria-hidden', 'true');
     }
+    if (modelToggle) {
+      modelToggle.setAttribute('aria-expanded', 'false');
+    }
   }
 
   function openModelMenu() {
     if (modelMenu) {
       modelMenu.setAttribute('aria-hidden', 'false');
+    }
+    if (modelToggle) {
+      modelToggle.setAttribute('aria-expanded', 'true');
     }
   }
 
@@ -1639,6 +1645,17 @@ document.addEventListener('DOMContentLoaded', () => {
     closeModelMenu();
   }
 
+  function getMenuItems() {
+    return modelMenu ? Array.from(modelMenu.querySelectorAll('.model-select__option')) : [];
+  }
+
+  function focusMenuItem(index) {
+    const items = getMenuItems();
+    if (items.length > 0 && index >= 0 && index < items.length) {
+      items[index].focus();
+    }
+  }
+
   // Initialize model selector
   syncModelUI(currentModel);
 
@@ -1649,6 +1666,20 @@ document.addEventListener('DOMContentLoaded', () => {
       closeModelMenu();
     } else {
       openModelMenu();
+      focusMenuItem(0);
+    }
+  });
+
+  modelToggle?.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      e.preventDefault();
+      const isOpen = modelMenu?.getAttribute('aria-hidden') === 'false';
+      if (!isOpen) {
+        openModelMenu();
+      }
+      focusMenuItem(e.key === 'ArrowDown' ? 0 : getMenuItems().length - 1);
+    } else if (e.key === 'Escape') {
+      closeModelMenu();
     }
   });
 
@@ -1657,6 +1688,40 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!btn) return;
     const slug = btn.dataset.model;
     setModel(slug);
+    modelToggle?.focus();
+  });
+
+  modelMenu?.addEventListener('keydown', (e) => {
+    const items = getMenuItems();
+    const currentIndex = items.findIndex(item => item === document.activeElement);
+
+    switch (e.key) {
+      case 'ArrowDown':
+        e.preventDefault();
+        focusMenuItem(currentIndex < items.length - 1 ? currentIndex + 1 : 0);
+        break;
+      case 'ArrowUp':
+        e.preventDefault();
+        focusMenuItem(currentIndex > 0 ? currentIndex - 1 : items.length - 1);
+        break;
+      case 'Enter':
+      case ' ':
+        e.preventDefault();
+        if (currentIndex >= 0) {
+          const slug = items[currentIndex].dataset.model;
+          setModel(slug);
+          modelToggle?.focus();
+        }
+        break;
+      case 'Escape':
+        e.preventDefault();
+        closeModelMenu();
+        modelToggle?.focus();
+        break;
+      case 'Tab':
+        closeModelMenu();
+        break;
+    }
   });
 
   document.addEventListener('click', (e) => {

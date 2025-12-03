@@ -84,7 +84,9 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
 
   let currentMode = MODE_OPTIONS[sessionStorage.getItem(MODE_STORAGE_KEY)]?.id || "deep";
 
-  // Model selection is managed on the landing hero; the wizard reads that shared choice.
+  // Model selection is shared via sessionStorage with the landing hero.
+  // The wizard reads the stored model choice and ensures a valid model is set,
+  // defaulting to the first available model if none is stored or if invalid.
   const MODEL_STORAGE_KEY = "promptly:model-selection";
   const AVAILABLE_MODELS = [
     "promptly-mini",

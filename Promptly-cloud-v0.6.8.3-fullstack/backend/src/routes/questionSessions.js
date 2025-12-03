@@ -61,13 +61,13 @@ const MODEL_IDS = [
 const MODEL_TARGETS = {
   "promptly-mini": "gpt-4o-mini",
   promptly: "gpt-4o",
-  "promptly-plus": "gpt-4o",
-  "promptly-pro": "gpt-4o",
+  "promptly-plus": "gpt-4-turbo",
+  "promptly-pro": "gpt-4",
   "promptly-pro-max": "gpt-4o",
   "promptly-code-mini": "gpt-4o-mini",
   "promptly-code": "gpt-4o-mini",
-  "promptly-code-plus": "gpt-4o",
-  "promptly-code-pro": "gpt-4o",
+  "promptly-code-plus": "gpt-4-turbo",
+  "promptly-code-pro": "gpt-4",
   "promptly-code-pro-max": "gpt-4o"
 };
 

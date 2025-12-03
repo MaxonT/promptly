@@ -2029,6 +2029,51 @@ html[data-theme="light"] .nav-wizard-link {
   color: #1f2937;
 }
 
+/* === Fix: make "Question wizard" always readable in nav === */
+.topbar .navlinks a.nav-wizard-link,
+.topbar .navlinks a.nav-wizard-link:link,
+.topbar .navlinks a.nav-wizard-link:visited {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0;
+  margin-left: 12px;
+  font-weight: 600;
+  text-decoration: none;
+  
+  /* 把前面所有 gradient / clip 统统关掉 */
+  background: none !important;
+  background-image: none !important;
+  -webkit-background-clip: initial !important;
+  background-clip: initial !important;
+  -webkit-text-fill-color: #7EC9FF !important;
+  color: #7EC9FF !important;
+  text-shadow: none !important;
+  border: none;
+  box-shadow: none;
+  filter: none;
+
+  white-space: nowrap;
+}
+
+/* hover 保持你喜欢的高亮 */
+.topbar .navlinks a.nav-wizard-link:hover {
+  color: var(--brand-b) !important;
+  text-shadow: 0 0 10px rgba(6, 182, 212, 0.35);
+}
+
+/* Light 模式下用深色文字，避免糊掉 */
+html[data-theme="light"] .topbar .navlinks a.nav-wizard-link,
+html[data-theme="light"] .topbar .navlinks a.nav-wizard-link:link,
+html[data-theme="light"] .topbar .navlinks a.nav-wizard-link:visited {
+  background: none !important;
+  background-image: none !important;
+  -webkit-background-clip: initial !important;
+  background-clip: initial !important;
+  -webkit-text-fill-color: #0B0D13 !important;
+  color: #0B0D13 !important;
+  text-shadow: none !important;
+}
 
 /* ============================================
    Text Enhancement Styles

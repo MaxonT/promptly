@@ -76,6 +76,7 @@ CREATE TABLE IF NOT EXISTS question_sessions (
   initial_description TEXT NOT NULL,
   kind TEXT,
   mode TEXT DEFAULT 'deep',
+  model TEXT DEFAULT 'promptly',
   status TEXT NOT NULL,
   intent_json TEXT,
   spec_json TEXT,
@@ -207,6 +208,7 @@ function ensureColumn(table, column, definition) {
 
 // Backfill newly added columns when upgrading existing databases
 ensureColumn("question_sessions", "mode", "mode TEXT DEFAULT 'deep'");
+ensureColumn("question_sessions", "model", "model TEXT DEFAULT 'promptly'");
 
 // Whitelists for allowed table and column names
 const ALLOWED_TABLES = [

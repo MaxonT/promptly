@@ -457,13 +457,12 @@ html[data-theme="light"] .grey-gradient-text{
         </details>
         <button id="runBtn" class="btn layer-primary-action" data-i18n="run_btn">Generate optimized prompt</button>
       </div>
-      <div class="layer-default__output">
+      <div class="best-prompt-card">
         <div class="layer-output-header">
           <div>
             <h3 class="gradient-text" data-i18n="best_prompt">Best Prompt</h3>
             <small>Selected via Outcome Runner (best-of-N evaluation)</small>
           </div>
-          <button class="btn copy-btn" type="button" onclick="navigator.clipboard?.writeText(document.getElementById('bestPrompt').value)">Copy</button>
         </div>
         <div class="best-prompt-pipeline" id="bestPromptPipeline">
           <div class="pipeline-track">
@@ -576,10 +575,19 @@ html[data-theme="light"] .grey-gradient-text{
           </div>
           <div class="pipeline-status-text" id="pipelineStatusText">Promptly’s pipeline will show you how your best prompt is chosen.</div>
         </div>
+      </div>
+      <div class="layer-default__output best-prompt-output">
+        <div class="layer-output-header">
+          <div>
+            <h3 class="gradient-text">Best Prompt Output</h3>
+            <small>We run Spec → Questions → LLM agents → Metrics → Outcome Runner before surfacing this prompt.</small>
+          </div>
+          <button class="btn copy-btn" type="button" onclick="navigator.clipboard?.writeText(document.getElementById('bestPrompt').value)">Copy</button>
+        </div>
         <textarea id="bestPrompt" class="codeblock" rows="14" placeholder="Click “Generate optimized prompt” to see the strongest prompt for your goal."></textarea>
-        <p class="layer-output-hint">We run Spec → Questions → LLM agents → Metrics → Outcome Runner before surfacing this prompt.</p>
       </div>
     </section>
+
 
     <section class="layer-card">
       <button class="layer-toggle" type="button" data-layer-toggle="advancedPanel" aria-expanded="false">

@@ -276,7 +276,7 @@ details.layer-field > small.help{
   flex-wrap:wrap;
 }
 .model-select__title{
-  font-size:1.05rem;
+  font-size:0.98rem;
   font-weight:800;
   letter-spacing:0.2px;
   color:var(--text, #e2e8f0);
@@ -293,7 +293,7 @@ details.layer-field > small.help{
   white-space:nowrap;
 }
 .model-select__arrow{
-  font-size:1.05rem;
+  font-size:1rem;
   opacity:0.9;
 }
 .model-select__name{

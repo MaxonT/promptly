@@ -30,6 +30,11 @@
     hi:{language:"हिन्दी",processing:"प्रोसेसिंग...",success_message:"सर्वोत्तम प्रॉम्प्ट अपडेट हो गया!"}
   };
   const LANG_OPTIONS=[["en","English"],["zh","中文"],["es","Español"],["fr","Français"],["ja","日本語"],["ko","한국어"],["ar","العربية"],["pt","Português"],["hi","हिन्दी"]];
+  const API_BASE=(window.PROMPTLY_API_BASE&&window.PROMPTLY_API_BASE.trim())||(window.location&&window.location.origin&&window.location.origin!="null"?window.location.origin:"http://localhost:8080");
+  const WIZARD_SESSION_KEY="promptly.wizard.session";
+  let wizardIndicatorEl=null;
+  let wizardIndicatorLabel=null;
+  let wizardStatusTimer=null;
   function $(s){return document.querySelector(s)} function $all(s){return Array.from(document.querySelectorAll(s))}
   function applyTheme(theme){document.documentElement.setAttribute("data-theme", theme==="auto"?(prefersDark.matches?"dark":"light"):theme)}
   function i18nApply(lang){const d=translations[lang]||translations.en;$all("[data-i18n]").forEach(el=>{const k=el.getAttribute("data-i18n");if(d[k])el.textContent=d[k];});
@@ -102,6 +107,15 @@
       return null;
     }
   }
+  function getStoredWizardSession(){try{const raw=localStorage.getItem(WIZARD_SESSION_KEY);return raw?JSON.parse(raw):null;}catch{return null;}}
+  function setStoredWizardSession(sessionId){if(!sessionId)return;try{localStorage.setItem(WIZARD_SESSION_KEY,JSON.stringify({sessionId,startedAt:Date.now()}));}catch{}}
+  function clearStoredWizardSession(){try{localStorage.removeItem(WIZARD_SESSION_KEY);}catch{}}
+  function ensureWizardIndicator(){if(wizardIndicatorEl)return;wizardIndicatorEl=document.getElementById("wizardStatusIndicator");if(!wizardIndicatorEl){wizardIndicatorEl=document.createElement("div");wizardIndicatorEl.id="wizardStatusIndicator";wizardIndicatorEl.className="wizard-status-indicator";wizardIndicatorEl.innerHTML='<span class="spinner"></span><span class="wizard-status-indicator__label">Question Wizard is running...</span>';document.body.appendChild(wizardIndicatorEl);}wizardIndicatorLabel=wizardIndicatorEl.querySelector(".wizard-status-indicator__label");if(!wizardIndicatorLabel){wizardIndicatorLabel=document.createElement("span");wizardIndicatorLabel.className="wizard-status-indicator__label";wizardIndicatorEl.appendChild(wizardIndicatorLabel);}if(!wizardIndicatorEl.querySelector(".spinner")){const spin=document.createElement("span");spin.className="spinner";wizardIndicatorEl.prepend(spin);}wizardIndicatorEl.onclick=()=>{window.location.href="wizard.html";};}
+  function hideWizardIndicator(){if(wizardIndicatorEl){wizardIndicatorEl.classList.remove("active");}}
+  function showWizardIndicator(message){ensureWizardIndicator();if(wizardIndicatorLabel)wizardIndicatorLabel.textContent=message;wizardIndicatorEl.classList.add("active");}
+  async function refreshWizardIndicator(){const stored=getStoredWizardSession();const sessionId=stored?.sessionId;if(!sessionId){hideWizardIndicator();return;}try{const res=await fetch(`${API_BASE}/api/question-sessions/status/active?session_id=${encodeURIComponent(sessionId)}`);if(!res.ok){console.warn("[promptly] wizard status request failed",res.status);return;}const data=await res.json();if(!data.running){clearStoredWizardSession();hideWizardIndicator();return;}const progress=data.progress||{};const answered=Math.min(progress.answered||0,progress.total||0);const total=progress.total||0;const suffix=total>0?` (${answered}/${total} answered)`:"";showWizardIndicator(`Question Wizard is running${suffix}`);}catch(err){console.warn("[promptly] wizard status refresh error",err);}}
+  function initWizardStatusIndicator(){ensureWizardIndicator();refreshWizardIndicator();if(wizardStatusTimer)return;wizardStatusTimer=setInterval(refreshWizardIndicator,12000);}
+  window.promptlyWizardSession={markRunning:(sessionId)=>{setStoredWizardSession(sessionId);initWizardStatusIndicator();},clear:()=>{clearStoredWizardSession();hideWizardIndicator();},getActive:getStoredWizardSession};
   function formatBestPrompt(rawOutput) {
     if (!rawOutput) return "";
     if (typeof rawOutput === "string") return rawOutput;
@@ -175,5 +189,6 @@
       const c = document.getElementById(id);
       if (c) ro.observe(c);
     });
+    initWizardStatusIndicator();
   });
 })();

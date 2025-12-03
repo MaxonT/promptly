@@ -158,20 +158,22 @@ html[data-theme="light"] .mode-card{background:linear-gradient(var(--card),var(-
 .keyword{font-weight:600;color:#fff;}
 .layer-default{
   display:grid;
-  grid-template-columns:repeat(auto-fit,minmax(280px,1fr));
-  gap:24px;
+  grid-template-columns:1.05fr 0.95fr;
+  gap:28px;
   align-items:start;
 }
 .layer-default__column{
   display:flex;
   flex-direction:column;
-  gap:14px;
+  gap:12px;
 }
 .layer-default__output{
   display:flex;
   flex-direction:column;
   gap:12px;
 }
+.layer-default__column h2{ margin:10px 0 4px; }
+.layer-default__column > p{ margin:0 0 10px; line-height:1.5; }
 .layer-badge{
   display:inline-flex;
   padding:4px 12px;
@@ -231,10 +233,72 @@ details.layer-field > small.help{
   margin-top:10px;
 }
 .layer-field textarea{
-  min-height:110px;
+  min-height:130px;
 }
 .layer-primary-action{
   width:fit-content;
+}
+.model-select{
+  position:relative;
+  display:block;
+  width:100%;
+  border:1px solid var(--border);
+  border-radius:10px;
+  padding:10px 12px;
+  background:rgba(15,23,42,0.25);
+}
+.model-select__toggle{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  width:100%;
+  padding:10px 12px;
+  border-radius:10px;
+  border:1px solid transparent;
+  background:linear-gradient(90deg,rgba(124,58,237,0.12),rgba(6,182,212,0.12));
+  color:var(--text, #e2e8f0);
+  font-weight:650;
+  cursor:pointer;
+  text-align:left;
+}
+.model-select__toggle:hover{
+  color:var(--primary);
+  box-shadow:0 6px 18px rgba(124,58,237,0.16);
+}
+.model-select__label{display:flex; align-items:center; gap:8px;}
+.model-select__chevron{opacity:0.8; font-weight:800; color:var(--accent);}
+.model-select__menu{
+  position:absolute;
+  margin-top:10px;
+  min-width:100%;
+  background:rgba(15,23,42,0.95);
+  border:1px solid var(--border);
+  border-radius:12px;
+  padding:8px;
+  box-shadow:0 16px 34px rgba(0,0,0,0.25);
+  display:none;
+  z-index:10;
+}
+.model-select__menu[aria-hidden="false"]{
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+}
+.model-select__option{
+  text-align:left;
+  padding:10px 12px;
+  border-radius:10px;
+  border:1px solid transparent;
+  background:transparent;
+  color:var(--text, #e2e8f0);
+  cursor:pointer;
+  transition:background 0.2s ease, border-color 0.2s ease;
+}
+.model-select__option:hover,
+.model-select__option.is-active{
+  background:linear-gradient(90deg,rgba(124,58,237,0.12),rgba(6,182,212,0.12));
+  border-color:rgba(124,58,237,0.35);
 }
 .layer-output-header{
   display:flex;
@@ -1937,28 +2001,78 @@ html[data-theme="light"] .layer-card {
    ============================================ */
 
 .nav-wizard-link {
-  background: linear-gradient(90deg, #7C3AED, #06B6D4);
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-  font-weight: 600 !important;
-  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0;
+  margin-left: 12px;
+  font-weight: 600;
+  text-decoration: none;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  filter: none;
+  transition: color 0.15s ease, text-shadow 0.25s ease;
 }
 
-.nav-wizard-link::after {
-  content: '';
-  position: absolute;
-  bottom: -2px;
-  left: 0;
-  width: 100%;
-  height: 2px;
-  background: linear-gradient(90deg, #7C3AED, #06B6D4);
-  transform: scaleX(0);
-  transition: transform 0.3s ease;
+.nav-wizard-link:hover {
+  color: inherit;
+  text-shadow: 0 0 10px rgba(6, 182, 212, 0.35);
 }
 
-.nav-wizard-link:hover::after {
-  transform: scaleX(1);
+.nav-wizard-link:focus-visible {
+  outline: 2px solid #22d3ee;
+  outline-offset: 2px;
+}
+
+html[data-theme="light"] .nav-wizard-link {
+  color: #1f2937;
+}
+
+/* === Fix: make "Question wizard" always readable in nav === */
+.topbar .navlinks a.nav-wizard-link,
+.topbar .navlinks a.nav-wizard-link:link,
+.topbar .navlinks a.nav-wizard-link:visited {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0;
+  margin-left: 12px;
+  font-weight: 600;
+  text-decoration: none;
+  
+  /* 把前面所有 gradient / clip 统统关掉 */
+  background: none !important;
+  background-image: none !important;
+  -webkit-background-clip: initial !important;
+  background-clip: initial !important;
+  -webkit-text-fill-color: #7EC9FF !important;
+  color: #7EC9FF !important;
+  text-shadow: none !important;
+  border: none;
+  box-shadow: none;
+  filter: none;
+
+  white-space: nowrap;
+}
+
+/* hover 保持你喜欢的高亮 */
+.topbar .navlinks a.nav-wizard-link:hover {
+  color: var(--brand-b) !important;
+  text-shadow: 0 0 10px rgba(6, 182, 212, 0.35);
+}
+
+/* Light 模式下用深色文字，避免糊掉 */
+html[data-theme="light"] .topbar .navlinks a.nav-wizard-link,
+html[data-theme="light"] .topbar .navlinks a.nav-wizard-link:link,
+html[data-theme="light"] .topbar .navlinks a.nav-wizard-link:visited {
+  background: none !important;
+  background-image: none !important;
+  -webkit-background-clip: initial !important;
+  background-clip: initial !important;
+  -webkit-text-fill-color: #0B0D13 !important;
+  color: #0B0D13 !important;
+  text-shadow: none !important;
 }
 
 /* ============================================
@@ -2075,6 +2189,7 @@ html[data-theme="light"] .text-keyword {
   padding: 22px !important;
   margin-bottom: 20px !important;
 }
+
 
 /* ============================================
    Question Wizard Status Indicator

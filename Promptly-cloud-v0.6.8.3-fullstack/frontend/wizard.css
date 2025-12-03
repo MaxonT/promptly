@@ -250,8 +250,16 @@
   background:linear-gradient(90deg,#16A34A,#7C3AED);
 }
 
-.wizard-mode-toggle{
+.wizard-top-controls{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:0.75rem;
   margin:1rem 1.5rem;
+  flex-wrap:wrap;
+}
+.wizard-mode-toggle{
+  margin:0;
   padding:0.75rem;
   border:1px solid rgba(148,163,184,0.25);
   background:rgba(15,23,42,0.45);
@@ -261,6 +269,8 @@
   grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
   gap:0.75rem;
   box-shadow:0 12px 30px rgba(0,0,0,0.12);
+  flex:1;
+  min-width:260px;
 }
 .wizard-mode-option{
   border:1px solid rgba(148,163,184,0.25);

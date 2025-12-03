@@ -158,16 +158,47 @@ html[data-theme="light"] .mode-card{background:linear-gradient(var(--card),var(-
 .keyword{font-weight:600;color:#fff;}
 .layer-default{
   display:grid;
-  grid-template-columns:1.05fr 0.95fr;
-  gap:28px;
+  grid-template-columns:minmax(340px,380px) minmax(0,1fr);
+  grid-template-rows:auto auto;
+  gap:24px;
   align-items:start;
 }
 .layer-default__column{
+  grid-column:1;
+  grid-row:1;
   display:flex;
   flex-direction:column;
   gap:12px;
 }
 .layer-default__output{
+  grid-column:2;
+  grid-row:1;
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+}
+.best-prompt-card{
+  gap:16px;
+}
+.best-prompt-card__title{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  justify-content:space-between;
+}
+.best-prompt-card__title .badge{
+  background:rgba(124,58,237,0.15);
+  color:#c4b5fd;
+  border:1px solid rgba(124,58,237,0.25);
+  padding:6px 10px;
+  border-radius:999px;
+  font-weight:600;
+  letter-spacing:0.3px;
+}
+.best-prompt-card__title small{color:var(--muted);}
+.best-prompt-output{
+  grid-column:1 / -1;
+  grid-row:2;
   display:flex;
   flex-direction:column;
   gap:12px;

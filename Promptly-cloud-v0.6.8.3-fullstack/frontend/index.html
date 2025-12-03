@@ -367,6 +367,7 @@ html[data-theme="light"] .grey-gradient-text{
         <a href="terms.html" data-i18n="nav_terms">Terms</a>
         <a href="cookies.html" data-i18n="nav_cookies">Cookies</a>
         <a href="settings.html#accountPanel" data-i18n="nav_account">Account</a>
+        <a href="wizard.html" class="nav-wizard-link">Question Wizard</a>
       </div>
       <label class="control"><span data-i18n="appearance">Appearance</span>
         <select id="themeSelect"><option value="auto" data-i18n="auto">System</option><option value="light" data-i18n="light">Light</option><option value="dark" data-i18n="dark">Dark</option></select>
@@ -422,8 +423,25 @@ html[data-theme="light"] .grey-gradient-text{
         <p>Promptly turns a single sentence into a multi-step optimized prompt. Tell us what you want and we’ll handle the rest.</p>
         <label class="layer-field">
           <span>What should the AI do?</span>
-          <textarea id="task" rows="4" placeholder="Summarize customer interviews into 5 product requirements."></textarea>
+          <textarea id="task" rows="6" placeholder="Summarize customer interviews into 5 product requirements."></textarea>
         </label>
+        <details class="layer-field model-select" id="modelSelect" title="Select model (quality vs. speed)">
+          <summary>
+            <span class="model-select__label">“Model: Promptly Mini”</span>
+          </summary>
+          <div class="model-select__menu" id="modelDropdownMenu" role="menu" aria-hidden="true">
+            <button type="button" class="model-select__option" data-model="promptly-mini">Promptly Mini</button>
+            <button type="button" class="model-select__option" data-model="promptly">Promptly</button>
+            <button type="button" class="model-select__option" data-model="promptly-plus">Promptly Plus</button>
+            <button type="button" class="model-select__option" data-model="promptly-pro">Promptly Pro</button>
+            <button type="button" class="model-select__option" data-model="promptly-pro-max">Promptly Pro Max</button>
+            <button type="button" class="model-select__option" data-model="promptly-code-mini">Promptly Code Mini</button>
+            <button type="button" class="model-select__option" data-model="promptly-code">Promptly Code</button>
+            <button type="button" class="model-select__option" data-model="promptly-code-plus">Promptly Code Plus</button>
+            <button type="button" class="model-select__option" data-model="promptly-code-pro">Promptly Code Pro</button>
+            <button type="button" class="model-select__option" data-model="promptly-code-pro-max">Promptly Code Pro Max</button>
+          </div>
+        </details>
         <details class="layer-field">
           <summary>Optional context or source text</summary>
           <textarea id="examples" rows="4" placeholder="Paste key paragraphs, bullet points, or constraints you already have."></textarea>
@@ -1566,7 +1584,83 @@ document.addEventListener('DOMContentLoaded', () => {
   const runBtn = document.getElementById("runBtn");
   const bestPromptEl = document.getElementById('bestPrompt');
   const taskEl = document.getElementById('task');
-  
+  const modelDetails = document.getElementById('modelSelect');
+  const modelMenu = document.getElementById('modelDropdownMenu');
+  const MODEL_STORAGE_KEY = 'promptly:model-selection';
+  const MODEL_OPTIONS = [
+    { slug: 'promptly-mini', label: 'Promptly Mini' },
+    { slug: 'promptly', label: 'Promptly' },
+    { slug: 'promptly-plus', label: 'Promptly Plus' },
+    { slug: 'promptly-pro', label: 'Promptly Pro' },
+    { slug: 'promptly-pro-max', label: 'Promptly Pro Max' },
+    { slug: 'promptly-code-mini', label: 'Promptly Code Mini' },
+    { slug: 'promptly-code', label: 'Promptly Code' },
+    { slug: 'promptly-code-plus', label: 'Promptly Code Plus' },
+    { slug: 'promptly-code-pro', label: 'Promptly Code Pro' },
+    { slug: 'promptly-code-pro-max', label: 'Promptly Code Pro Max' }
+  ];
+
+  function getModelLabel(slug) {
+    return MODEL_OPTIONS.find((opt) => opt.slug === slug)?.label || MODEL_OPTIONS[0].label;
+  }
+
+  let currentModel = sessionStorage.getItem(MODEL_STORAGE_KEY) || MODEL_OPTIONS[0].slug;
+  if (!MODEL_OPTIONS.some((opt) => opt.slug === currentModel)) {
+    currentModel = MODEL_OPTIONS[0].slug;
+  }
+
+  function syncModelUI(slug) {
+    const labelEl = modelDetails?.querySelector('.model-select__label');
+    if (labelEl) {
+      labelEl.textContent = `“Model: ${getModelLabel(slug)}”`;
+    }
+    if (modelMenu) {
+      modelMenu.querySelectorAll('.model-select__option').forEach((btn) => {
+        btn.classList.toggle('is-active', btn.dataset.model === slug);
+      });
+    }
+  }
+
+  function closeModelMenu() {
+    if (modelMenu) {
+      modelMenu.setAttribute('aria-hidden', 'true');
+    }
+    if (modelDetails) {
+      modelDetails.removeAttribute('open');
+    }
+  }
+
+  function setModel(slug, { persist = true } = {}) {
+    currentModel = slug;
+    if (persist) {
+      sessionStorage.setItem(MODEL_STORAGE_KEY, slug);
+    }
+    syncModelUI(slug);
+    closeModelMenu();
+  }
+
+  // Initialize model selector
+  syncModelUI(currentModel);
+
+  modelDetails?.addEventListener('toggle', () => {
+    const isOpen = modelDetails.hasAttribute('open');
+    modelMenu?.setAttribute('aria-hidden', isOpen ? 'false' : 'true');
+  });
+
+  modelMenu?.addEventListener('click', (e) => {
+    const btn = e.target.closest('.model-select__option');
+    if (!btn) return;
+    const slug = btn.dataset.model;
+    setModel(slug);
+  });
+
+  document.addEventListener('click', (e) => {
+    if (!modelMenu || !modelDetails) return;
+    if (!modelMenu.contains(e.target) && !modelDetails.contains(e.target)) {
+      closeModelMenu();
+    }
+  });
+
   if (!runBtn) {
     console.error('[Promptly] Run Optimization button (#runBtn) not found!');
     return;
@@ -1638,10 +1732,11 @@ document.addEventListener('DOMContentLoaded', () => {
       const apiBase = window.PROMPTLY_API_BASE || '';
       // Note: examples text field is not sent to backend as 'input'
       // Users should include examples directly in the task description if needed
-      
+
       const requestBody = {
         task: task,
-        n: DEFAULT_CANDIDATE_COUNT
+        n: DEFAULT_CANDIDATE_COUNT,
+        model: currentModel
       };
       
       try {

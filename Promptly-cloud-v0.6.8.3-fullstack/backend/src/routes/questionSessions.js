@@ -107,6 +107,8 @@ function resolveModeProfile(mode) {
   return MODE_PROFILES[mode] || MODE_PROFILES.deep;
 }
 
+const ACTIVE_STATUSES = ["active", "ready_to_finalize"];
+
 function resolveModelChoice(modelId) {
   const fallback = process.env.OPENAI_MODEL || "gpt-4o-mini";
   const selected = MODEL_IDS.includes(modelId) ? modelId : "promptly";
@@ -274,6 +276,41 @@ questionSessionRouter.post("/", async (req, res) => {
   }
 });
 
+// Return the latest active Question Wizard session for the current user
+questionSessionRouter.get("/active", (req, res) => {
+  const userId = getUserId(req);
+  const session = db
+    .prepare(
+      `SELECT id, owner_id, kind, status, initial_description, mode, model, created_at, updated_at
+       FROM question_sessions
+       WHERE owner_id = ? AND status IN (${ACTIVE_STATUSES.map(() => "?").join(", ")})
+       ORDER BY updated_at DESC
+       LIMIT 1`
+    )
+    .get(userId, ...ACTIVE_STATUSES);
+
+  if (!session) {
+    return res.json({ ok: true, session: null });
+  }
+
+  return res.json({
+    ok: true,
+    session: {
+      id: session.id,
+      owner_id: session.owner_id,
+      mode: session.mode || "deep",
+      model: session.model || "promptly",
+      mode_profile: resolveModeProfile(session.mode),
+      kind: session.kind,
+      status: session.status,
+      initial_description: session.initial_description,
+      initialDescription: session.initial_description,
+      created_at: session.created_at,
+      updated_at: session.updated_at
+    }
+  });
+});
+
 questionSessionRouter.get("/:sessionId", (req, res) => {
   const { sessionId } = req.params;
   const session = db
@@ -303,6 +340,70 @@ questionSessionRouter.get("/:sessionId", (req, res) => {
       created_at: session.created_at,
       updated_at: session.updated_at
     }
+  });
+});
+
+// Provide full session progress for resuming the wizard client
+questionSessionRouter.get("/:sessionId/progress", (req, res) => {
+  const { sessionId } = req.params;
+  const session = db
+    .prepare(
+      `SELECT id, owner_id, kind, status, initial_description, mode, model, created_at, updated_at
+       FROM question_sessions
+       WHERE id = ?`
+    )
+    .get(sessionId);
+
+  if (!session) {
+    return res.status(404).json({ ok: false, error: "Session not found" });
+  }
+
+  const questions = db
+    .prepare(
+      "SELECT id, type, content, options_json, order_index FROM question_questions WHERE session_id = ? ORDER BY order_index ASC"
+    )
+    .all(sessionId)
+    .map((q) => {
+      const parsedOptions = q.options_json ? JSON.parse(q.options_json) : {};
+      return {
+        id: q.id,
+        type: q.type,
+        content: q.content,
+        depth_enabled: parsedOptions.depth_enabled || false,
+        options: parsedOptions.options || null,
+        depth_question: parsedOptions.depth_question || null,
+        depth_levels: parsedOptions.depth_levels || null,
+        order_index: q.order_index
+      };
+    });
+
+  const answers = db
+    .prepare("SELECT question_id, answer_json FROM question_answers WHERE session_id = ?")
+    .all(sessionId);
+  const answerByQuestion = new Map();
+  answers.forEach((a) => answerByQuestion.set(a.question_id, a.answer_json ? JSON.parse(a.answer_json) : null));
+
+  const merged = questions.map((q) => ({
+    ...q,
+    answer: answerByQuestion.has(q.id) ? answerByQuestion.get(q.id) : null
+  }));
+
+  return res.json({
+    ok: true,
+    session: {
+      id: session.id,
+      owner_id: session.owner_id,
+      mode: session.mode || "deep",
+      model: session.model || "promptly",
+      mode_profile: resolveModeProfile(session.mode),
+      kind: session.kind,
+      status: session.status,
+      initial_description: session.initial_description,
+      initialDescription: session.initial_description,
+      created_at: session.created_at,
+      updated_at: session.updated_at
+    },
+    questions: merged
   });
 });
 

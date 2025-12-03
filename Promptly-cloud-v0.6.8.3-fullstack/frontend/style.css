@@ -2256,6 +2256,22 @@ html[data-theme="light"] .text-keyword {
   gap: 8px;
 }
 
+.wizard-status-indicator .wizard-status-text {
+  letter-spacing: 0.01em;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.wizard-status-indicator .wizard-status-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: #22d3ee;
+  box-shadow: 0 0 0 0 rgba(34, 211, 238, 0.7);
+  animation: wizard-dot-pulse 1.6s ease-in-out infinite;
+}
+
 .wizard-status-indicator .spinner {
   width: 16px;
   height: 16px;
@@ -2263,6 +2279,12 @@ html[data-theme="light"] .text-keyword {
   border-top-color: #fff;
   border-radius: 50%;
   animation: spin 1s linear infinite;
+}
+
+@keyframes wizard-dot-pulse {
+  0% { box-shadow: 0 0 0 0 rgba(34, 211, 238, 0.55); opacity: 1; }
+  50% { box-shadow: 0 0 0 10px rgba(34, 211, 238, 0); opacity: 0.65; }
+  100% { box-shadow: 0 0 0 0 rgba(34, 211, 238, 0); opacity: 1; }
 }
 
 @keyframes pulse-glow {

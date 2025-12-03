@@ -2,6 +2,12 @@
 (function(){
   const THEME_KEY="promptly.theme", LANG_KEY="promptly.lang", CONSENT_KEY="promptly.consent";
   const prefersDark=window.matchMedia("(prefers-color-scheme: dark)");
+  const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
+    || (window.location && window.location.origin && window.location.origin !== "null"
+      ? window.location.origin
+      : "http://localhost:8080");
+  const WIZARD_STATE_KEY = "promptly:wizard-session";
+  const WIZARD_RUNNING_STATUSES = ["active", "ready_to_finalize"];
   const translations={
     en:{nav_home:"Dashboard",nav_privacy:"Privacy",nav_terms:"Terms",nav_cookies:"Cookies",nav_account:"Account",appearance:"System",auto:"System",light:"Light",dark:"Dark",language:"English",
         hero_title:"Promptly — Prompt Optimizer Studio",hero_subtitle:"Visualization-first workflow. See every gain, every cost, every version.",
@@ -30,6 +36,110 @@
     hi:{language:"हिन्दी",processing:"प्रोसेसिंग...",success_message:"सर्वोत्तम प्रॉम्प्ट अपडेट हो गया!"}
   };
   const LANG_OPTIONS=[["en","English"],["zh","中文"],["es","Español"],["fr","Français"],["ja","日本語"],["ko","한국어"],["ar","العربية"],["pt","Português"],["hi","हिन्दी"]];
+  function isWizardRunningStatus(status){
+    return WIZARD_RUNNING_STATUSES.includes(status);
+  }
+  function readWizardState(){
+    try{
+      const raw=localStorage.getItem(WIZARD_STATE_KEY);
+      return raw?JSON.parse(raw):null;
+    }catch{return null;}
+  }
+  function persistWizardState(state){
+    if(!state||!state.sessionId)return;
+    try{
+      localStorage.setItem(WIZARD_STATE_KEY, JSON.stringify({
+        sessionId: state.sessionId,
+        status: state.status||"active",
+        updatedAt: new Date().toISOString()
+      }));
+    }catch{}
+  }
+  function clearWizardState(){
+    try{localStorage.removeItem(WIZARD_STATE_KEY);}catch{}
+  }
+  function ensureWizardIndicator(){
+    let indicator=document.getElementById("wizardStatusIndicator");
+    if(!indicator){
+      indicator=document.createElement("div");
+      indicator.id="wizardStatusIndicator";
+      indicator.className="wizard-status-indicator";
+      indicator.innerHTML=`
+        <span class="wizard-status-dot" aria-hidden="true"></span>
+        <span class="spinner" aria-hidden="true"></span>
+        <span class="wizard-status-text">Question Wizard Running...</span>
+      `;
+      document.body.appendChild(indicator);
+    }else{
+      if(!indicator.querySelector(".wizard-status-dot")){
+        indicator.insertAdjacentHTML("afterbegin", '<span class="wizard-status-dot" aria-hidden="true"></span>');
+      }
+      const existingText = indicator.querySelector(".wizard-status-text")
+        || indicator.querySelector("span:not(.spinner):not(.wizard-status-dot)");
+      if(existingText){
+        existingText.classList.add("wizard-status-text");
+      }else{
+        indicator.insertAdjacentHTML("beforeend", '<span class="wizard-status-text">Question Wizard Running...</span>');
+      }
+    }
+    return indicator;
+  }
+  async function fetchWizardSession(sessionId){
+    const res=await fetch(`${API_BASE}/api/question-sessions/${encodeURIComponent(sessionId)}`);
+    if(!res.ok) return null;
+    const data=await res.json();
+    return data.session||null;
+  }
+  async function fetchActiveWizardSession(){
+    const res=await fetch(`${API_BASE}/api/question-sessions/active`);
+    if(!res.ok) return null;
+    const data=await res.json();
+    return data.session||null;
+  }
+  function renderWizardIndicator(session){
+    const indicator=ensureWizardIndicator();
+    if(session && isWizardRunningStatus(session.status)){
+      indicator.classList.add("active");
+      indicator.setAttribute("role","button");
+      indicator.setAttribute("aria-live","polite");
+      indicator.querySelector(".wizard-status-text").textContent="Question Wizard is running";
+      indicator.onclick=(evt)=>{
+        evt.preventDefault();
+        const url=new URL("wizard.html", window.location.href);
+        url.searchParams.set("sessionId", session.id);
+        window.location.href=url.toString();
+      };
+    }else{
+      indicator.classList.remove("active");
+      indicator.removeAttribute("role");
+      indicator.onclick=null;
+    }
+  }
+  async function syncWizardStatusFromBackend(){
+    try{
+      const stored=readWizardState();
+      let session=null;
+      if(stored?.sessionId){
+        session=await fetchWizardSession(stored.sessionId).catch(()=>null);
+      }
+      if(!session || !isWizardRunningStatus(session.status)){
+        const active=await fetchActiveWizardSession().catch(()=>null);
+        session=isWizardRunningStatus(active?.status)?active:null;
+      }
+      if(session && isWizardRunningStatus(session.status)){
+        persistWizardState({sessionId:session.id,status:session.status});
+      }else{
+        clearWizardState();
+      }
+      renderWizardIndicator(session);
+      return session;
+    }catch(err){
+      console.warn("[promptly] Failed to sync wizard status", err);
+      clearWizardState();
+      renderWizardIndicator(null);
+      return null;
+    }
+  }
   function $(s){return document.querySelector(s)} function $all(s){return Array.from(document.querySelectorAll(s))}
   function applyTheme(theme){document.documentElement.setAttribute("data-theme", theme==="auto"?(prefersDark.matches?"dark":"light"):theme)}
   function i18nApply(lang){const d=translations[lang]||translations.en;$all("[data-i18n]").forEach(el=>{const k=el.getAttribute("data-i18n");if(d[k])el.textContent=d[k];});
@@ -131,6 +241,17 @@
   }
   // Expose refreshMetrics globally so other scripts can call it
   window.promptlyRefreshMetrics = refreshMetrics;
+  window.promptlyWizardSession = {
+    get: readWizardState,
+    set: persistWizardState,
+    clear: clearWizardState,
+    isRunning: isWizardRunningStatus,
+    refresh: syncWizardStatusFromBackend,
+    fetchSession: fetchWizardSession
+  };
+  window.promptlyWizardIndicator = {
+    refresh: syncWizardStatusFromBackend
+  };
   // Expose function to get localized text for cross-script access
   window.promptlyGetText = function(key) {
     const lang = localStorage.getItem(LANG_KEY) || "en";
@@ -168,6 +289,7 @@
       });
     }
     consentBanner();
+    syncWizardStatusFromBackend();
     // Note: runBtn click handler is now in index.html to coordinate with animation
     refreshMetrics();
     const ro = new ResizeObserver(() => renderCharts());

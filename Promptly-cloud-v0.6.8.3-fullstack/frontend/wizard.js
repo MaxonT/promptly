@@ -60,6 +60,9 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
   let loadingTimeoutRef = null;
   let slowWarningTimerRef = null;
 
+  const wizardSessionStore = window.promptlyWizardSession || null;
+  const wizardIndicator = window.promptlyWizardIndicator || null;
+
   const MODE_STORAGE_KEY = "promptly-wizard-mode";
   const MODE_OPTIONS = {
     fast: {
@@ -128,6 +131,23 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
     if (!wizardStatus) return;
     wizardStatus.classList.add("hidden");
     wizardStatus.textContent = "";
+  }
+
+  function persistWizardSession(sessionId, status = "active") {
+    if (wizardSessionStore?.set) {
+      wizardSessionStore.set({ sessionId, status });
+    }
+    wizardIndicator?.refresh?.();
+  }
+
+  function clearPersistedWizardSession() {
+    wizardSessionStore?.clear?.();
+    wizardIndicator?.refresh?.();
+  }
+
+  function isRunningStatus(status) {
+    if (wizardSessionStore?.isRunning) return wizardSessionStore.isRunning(status);
+    return status === "active" || status === "ready_to_finalize";
   }
 
   function setMode(mode, { silentLog = false } = {}) {
@@ -273,6 +293,73 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
         questionNumber: startIndex + idx + 1 // 1-based numbering
       });
     });
+  }
+
+  async function restoreExistingSession(sessionId) {
+    if (!sessionId) return false;
+    try {
+      setWizardStatus("Restoring Question Wizard session...", "info", { showTicks: true });
+      const res = await fetch(`${API_BASE}/api/question-sessions/${encodeURIComponent(sessionId)}/progress`);
+      if (!res.ok) {
+        clearWizardStatus();
+        clearPersistedWizardSession();
+        return false;
+      }
+      const data = await res.json();
+      if (!data.ok || !data.session || !data.questions || !isRunningStatus(data.session.status)) {
+        clearWizardStatus();
+        clearPersistedWizardSession();
+        return false;
+      }
+
+      currentSessionId = data.session.id;
+      clearQuestions();
+      currentAnswers.clear();
+      addQuestions(
+        data.questions.map((q) => ({
+          id: q.id,
+          type: q.type,
+          content: q.content,
+          options: q.options || null,
+          depth_enabled: q.depth_enabled,
+          depth_question: q.depth_question,
+          depth_levels: q.depth_levels
+        }))
+      );
+
+      data.questions.forEach((q) => {
+        if (q.answer !== undefined && q.answer !== null) {
+          currentAnswers.set(q.id, q.answer);
+        }
+      });
+
+      const firstUnansweredIndex = data.questions.findIndex((q) => !currentAnswers.has(q.id));
+      currentPageIndex = firstUnansweredIndex >= 0 ? Math.floor(firstUnansweredIndex / PAGE_SIZE) : 0;
+
+      renderCurrentPage();
+      ideaPanel?.classList.add("is-starting");
+      qaPanel?.classList.add("is-appearing");
+      startBtn.disabled = true;
+      startBtn.textContent = "Session in progress";
+
+      const allAnswered = data.questions.length === 0 || data.questions.every((q) => currentAnswers.has(q.id));
+      if (allAnswered) {
+        updateWizardStepper('finalize');
+        finalizeBtn?.classList.remove("hidden");
+        setWizardStatus("Questions answered. You can finalize the spec.");
+      } else {
+        updateWizardStepper('questions');
+        setWizardStatus("Resumed your Question Wizard session. Continue answering.");
+      }
+
+      persistWizardSession(currentSessionId, data.session.status || "active");
+      return true;
+    } catch (err) {
+      console.error(err);
+      clearWizardStatus();
+      clearPersistedWizardSession();
+      return false;
+    }
   }
   
   // Get current page of questions
@@ -624,6 +711,15 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
   }
 
   async function startWizard() {
+    const storedState = wizardSessionStore?.get?.();
+    if (currentSessionId && storedState?.sessionId === currentSessionId && isRunningStatus(storedState?.status || "active")) {
+      setWizardStatus("You're already in an active Question Wizard session.", "warn");
+      return;
+    }
+    if (!currentSessionId && storedState?.sessionId && isRunningStatus(storedState.status)) {
+      const restored = await restoreExistingSession(storedState.sessionId);
+      if (restored) return;
+    }
     const idea = (ideaInput.value || "").trim();
     const kind = kindSelect.value || undefined;
     if (!idea || idea.length < 10) {
@@ -719,7 +815,8 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
       const data = await res.json();
       currentSessionId = data.session_id;
       log(`Session created: ${currentSessionId}`);
-      
+      persistWizardSession(currentSessionId, "active");
+
       // Hide loading overlay
       hideLoadingInQuestionPanel();
       
@@ -809,9 +906,13 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
         return;
       }
       const data = await res.json();
-      
+
       if (data.done) {
         log("All questions answered. You can now finalize the spec.");
+        persistWizardSession(currentSessionId, "ready_to_finalize");
+        updateWizardStepper('finalize');
+        finalizeBtn?.classList.remove("hidden");
+        setWizardStatus("Questions answered. You can finalize the spec.");
         clearQuestions();
       } else if (data.questions && data.questions.length > 0) {
         // More questions arrived from backend
@@ -871,6 +972,14 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
       } else if (resultPageLink) {
         resultPageLink.classList.add("hidden");
       }
+
+      clearPersistedWizardSession();
+      currentSessionId = null;
+      startBtn.disabled = false;
+      startBtn.textContent = "Start wizard";
+      ideaPanel?.classList.remove("is-starting");
+      qaPanel?.classList.remove("is-appearing");
+      setWizardStatus("Session completed. You can start a new Question Wizard run when ready.");
     } catch (err) {
       console.error(err);
       log("Error while finalizing session: " + err.message);
@@ -1171,6 +1280,19 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
   updateWizardStepper('describe');
   initModeSelector();
   syncStartButtonState();
+
+  (async function bootstrapWizardSession() {
+    const stored = wizardSessionStore?.get?.();
+    const candidateSessionId = urlParams.get("sessionId") || stored?.sessionId || null;
+    if (!candidateSessionId) {
+      clearPersistedWizardSession();
+      return;
+    }
+    const restored = await restoreExistingSession(candidateSessionId);
+    if (!restored) {
+      clearPersistedWizardSession();
+    }
+  })();
 
   // FIX 1.2: Auto-fill idea from sessionStorage (passed from index.html)
   (function autoFillFromSession() {

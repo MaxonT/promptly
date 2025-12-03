@@ -2030,6 +2030,34 @@ html[data-theme="light"] .nav-wizard-link {
   color: #1f2937;
 }
 
+/* === Fix: make "Question wizard" visible & normal again === */
+.topbar .navlinks a.nav-wizard-link,
+.topbar .navlinks button.nav-wizard-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0;
+  margin-left: 12px;
+  font-weight: 600;
+  text-decoration: none;
+
+  /* 把前面所有 gradient / 透明文字 全部干掉 */
+  background: none !important;
+  background-image: none !important;
+  -webkit-background-clip: initial !important;
+  background-clip: initial !important;
+  -webkit-text-fill-color: #7EC9FF !important;
+  color: #7EC9FF !important;
+  text-shadow: none !important;
+}
+
+/* light 模式下的文字颜色 */
+html[data-theme="light"] .topbar .navlinks a.nav-wizard-link,
+html[data-theme="light"] .topbar .navlinks button.nav-wizard-link {
+  -webkit-text-fill-color: #1F2937 !important;
+  color: #1F2937 !important;
+}
+
 /* ============================================
    Text Enhancement Styles
    ============================================ */
@@ -2144,6 +2172,7 @@ html[data-theme="light"] .text-keyword {
   padding: 22px !important;
   margin-bottom: 20px !important;
 }
+
 
 /* ============================================
    Question Wizard Status Indicator

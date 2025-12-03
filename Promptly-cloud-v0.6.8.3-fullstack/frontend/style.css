@@ -161,7 +161,7 @@ html[data-theme="light"] .mode-card{background:linear-gradient(var(--card),var(-
   grid-template-columns:minmax(340px,380px) minmax(0,1fr);
   grid-template-rows:auto auto;
   column-gap:24px;
-  row-gap:16px;
+  row-gap:12px;
   align-items:start;
 }
 .layer-default__column{

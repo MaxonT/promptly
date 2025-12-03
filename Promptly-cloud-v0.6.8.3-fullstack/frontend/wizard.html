@@ -222,7 +222,21 @@
       <div id="qaEmptyState" class="wizard-empty">
         <p>No questions yet. Start the wizard by describing your project on the left.</p>
       </div>
-      <div id="wizardStatus" class="wizard-status hidden" role="status" aria-live="polite"></div>
+      <div id="wizardStatus" class="wizard-status hidden" role="status" aria-live="polite">
+        <div class="pipeline-status">
+          <span id="pipelineStage" class="pipeline-stage">Working</span>
+          <div id="pipelineBar" class="pipeline-bar pipeline-bar--indeterminate">
+            <div id="pipelineFill" class="pipeline-bar__fill"></div>
+          </div>
+          <span id="pipelinePct" class="pipeline-pct">…</span>
+          <span id="pipelineDots" class="pipeline-dots">
+            <span class="pipeline-dots__dot"></span>
+            <span class="pipeline-dots__dot"></span>
+            <span class="pipeline-dots__dot"></span>
+          </span>
+          <span id="pipelineLive" class="hidden-visually" aria-live="polite"></span>
+        </div>
+      </div>
       <div id="questionsContainer" class="wizard-questions hidden"></div>
       <div class="wizard-qa-actions">
         <!-- Progress indicator at top of navigation bar -->

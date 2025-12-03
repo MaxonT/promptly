@@ -966,3 +966,105 @@
   }
 }
 
+/* BEGIN PIPELINE STATUS CSS */
+.pipeline-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 0.95rem;
+  color: rgba(148, 163, 184, 0.95);
+  user-select: none;
+}
+
+.pipeline-bar {
+  --w: 160px;
+  width: var(--w);
+  height: 10px;
+  background: linear-gradient(90deg, rgba(148,163,184,0.08), rgba(148,163,184,0.04));
+  border-radius: 999px;
+  overflow: hidden;
+  position: relative;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.02);
+}
+
+.pipeline-bar__fill {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, #7C3AED 0%, #A78BFA 60%, #7C3AED 100%);
+  transform-origin: left center;
+  transition: width 420ms cubic-bezier(.2,.9,.25,1), opacity 220ms;
+  border-radius: 999px;
+  box-shadow: 0 4px 18px rgba(124, 58, 237, 0.14);
+}
+
+.pipeline-bar--indeterminate::after {
+  content: "";
+  position: absolute;
+  left: -40%;
+  top: 0;
+  bottom: 0;
+  width: 40%;
+  background: linear-gradient(90deg, rgba(255,255,255,0), rgba(255,255,255,0.08), rgba(255,255,255,0));
+  transform: skewX(-15deg);
+  animation: pipeline-sheen 1.2s linear infinite;
+}
+
+@keyframes pipeline-sheen {
+  to { left: 120%; }
+}
+
+.pipeline-dots {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+}
+.pipeline-dots__dot {
+  width: 8px;
+  height: 8px;
+  background: #c7b3ff;
+  border-radius: 50%;
+  opacity: 0.25;
+  transform: translateY(0);
+  animation: pipeline-pulse 1s infinite ease-in-out;
+}
+.pipeline-dots__dot:nth-child(2) { animation-delay: 0.15s; }
+.pipeline-dots__dot:nth-child(3) { animation-delay: 0.3s; }
+
+@keyframes pipeline-pulse {
+  0% { opacity: 0.25; transform: translateY(0); }
+  40% { opacity: 1; transform: translateY(-4px); }
+  100% { opacity: 0.25; transform: translateY(0); }
+}
+
+.pipeline-stage {
+  min-width: 120px;
+  color: rgba(148,163,184,0.95);
+  font-weight: 500;
+}
+
+.pipeline-pct {
+  min-width: 48px;
+  text-align: right;
+  color: rgba(148,163,184,0.95);
+  font-variant-numeric: tabular-nums;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pipeline-bar--indeterminate::after,
+  .pipeline-dots__dot {
+    animation: none;
+    opacity: 0.8;
+    transform: none;
+  }
+  .pipeline-bar__fill { transition: none; }
+}
+
+.hidden-visually {
+  position: absolute !important;
+  height: 1px; width: 1px;
+  overflow: hidden;
+  clip: rect(1px,1px,1px,1px);
+  white-space: nowrap;
+}
+/* END PIPELINE STATUS CSS */
+

@@ -124,9 +124,78 @@
       return;
     }
     renderMetrics(run.metrics);
+    updatePipelineFromRun(run);
     const bestPromptEl = document.getElementById("bestPrompt");
     if (bestPromptEl) {
       bestPromptEl.value = formatBestPrompt(run.raw_output);
+    }
+  }
+
+  function _clamp(v, a=0, b=1){ return Math.max(a, Math.min(b, v)); }
+
+  function showPipelineStatus(opts = {}) {
+    const container = document.getElementById("wizardStatus");
+    const stageEl = document.getElementById("pipelineStage");
+    const fillEl = document.getElementById("pipelineFill");
+    const barEl = document.getElementById("pipelineBar");
+    const pctEl = document.getElementById("pipelinePct");
+    const dotsEl = document.getElementById("pipelineDots");
+    const liveEl = document.getElementById("pipelineLive");
+
+    if (!container || !stageEl || !fillEl || !pctEl || !barEl || !dotsEl || !liveEl) return;
+
+    if (opts.visible === false) {
+      container.classList.add("hidden");
+      return;
+    } else {
+      container.classList.remove("hidden");
+    }
+
+    const stage = opts.stage || "Working";
+    stageEl.textContent = stage;
+    liveEl.textContent = `${stage}${typeof opts.progress === "number" ? ` — ${Math.round(opts.progress*100)}%` : ""}`;
+
+    const indeterminate = !!opts.indeterminate;
+    if (indeterminate) {
+      barEl.classList.add("pipeline-bar--indeterminate");
+      dotsEl.style.display = "inline-flex";
+      pctEl.textContent = "…";
+      fillEl.style.width = "0%";
+      fillEl.style.opacity = "0.9";
+    } else {
+      barEl.classList.remove("pipeline-bar--indeterminate");
+      dotsEl.style.display = "none";
+      const progress = _clamp(opts.progress ?? 0, 0, 1);
+      requestAnimationFrame(() => {
+        fillEl.style.width = `${(progress * 100).toFixed(1)}%`;
+        pctEl.textContent = `${Math.round(progress * 100)}%`;
+      });
+    }
+  }
+
+  function updatePipelineFromRun(run) {
+    if (!run) {
+      showPipelineStatus({ visible: false });
+      return;
+    }
+    const status = (run.status || "").toLowerCase();
+    if (status === "running" || status === "started" || status === "pending") {
+      const prog = run.metrics?.progress_pct != null ? (run.metrics.progress_pct / 100) : null;
+      if (prog == null) {
+        showPipelineStatus({ visible: true, stage: "Running", indeterminate: true });
+      } else {
+        showPipelineStatus({ visible: true, stage: "Running", progress: prog, indeterminate: false });
+      }
+    } else if (status === "completed" || status === "done" || status === "success") {
+      showPipelineStatus({ visible: true, stage: "Complete", progress: 1, indeterminate: false });
+      setTimeout(() => {
+        const container = document.getElementById("wizardStatus");
+        if (container) container.classList.add("hidden");
+      }, 1200);
+    } else if (status === "failed" || status === "error") {
+      showPipelineStatus({ visible: true, stage: "Failed", progress: 0, indeterminate: false });
+    } else {
+      showPipelineStatus({ visible: false });
     }
   }
   // Expose refreshMetrics globally so other scripts can call it

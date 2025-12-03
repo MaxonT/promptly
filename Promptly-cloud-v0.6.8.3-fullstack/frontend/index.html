@@ -458,12 +458,13 @@ html[data-theme="light"] .grey-gradient-text{
         <button id="runBtn" class="btn layer-primary-action" data-i18n="run_btn">Generate optimized prompt</button>
       </div>
       <div class="layer-default__output">
-        <div class="layer-output-header">
+        <div class="pipeline-header">
           <div>
-            <h3 class="gradient-text" data-i18n="best_prompt">Best Prompt</h3>
-            <small>Selected via Outcome Runner (best-of-N evaluation)</small>
+            <p class="eyebrow">Pipeline preview</p>
+            <h3 class="gradient-text">Best Prompt animation</h3>
+            <p class="layer-output-hint">Watch every stage that shapes the final prompt without shrinking the visuals.</p>
           </div>
-          <button class="btn copy-btn" type="button" onclick="navigator.clipboard?.writeText(document.getElementById('bestPrompt').value)">Copy</button>
+          <div class="pipeline-chip">Live</div>
         </div>
         <div class="best-prompt-pipeline" id="bestPromptPipeline">
           <div class="pipeline-track">
@@ -575,6 +576,15 @@ html[data-theme="light"] .grey-gradient-text{
             </div>
           </div>
           <div class="pipeline-status-text" id="pipelineStatusText">Promptly’s pipeline will show you how your best prompt is chosen.</div>
+        </div>
+      </div>
+      <div class="layer-default__best">
+        <div class="layer-output-header">
+          <div>
+            <h3 class="gradient-text" data-i18n="best_prompt">Best Prompt</h3>
+            <small>Selected via Outcome Runner (best-of-N evaluation)</small>
+          </div>
+          <button class="btn copy-btn" type="button" onclick="navigator.clipboard?.writeText(document.getElementById('bestPrompt').value)">Copy</button>
         </div>
         <textarea id="bestPrompt" class="codeblock" rows="14" placeholder="Click “Generate optimized prompt” to see the strongest prompt for your goal."></textarea>
         <p class="layer-output-hint">We run Spec → Questions → LLM agents → Metrics → Outcome Runner before surfacing this prompt.</p>

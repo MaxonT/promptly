@@ -33,6 +33,9 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
   const cancelWizardBtn = document.getElementById("cancelWizardBtn");
   const wizardStatus = document.getElementById("wizardStatus");
 
+  const modeSelector = document.getElementById("modeSelector");
+  const modeCards = Array.from(document.querySelectorAll(".wizard-mode-option"));
+
   const resultEmptyState = document.getElementById("resultEmptyState");
   const resultContainer = document.getElementById("resultContainer");
   const specOutput = document.getElementById("specOutput");
@@ -57,6 +60,51 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
   let loadingTimeoutRef = null;
   let slowWarningTimerRef = null;
 
+  const MODE_STORAGE_KEY = "promptly-wizard-mode";
+  const MODE_OPTIONS = {
+    fast: {
+      id: "fast",
+      label: "Fast",
+      hierarchy: "A+",
+      description: "Quick response, minimal reasoning"
+    },
+    deep: {
+      id: "deep",
+      label: "Deep Thinking",
+      hierarchy: "S",
+      description: "Balanced depth and speed"
+    },
+    ultra: {
+      id: "ultra",
+      label: "Ultra Thinking",
+      hierarchy: "S+",
+      description: "Maximum depth, slowest response"
+    }
+  };
+
+  let currentMode = MODE_OPTIONS[sessionStorage.getItem(MODE_STORAGE_KEY)]?.id || "deep";
+
+  // Model selection is managed on the landing hero; the wizard reads that shared choice.
+  const MODEL_STORAGE_KEY = "promptly:model-selection";
+  const AVAILABLE_MODELS = [
+    "promptly-mini",
+    "promptly",
+    "promptly-plus",
+    "promptly-pro",
+    "promptly-pro-max",
+    "promptly-code-mini",
+    "promptly-code",
+    "promptly-code-plus",
+    "promptly-code-pro",
+    "promptly-code-pro-max"
+  ];
+
+  let currentModel = sessionStorage.getItem(MODEL_STORAGE_KEY) || AVAILABLE_MODELS[0];
+  if (!AVAILABLE_MODELS.includes(currentModel)) {
+    currentModel = AVAILABLE_MODELS[0];
+  }
+  sessionStorage.setItem(MODEL_STORAGE_KEY, currentModel);
+
   function log(line) {
     const ts = new Date().toISOString().slice(11, 19);
     logOutput.textContent += `[${ts}] ${line}\n`;
@@ -80,6 +128,47 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
     if (!wizardStatus) return;
     wizardStatus.classList.add("hidden");
     wizardStatus.textContent = "";
+  }
+
+  function setMode(mode, { silentLog = false } = {}) {
+    const resolvedMode = MODE_OPTIONS[mode]?.id || "deep";
+    currentMode = resolvedMode;
+
+    modeCards.forEach((card) => {
+      const isActive = card.dataset.mode === resolvedMode;
+      card.classList.toggle("is-selected", isActive);
+      card.setAttribute("aria-pressed", isActive ? "true" : "false");
+    });
+
+    sessionStorage.setItem(MODE_STORAGE_KEY, resolvedMode);
+
+    if (modeSelector && MODE_OPTIONS[resolvedMode]) {
+      modeSelector.setAttribute(
+        "aria-label",
+        `Response depth mode: ${MODE_OPTIONS[resolvedMode].label} (${MODE_OPTIONS[resolvedMode].hierarchy})`
+      );
+    }
+
+    if (!silentLog && MODE_OPTIONS[resolvedMode]) {
+      log(`Mode set to ${MODE_OPTIONS[resolvedMode].label} (${MODE_OPTIONS[resolvedMode].hierarchy})`);
+    }
+  }
+
+  function initModeSelector() {
+    if (!modeSelector || !modeCards.length) return;
+    modeCards.forEach((card) => {
+      card.setAttribute("role", "button");
+      card.setAttribute("aria-pressed", "false");
+      card.addEventListener("click", () => setMode(card.dataset.mode || "deep"));
+      card.addEventListener("keydown", (evt) => {
+        if (evt.key === "Enter" || evt.key === " ") {
+          evt.preventDefault();
+          setMode(card.dataset.mode || "deep");
+        }
+      });
+    });
+
+    setMode(currentMode, { silentLog: true });
   }
 
   function syncStartButtonState() {
@@ -568,7 +657,7 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
     await new Promise(resolve => setTimeout(resolve, 300));
 
     try {
-      log("Starting new question session...");
+      log(`Starting new question session in ${MODE_OPTIONS[currentMode].label} (${MODE_OPTIONS[currentMode].hierarchy}) mode...`);
 
       // FIX 2.1: Show enhanced loading overlay with progress info
       showLoadingInQuestionPanel(`
@@ -605,9 +694,12 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           initial_description: idea,
-          kind
-        })
-      , signal: startController.signal });
+          kind,
+          mode: currentMode,
+          model: currentModel
+        }),
+        signal: startController.signal
+      });
 
       // Clear timeout if request completes
       clearTimeout(loadingTimeoutRef);
@@ -709,7 +801,7 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
       const res = await fetch(`${API_BASE}/api/question-sessions/${encodeURIComponent(currentSessionId)}/answer`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ answers: answersPayload })
+        body: JSON.stringify({ answers: answersPayload, model: currentModel })
       });
       if (!res.ok) {
         const txt = await res.text();
@@ -740,7 +832,9 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
     try {
       log("Finalizing session and generating spec + compiled prompt...");
       const res = await fetch(`${API_BASE}/api/question-sessions/${encodeURIComponent(currentSessionId)}/finalize`, {
-        method: "POST"
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ model: currentModel })
       });
       if (!res.ok) {
         const txt = await res.text();
@@ -793,9 +887,11 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
       const originalText = saveSnapshotBtn.textContent;
       saveSnapshotBtn.disabled = true;
       saveSnapshotBtn.textContent = "💾 Saving...";
-      
+
       const res = await fetch(`${API_BASE}/api/question-sessions/${encodeURIComponent(currentSessionId)}/snapshot`, {
-        method: "POST"
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ model: currentModel })
       });
       if (!res.ok) {
         const txt = await res.text();
@@ -934,7 +1030,8 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           answers: [{ question_id: firstQuestionId, value: null }],
-          control: "skip"
+          control: "skip",
+          model: currentModel
         })
       });
       if (!res.ok) {
@@ -985,7 +1082,11 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
       
       const res = await fetch(
         `${API_BASE}/api/question-sessions/${encodeURIComponent(currentSessionId)}/questions/${encodeURIComponent(questionId)}/regenerate`,
-        { method: "POST" }
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ model: currentModel })
+        }
       );
       if (!res.ok) {
         const txt = await res.text();
@@ -1068,6 +1169,7 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
 
   // Initialize wizard stepper to Describe step
   updateWizardStepper('describe');
+  initModeSelector();
   syncStartButtonState();
 
   // FIX 1.2: Auto-fill idea from sessionStorage (passed from index.html)

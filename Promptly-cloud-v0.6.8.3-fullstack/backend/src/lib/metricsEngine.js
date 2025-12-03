@@ -103,7 +103,7 @@ export function buildEvaluationMetrics({ testStats = null, usage = null, targets
   };
 }
 
-export function buildRunMetrics({ latencyMs = null, usage = null }) {
+export function buildRunMetrics({ latencyMs = null, usage = null, modeProfile = null }) {
   const tokensIn = usage?.prompt_tokens ?? usage?.promptTokens ?? null;
   const tokensOut = usage?.completion_tokens ?? usage?.completionTokens ?? null;
   const tokenEfficiency = tokensIn && tokensOut ? tokensOut / tokensIn : null;
@@ -111,7 +111,10 @@ export function buildRunMetrics({ latencyMs = null, usage = null }) {
     latencyMs,
     tokensIn,
     tokensOut,
-    tokenEfficiency
+    tokenEfficiency,
+    mode: modeProfile?.id || null,
+    chainLength: modeProfile?.chainLength || null,
+    maxSteps: modeProfile?.maxSteps || null
   };
 }
 

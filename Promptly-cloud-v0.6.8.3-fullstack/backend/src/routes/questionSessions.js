@@ -15,12 +15,70 @@ export const questionSessionRouter = Router();
 
 const PROJECT_DESCRIPTION_REQUIRED_MESSAGE = "Project description is required.";
 
+const MODE_PROFILES = {
+  fast: {
+    id: "fast",
+    label: "Fast",
+    hierarchy: "A+",
+    chainLength: 2,
+    maxSteps: 3,
+    timeoutMs: 15000,
+    description: "Quick response, minimal reasoning"
+  },
+  deep: {
+    id: "deep",
+    label: "Deep Thinking",
+    hierarchy: "S",
+    chainLength: 4,
+    maxSteps: 6,
+    timeoutMs: 25000,
+    description: "Balanced depth and speed"
+  },
+  ultra: {
+    id: "ultra",
+    label: "Ultra Thinking",
+    hierarchy: "S+",
+    chainLength: 6,
+    maxSteps: 8,
+    timeoutMs: 40000,
+    description: "Maximum depth, slowest response"
+  }
+};
+
+const MODEL_IDS = [
+  "promptly-mini",
+  "promptly",
+  "promptly-plus",
+  "promptly-pro",
+  "promptly-pro-max",
+  "promptly-code-mini",
+  "promptly-code",
+  "promptly-code-plus",
+  "promptly-code-pro",
+  "promptly-code-pro-max"
+];
+
+const MODEL_TARGETS = {
+  "promptly-mini": "gpt-4o-mini",
+  promptly: "gpt-4o",
+  "promptly-plus": "gpt-4o",
+  "promptly-pro": "gpt-4o",
+  "promptly-pro-max": "gpt-4o",
+  "promptly-code-mini": "gpt-4o-mini",
+  "promptly-code": "gpt-4o-mini",
+  "promptly-code-plus": "gpt-4o",
+  "promptly-code-pro": "gpt-4o",
+  "promptly-code-pro-max": "gpt-4o"
+};
+
 const CreateSessionSchema = z.object({
   initial_description: z
     .string()
     .trim()
     .min(1, { message: PROJECT_DESCRIPTION_REQUIRED_MESSAGE }),
-  kind: z.string().min(1).max(64).optional()
+  kind: z.string().min(1).max(64).optional(),
+  mode: z.enum(["fast", "deep", "ultra"]).optional(),
+  model: z.enum(MODEL_IDS).optional()
 });
 
 const AnswerPayloadSchema = z.object({
@@ -32,12 +90,56 @@ const AnswerPayloadSchema = z.object({
       })
     )
     .min(1),
-  control: z.enum(["back", "skip"]).optional()
+  control: z.enum(["back", "skip"]).optional(),
+  model: z.enum(MODEL_IDS).optional()
+});
+
+const ModelOnlySchema = z.object({
+  model: z.enum(MODEL_IDS).optional()
 });
 
 function getUserId(req) {
   if (req.user && req.user.sub) return req.user.sub;
   return "demo-user";
+}
+
+function resolveModeProfile(mode) {
+  return MODE_PROFILES[mode] || MODE_PROFILES.deep;
+}
+
+function resolveModelChoice(modelId) {
+  const fallback = process.env.OPENAI_MODEL || "gpt-4o-mini";
+  const selected = MODEL_IDS.includes(modelId) ? modelId : "promptly";
+  return { id: selected, targetModel: MODEL_TARGETS[selected] || fallback };
+}
+
+function resolveAndPersistModel(sessionId, sessionModel, incomingModel) {
+  const resolved = resolveModelChoice(incomingModel || sessionModel);
+  if (sessionId && resolved.id !== sessionModel) {
+    db.prepare("UPDATE question_sessions SET model = ?, updated_at = ? WHERE id = ?").run(
+      resolved.id,
+      new Date().toISOString(),
+      sessionId
+    );
+  }
+  return resolved;
+}
+
+async function runWithTimeout(promise, timeoutMs, label = "task") {
+  if (!timeoutMs) return promise;
+  let timeoutId;
+  const timeoutPromise = new Promise((_, reject) => {
+    timeoutId = setTimeout(() => {
+      reject(new Error(`${label} timed out after ${timeoutMs}ms`));
+    }, timeoutMs);
+  });
+
+  try {
+    const result = await Promise.race([promise, timeoutPromise]);
+    return result;
+  } finally {
+    clearTimeout(timeoutId);
+  }
 }
 
 questionSessionRouter.post("/", async (req, res) => {
@@ -53,7 +155,9 @@ questionSessionRouter.post("/", async (req, res) => {
     }
     return res.status(400).json({ ok: false, error: parsed.error.flatten() });
   }
-  const { initial_description, kind } = parsed.data;
+  const { initial_description, kind, mode, model } = parsed.data;
+  const modeProfile = resolveModeProfile(mode);
+  const modelChoice = resolveModelChoice(model);
   const userId = getUserId(req);
   
   // Ensure the user exists before creating a session
@@ -64,20 +168,32 @@ questionSessionRouter.post("/", async (req, res) => {
 
   db.prepare(
     `INSERT INTO question_sessions
-     (id, owner_id, initial_description, kind, status, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?)`
-  ).run(sessionId, userId, initial_description, kind || null, "active", now, now);
+     (id, owner_id, initial_description, kind, mode, model, status, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+  ).run(sessionId, userId, initial_description, kind || null, modeProfile.id, modelChoice.id, "active", now, now);
 
   try {
-    const broadQuestions = await generateBroadQuestions({
-      initialDescription: initial_description,
-      kind: kind || null
-    });
-    const choiceQuestions = await generateChoiceQuestions({
-      initialDescription: initial_description,
-      kind: kind || null,
-      broadQuestions
-    });
+    const broadQuestions = await runWithTimeout(
+      generateBroadQuestions({
+        initialDescription: initial_description,
+        kind: kind || null,
+        modeProfile,
+        model: modelChoice.targetModel
+      }),
+      modeProfile.timeoutMs,
+      "generate broad questions"
+    );
+    const choiceQuestions = await runWithTimeout(
+      generateChoiceQuestions({
+        initialDescription: initial_description,
+        kind: kind || null,
+        broadQuestions,
+        modeProfile,
+        model: modelChoice.targetModel
+      }),
+      modeProfile.timeoutMs,
+      "generate choice questions"
+    );
 
     const insertQuestion = db.prepare(
       `INSERT INTO question_questions
@@ -115,7 +231,14 @@ questionSessionRouter.post("/", async (req, res) => {
       depth_levels: q.depth_levels || null
     }));
 
-    return res.json({ ok: true, session_id: sessionId, questions: firstBatch });
+    return res.json({
+      ok: true,
+      session_id: sessionId,
+      mode: modeProfile.id,
+      model: modelChoice.id,
+      mode_profile: modeProfile,
+      questions: firstBatch
+    });
   } catch (err) {
     console.error("[promptly] question session init failed", err);
     db.prepare(
@@ -155,7 +278,7 @@ questionSessionRouter.get("/:sessionId", (req, res) => {
   const { sessionId } = req.params;
   const session = db
     .prepare(
-      `SELECT id, owner_id, kind, status, initial_description, created_at, updated_at
+      `SELECT id, owner_id, kind, status, initial_description, mode, model, created_at, updated_at
        FROM question_sessions
        WHERE id = ?`
     )
@@ -170,6 +293,9 @@ questionSessionRouter.get("/:sessionId", (req, res) => {
     session: {
       id: session.id,
       owner_id: session.owner_id,
+      mode: session.mode || "deep",
+      model: session.model || "promptly",
+      mode_profile: resolveModeProfile(session.mode),
       kind: session.kind,
       status: session.status,
       initial_description: session.initial_description,
@@ -194,6 +320,7 @@ questionSessionRouter.post("/:sessionId/answer", (req, res) => {
   }
 
   const { answers, control } = parsed.data;
+  resolveAndPersistModel(sessionId, session.model, parsed.data.model);
   
   // Handle control actions (back/skip)
   if (control === "back") {
@@ -295,6 +422,13 @@ questionSessionRouter.post("/:sessionId/finalize", async (req, res) => {
     return res.status(404).json({ ok: false, error: "Session not found" });
   }
 
+  const parsedModel = ModelOnlySchema.safeParse(req.body || {});
+  if (!parsedModel.success) {
+    return res.status(400).json({ ok: false, error: parsedModel.error.flatten() });
+  }
+
+  const modelChoice = resolveAndPersistModel(sessionId, session.model, parsedModel.data.model);
+
   const questions = db
     .prepare(
       "SELECT * FROM question_questions WHERE session_id = ? ORDER BY order_index ASC"
@@ -327,10 +461,13 @@ questionSessionRouter.post("/:sessionId/finalize", async (req, res) => {
   });
 
   try {
+    const modeProfile = resolveModeProfile(session.mode);
     const result = await generateRawSpec({
       initialDescription: session.initial_description,
       kind: session.kind,
-      qaPairs
+      qaPairs,
+      modeProfile,
+      model: modelChoice.targetModel
     });
 
     const compiled = compileSpecToPrompt(result.spec);
@@ -504,6 +641,13 @@ questionSessionRouter.post("/:sessionId/questions/:questionId/regenerate", async
     return res.status(404).json({ ok: false, error: "Session not found" });
   }
 
+  const parsedModel = ModelOnlySchema.safeParse(req.body || {});
+  if (!parsedModel.success) {
+    return res.status(400).json({ ok: false, error: parsedModel.error.flatten() });
+  }
+
+  const modelChoice = resolveAndPersistModel(sessionId, session.model, parsedModel.data.model);
+
   const oldQuestion = db
     .prepare("SELECT * FROM question_questions WHERE id = ? AND session_id = ?")
     .get(questionId, sessionId);
@@ -515,12 +659,14 @@ questionSessionRouter.post("/:sessionId/questions/:questionId/regenerate", async
     // Use LLM to generate a new variation of this question
     const broadQuestions = await generateBroadQuestions({
       initialDescription: session.initial_description,
-      kind: session.kind || null
+      kind: session.kind || null,
+      model: modelChoice.targetModel
     });
     const choiceQuestions = await generateChoiceQuestions({
       initialDescription: session.initial_description,
       kind: session.kind || null,
-      broadQuestions
+      broadQuestions,
+      model: modelChoice.targetModel
     });
 
     // Pick a new question that's similar in type

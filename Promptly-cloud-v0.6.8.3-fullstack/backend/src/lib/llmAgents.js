@@ -52,12 +52,15 @@ const AgentCOutputSchema = z.object({
   explanation: z.string()
 });
 
-export async function generateBroadQuestions({ initialDescription, kind }) {
+export async function generateBroadQuestions({ initialDescription, kind, modeProfile = null, model = null }) {
   const system = [
     "You are Agent A in Promptly's Question Engine.",
     "Goal: from a fuzzy project idea, propose 8-12 broad clarification axes.",
     "IMPORTANT: Return ONLY valid JSON, no other text.",
     "",
+    modeProfile
+      ? `Runtime mode: ${modeProfile.label} (${modeProfile.hierarchy}). Use about ${modeProfile.chainLength} chained thoughts, and cap at ${modeProfile.maxSteps} reasoning steps to honor this profile. Prioritize ${modeProfile.description.toLowerCase()}.`
+      : "",
     "Required JSON format example:",
     "{",
     '  "broad_questions": [',
@@ -85,13 +88,14 @@ export async function generateBroadQuestions({ initialDescription, kind }) {
   ].join("\n");
   const user = JSON.stringify({
     initial_description: initialDescription,
-    kind: kind || null
+    kind: kind || null,
+    mode_profile: modeProfile
   });
-  
-  const model = process.env.OPENAI_MODEL || "gpt-4o-mini";
+
+  const usedModel = model || process.env.OPENAI_MODEL || "gpt-4o-mini";
   const runId = createRun({
-    model,
-    inputBlocks: { agent: "A", initial_description: initialDescription, kind }
+    model: usedModel,
+    inputBlocks: { agent: "A", initial_description: initialDescription, kind, mode: modeProfile?.id }
   });
 
   let raw;
@@ -103,9 +107,13 @@ export async function generateBroadQuestions({ initialDescription, kind }) {
   while (retryCount <= MAX_RETRIES) {
     try {
       const start = Date.now();
-      const response = await chatJson({ system, user });
+      const response = await chatJson({ system, user, model: usedModel });
       raw = response.data;
-      const runMetrics = buildRunMetrics({ latencyMs: Date.now() - start, usage: response.usage });
+      const runMetrics = buildRunMetrics({
+        latencyMs: Date.now() - start,
+        usage: response.usage,
+        modeProfile
+      });
 
       // Auto-fix: Clean and normalize the response
       if (raw && raw.broad_questions && Array.isArray(raw.broad_questions)) {
@@ -193,12 +201,15 @@ function cleanOptionsArray(options) {
   return cleaned;
 }
 
-export async function generateChoiceQuestions({ initialDescription, kind, broadQuestions }) {
+export async function generateChoiceQuestions({ initialDescription, kind, broadQuestions, modeProfile = null, model = null }) {
   const system = [
     "You are Agent B in Promptly's Question Engine.",
     "Goal: convert broad axes into concrete, user-friendly questions with depth levels.",
     "IMPORTANT: Return ONLY valid JSON, no other text.",
     "",
+    modeProfile
+      ? `Runtime mode: ${modeProfile.label} (${modeProfile.hierarchy}). Use about ${modeProfile.chainLength} chained thoughts and no more than ${modeProfile.maxSteps} planning hops to balance speed/quality as described: ${modeProfile.description}.`
+      : "",
     "⚠️ CRITICAL RULES - MUST FOLLOW:",
     "1. EVERY question MUST provide multiple-choice options (3-6 options minimum) ⚠️",
     "2. NO questions without options - this will cause errors! ⚠️",
@@ -307,13 +318,14 @@ export async function generateChoiceQuestions({ initialDescription, kind, broadQ
   const user = JSON.stringify({
     initial_description: initialDescription,
     kind: kind || null,
-    broad_questions: broadQuestions
+    broad_questions: broadQuestions,
+    mode_profile: modeProfile
   });
 
-  const model = process.env.OPENAI_MODEL || "gpt-4o-mini";
+  const usedModel = model || process.env.OPENAI_MODEL || "gpt-4o-mini";
   const runId = createRun({
-    model,
-    inputBlocks: { agent: "B", initial_description: initialDescription, kind, broad_questions: broadQuestions }
+    model: usedModel,
+    inputBlocks: { agent: "B", initial_description: initialDescription, kind, broad_questions: broadQuestions, mode: modeProfile?.id }
   });
 
   let raw;
@@ -325,9 +337,13 @@ export async function generateChoiceQuestions({ initialDescription, kind, broadQ
   while (retryCount <= MAX_RETRIES) {
     try {
       const start = Date.now();
-      const response = await chatJson({ system, user });
+      const response = await chatJson({ system, user, model: usedModel });
       raw = response.data;
-      const runMetrics = buildRunMetrics({ latencyMs: Date.now() - start, usage: response.usage });
+      const runMetrics = buildRunMetrics({
+        latencyMs: Date.now() - start,
+        usage: response.usage,
+        modeProfile
+      });
       
       // Auto-fix: Clean and normalize the response
       if (raw && raw.choice_questions && Array.isArray(raw.choice_questions)) {
@@ -557,13 +573,16 @@ export async function generateChoiceQuestions({ initialDescription, kind, broadQ
   }
 }
 
-export async function generateRawSpec({ initialDescription, kind, qaPairs }) {
+export async function generateRawSpec({ initialDescription, kind, qaPairs, modeProfile = null, model = null }) {
   const system = [
     "You are Agent C in Promptly's Question Engine.",
     "You receive all questions and answers from a wizard.",
     "Your job: synthesize them into a structured specification.",
     "IMPORTANT: Return ONLY valid JSON, no other text.",
     "",
+    modeProfile
+      ? `Runtime mode: ${modeProfile.label} (${modeProfile.hierarchy}). Use about ${modeProfile.chainLength} reasoning chains but cap at ${modeProfile.maxSteps} steps to match the desired depth: ${modeProfile.description}.`
+      : "",
     "Required JSON format example:",
     "{",
     '  "spec": {',
@@ -592,13 +611,14 @@ export async function generateRawSpec({ initialDescription, kind, qaPairs }) {
   const user = JSON.stringify({
     initial_description: initialDescription,
     kind: kind || null,
-    qa_pairs: qaPairs
+    qa_pairs: qaPairs,
+    mode_profile: modeProfile
   });
 
-  const model = process.env.OPENAI_MODEL || "gpt-4o-mini";
+  const usedModel = model || process.env.OPENAI_MODEL || "gpt-4o-mini";
   const runId = createRun({
-    model,
-    inputBlocks: { agent: "C", initial_description: initialDescription, kind, qa_pairs: qaPairs }
+    model: usedModel,
+    inputBlocks: { agent: "C", initial_description: initialDescription, kind, qa_pairs: qaPairs, mode: modeProfile?.id }
   });
 
   let raw;
@@ -610,9 +630,13 @@ export async function generateRawSpec({ initialDescription, kind, qaPairs }) {
   while (retryCount <= MAX_RETRIES) {
     try {
       const start = Date.now();
-      const response = await chatJson({ system, user });
+      const response = await chatJson({ system, user, model: usedModel });
       raw = response.data;
-      const runMetrics = buildRunMetrics({ latencyMs: Date.now() - start, usage: response.usage });
+      const runMetrics = buildRunMetrics({
+        latencyMs: Date.now() - start,
+        usage: response.usage,
+        modeProfile
+      });
 
       // Auto-fix: Clean and normalize the response
       if (raw) {

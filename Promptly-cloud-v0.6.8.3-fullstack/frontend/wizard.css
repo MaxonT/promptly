@@ -249,6 +249,94 @@
 .wizard-stepper-connector--completed{
   background:linear-gradient(90deg,#16A34A,#7C3AED);
 }
+
+.wizard-top-controls{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:0.75rem;
+  margin:1rem 1.5rem;
+  flex-wrap:wrap;
+}
+.wizard-mode-toggle{
+  margin:0;
+  padding:0.75rem;
+  border:1px solid rgba(148,163,184,0.25);
+  background:rgba(15,23,42,0.45);
+  backdrop-filter:blur(8px);
+  border-radius:14px;
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+  gap:0.75rem;
+  box-shadow:0 12px 30px rgba(0,0,0,0.12);
+  flex:1;
+  min-width:260px;
+}
+.wizard-mode-option{
+  border:1px solid rgba(148,163,184,0.25);
+  background:linear-gradient(145deg,rgba(30,41,59,0.8),rgba(15,23,42,0.8));
+  border-radius:12px;
+  padding:0.75rem 0.9rem;
+  cursor:pointer;
+  transition:all 0.2s ease;
+  outline:none;
+  display:flex;
+  flex-direction:column;
+  gap:0.25rem;
+}
+.wizard-mode-option:hover{
+  border-color:rgba(124,58,237,0.7);
+  box-shadow:0 10px 24px rgba(124,58,237,0.16);
+  transform:translateY(-1px);
+}
+.wizard-mode-option.is-selected{
+  border-color:rgba(34,211,238,0.9);
+  box-shadow:0 0 0 2px rgba(34,211,238,0.18),0 12px 26px rgba(6,182,212,0.18);
+  background:linear-gradient(135deg,rgba(34,211,238,0.16),rgba(124,58,237,0.16));
+}
+.wizard-mode-option:focus-visible{
+  outline:2px solid rgba(34,211,238,0.6);
+  outline-offset:2px;
+}
+.wizard-mode-option-header{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:0.75rem;
+  font-weight:700;
+  color:var(--text-high, #e5e7eb);
+}
+.wizard-mode-tier{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  background:rgba(124,58,237,0.15);
+  color:#c084fc;
+  border:1px solid rgba(124,58,237,0.4);
+  border-radius:999px;
+  padding:0.2rem 0.6rem;
+  font-size:0.75rem;
+  font-weight:700;
+  letter-spacing:0.02em;
+}
+.wizard-mode-desc{
+  margin:0;
+  font-size:0.85rem;
+  color:var(--text-med, #cbd5e1);
+}
+html[data-theme="light"] .wizard-mode-toggle{
+  background:rgba(248,250,252,0.9);
+  border-color:rgba(148,163,184,0.35);
+}
+html[data-theme="light"] .wizard-mode-option{
+  background:linear-gradient(145deg,#ffffff, #f8fafc);
+  border-color:rgba(148,163,184,0.4);
+}
+html[data-theme="light"] .wizard-mode-option.is-selected{
+  border-color:rgba(124,58,237,0.6);
+  box-shadow:0 0 0 2px rgba(124,58,237,0.15),0 12px 26px rgba(124,58,237,0.18);
+  background:linear-gradient(135deg,rgba(124,58,237,0.08),rgba(6,182,212,0.08));
+}
 .wizard-header-main{
   display:flex;
   align-items:center;

@@ -234,8 +234,21 @@
       showWizardCheckingFallback(getStoredWizardSession()?.sessionId);
     }
     refreshWizardIndicator();
-    if(wizardStatusTimer)return;wizardStatusTimer=setInterval(refreshWizardIndicator,10000);
+    // Clear any existing timer before creating a new one
+    if(wizardStatusTimer){
+      clearInterval(wizardStatusTimer);
+    }
+    // Poll every 10 seconds to check wizard status
+    wizardStatusTimer=setInterval(refreshWizardIndicator,10000);
   }
+  
+  // Clean up timer on page unload
+  window.addEventListener("beforeunload",()=>{
+    if(wizardStatusTimer){
+      clearInterval(wizardStatusTimer);
+      wizardStatusTimer=null;
+    }
+  });
   window.promptlyWizardSession={markRunning:(sessionId)=>{setStoredWizardSession(sessionId);showWizardCheckingFallback(sessionId);initWizardStatusIndicator();},clear:()=>{clearStoredWizardSession();hideWizardIndicator();},getActive:getStoredWizardSession};
   function formatBestPrompt(rawOutput) {
     if (!rawOutput) return "";

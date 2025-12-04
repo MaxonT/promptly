@@ -224,6 +224,20 @@
           The engine will ask 3–5 questions at a time. Your answers will be stored in the backend and
           used to assemble a high-level spec.
         </p>
+        <div class="wizard-user-guidance" style="margin-top: 1rem; padding: 1rem; background: rgba(124, 58, 237, 0.1); border-radius: 8px; border-left: 3px solid #7C3AED;">
+          <p style="margin: 0 0 0.5rem 0; font-weight: 600; color: var(--text-high, #E7EAF0);">💡 Answering Tips:</p>
+          <ul style="margin: 0; padding-left: 1.5rem; color: var(--text-med, #A0A8B5); font-size: 0.9rem; line-height: 1.6;">
+            <li>You <strong>do NOT need to answer all questions</strong> — answering at least one is okay</li>
+            <li>The more questions you answer, the more accurate and tailored your final prompt will be</li>
+            <li>Your answers are <strong>automatically saved</strong> as you type — no need to click Save</li>
+            <li>You can skip questions or go back to previous pages anytime</li>
+          </ul>
+        </div>
+        <div class="wizard-timing-info" id="wizardTimingInfo" style="margin-top: 0.75rem; padding: 0.75rem; background: rgba(6, 182, 212, 0.1); border-radius: 8px; border-left: 3px solid #06B6D4; display: none;">
+          <p style="margin: 0; font-size: 0.85rem; color: var(--text-med, #A0A8B5);">
+            <strong>Expected processing time:</strong> <span id="wizardTimingText"></span>
+          </p>
+        </div>
       </div>
       <div id="qaEmptyState" class="wizard-empty">
         <p>No questions yet. Start the wizard by describing your project on the left.</p>

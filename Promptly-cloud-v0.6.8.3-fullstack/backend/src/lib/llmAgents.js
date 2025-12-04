@@ -580,6 +580,12 @@ export async function generateRawSpec({ initialDescription, kind, qaPairs, modeP
     "Your job: synthesize them into a structured specification.",
     "IMPORTANT: Return ONLY valid JSON, no other text.",
     "",
+    "CRITICAL: The spec you generate must include:",
+    "- All information from the initial description",
+    "- All answers provided by the user in the wizard",
+    "- The project kind/type if specified",
+    "- Any constraints, requirements, or preferences mentioned",
+    "",
     modeProfile
       ? `Runtime mode: ${modeProfile.label} (${modeProfile.hierarchy}). Use about ${modeProfile.chainLength} reasoning chains but cap at ${modeProfile.maxSteps} steps to match the desired depth: ${modeProfile.description}.`
       : "",
@@ -608,12 +614,23 @@ export async function generateRawSpec({ initialDescription, kind, qaPairs, modeP
     "5. Be specific and actionable based on the Q&A responses.",
     "6. Structure the spec logically for a developer to implement."
   ].join("\n");
-  const user = JSON.stringify({
+  // Build comprehensive input for spec generation
+  const userInput = {
     initial_description: initialDescription,
     kind: kind || null,
     qa_pairs: qaPairs,
-    mode_profile: modeProfile
-  });
+    mode_profile: modeProfile ? {
+      id: modeProfile.id,
+      label: modeProfile.label,
+      hierarchy: modeProfile.hierarchy
+    } : null,
+    model: model || null,
+    // Include summary of answered questions for context
+    answered_questions_count: qaPairs.filter(qa => qa.answer !== null).length,
+    total_questions_count: qaPairs.length
+  };
+  
+  const user = JSON.stringify(userInput);
 
   const usedModel = model || process.env.OPENAI_MODEL || "gpt-4o-mini";
   const runId = createRun({

@@ -627,6 +627,7 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
   let statusPollInterval = null;
   let pollingStartTime = null;
   const STATUS_POLL_INTERVAL_MS = 2000; // Poll every 2 seconds
+  const SESSION_RECOVERY_TIMEOUT_MS = 15 * 60 * 1000; // 15 minutes
   
   // Save session to localStorage for recovery
   function saveSessionToLocalStorage(sessionId) {
@@ -646,8 +647,8 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
       const saved = localStorage.getItem("promptly:wizard-pending-session");
       if (saved) {
         const data = JSON.parse(saved);
-        // Only restore sessions less than 15 minutes old
-        if (Date.now() - data.startedAt < 15 * 60 * 1000) {
+        // Only restore sessions within the recovery timeout window
+        if (Date.now() - data.startedAt < SESSION_RECOVERY_TIMEOUT_MS) {
           return data.sessionId;
         } else {
           localStorage.removeItem("promptly:wizard-pending-session");
@@ -699,12 +700,13 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
     try {
       const res = await fetch(`${API_BASE}/api/question-sessions/${encodeURIComponent(sessionId)}/status`);
       if (!res.ok) {
-        console.warn(`Status poll failed: HTTP ${res.status}`);
+        const errorText = await res.text().catch(() => "Unknown error");
+        console.warn(`[Wizard] Status poll failed for session ${sessionId}: HTTP ${res.status} - ${errorText}`);
         return null;
       }
       return await res.json();
     } catch (err) {
-      console.warn("Status poll error:", err);
+      console.warn(`[Wizard] Status poll error for session ${sessionId}:`, err.message || err);
       return null;
     }
   }

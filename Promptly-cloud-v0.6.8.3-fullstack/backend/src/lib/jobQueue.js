@@ -21,10 +21,11 @@ const JobStatus = {
   ERROR: "error"
 };
 
-// Maximum retry attempts for failed jobs
+// Configuration constants
 const MAX_RETRIES = 2;
-// Timeout for question generation (60 seconds)
-const GENERATION_TIMEOUT_MS = 60000;
+const GENERATION_TIMEOUT_MS = 60000; // 60 seconds
+const JOB_CLEANUP_RETENTION_MS = 30 * 60 * 1000; // 30 minutes
+const JOB_CLEANUP_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
 
 /**
  * Create a new question generation job
@@ -292,22 +293,22 @@ async function runWithTimeout(promise, timeoutMs, label = "task") {
 
 /**
  * Clean up old completed jobs (runs periodically)
- * Keeps jobs for 30 minutes after completion
+ * Keeps jobs for the configured retention period after completion
  */
 export function cleanupOldJobs() {
-  const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000).toISOString();
+  const cutoffTime = new Date(Date.now() - JOB_CLEANUP_RETENTION_MS).toISOString();
   
   for (const [jobId, job] of jobs.entries()) {
     if (
       (job.status === JobStatus.READY || job.status === JobStatus.ERROR) &&
-      job.updatedAt < thirtyMinutesAgo
+      job.updatedAt < cutoffTime
     ) {
       jobs.delete(jobId);
     }
   }
 }
 
-// Clean up old jobs every 5 minutes
-setInterval(cleanupOldJobs, 5 * 60 * 1000);
+// Clean up old jobs at configured interval
+setInterval(cleanupOldJobs, JOB_CLEANUP_INTERVAL_MS);
 
 export { JobStatus };

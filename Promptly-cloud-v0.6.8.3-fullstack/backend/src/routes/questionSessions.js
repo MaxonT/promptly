@@ -132,23 +132,6 @@ function resolveAndPersistModel(sessionId, sessionModel, incomingModel) {
   return resolved;
 }
 
-async function runWithTimeout(promise, timeoutMs, label = "task") {
-  if (!timeoutMs) return promise;
-  let timeoutId;
-  const timeoutPromise = new Promise((_, reject) => {
-    timeoutId = setTimeout(() => {
-      reject(new Error(`${label} timed out after ${timeoutMs}ms`));
-    }, timeoutMs);
-  });
-
-  try {
-    const result = await Promise.race([promise, timeoutPromise]);
-    return result;
-  } finally {
-    clearTimeout(timeoutId);
-  }
-}
-
 questionSessionRouter.post("/", async (req, res) => {
   const parsed = CreateSessionSchema.safeParse(req.body);
   if (!parsed.success) {

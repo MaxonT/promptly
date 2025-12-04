@@ -264,6 +264,75 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
     progressIndicator?.classList.add("hidden");
   }
   
+  // ===== Phase 3 UX Enhancement Functions =====
+  
+  // Auto-save indicator elements
+  const autoSaveIndicator = document.getElementById("autoSaveIndicator");
+  const answerGuidance = document.getElementById("answerGuidance");
+  const guidanceMessage = document.getElementById("guidanceMessage");
+  const guidanceCounter = document.getElementById("guidanceCounter");
+  
+  let autoSaveTimer = null;
+  
+  // Show auto-save indicator with debounce
+  function triggerAutoSave() {
+    // Clear previous timer
+    if (autoSaveTimer) clearTimeout(autoSaveTimer);
+    
+    // Debounce: wait 2 seconds after last change
+    autoSaveTimer = setTimeout(() => {
+      showAutoSaveIndicator();
+    }, 2000);
+  }
+  
+  // Show the auto-save indicator
+  function showAutoSaveIndicator() {
+    if (!autoSaveIndicator) return;
+    
+    autoSaveIndicator.classList.remove("hidden");
+    
+    // Auto-hide after 2 seconds
+    setTimeout(() => {
+      autoSaveIndicator.classList.add("hidden");
+    }, 2000);
+  }
+  
+  // Update the answer guidance banner
+  function updateAnswerGuidance() {
+    if (!answerGuidance || allQuestions.length === 0) {
+      if (answerGuidance) answerGuidance.classList.add("hidden");
+      return;
+    }
+    
+    const answeredCount = currentAnswers.size;
+    const totalCount = allQuestions.length;
+    const minRequired = 1;
+    
+    answerGuidance.classList.remove("hidden");
+    
+    if (answeredCount >= minRequired) {
+      answerGuidance.classList.add("guidance-met");
+      if (guidanceMessage) {
+        guidanceMessage.textContent = "Great! More answers = better results";
+      }
+    } else {
+      answerGuidance.classList.remove("guidance-met");
+      if (guidanceMessage) {
+        guidanceMessage.textContent = `Answer at least ${minRequired} question to continue`;
+      }
+    }
+    
+    if (guidanceCounter) {
+      guidanceCounter.textContent = `${answeredCount} of ${totalCount} answered`;
+    }
+  }
+  
+  // Track answer changes for auto-save and guidance
+  function onAnswerChange() {
+    triggerAutoSave();
+    updateAnswerGuidance();
+  }
+  
   // Add questions to the global list (with sequential numbering)
   function addQuestions(newQuestions) {
     const startIndex = allQuestions.length;
@@ -453,6 +522,7 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
         input.value = currentAnswers.get(q.id) ?? "";
         input.addEventListener("input", () => {
           currentAnswers.set(q.id, input.value);
+          onAnswerChange(); // Phase 3: Track answer changes
         });
         card.appendChild(input);
       } else if (q.type === "yes_no") {
@@ -473,6 +543,7 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
           currentAnswers.set(q.id, selected);
           yes.classList.toggle("is-selected", selected === true);
           no.classList.toggle("is-selected", selected === false);
+          onAnswerChange(); // Phase 3: Track answer changes
         }
 
         yes.addEventListener("click", () => update(true));
@@ -566,6 +637,7 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
                 }
               }
             }
+            onAnswerChange(); // Phase 3: Track answer changes
           }
 
           function showOtherInput() {
@@ -621,6 +693,9 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
     
     // Show all buttons
     skipBtn.classList.remove("hidden");
+    
+    // Phase 3: Update guidance banner when page renders
+    updateAnswerGuidance();
   }
 
   async function startWizard() {
@@ -653,6 +728,17 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
     cancelWizardBtn?.classList.remove("hidden");
     setWizardStatus("Preparing questions... This usually takes 10–15 seconds.", "info", { showTicks: true });
 
+    // Show global status bar for cross-page visibility
+    if (typeof window.globalStatus !== 'undefined') {
+      window.globalStatus.show({
+        title: '🧙‍♂️ Question Wizard Running',
+        subtitle: 'Generating questions...',
+        progress: 0,
+        mode: currentMode,
+        estimatedTime: true
+      });
+    }
+
     // Wait for fade-out animation before starting API call
     await new Promise(resolve => setTimeout(resolve, 300));
 
@@ -668,6 +754,11 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
       `);
 
       qaPanel?.classList.add("is-appearing");
+
+      // Update global status progress
+      if (typeof window.globalStatus !== 'undefined') {
+        window.globalStatus.updateProgress(20);
+      }
 
       slowWarningTimerRef = setTimeout(() => {
         setWizardStatus("This is taking longer than usual. You can cancel and retry.", "warn", { showTicks: true });
@@ -738,6 +829,15 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
       // Update wizard stepper to Questions step
       updateWizardStepper('questions');
 
+      // Update global status to show questions are ready
+      if (typeof window.globalStatus !== 'undefined') {
+        window.globalStatus.complete({
+          message: `✅ ${allQuestions.length} questions ready!`,
+          autoHide: true,
+          autoHideDelay: 3000
+        });
+      }
+
       // Keep button disabled after successful start
       startBtn.textContent = "Session started";
       startController = null;
@@ -745,10 +845,22 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
       if (err.name === "AbortError") {
         log("Wizard start cancelled by user.");
         setWizardStatus("Wizard cancelled. You can edit your idea and start again.", "warn");
+        // Hide global status on cancel
+        if (typeof window.globalStatus !== 'undefined') {
+          window.globalStatus.hide();
+        }
       } else {
         console.error(err);
         log("Error while starting wizard: " + err.message);
         setWizardStatus("Something went wrong while preparing questions. Please try again.", "error");
+        // Show error in global status
+        if (typeof window.globalStatus !== 'undefined') {
+          window.globalStatus.error({
+            message: '❌ Question generation failed',
+            details: err.message || 'Unknown error',
+            autoHide: false
+          });
+        }
       }
       // Revert animations on error
       ideaPanel?.classList.remove("is-starting");

@@ -1,0 +1,240 @@
+/**
+ * Global Status Bar Styles
+ * 
+ * Persistent cross-page status indicator for wizard operations
+ */
+
+.global-status-bar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 10000;
+  background: rgba(15, 23, 42, 0.95);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(124, 58, 237, 0.4);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3), 0 0 40px rgba(124, 58, 237, 0.15);
+  transform: translateY(0);
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease;
+}
+
+.global-status-bar.hidden {
+  transform: translateY(-100%);
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Light theme */
+[data-theme="light"] .global-status-bar {
+  background: rgba(255, 255, 255, 0.95);
+  border-bottom-color: rgba(124, 58, 237, 0.3);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.1), 0 0 40px rgba(124, 58, 237, 0.1);
+}
+
+.global-status-content {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0.875rem 1.25rem;
+}
+
+/* Icon / Spinner */
+.global-status-icon {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.global-status-spinner {
+  width: 24px;
+  height: 24px;
+  border: 3px solid rgba(124, 58, 237, 0.2);
+  border-top-color: #7C3AED;
+  border-radius: 50%;
+  animation: globalStatusSpin 0.8s linear infinite;
+}
+
+@keyframes globalStatusSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Hide spinner on success/error */
+.global-status-bar.global-status--success .global-status-spinner,
+.global-status-bar.global-status--error .global-status-spinner {
+  display: none;
+}
+
+.global-status-bar.global-status--success .global-status-icon::before {
+  content: "✅";
+  font-size: 1.5rem;
+}
+
+.global-status-bar.global-status--error .global-status-icon::before {
+  content: "❌";
+  font-size: 1.5rem;
+}
+
+/* Text content */
+.global-status-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.global-status-title {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #E7EAF0;
+  margin-bottom: 0.125rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+[data-theme="light"] .global-status-title {
+  color: #1F2937;
+}
+
+.global-status-subtitle {
+  font-size: 0.8rem;
+  color: rgba(148, 163, 184, 0.9);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+[data-theme="light"] .global-status-subtitle {
+  color: #64748B;
+}
+
+/* Progress bar */
+.global-status-progress {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 180px;
+}
+
+.global-status-progress-bar {
+  flex: 1;
+  height: 6px;
+  background: rgba(148, 163, 184, 0.2);
+  border-radius: 999px;
+  overflow: hidden;
+  position: relative;
+}
+
+.global-status-progress-bar::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 100%;
+  width: var(--progress, 0%);
+  background: linear-gradient(90deg, #7C3AED, #06B6D4);
+  border-radius: 999px;
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Use inline style for width, this is a fallback */
+.global-status-progress-bar {
+  position: relative;
+}
+
+.global-status-progress-bar {
+  background: rgba(148, 163, 184, 0.2);
+}
+
+/* Apply width via direct style manipulation in JS */
+
+.global-status-progress-text {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #7C3AED;
+  min-width: 32px;
+  text-align: right;
+}
+
+/* Close button */
+.global-status-close {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  border-radius: 6px;
+  color: rgba(148, 163, 184, 0.8);
+  font-size: 1.25rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.global-status-close:hover {
+  background: rgba(124, 58, 237, 0.1);
+  border-color: rgba(124, 58, 237, 0.5);
+  color: #7C3AED;
+}
+
+/* Success state */
+.global-status-bar.global-status--success {
+  border-bottom-color: rgba(34, 197, 94, 0.5);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3), 0 0 40px rgba(34, 197, 94, 0.15);
+}
+
+.global-status-bar.global-status--success .global-status-progress-bar::after {
+  background: linear-gradient(90deg, #22C55E, #16A34A);
+}
+
+.global-status-bar.global-status--success .global-status-progress-text {
+  color: #22C55E;
+}
+
+/* Error state */
+.global-status-bar.global-status--error {
+  border-bottom-color: rgba(239, 68, 68, 0.5);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3), 0 0 40px rgba(239, 68, 68, 0.15);
+}
+
+.global-status-bar.global-status--error .global-status-progress-bar::after {
+  background: linear-gradient(90deg, #EF4444, #DC2626);
+}
+
+.global-status-bar.global-status--error .global-status-progress-text {
+  color: #EF4444;
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+  .global-status-content {
+    padding: 0.75rem 1rem;
+    gap: 0.75rem;
+  }
+
+  .global-status-progress {
+    width: 100px;
+  }
+
+  .global-status-title {
+    font-size: 0.875rem;
+  }
+
+  .global-status-subtitle {
+    font-size: 0.75rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .global-status-progress {
+    display: none;
+  }
+}

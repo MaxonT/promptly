@@ -10,6 +10,7 @@ import {
 import { compileSpecToPrompt } from "../lib/specCompiler.js";
 import { LlmDisabledError } from "../lib/openaiClient.js";
 import { goBack, skipQuestion } from "../lib/questionNavigator.js";
+import { getModelIds, resolveModelName, isValidModel } from "../lib/modelRegistry.js";
 
 export const questionSessionRouter = Router();
 
@@ -45,31 +46,14 @@ const MODE_PROFILES = {
   }
 };
 
-const MODEL_IDS = [
-  "promptly-mini",
-  "promptly",
-  "promptly-plus",
-  "promptly-pro",
-  "promptly-pro-max",
-  "promptly-code-mini",
-  "promptly-code",
-  "promptly-code-plus",
-  "promptly-code-pro",
-  "promptly-code-pro-max"
-];
+// Get model IDs from the centralized model registry
+const MODEL_IDS = getModelIds();
 
-const MODEL_TARGETS = {
-  "promptly-mini": "gpt-4o-mini",
-  promptly: "gpt-4o",
-  "promptly-plus": "gpt-4o",
-  "promptly-pro": "gpt-4o",
-  "promptly-pro-max": "gpt-4o",
-  "promptly-code-mini": "gpt-4o-mini",
-  "promptly-code": "gpt-4o-mini",
-  "promptly-code-plus": "gpt-4o",
-  "promptly-code-pro": "gpt-4o",
-  "promptly-code-pro-max": "gpt-4o"
-};
+// Legacy MODEL_TARGETS kept for backward compatibility, but uses registry internally
+const MODEL_TARGETS = MODEL_IDS.reduce((acc, modelId) => {
+  acc[modelId] = resolveModelName(modelId);
+  return acc;
+}, {});
 
 const CreateSessionSchema = z.object({
   initial_description: z
@@ -111,8 +95,10 @@ function resolveModeProfile(mode) {
 
 function resolveModelChoice(modelId) {
   const fallback = process.env.OPENAI_MODEL || "gpt-4o-mini";
-  const selected = MODEL_IDS.includes(modelId) ? modelId : "promptly";
-  return { id: selected, targetModel: MODEL_TARGETS[selected] || fallback };
+  // Use model registry to validate and resolve model
+  const selected = isValidModel(modelId) ? modelId : "promptly";
+  const targetModel = resolveModelName(selected);
+  return { id: selected, targetModel: targetModel || fallback };
 }
 
 function resolveAndPersistModel(sessionId, sessionModel, incomingModel) {

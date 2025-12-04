@@ -7,8 +7,10 @@
   <link rel="icon" href="assets/promptly-icon.svg" type="image/svg+xml"/>
   <link rel="stylesheet" href="style.css" />
   <link rel="stylesheet" href="wizard.css" />
+  <link rel="stylesheet" href="styles/globalStatus.css" />
   <script src="config.js"></script>
   <script src="core.js"></script>
+  <script src="lib/globalStatusManager.js"></script>
   <style>
     /* Global navigation header styles (consistent with index.html) */
     .global-topbar {
@@ -166,6 +168,7 @@
           <span class="wizard-mode-tier">A+</span>
         </div>
         <p class="wizard-mode-desc">Quick response, minimal reasoning</p>
+        <span class="wizard-mode-time" data-time="fast">🕐 10–40s</span>
       </div>
       <div class="wizard-mode-option" data-mode="deep" tabindex="0">
         <div class="wizard-mode-option-header">
@@ -173,6 +176,7 @@
           <span class="wizard-mode-tier">S</span>
         </div>
         <p class="wizard-mode-desc">Balanced depth and speed</p>
+        <span class="wizard-mode-time" data-time="deep">🕐 30–90s</span>
       </div>
       <div class="wizard-mode-option" data-mode="ultra" tabindex="0">
         <div class="wizard-mode-option-header">
@@ -180,6 +184,7 @@
           <span class="wizard-mode-tier">S+</span>
         </div>
         <p class="wizard-mode-desc">Maximum depth, slowest response</p>
+        <span class="wizard-mode-time" data-time="ultra">🕐 90–180s</span>
       </div>
     </section>
   </div>
@@ -224,6 +229,24 @@
         <p>No questions yet. Start the wizard by describing your project on the left.</p>
       </div>
       <div id="wizardStatus" class="wizard-status hidden" role="status" aria-live="polite"></div>
+      
+      <!-- Answer Guidance Banner (Phase 3.2) -->
+      <div id="answerGuidance" class="wizard-answer-guidance hidden">
+        <div class="wizard-answer-guidance-icon">💡</div>
+        <div class="wizard-answer-guidance-text">
+          <span id="guidanceMessage">Answer at least 1 question to continue</span>
+          <span id="guidanceCounter" class="wizard-answer-counter">0 of 0 answered</span>
+        </div>
+      </div>
+      
+      <!-- Auto-save Indicator (Phase 3.1) -->
+      <div id="autoSaveIndicator" class="wizard-autosave-indicator hidden">
+        <svg class="wizard-autosave-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="20 6 9 17 4 12"></polyline>
+        </svg>
+        <span>Auto-saved</span>
+      </div>
+      
       <div id="questionsContainer" class="wizard-questions hidden"></div>
       <div class="wizard-qa-actions">
         <!-- Progress indicator at top of navigation bar -->

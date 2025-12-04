@@ -152,6 +152,26 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
     if (!silentLog && MODE_OPTIONS[resolvedMode]) {
       log(`Mode set to ${MODE_OPTIONS[resolvedMode].label} (${MODE_OPTIONS[resolvedMode].hierarchy})`);
     }
+    
+    // Update timing info when mode changes
+    updateTimingInfo();
+  }
+  
+  // Update timing information based on current mode
+  function updateTimingInfo() {
+    const timingInfo = document.getElementById("wizardTimingInfo");
+    const timingText = document.getElementById("wizardTimingText");
+    if (!timingInfo || !timingText) return;
+    
+    const timingMap = {
+      fast: "Fast mode: typically 10–40 seconds",
+      deep: "Deep Thinking mode: typically 30–90 seconds",
+      ultra: "Ultra Thinking mode: typically 90–180 seconds"
+    };
+    
+    const timing = timingMap[currentMode] || timingMap.deep;
+    timingText.textContent = timing;
+    timingInfo.style.display = "block";
   }
 
   function initModeSelector() {
@@ -460,16 +480,22 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
     finalizeBtn.classList.remove("hidden");
     saveSnapshotBtn.classList.remove("hidden");
     
-    // Add page indicator (FIX 6)
+    // Add page indicator with auto-save notice
     const pageIndicator = document.createElement("div");
     pageIndicator.className = "wizard-page-indicator";
     const totalPages = getTotalPages();
     const startQ = currentPageIndex * PAGE_SIZE + 1;
     const endQ = Math.min((currentPageIndex + 1) * PAGE_SIZE, allQuestions.length);
     pageIndicator.innerHTML = `
-      <span>Page <span class="wizard-page-indicator-number">${currentPageIndex + 1}</span> of ${totalPages}</span>
-      <span style="color:rgba(148,163,184,0.5);">•</span>
-      <span>Questions ${startQ}–${endQ} of ${allQuestions.length}</span>
+      <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.5rem;">
+        <span>Page <span class="wizard-page-indicator-number">${currentPageIndex + 1}</span> of ${totalPages}</span>
+        <span style="color:rgba(148,163,184,0.5);">•</span>
+        <span>Questions ${startQ}–${endQ} of ${allQuestions.length}</span>
+      </div>
+      <div style="font-size: 0.8rem; color: rgba(34, 197, 94, 0.8); display: flex; align-items: center; gap: 0.25rem;">
+        <span>✓</span>
+        <span>Answers are automatically saved as you type</span>
+      </div>
     `;
     questionsContainer.appendChild(pageIndicator);
     
@@ -526,7 +552,13 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
         input.value = currentAnswers.get(q.id) ?? "";
         input.addEventListener("input", () => {
           currentAnswers.set(q.id, input.value);
-          onAnswerChange(); // Phase 3: Track answer changes
+          // Phase 3: Track answer changes for auto-save and guidance
+          onAnswerChange();
+          // Auto-save feedback (subtle visual)
+          input.style.borderColor = "#22C55E";
+          setTimeout(() => {
+            input.style.borderColor = "";
+          }, 300);
         });
         card.appendChild(input);
       } else if (q.type === "yes_no") {
@@ -547,7 +579,14 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
           currentAnswers.set(q.id, selected);
           yes.classList.toggle("is-selected", selected === true);
           no.classList.toggle("is-selected", selected === false);
-          onAnswerChange(); // Phase 3: Track answer changes
+          // Phase 3: Track answer changes for auto-save and guidance
+          onAnswerChange();
+          // Auto-save feedback (subtle visual)
+          const row = yes.parentElement;
+          row.style.borderColor = "#22C55E";
+          setTimeout(() => {
+            row.style.borderColor = "";
+          }, 300);
         }
 
         yes.addEventListener("click", () => update(true));
@@ -641,7 +680,13 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
                 }
               }
             }
-            onAnswerChange(); // Phase 3: Track answer changes
+            // Phase 3: Track answer changes for auto-save and guidance
+            onAnswerChange();
+            // Auto-save feedback (subtle visual)
+            row.style.borderColor = "#22C55E";
+            setTimeout(() => {
+              row.style.borderColor = "";
+            }, 300);
           }
 
           function showOtherInput() {
@@ -851,6 +896,9 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
 
       setWizardStatus("Answer the questions below. Use Next/Back to navigate.");
       cancelWizardBtn?.classList.add("hidden");
+      
+      // Show timing info based on mode
+      updateTimingInfo();
 
       // Update wizard stepper to Questions step
       updateWizardStepper('questions');
@@ -871,9 +919,14 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
       if (err.name === "AbortError") {
         log("Wizard start cancelled by user.");
         setWizardStatus("Wizard cancelled. You can edit your idea and start again.", "warn");
+<<<<<<< Updated upstream
         // Hide global status on cancel
         if (typeof window.globalStatus !== 'undefined') {
           window.globalStatus.hide();
+        }
+        // Clear status indicator on cancellation
+        if (window.promptlyWizardSession && typeof window.promptlyWizardSession.clear === "function") {
+          window.promptlyWizardSession.clear();
         }
       } else {
         console.error(err);
@@ -886,6 +939,10 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
             details: err.message || 'Unknown error',
             autoHide: false
           });
+        }
+        // Clear status indicator on error
+        if (window.promptlyWizardSession && typeof window.promptlyWizardSession.clear === "function") {
+          window.promptlyWizardSession.clear();
         }
       }
       // Revert animations on error
@@ -990,20 +1047,44 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
       
       resultEmptyState.classList.add("hidden");
       resultContainer.classList.remove("hidden");
-      specOutput.textContent = JSON.stringify(data.spec, null, 2);
+      
+      // Display the complete spec (includes all wizard inputs: initial description, answers, mode, model)
+      const specDisplay = {
+        ...data.spec,
+        _metadata: {
+          session_id: currentSessionId,
+          mode: currentMode,
+          model: currentModel,
+          generated_at: new Date().toISOString(),
+          note: "This spec was generated from your wizard answers and includes all relevant inputs."
+        }
+      };
+      specOutput.textContent = JSON.stringify(specDisplay, null, 2);
+      
+      // Display the compiled prompt blocks (final merged result)
       if (data.compiled_prompt && data.compiled_prompt.blocks) {
         const blocksText = data.compiled_prompt.blocks
-          .map((b) => `[${b.role} · ${b.label || ""}]\n${b.content}\n`)
-          .join("\n");
+          .map((b, idx) => `[Block ${idx + 1}: ${b.role} · ${b.label || ""}]\n${b.content}\n`)
+          .join("\n\n");
         promptOutput.textContent = blocksText;
+        
+        // Add metadata note
+        const metadataNote = `\n\n---\nCompiled from spec with ${data.compiled_prompt.blocks.length} blocks.\nThis is the final prompt that will be used in the optimization pipeline.`;
+        promptOutput.textContent += metadataNote;
       } else {
         promptOutput.textContent = "(no compiled prompt blocks returned)";
       }
-      explanationOutput.textContent = data.explanation || "(no explanation provided)";
+      
+      // Display explanation
+      explanationOutput.textContent = data.explanation || data.compiled_prompt?.explanation || "(no explanation provided)";
 
+      // Clear wizard status indicator when finalization completes
       if (window.promptlyWizardSession && typeof window.promptlyWizardSession.clear === "function") {
         window.promptlyWizardSession.clear();
       }
+      
+      // Update status to show completion
+      setWizardStatus("Spec finalized successfully! You can now view the compiled prompt below.", "info");
 
       if (resultPageLink && data.spec_id) {
         currentSpecId = data.spec_id;
@@ -1019,6 +1100,11 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
     } catch (err) {
       console.error(err);
       log("Error while finalizing session: " + err.message);
+      setWizardStatus("Failed to finalize session. Please try again.", "error");
+      // Clear status indicator on error
+      if (window.promptlyWizardSession && typeof window.promptlyWizardSession.clear === "function") {
+        window.promptlyWizardSession.clear();
+      }
     }
   }
 

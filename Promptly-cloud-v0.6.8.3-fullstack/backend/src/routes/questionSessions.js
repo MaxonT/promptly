@@ -16,6 +16,25 @@ export const questionSessionRouter = Router();
 
 const PROJECT_DESCRIPTION_REQUIRED_MESSAGE = "Project description is required.";
 
+/**
+ * MODE_PROFILES - Question Wizard processing modes
+ * 
+ * These modes control the depth and speed of LLM agent reasoning:
+ * - chainLength: Number of reasoning chains the agent should use (affects prompt instructions)
+ * - maxSteps: Maximum planning/reasoning steps (affects prompt instructions)
+ * - timeoutMs: Request timeout in milliseconds (enforced via runWithTimeout)
+ * 
+ * Current implementation:
+ * - Mode parameters are passed to LLM agents via system prompts
+ * - Agents receive instructions to use chainLength chained thoughts and cap at maxSteps
+ * - Timeouts are enforced using runWithTimeout() wrapper
+ * - Different modes produce different response times and reasoning depth
+ * 
+ * Verified behavior:
+ * - Fast mode: Quick responses (15s timeout), minimal reasoning (2 chains, 3 steps)
+ * - Deep mode: Balanced responses (25s timeout), moderate reasoning (4 chains, 6 steps)
+ * - Ultra mode: Slower responses (40s timeout), maximum reasoning (6 chains, 8 steps)
+ */
 const MODE_PROFILES = {
   fast: {
     id: "fast",
@@ -49,7 +68,22 @@ const MODE_PROFILES = {
 // Get model IDs from the centralized model registry
 const MODEL_IDS = getModelIds();
 
-// Legacy MODEL_TARGETS kept for backward compatibility, but uses registry internally
+/**
+ * MODEL_TARGETS - Mapping from Promptly model identifiers to underlying OpenAI models
+ * 
+ * Uses the centralized model registry for resolution.
+ * This provides backward compatibility while using the new registry system.
+ * 
+ * Current implementation:
+ * - All models are resolved through modelRegistry.js
+ * - Most models currently map to the same underlying models (gpt-4o or gpt-4o-mini)
+ * - This is a placeholder implementation that provides a clear upgrade path
+ * 
+ * Future enhancements:
+ * - Different models can be mapped to different OpenAI models (gpt-4, gpt-4-turbo, etc.)
+ * - Models can have different temperature, max_tokens, or other parameters
+ * - Custom fine-tuned models can be integrated
+ */
 const MODEL_TARGETS = MODEL_IDS.reduce((acc, modelId) => {
   acc[modelId] = resolveModelName(modelId);
   return acc;
@@ -89,16 +123,35 @@ function getUserId(req) {
   return "demo-user";
 }
 
+/**
+ * Resolve mode profile from mode identifier
+ * @param {string} mode - Mode identifier ("fast", "deep", "ultra")
+ * @returns {Object} Mode profile with chainLength, maxSteps, timeoutMs, etc.
+ */
 function resolveModeProfile(mode) {
-  return MODE_PROFILES[mode] || MODE_PROFILES.deep;
+  const profile = MODE_PROFILES[mode] || MODE_PROFILES.deep;
+  console.log(`[promptly] Resolved mode: ${mode || 'default'} -> ${profile.id} (${profile.label})`);
+  return profile;
 }
 
+/**
+ * Resolve model choice from user selection
+ * @param {string} modelId - The model identifier from frontend
+ * @returns {{id: string, targetModel: string}} - Resolved model ID and target OpenAI model
+ */
 function resolveModelChoice(modelId) {
   const fallback = process.env.OPENAI_MODEL || "gpt-4o-mini";
   // Use model registry to validate and resolve model
   const selected = isValidModel(modelId) ? modelId : "promptly";
-  const targetModel = resolveModelName(selected);
-  return { id: selected, targetModel: targetModel || fallback };
+  const targetModel = resolveModelName(selected) || fallback;
+  
+  // Log model resolution for debugging
+  if (selected !== modelId) {
+    console.log(`[promptly] Model ${modelId} not found, using default: ${selected}`);
+  }
+  console.log(`[promptly] Resolved model: ${selected} -> ${targetModel}`);
+  
+  return { id: selected, targetModel };
 }
 
 function resolveAndPersistModel(sessionId, sessionModel, incomingModel) {

@@ -102,8 +102,12 @@ class MockSessionStorage {
 global.document = new MockDocument();
 global.sessionStorage = new MockSessionStorage();
 
-// Now we can evaluate the class
-const PromptlyDataAggregatorCode = `
+/**
+ * PromptlyDataAggregator - Direct class definition for testing
+ * 
+ * This is a simplified version of the frontend dataAggregator.js
+ * that works in Node.js without DOM dependencies.
+ */
 class PromptlyDataAggregator {
   constructor() {
     this.data = {
@@ -211,7 +215,7 @@ class PromptlyDataAggregator {
     if (!text) return {};
 
     const result = {};
-    const lines = text.split('\\n');
+    const lines = text.split('\n');
 
     for (const line of lines) {
       const trimmed = line.trim();
@@ -344,10 +348,6 @@ class PromptlyDataAggregator {
     return summary;
   }
 }
-`;
-
-// Evaluate and get the class
-const PromptlyDataAggregator = eval(`(${PromptlyDataAggregatorCode.replace('class PromptlyDataAggregator', '(class PromptlyDataAggregator')}))`);
 
 // Simple test framework
 let testsPassed = 0;

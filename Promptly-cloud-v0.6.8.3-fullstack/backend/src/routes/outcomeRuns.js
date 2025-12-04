@@ -8,16 +8,22 @@ import { isValidModel, getModelConfig, MODEL_REGISTRY } from "../lib/modelRegist
 export const outcomeRunsRouter = Router();
 
 /**
+ * Field definitions for Layer 2/3 data
+ * Used for logging and validation consistency
+ */
+const LAYER_FIELDS = {
+  layer2: ['input', 'style', 'constraints', 'blueprintInstructions', 'blueprintExamples', 'blueprintConstraints'],
+  layer3: ['posNegDataset', 'schemaTemplate', 'optimizationKnobs', 'dataset', 'schema', 'tests', 'temperature']
+};
+
+/**
  * Logging utility for Layer 2/3 data verification
  * @param {string} stage - Processing stage name
  * @param {Object} data - Data to log
  */
 function logLayerData(stage, data) {
-  const layer2Fields = ['input', 'style', 'constraints', 'blueprintInstructions', 'blueprintExamples', 'blueprintConstraints'];
-  const layer3Fields = ['posNegDataset', 'schemaTemplate', 'optimizationKnobs', 'dataset', 'schema', 'tests', 'temperature'];
-  
-  const layer2Present = layer2Fields.filter(f => data[f]);
-  const layer3Present = layer3Fields.filter(f => data[f]);
+  const layer2Present = LAYER_FIELDS.layer2.filter(f => data[f]);
+  const layer3Present = LAYER_FIELDS.layer3.filter(f => data[f]);
   
   console.log(`[outcomeRunner] ${stage}:`);
   console.log(`  - Task: ${data.task?.substring(0, 50)}${data.task?.length > 50 ? '...' : ''}`);

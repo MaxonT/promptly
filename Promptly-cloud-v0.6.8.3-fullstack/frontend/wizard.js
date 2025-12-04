@@ -919,7 +919,6 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
       if (err.name === "AbortError") {
         log("Wizard start cancelled by user.");
         setWizardStatus("Wizard cancelled. You can edit your idea and start again.", "warn");
-<<<<<<< Updated upstream
         // Hide global status on cancel
         if (typeof window.globalStatus !== 'undefined') {
           window.globalStatus.hide();

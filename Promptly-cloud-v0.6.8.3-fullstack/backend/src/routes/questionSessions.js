@@ -10,6 +10,11 @@ import {
 import { compileSpecToPrompt } from "../lib/specCompiler.js";
 import { LlmDisabledError } from "../lib/openaiClient.js";
 import { goBack, skipQuestion } from "../lib/questionNavigator.js";
+import {
+  createQuestionJob,
+  getJobBySessionId,
+  JobStatus
+} from "../lib/jobQueue.js";
 
 export const questionSessionRouter = Router();
 
@@ -168,112 +173,141 @@ questionSessionRouter.post("/", async (req, res) => {
   const now = new Date().toISOString();
   const sessionId = `sess_${nanoid(16)}`;
 
+  // Create session with "pending" status - questions will be generated in background
   db.prepare(
     `INSERT INTO question_sessions
      (id, owner_id, initial_description, kind, mode, model, status, created_at, updated_at)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
-  ).run(sessionId, userId, initial_description, kind || null, modeProfile.id, modelChoice.id, "active", now, now);
+  ).run(sessionId, userId, initial_description, kind || null, modeProfile.id, modelChoice.id, "pending", now, now);
 
-  try {
-    const broadQuestions = await runWithTimeout(
-      generateBroadQuestions({
-        initialDescription: initial_description,
-        kind: kind || null,
-        modeProfile,
-        model: modelChoice.targetModel
-      }),
-      modeProfile.timeoutMs,
-      "generate broad questions"
-    );
-    const choiceQuestions = await runWithTimeout(
-      generateChoiceQuestions({
-        initialDescription: initial_description,
-        kind: kind || null,
-        broadQuestions,
-        modeProfile,
-        model: modelChoice.targetModel
-      }),
-      modeProfile.timeoutMs,
-      "generate choice questions"
-    );
+  // Start background job for question generation (non-blocking)
+  const jobInfo = createQuestionJob(sessionId, {
+    initialDescription: initial_description,
+    kind: kind || null,
+    modeProfile,
+    model: modelChoice.targetModel
+  });
 
-    const insertQuestion = db.prepare(
-      `INSERT INTO question_questions
-       (id, session_id, type, content, options_json, order_index)
-       VALUES (?, ?, ?, ?, ?, ?)`
-    );
+  console.log(`[promptly] Created question session ${sessionId} with background job ${jobInfo.jobId}`);
 
-    choiceQuestions.forEach((q, index) => {
-      const qid = q.id || `q_${nanoid(12)}`;
-      // Store complete question data including depth structure
-      const questionData = {
-        depth_enabled: q.depth_enabled,
-        options: q.options || null,
-        depth_question: q.depth_question || null,
-        depth_levels: q.depth_levels || null
+  // Return immediately with session ID and pending status
+  return res.json({
+    ok: true,
+    session_id: sessionId,
+    job_id: jobInfo.jobId,
+    mode: modeProfile.id,
+    model: modelChoice.id,
+    mode_profile: modeProfile,
+    status: "pending",
+    questions: [] // Questions will be available via polling
+  });
+});
+
+// Status polling endpoint for question generation progress
+questionSessionRouter.get("/:sessionId/status", (req, res) => {
+  const { sessionId } = req.params;
+  const userId = getUserId(req);
+  
+  const session = db
+    .prepare(
+      `SELECT id, owner_id, kind, status, mode, model, created_at, updated_at
+       FROM question_sessions
+       WHERE id = ?`
+    )
+    .get(sessionId);
+
+  if (!session) {
+    return res.status(404).json({ ok: false, error: "Session not found" });
+  }
+
+  // Check ownership
+  if (session.owner_id !== userId && session.owner_id !== "demo-user") {
+    return res.status(403).json({ ok: false, error: "Access denied" });
+  }
+
+  // Get job status if session is pending
+  const jobInfo = getJobBySessionId(sessionId);
+  
+  // Calculate progress info
+  const totalQuestions = db
+    .prepare("SELECT COUNT(*) as count FROM question_questions WHERE session_id = ?")
+    .get(sessionId)?.count || 0;
+  const answeredQuestions = db
+    .prepare("SELECT COUNT(*) as count FROM question_answers WHERE session_id = ?")
+    .get(sessionId)?.count || 0;
+
+  // Determine effective status
+  let effectiveStatus = session.status;
+  let progressInfo = null;
+  let questions = [];
+  
+  if (jobInfo) {
+    if (jobInfo.status === JobStatus.READY) {
+      effectiveStatus = "ready";
+      // Fetch questions from database
+      const questionRows = db
+        .prepare(
+          "SELECT * FROM question_questions WHERE session_id = ? ORDER BY order_index ASC"
+        )
+        .all(sessionId);
+      questions = questionRows.slice(0, 5).map((q) => {
+        const questionData = q.options_json ? JSON.parse(q.options_json) : {};
+        return {
+          id: q.id,
+          type: q.type,
+          content: q.content,
+          depth_enabled: questionData.depth_enabled || false,
+          options: questionData.options || null,
+          depth_question: questionData.depth_question || null,
+          depth_levels: questionData.depth_levels || null
+        };
+      });
+    } else if (jobInfo.status === JobStatus.ERROR) {
+      effectiveStatus = "error";
+    } else if (jobInfo.status === JobStatus.GENERATING) {
+      effectiveStatus = "generating";
+    } else {
+      effectiveStatus = "pending";
+    }
+    progressInfo = jobInfo.progress;
+  } else if (session.status === "active" || session.status === "ready_to_finalize") {
+    // Session has questions, fetch them
+    effectiveStatus = "ready";
+    const questionRows = db
+      .prepare(
+        "SELECT * FROM question_questions WHERE session_id = ? ORDER BY order_index ASC"
+      )
+      .all(sessionId);
+    questions = questionRows.slice(0, 5).map((q) => {
+      const questionData = q.options_json ? JSON.parse(q.options_json) : {};
+      return {
+        id: q.id,
+        type: q.type,
+        content: q.content,
+        depth_enabled: questionData.depth_enabled || false,
+        options: questionData.options || null,
+        depth_question: questionData.depth_question || null,
+        depth_levels: questionData.depth_levels || null
       };
-      insertQuestion.run(
-        qid,
-        sessionId,
-        q.type,
-        q.content,
-        JSON.stringify(questionData),
-        index
-      );
-      q.id = qid;
-    });
-
-    const firstBatch = choiceQuestions.slice(0, 5).map((q) => ({
-      id: q.id,
-      type: q.type,
-      content: q.content,
-      depth_enabled: q.depth_enabled,
-      options: q.options || null,
-      depth_question: q.depth_question || null,
-      depth_levels: q.depth_levels || null
-    }));
-
-    return res.json({
-      ok: true,
-      session_id: sessionId,
-      mode: modeProfile.id,
-      model: modelChoice.id,
-      mode_profile: modeProfile,
-      questions: firstBatch
-    });
-  } catch (err) {
-    console.error("[promptly] question session init failed", err);
-    db.prepare(
-      "UPDATE question_sessions SET status = ?, updated_at = ? WHERE id = ?"
-    ).run("error", new Date().toISOString(), sessionId);
-    
-    // Check for specific error types
-    if (err instanceof LlmDisabledError || err.code === "LLM_DISABLED") {
-      return res.status(503).json({ ok: false, error: "LLM disabled: OPENAI_API_KEY not set" });
-    }
-    
-    // Check for OpenAI API authentication errors
-    if (err.status === 401 || err.code === "invalid_api_key") {
-      return res.status(502).json({ 
-        ok: false, 
-        error: "Invalid OpenAI API Key. Please check your OPENAI_API_KEY environment variable." 
-      });
-    }
-    
-    // Check for other OpenAI API errors
-    if (err.status) {
-      return res.status(502).json({ 
-        ok: false, 
-        error: `OpenAI API error (${err.status}): ${err.message || "Unknown error"}` 
-      });
-    }
-    
-    // Generic error
-    return res.status(502).json({ 
-      ok: false, 
-      error: `Question engine failed: ${err.message || "Unknown error"}` 
     });
   }
+
+  return res.json({
+    ok: true,
+    session_id: sessionId,
+    status: effectiveStatus,
+    progress: progressInfo,
+    error: jobInfo?.error || null,
+    questions: questions,
+    stats: {
+      total_questions: totalQuestions,
+      answered: answeredQuestions
+    },
+    mode: session.mode || "deep",
+    model: session.model || "promptly",
+    created_at: session.created_at,
+    updated_at: session.updated_at
+  });
 });
 
 questionSessionRouter.get("/status/active", (req, res) => {

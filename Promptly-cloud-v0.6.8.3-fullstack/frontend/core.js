@@ -168,7 +168,12 @@
       spin.setAttribute("aria-hidden","true");
       wizardIndicatorEl.prepend(spin);
     }
+    // Add accessibility attributes and clickability
+    wizardIndicatorEl.setAttribute("role", "button");
+    wizardIndicatorEl.setAttribute("tabindex", "0");
+    wizardIndicatorEl.setAttribute("aria-label", "Question Wizard is running. Click to view progress.");
     wizardIndicatorEl.onclick=()=>{window.location.href="wizard.html";};
+    wizardIndicatorEl.onkeydown=(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();window.location.href="wizard.html";}};
   }
   function hideWizardIndicator(){if(wizardIndicatorEl){wizardIndicatorEl.classList.remove("active");}}
   function updateWizardProgress(answered,total){

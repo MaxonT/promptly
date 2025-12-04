@@ -623,6 +623,160 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
     skipBtn.classList.remove("hidden");
   }
 
+  // Polling interval for session status
+  let statusPollInterval = null;
+  let pollingStartTime = null;
+  const STATUS_POLL_INTERVAL_MS = 2000; // Poll every 2 seconds
+  
+  // Save session to localStorage for recovery
+  function saveSessionToLocalStorage(sessionId) {
+    try {
+      localStorage.setItem("promptly:wizard-pending-session", JSON.stringify({
+        sessionId,
+        startedAt: Date.now()
+      }));
+    } catch (e) {
+      console.warn("Could not save session to localStorage:", e);
+    }
+  }
+  
+  // Load pending session from localStorage
+  function loadPendingSession() {
+    try {
+      const saved = localStorage.getItem("promptly:wizard-pending-session");
+      if (saved) {
+        const data = JSON.parse(saved);
+        // Only restore sessions less than 15 minutes old
+        if (Date.now() - data.startedAt < 15 * 60 * 1000) {
+          return data.sessionId;
+        } else {
+          localStorage.removeItem("promptly:wizard-pending-session");
+        }
+      }
+    } catch (e) {
+      console.warn("Could not load session from localStorage:", e);
+    }
+    return null;
+  }
+  
+  // Clear pending session from localStorage
+  function clearPendingSession() {
+    try {
+      localStorage.removeItem("promptly:wizard-pending-session");
+    } catch (e) {
+      console.warn("Could not clear session from localStorage:", e);
+    }
+  }
+  
+  // Update loading overlay with elapsed time
+  function updateLoadingOverlayWithElapsedTime() {
+    if (!pollingStartTime || !loadingOverlay) return;
+    
+    const elapsed = Math.floor((Date.now() - pollingStartTime) / 1000);
+    let message = "Generating questions...";
+    let subMessage = "This usually takes 10-15 seconds";
+    
+    if (elapsed >= 60) {
+      message = "Almost done...";
+      subMessage = `Final questions loading (${elapsed}s)`;
+    } else if (elapsed >= 30) {
+      message = "Still working...";
+      subMessage = `LLM is thinking deeply (${elapsed}s)`;
+    } else if (elapsed >= 15) {
+      subMessage = `Generating questions... (${elapsed}s elapsed)`;
+    }
+    
+    loadingOverlay.innerHTML = `
+      <div class="wizard-loading-spinner"></div>
+      <div class="wizard-loading-text" style="font-size:1rem;margin-top:0.5rem;">${message}</div>
+      <div class="wizard-loading-text" style="font-size:0.875rem;opacity:0.7;">${subMessage}</div>
+      <div class="wizard-loading-text" style="font-size:0.75rem;margin-top:0.5rem;opacity:0.6;">Stay on this page — we're working in the background</div>
+    `;
+  }
+  
+  // Poll for session status
+  async function pollSessionStatus(sessionId) {
+    try {
+      const res = await fetch(`${API_BASE}/api/question-sessions/${encodeURIComponent(sessionId)}/status`);
+      if (!res.ok) {
+        console.warn(`Status poll failed: HTTP ${res.status}`);
+        return null;
+      }
+      return await res.json();
+    } catch (err) {
+      console.warn("Status poll error:", err);
+      return null;
+    }
+  }
+  
+  // Start polling for session status
+  function startStatusPolling(sessionId) {
+    if (statusPollInterval) {
+      clearInterval(statusPollInterval);
+    }
+    
+    pollingStartTime = Date.now();
+    
+    statusPollInterval = setInterval(async () => {
+      const statusData = await pollSessionStatus(sessionId);
+      
+      if (!statusData) return;
+      
+      // Update loading overlay with elapsed time
+      updateLoadingOverlayWithElapsedTime();
+      
+      // Update progress info in status
+      if (statusData.progress) {
+        log(`⏳ Status: ${statusData.status} - ${statusData.progress.message}`);
+      }
+      
+      // Handle status
+      if (statusData.status === "ready" && statusData.questions && statusData.questions.length > 0) {
+        // Questions are ready!
+        stopStatusPolling();
+        clearPendingSession();
+        hideLoadingInQuestionPanel();
+        
+        addQuestions(statusData.questions);
+        currentPageIndex = 0;
+        renderCurrentPage();
+        
+        log(`✓ Loaded ${allQuestions.length} questions (showing page 1/${getTotalPages()})`);
+        setWizardStatus("Answer the questions below. Use Next/Back to navigate.");
+        cancelWizardBtn?.classList.add("hidden");
+        updateWizardStepper('questions');
+        startBtn.textContent = "Session started";
+        
+      } else if (statusData.status === "error") {
+        // Generation failed
+        stopStatusPolling();
+        clearPendingSession();
+        hideLoadingInQuestionPanel();
+        
+        const errorMsg = statusData.error || "Question generation failed";
+        log(`✕ Error: ${errorMsg}`);
+        setWizardStatus(`Failed to generate questions: ${errorMsg}. Please try again.`, "error");
+        
+        ideaPanel?.classList.remove("is-starting");
+        qaPanel?.classList.remove("is-appearing");
+        startBtn.disabled = false;
+        startBtn.textContent = "Start wizard";
+        cancelWizardBtn?.classList.add("hidden");
+      }
+      // If still pending/generating, continue polling
+      
+    }, STATUS_POLL_INTERVAL_MS);
+  }
+  
+  // Stop polling
+  function stopStatusPolling() {
+    if (statusPollInterval) {
+      clearInterval(statusPollInterval);
+      statusPollInterval = null;
+    }
+    pollingStartTime = null;
+  }
+
   async function startWizard() {
     const idea = (ideaInput.value || "").trim();
     const kind = kindSelect.value || undefined;
@@ -659,7 +813,7 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
     try {
       log(`Starting new question session in ${MODE_OPTIONS[currentMode].label} (${MODE_OPTIONS[currentMode].hierarchy}) mode...`);
 
-      // FIX 2.1: Show enhanced loading overlay with progress info
+      // Show enhanced loading overlay with progress info
       showLoadingInQuestionPanel(`
         <div class="wizard-loading-spinner"></div>
         <div class="wizard-loading-text" style="font-size:1rem;margin-top:0.5rem;">Generating questions...</div>
@@ -670,25 +824,10 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
       qaPanel?.classList.add("is-appearing");
 
       slowWarningTimerRef = setTimeout(() => {
-        setWizardStatus("This is taking longer than usual. You can cancel and retry.", "warn", { showTicks: true });
-      }, 20000);
+        setWizardStatus("This is taking longer than usual. Please wait or cancel.", "warn", { showTicks: true });
+      }, 45000); // 45 seconds warning
 
-      // FIX 2.1: Set timeout to show error if request takes too long
-      loadingTimeoutRef = setTimeout(() => {
-        if (loadingOverlay && loadingOverlay.parentNode) {
-          log("⚠️ Request is taking longer than expected. Please wait...");
-          // Update loading message
-          const loadingText = loadingOverlay.querySelector(".wizard-loading-text");
-          if (loadingText) {
-            loadingText.innerHTML = `
-              <div style="font-size:1rem;margin-top:0.5rem;">Still working...</div>
-              <div style="font-size:0.875rem;opacity:0.7;margin-top:0.3rem;">This is taking longer than usual</div>
-              <div style="font-size:0.75rem;opacity:0.6;margin-top:0.3rem;">Please check your connection or try refreshing</div>
-            `;
-          }
-        }
-      }, 30000); // 30 seconds
-
+      // Create session (returns immediately with pending status)
       const res = await fetch(`${API_BASE}/api/question-sessions`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -701,13 +840,10 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
         signal: startController.signal
       });
 
-      // Clear timeout if request completes
-      clearTimeout(loadingTimeoutRef);
-      clearTimeout(slowWarningTimerRef);
       if (!res.ok) {
         const txt = await res.text();
         log(`Failed to start session: HTTP ${res.status} ${txt}`);
-        // Revert animations on error
+        hideLoadingInQuestionPanel();
         ideaPanel?.classList.remove("is-starting");
         qaPanel?.classList.remove("is-appearing");
         startBtn.disabled = false;
@@ -716,32 +852,45 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
         setWizardStatus("Could not start the wizard. Please verify your connection or API key and try again.", "error");
         return;
       }
+      
       const data = await res.json();
       currentSessionId = data.session_id;
+      
+      // Save session to localStorage for recovery
+      saveSessionToLocalStorage(currentSessionId);
+      
       if (window.promptlyWizardSession && typeof window.promptlyWizardSession.markRunning === "function") {
         window.promptlyWizardSession.markRunning(currentSessionId);
       }
-      log(`Session created: ${currentSessionId}`);
+      log(`Session created: ${currentSessionId} (status: ${data.status || "pending"})`);
       
-      // Hide loading overlay
-      hideLoadingInQuestionPanel();
+      // If questions are already ready (unlikely but handle it)
+      if (data.questions && data.questions.length > 0) {
+        clearTimeout(slowWarningTimerRef);
+        hideLoadingInQuestionPanel();
+        clearPendingSession();
+        
+        addQuestions(data.questions);
+        currentPageIndex = 0;
+        renderCurrentPage();
+        log(`✓ Loaded ${allQuestions.length} questions (showing page 1/${getTotalPages()})`);
+        
+        setWizardStatus("Answer the questions below. Use Next/Back to navigate.");
+        cancelWizardBtn?.classList.add("hidden");
+        updateWizardStepper('questions');
+        startBtn.textContent = "Session started";
+      } else {
+        // Start polling for status (questions being generated in background)
+        log("Waiting for questions to be generated...");
+        startStatusPolling(currentSessionId);
+      }
       
-      // Add questions and render first page
-      addQuestions(data.questions || []);
-      currentPageIndex = 0;
-      renderCurrentPage();
-      log(`Loaded ${allQuestions.length} questions (showing page 1/${getTotalPages()})`);
-
-      setWizardStatus("Answer the questions below. Use Next/Back to navigate.");
-      cancelWizardBtn?.classList.add("hidden");
-
-      // Update wizard stepper to Questions step
-      updateWizardStepper('questions');
-
-      // Keep button disabled after successful start
-      startBtn.textContent = "Session started";
       startController = null;
     } catch (err) {
+      clearTimeout(slowWarningTimerRef);
+      stopStatusPolling();
+      hideLoadingInQuestionPanel();
+      
       if (err.name === "AbortError") {
         log("Wizard start cancelled by user.");
         setWizardStatus("Wizard cancelled. You can edit your idea and start again.", "warn");
@@ -757,6 +906,68 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
       startBtn.textContent = "Start wizard";
       cancelWizardBtn?.classList.add("hidden");
       startController = null;
+    }
+  }
+  
+  // Check for pending session on page load
+  async function checkPendingSession() {
+    const pendingSessionId = loadPendingSession();
+    if (!pendingSessionId) return;
+    
+    log(`Found pending session: ${pendingSessionId} - checking status...`);
+    
+    const statusData = await pollSessionStatus(pendingSessionId);
+    if (!statusData) {
+      clearPendingSession();
+      return;
+    }
+    
+    if (statusData.status === "ready" && statusData.questions && statusData.questions.length > 0) {
+      // Resume the session
+      currentSessionId = pendingSessionId;
+      clearPendingSession();
+      
+      if (window.promptlyWizardSession && typeof window.promptlyWizardSession.markRunning === "function") {
+        window.promptlyWizardSession.markRunning(currentSessionId);
+      }
+      
+      addQuestions(statusData.questions);
+      currentPageIndex = 0;
+      renderCurrentPage();
+      
+      log(`✓ Resumed session with ${allQuestions.length} questions`);
+      setWizardStatus("Welcome back! Continue answering questions below.");
+      updateWizardStepper('questions');
+      startBtn.disabled = true;
+      startBtn.textContent = "Session in progress";
+      
+    } else if (statusData.status === "pending" || statusData.status === "generating") {
+      // Resume polling
+      currentSessionId = pendingSessionId;
+      
+      if (window.promptlyWizardSession && typeof window.promptlyWizardSession.markRunning === "function") {
+        window.promptlyWizardSession.markRunning(currentSessionId);
+      }
+      
+      ideaPanel?.classList.add("is-starting");
+      qaPanel?.classList.add("is-appearing");
+      startBtn.disabled = true;
+      startBtn.textContent = "Resuming...";
+      
+      showLoadingInQuestionPanel(`
+        <div class="wizard-loading-spinner"></div>
+        <div class="wizard-loading-text" style="font-size:1rem;margin-top:0.5rem;">Resuming session...</div>
+        <div class="wizard-loading-text" style="font-size:0.875rem;opacity:0.7;">Questions are still being generated</div>
+      `);
+      
+      log(`Resuming polling for session ${pendingSessionId}`);
+      startStatusPolling(pendingSessionId);
+      
+    } else if (statusData.status === "error") {
+      clearPendingSession();
+      log(`Previous session failed: ${statusData.error || "Unknown error"}`);
+    } else {
+      clearPendingSession();
     }
   }
 
@@ -1135,6 +1346,10 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
       startController.abort();
       startController = null;
     }
+    // Stop any ongoing status polling
+    stopStatusPolling();
+    clearPendingSession();
+    
     clearTimeout(loadingTimeoutRef);
     clearTimeout(slowWarningTimerRef);
     hideLoadingInQuestionPanel();
@@ -1178,6 +1393,9 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
   updateWizardStepper('describe');
   initModeSelector();
   syncStartButtonState();
+  
+  // Check for pending session from previous page visit
+  checkPendingSession();
 
   // FIX 1.2: Auto-fill idea from sessionStorage (passed from index.html)
   (function autoFillFromSession() {

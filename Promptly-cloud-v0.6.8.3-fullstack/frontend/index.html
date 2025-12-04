@@ -10,7 +10,10 @@
 
 
 <link rel="stylesheet" href="style.css" />
+<link rel="stylesheet" href="styles/globalStatus.css" />
 <script src="config.js"></script>
+<script src="lib/dataAggregator.js"></script>
+<script src="lib/globalStatusManager.js"></script>
 <style>
 /* === v0.5.3 UI Patch: gradients, titles, numbers, footer === */
 :root{
@@ -1938,17 +1941,30 @@ document.addEventListener('DOMContentLoaded', () => {
       startPipelineTimeline();
       showRealProcessingStages(bestPromptEl, 4);
 
-      // 2. Call Outcome Runner API
+      // 2. Call Outcome Runner API with data from all layers
       console.log('[Promptly] Calling Outcome Runner API...');
       const apiBase = window.PROMPTLY_API_BASE || '';
-      // Note: examples text field is not sent to backend as 'input'
-      // Users should include examples directly in the task description if needed
-
-      const requestBody = {
-        task: task,
-        n: DEFAULT_CANDIDATE_COUNT,
-        model: currentModel
-      };
+      
+      // Use PromptlyDataAggregator to collect data from all 3 layers
+      let requestBody;
+      if (typeof PromptlyDataAggregator !== 'undefined') {
+        const aggregator = new PromptlyDataAggregator();
+        aggregator.collect();
+        requestBody = aggregator.toAPI();
+        
+        // Log summary of collected data
+        const summary = aggregator.getSummary();
+        console.log('[Promptly] Data collected from layers:', summary.description);
+        console.log('[Promptly] Layer 2 used:', summary.layer2.used);
+        console.log('[Promptly] Layer 3 used:', summary.layer3.used);
+      } else {
+        // Fallback to simple payload if aggregator not loaded
+        requestBody = {
+          task: task,
+          n: DEFAULT_CANDIDATE_COUNT,
+          model: currentModel
+        };
+      }
       
       try {
         const response = await fetch(`${apiBase}/api/outcome-runs`, {

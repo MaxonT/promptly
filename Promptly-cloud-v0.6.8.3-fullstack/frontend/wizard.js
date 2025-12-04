@@ -262,6 +262,10 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
     skipBtn.classList.add("hidden");
     saveSnapshotBtn.classList.add("hidden");
     progressIndicator?.classList.add("hidden");
+    // Clear auto-save timer when questions are cleared
+    if (typeof autoSaveTimer !== 'undefined' && autoSaveTimer) {
+      clearTimeout(autoSaveTimer);
+    }
   }
   
   // ===== Phase 3 UX Enhancement Functions =====

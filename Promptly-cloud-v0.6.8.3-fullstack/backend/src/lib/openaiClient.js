@@ -33,6 +33,14 @@ function resolveModel(model) {
   return model || process.env.OPENAI_MODEL || "gpt-4o-mini";
 }
 
+/**
+ * Chat completion that returns JSON
+ * @param {Object} options
+ * @param {string} options.system - System prompt
+ * @param {string} options.user - User message
+ * @param {string} options.model - OpenAI model name OR Promptly model ID
+ * @param {string} [options.promptlyModelId] - Optional Promptly model ID for system prompt enhancement
+ */
 export async function chatJson({ system, user, model, promptlyModelId }) {
   if (!client) {
     throw new LlmDisabledError();
@@ -72,8 +80,13 @@ export async function chatJson({ system, user, model, promptlyModelId }) {
 }
 
 /**
- * ATTACHMENT FEATURE - Text completion
+ * Text completion
  * Similar to chatJson but returns plain text instead of JSON
+ * @param {Object} options
+ * @param {string} options.system - System prompt
+ * @param {string} options.user - User message
+ * @param {string} options.model - OpenAI model name OR Promptly model ID
+ * @param {string} [options.promptlyModelId] - Optional Promptly model ID for system prompt enhancement
  */
 export async function chatText({ system, user, model, promptlyModelId }) {
   if (!client) {

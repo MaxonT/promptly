@@ -191,7 +191,8 @@ class PromptlyDataAggregator {
         value = true;
       } else if (value === 'false') {
         value = false;
-      } else if (!isNaN(Number(value))) {
+      } else if (value !== '' && !isNaN(parseFloat(value)) && isFinite(Number(value))) {
+        // Robust numeric check: not empty, parseable as float, and finite
         value = Number(value);
       }
 

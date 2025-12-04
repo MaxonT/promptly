@@ -238,12 +238,14 @@ const GlobalStatusManager = (function() {
 
     const progressBar = statusElement.querySelector('.global-status-progress-bar');
     const progressText = statusElement.querySelector('.global-status-progress-text');
+    const clampedPercent = Math.min(100, Math.max(0, percent));
 
     if (progressBar) {
-      progressBar.style.width = `${Math.min(100, Math.max(0, percent))}%`;
+      // Use CSS custom property for better maintainability
+      progressBar.style.setProperty('--progress', `${clampedPercent}%`);
     }
     if (progressText) {
-      progressText.textContent = `${Math.round(percent)}%`;
+      progressText.textContent = `${Math.round(clampedPercent)}%`;
     }
 
     // Update saved state

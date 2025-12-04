@@ -1,35 +1,34 @@
 /**
- * GlobalStatusManager - Cross-Page Status Bar System
+ * GlobalStatusManager - Compact Floating Status Notification
  * 
- * Provides a persistent status indicator that survives page navigation.
+ * Provides a persistent, non-intrusive status indicator that survives page navigation.
  * Uses sessionStorage to maintain state across pages.
  * 
  * Features:
- * - Fixed position status bar at top of viewport
- * - Real-time progress bar with percentage
- * - Elapsed time counter
+ * - Compact floating notification (doesn't block navigation)
+ * - Real-time elapsed time counter
  * - Mode-specific time estimates
  * - Success/error state with color coding
+ * - Browser notification on completion
  * - Auto-hide on completion
- * - Animated slide-in/out transitions
  */
 
 const GlobalStatusManager = (function() {
   // Private state
   const STORAGE_KEY = 'promptly:global-status';
   const MODE_ESTIMATES = {
-    fast: { min: 10, max: 40 },
-    deep: { min: 30, max: 90 },
+    fast: { min: 10, max: 60 },
+    deep: { min: 30, max: 120 },
     ultra: { min: 90, max: 180 }
   };
 
   let statusElement = null;
-  let progressElement = null;
   let titleElement = null;
   let subtitleElement = null;
   let closeBtn = null;
   let elapsedInterval = null;
   let startTime = null;
+  let currentMode = 'deep';
 
   /**
    * Initialize the global status bar DOM
@@ -43,7 +42,7 @@ const GlobalStatusManager = (function() {
       return;
     }
 
-    // Create status bar element
+    // Create compact floating status element
     statusElement = document.createElement('div');
     statusElement.id = 'globalStatusBar';
     statusElement.className = 'global-status-bar hidden';
@@ -59,17 +58,43 @@ const GlobalStatusManager = (function() {
           <div class="global-status-title"></div>
           <div class="global-status-subtitle"></div>
         </div>
-        <div class="global-status-progress">
-          <div class="global-status-progress-bar"></div>
-          <span class="global-status-progress-text">0%</span>
-        </div>
         <button class="global-status-close" aria-label="Dismiss status">&times;</button>
       </div>
     `;
 
-    document.body.insertBefore(statusElement, document.body.firstChild);
+    document.body.appendChild(statusElement);
     _attachElements();
     _restoreState();
+    
+    // Request notification permission if not granted
+    _requestNotificationPermission();
+  }
+
+  /**
+   * Request browser notification permission
+   */
+  function _requestNotificationPermission() {
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
+  }
+
+  /**
+   * Send browser notification
+   */
+  function _sendNotification(title, body) {
+    if ('Notification' in window && Notification.permission === 'granted') {
+      try {
+        new Notification(title, {
+          body: body,
+          icon: '/assets/promptly-icon.svg',
+          tag: 'promptly-wizard',
+          requireInteraction: false
+        });
+      } catch (e) {
+        console.warn('[GlobalStatus] Notification failed:', e);
+      }
+    }
   }
 
   /**
@@ -78,7 +103,6 @@ const GlobalStatusManager = (function() {
   function _attachElements() {
     titleElement = statusElement.querySelector('.global-status-title');
     subtitleElement = statusElement.querySelector('.global-status-subtitle');
-    progressElement = statusElement.querySelector('.global-status-progress-bar');
     closeBtn = statusElement.querySelector('.global-status-close');
 
     closeBtn?.addEventListener('click', hide);
@@ -96,7 +120,7 @@ const GlobalStatusManager = (function() {
       
       // Check if the status is still relevant (not too old)
       const elapsed = Date.now() - state.startTime;
-      const maxAge = 5 * 60 * 1000; // 5 minutes max
+      const maxAge = 10 * 60 * 1000; // 10 minutes max
 
       if (elapsed > maxAge) {
         _clearState();
@@ -106,12 +130,11 @@ const GlobalStatusManager = (function() {
       // Restore the status
       if (state.visible) {
         startTime = state.startTime;
+        currentMode = state.mode || 'deep';
         show({
           title: state.title,
           subtitle: state.subtitle,
-          progress: state.progress,
           mode: state.mode,
-          estimatedTime: state.estimatedTime,
           state: state.state
         });
       }
@@ -128,6 +151,7 @@ const GlobalStatusManager = (function() {
     sessionStorage.setItem(STORAGE_KEY, JSON.stringify({
       ...state,
       startTime: startTime,
+      mode: currentMode,
       visible: true,
       timestamp: Date.now()
     }));
@@ -141,7 +165,7 @@ const GlobalStatusManager = (function() {
   }
 
   /**
-   * Start elapsed time counter
+   * Start elapsed time counter with real-time updates
    */
   function _startElapsedCounter() {
     if (elapsedInterval) clearInterval(elapsedInterval);
@@ -150,11 +174,24 @@ const GlobalStatusManager = (function() {
       if (!startTime || !subtitleElement) return;
       
       const elapsed = Math.floor((Date.now() - startTime) / 1000);
-      const currentSubtitle = subtitleElement.dataset.baseText || '';
+      const estimate = MODE_ESTIMATES[currentMode] || MODE_ESTIMATES.deep;
       
-      // Update with elapsed time
-      const elapsedText = `(${elapsed}s elapsed)`;
-      subtitleElement.textContent = `${currentSubtitle} ${elapsedText}`;
+      // Calculate dynamic progress estimate
+      const avgEstimate = (estimate.min + estimate.max) / 2;
+      const progressPercent = Math.min(95, Math.round((elapsed / avgEstimate) * 100));
+      
+      // Real-time subtitle with elapsed and remaining estimate
+      let statusText = `${elapsed}s elapsed`;
+      if (elapsed < estimate.max) {
+        const remaining = Math.max(0, Math.round(avgEstimate - elapsed));
+        if (remaining > 0) {
+          statusText += ` • ~${remaining}s remaining`;
+        }
+      } else {
+        statusText += ' • Taking longer than usual';
+      }
+      
+      subtitleElement.textContent = statusText;
     }, 1000);
   }
 
@@ -169,14 +206,6 @@ const GlobalStatusManager = (function() {
   }
 
   /**
-   * Format time estimate based on mode
-   */
-  function _formatEstimate(mode) {
-    const estimate = MODE_ESTIMATES[mode] || MODE_ESTIMATES.deep;
-    return `Usually ${estimate.min}–${estimate.max}s`;
-  }
-
-  /**
    * Show the global status bar
    * @param {Object} options - Display options
    */
@@ -184,13 +213,13 @@ const GlobalStatusManager = (function() {
     if (!statusElement) init();
 
     const {
-      title = '🧙‍♂️ Processing...',
-      subtitle = 'Please wait...',
-      progress = 0,
+      title = '🧙‍♂️ Wizard Running',
+      subtitle = 'Processing...',
       mode = 'deep',
-      estimatedTime = false,
       state = 'loading' // loading, success, error
     } = options;
+
+    currentMode = mode;
 
     // Set start time if new
     if (!startTime) {
@@ -201,16 +230,8 @@ const GlobalStatusManager = (function() {
     if (titleElement) titleElement.textContent = title;
     
     if (subtitleElement) {
-      let displaySubtitle = subtitle;
-      if (estimatedTime) {
-        displaySubtitle = `${subtitle} ${_formatEstimate(mode)}`;
-      }
-      subtitleElement.dataset.baseText = displaySubtitle;
-      subtitleElement.textContent = displaySubtitle;
+      subtitleElement.textContent = subtitle;
     }
-
-    // Update progress
-    updateProgress(progress);
 
     // Set state class
     statusElement.classList.remove('hidden', 'global-status--success', 'global-status--error');
@@ -226,39 +247,16 @@ const GlobalStatusManager = (function() {
     }
 
     // Save state for persistence across pages
-    _saveState({ title, subtitle, progress, mode, estimatedTime, state });
+    _saveState({ title, subtitle, mode, state });
   }
 
   /**
-   * Update progress percentage
+   * Update progress (kept for compatibility but simplified)
    * @param {number} percent - Progress percentage (0-100)
    */
   function updateProgress(percent) {
-    if (!statusElement) return;
-
-    const progressBar = statusElement.querySelector('.global-status-progress-bar');
-    const progressText = statusElement.querySelector('.global-status-progress-text');
-    const clampedPercent = Math.min(100, Math.max(0, percent));
-
-    if (progressBar) {
-      // Use CSS custom property for better maintainability
-      progressBar.style.setProperty('--progress', `${clampedPercent}%`);
-    }
-    if (progressText) {
-      progressText.textContent = `${Math.round(clampedPercent)}%`;
-    }
-
-    // Update saved state
-    const savedState = sessionStorage.getItem(STORAGE_KEY);
-    if (savedState) {
-      try {
-        const state = JSON.parse(savedState);
-        state.progress = percent;
-        sessionStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-      } catch (e) {
-        // Ignore
-      }
-    }
+    // Progress is now calculated dynamically based on elapsed time
+    // This method is kept for API compatibility
   }
 
   /**
@@ -269,7 +267,8 @@ const GlobalStatusManager = (function() {
     const {
       message = '✅ Complete!',
       autoHide = true,
-      autoHideDelay = 3000
+      autoHideDelay = 4000,
+      notify = true
     } = options;
 
     _stopElapsedCounter();
@@ -280,9 +279,17 @@ const GlobalStatusManager = (function() {
     }
 
     if (titleElement) titleElement.textContent = message;
-    if (subtitleElement) subtitleElement.textContent = '';
     
-    updateProgress(100);
+    // Show total elapsed time
+    if (subtitleElement && startTime) {
+      const totalElapsed = Math.floor((Date.now() - startTime) / 1000);
+      subtitleElement.textContent = `Completed in ${totalElapsed}s`;
+    }
+
+    // Send browser notification if page is not visible
+    if (notify && document.hidden) {
+      _sendNotification('Promptly Wizard Complete', message);
+    }
 
     // Auto-hide after delay
     if (autoHide) {
@@ -300,7 +307,8 @@ const GlobalStatusManager = (function() {
     const {
       message = '❌ Error',
       details = '',
-      autoHide = false
+      autoHide = false,
+      notify = true
     } = options;
 
     _stopElapsedCounter();
@@ -313,8 +321,13 @@ const GlobalStatusManager = (function() {
     if (titleElement) titleElement.textContent = message;
     if (subtitleElement) subtitleElement.textContent = details;
 
+    // Send browser notification if page is not visible
+    if (notify && document.hidden) {
+      _sendNotification('Promptly Wizard Error', details || message);
+    }
+
     // Save error state
-    _saveState({ title: message, subtitle: details, progress: 0, state: 'error' });
+    _saveState({ title: message, subtitle: details, state: 'error' });
 
     // Auto-hide if requested
     if (autoHide) {

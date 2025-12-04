@@ -72,8 +72,8 @@ Check if the status bar is currently visible.
 
 | Mode  | Time Range |
 |-------|------------|
-| Fast  | 10–40s     |
-| Deep  | 30–90s     |
+| Fast  | 10–60s     |
+| Deep  | 30–120s    |
 | Ultra | 90–180s    |
 
 ## SessionStorage Schema
@@ -82,7 +82,7 @@ Check if the status bar is currently visible.
 {
   "startTime": 1733328000000,
   "visible": true,
-  "title": "🧙‍♂️ Question Wizard Running",
+  "title": "🧙‍♂️ Wizard Running",
   "subtitle": "Generating questions...",
   "progress": 45,
   "mode": "deep",

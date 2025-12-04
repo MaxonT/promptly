@@ -23,7 +23,7 @@ const MODE_PROFILES = {
     hierarchy: "A+",
     chainLength: 2,
     maxSteps: 3,
-    timeoutMs: 15000,
+    timeoutMs: 60000, // Increased from 15s to 60s for reliability
     description: "Quick response, minimal reasoning"
   },
   deep: {
@@ -32,7 +32,7 @@ const MODE_PROFILES = {
     hierarchy: "S",
     chainLength: 4,
     maxSteps: 6,
-    timeoutMs: 25000,
+    timeoutMs: 120000, // Increased from 25s to 120s for reliability
     description: "Balanced depth and speed"
   },
   ultra: {
@@ -41,7 +41,7 @@ const MODE_PROFILES = {
     hierarchy: "S+",
     chainLength: 6,
     maxSteps: 8,
-    timeoutMs: 40000,
+    timeoutMs: 180000, // Increased from 40s to 180s for reliability
     description: "Maximum depth, slowest response"
   }
 };

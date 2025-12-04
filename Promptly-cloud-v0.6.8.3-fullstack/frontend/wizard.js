@@ -725,21 +725,23 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
     loadingTimeoutRef = null;
     slowWarningTimerRef = null;
 
+    // Get mode-specific time estimates
+    const modeLabels = { fast: 'Fast', deep: 'Deep', ultra: 'Ultra' };
+    const modeEstimates = { fast: '10-60s', deep: '30-120s', ultra: '90-180s' };
+    
     // Start transition animation
     ideaPanel?.classList.add("is-starting");
     startBtn.disabled = true;
     startBtn.textContent = "Starting...";
     cancelWizardBtn?.classList.remove("hidden");
-    setWizardStatus("Preparing questions... This usually takes 10–15 seconds.", "info", { showTicks: true });
+    setWizardStatus(`Generating ${modeLabels[currentMode]} mode questions... (${modeEstimates[currentMode]})`, "info", { showTicks: true });
 
-    // Show global status bar for cross-page visibility
+    // Show global status bar for cross-page visibility (compact floating notification)
     if (typeof window.globalStatus !== 'undefined') {
       window.globalStatus.show({
-        title: '🧙‍♂️ Question Wizard Running',
-        subtitle: 'Generating questions...',
-        progress: 0,
-        mode: currentMode,
-        estimatedTime: true
+        title: '🧙‍♂️ Wizard Running',
+        subtitle: 'Starting...',
+        mode: currentMode
       });
     }
 
@@ -749,40 +751,59 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
     try {
       log(`Starting new question session in ${MODE_OPTIONS[currentMode].label} (${MODE_OPTIONS[currentMode].hierarchy}) mode...`);
 
-      // FIX 2.1: Show enhanced loading overlay with progress info
+      // Get mode-specific time estimate
+      const modeEstimates = {
+        fast: { min: 10, max: 60 },
+        deep: { min: 30, max: 120 },
+        ultra: { min: 90, max: 180 }
+      };
+      const estimate = modeEstimates[currentMode] || modeEstimates.deep;
+      
+      // Show loading overlay with dynamic elapsed time counter
+      const loadingStartTime = Date.now();
       showLoadingInQuestionPanel(`
         <div class="wizard-loading-spinner"></div>
-        <div class="wizard-loading-text" style="font-size:1rem;margin-top:0.5rem;">Generating questions...</div>
-        <div class="wizard-loading-text" style="font-size:0.875rem;opacity:0.7;">This usually takes 10-15 seconds</div>
-        <div class="wizard-loading-text" style="font-size:0.75rem;margin-top:0.5rem;opacity:0.6;">We'll generate 5-8 customized questions for your project</div>
+        <div class="wizard-loading-text wizard-loading-main" style="font-size:1rem;margin-top:0.5rem;">Generating questions...</div>
+        <div class="wizard-loading-text wizard-loading-elapsed" style="font-size:0.875rem;opacity:0.8;margin-top:0.3rem;">0s elapsed • ~${Math.round((estimate.min + estimate.max) / 2)}s estimated</div>
+        <div class="wizard-loading-text" style="font-size:0.75rem;margin-top:0.5rem;opacity:0.6;">Analyzing your project to create personalized questions</div>
       `);
+      
+      // Start real-time elapsed counter
+      const elapsedCounterRef = setInterval(() => {
+        if (!loadingOverlay) {
+          clearInterval(elapsedCounterRef);
+          return;
+        }
+        const elapsed = Math.floor((Date.now() - loadingStartTime) / 1000);
+        const avgEstimate = Math.round((estimate.min + estimate.max) / 2);
+        const remaining = Math.max(0, avgEstimate - elapsed);
+        
+        const elapsedEl = loadingOverlay.querySelector('.wizard-loading-elapsed');
+        if (elapsedEl) {
+          if (elapsed < estimate.max) {
+            elapsedEl.textContent = `${elapsed}s elapsed • ~${remaining}s remaining`;
+          } else {
+            elapsedEl.textContent = `${elapsed}s elapsed • Taking longer than usual`;
+          }
+        }
+      }, 1000);
 
       qaPanel?.classList.add("is-appearing");
 
-      // Update global status progress
-      if (typeof window.globalStatus !== 'undefined') {
-        window.globalStatus.updateProgress(20);
-      }
-
       slowWarningTimerRef = setTimeout(() => {
         setWizardStatus("This is taking longer than usual. You can cancel and retry.", "warn", { showTicks: true });
-      }, 20000);
+      }, estimate.max * 1000); // Use mode-specific timeout
 
-      // FIX 2.1: Set timeout to show error if request takes too long
+      // Set timeout to update message if request takes too long
       loadingTimeoutRef = setTimeout(() => {
         if (loadingOverlay && loadingOverlay.parentNode) {
           log("⚠️ Request is taking longer than expected. Please wait...");
-          // Update loading message
-          const loadingText = loadingOverlay.querySelector(".wizard-loading-text");
-          if (loadingText) {
-            loadingText.innerHTML = `
-              <div style="font-size:1rem;margin-top:0.5rem;">Still working...</div>
-              <div style="font-size:0.875rem;opacity:0.7;margin-top:0.3rem;">This is taking longer than usual</div>
-              <div style="font-size:0.75rem;opacity:0.6;margin-top:0.3rem;">Please check your connection or try refreshing</div>
-            `;
+          const mainText = loadingOverlay.querySelector(".wizard-loading-main");
+          if (mainText) {
+            mainText.textContent = "Still working on it...";
           }
         }
-      }, 30000); // 30 seconds
+      }, estimate.max * 1000 / 2); // Half of max estimate
 
       const res = await fetch(`${API_BASE}/api/question-sessions`, {
         method: "POST",
@@ -796,7 +817,8 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
         signal: startController.signal
       });
 
-      // Clear timeout if request completes
+      // Clear timers if request completes
+      clearInterval(elapsedCounterRef);
       clearTimeout(loadingTimeoutRef);
       clearTimeout(slowWarningTimerRef);
       if (!res.ok) {

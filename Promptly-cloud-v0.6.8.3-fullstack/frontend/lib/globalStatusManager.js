@@ -29,6 +29,8 @@ const GlobalStatusManager = (function() {
   let elapsedInterval = null;
   let startTime = null;
   let currentMode = 'deep';
+  let currentSessionId = null;
+  let lastState = {};
 
   /**
    * Initialize the global status bar DOM
@@ -105,7 +107,20 @@ const GlobalStatusManager = (function() {
     subtitleElement = statusElement.querySelector('.global-status-subtitle');
     closeBtn = statusElement.querySelector('.global-status-close');
 
-    closeBtn?.addEventListener('click', hide);
+    closeBtn?.addEventListener('click', (event) => {
+      event.stopPropagation();
+      hide();
+    });
+
+    statusElement?.addEventListener('click', () => {
+      // Prefer the active session id if available
+      const sessionId = currentSessionId || window.promptlyWizardSession?.getActive?.()?.sessionId;
+      const url = new URL('wizard.html', window.location.href);
+      if (sessionId) {
+        url.searchParams.set('sessionId', sessionId);
+      }
+      window.location.href = url.toString();
+    });
   }
 
   /**
@@ -131,11 +146,13 @@ const GlobalStatusManager = (function() {
       if (state.visible) {
         startTime = state.startTime;
         currentMode = state.mode || 'deep';
+        currentSessionId = state.sessionId || null;
         show({
           title: state.title,
           subtitle: state.subtitle,
           mode: state.mode,
-          state: state.state
+          state: state.state,
+          sessionId: state.sessionId
         });
       }
     } catch (e) {
@@ -148,13 +165,17 @@ const GlobalStatusManager = (function() {
    * Save state to sessionStorage
    */
   function _saveState(state) {
-    sessionStorage.setItem(STORAGE_KEY, JSON.stringify({
+    lastState = {
+      ...lastState,
       ...state,
       startTime: startTime,
       mode: currentMode,
       visible: true,
+      sessionId: currentSessionId,
       timestamp: Date.now()
-    }));
+    };
+
+    sessionStorage.setItem(STORAGE_KEY, JSON.stringify(lastState));
   }
 
   /**
@@ -162,6 +183,7 @@ const GlobalStatusManager = (function() {
    */
   function _clearState() {
     sessionStorage.removeItem(STORAGE_KEY);
+    lastState = {};
   }
 
   /**
@@ -216,7 +238,8 @@ const GlobalStatusManager = (function() {
       title = '🧙‍♂️ Wizard Running',
       subtitle = 'Processing...',
       mode = 'deep',
-      state = 'loading' // loading, success, error
+      state = 'loading', // loading, success, error
+      sessionId
     } = options;
 
     currentMode = mode;
@@ -224,6 +247,10 @@ const GlobalStatusManager = (function() {
     // Set start time if new
     if (!startTime) {
       startTime = Date.now();
+    }
+
+    if (sessionId) {
+      currentSessionId = sessionId;
     }
 
     // Update content
@@ -268,10 +295,15 @@ const GlobalStatusManager = (function() {
       message = '✅ Complete!',
       autoHide = true,
       autoHideDelay = 4000,
-      notify = true
+      notify = true,
+      sessionId
     } = options;
 
     _stopElapsedCounter();
+
+    if (sessionId) {
+      currentSessionId = sessionId;
+    }
 
     if (statusElement) {
       statusElement.classList.remove('global-status--error');
@@ -308,10 +340,15 @@ const GlobalStatusManager = (function() {
       message = '❌ Error',
       details = '',
       autoHide = false,
-      notify = true
+      notify = true,
+      sessionId
     } = options;
 
     _stopElapsedCounter();
+
+    if (sessionId) {
+      currentSessionId = sessionId;
+    }
 
     if (statusElement) {
       statusElement.classList.remove('global-status--success');
@@ -343,12 +380,29 @@ const GlobalStatusManager = (function() {
   function hide() {
     _stopElapsedCounter();
     startTime = null;
+    currentSessionId = null;
 
     if (statusElement) {
       statusElement.classList.add('hidden');
     }
 
     _clearState();
+  }
+
+  /**
+   * Associate a session id with the status bar (for navigation/restoration)
+   * @param {string} sessionId
+   */
+  function setSession(sessionId) {
+    if (!sessionId) return;
+    currentSessionId = sessionId;
+
+    // Persist the session id alongside the last known state
+    if (Object.keys(lastState).length > 0) {
+      _saveState({});
+    } else {
+      _saveState({ sessionId });
+    }
   }
 
   /**
@@ -367,6 +421,7 @@ const GlobalStatusManager = (function() {
     updateProgress,
     complete,
     error,
+    setSession,
     isVisible
   };
 })();

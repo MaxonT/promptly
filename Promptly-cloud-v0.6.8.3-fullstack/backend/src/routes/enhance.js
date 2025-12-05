@@ -4,6 +4,26 @@
  * 此模块实现了 Promptly 的 enhancer 优化流程，确保用户理解从输入到最终清理后的 prompt 之间发生的过程。
  * 
  * ============================================
+ * IMPORTANT: Relationship with Best Prompt Pipeline
+ * ============================================
+ * 
+ * This module (`/api/enhance/*`) provides **single-shot enhancement interfaces** for quick, 
+ * one-off prompt improvements. These endpoints are useful for immediate enhancements without 
+ * going through the full pipeline.
+ * 
+ * The **Best Prompt Pipeline** (implemented in `/api/prompts/*`, `/api/specs/from-idea`, etc.)
+ * provides the complete, multi-stage pipeline:
+ * - Spec Builder → Question Engine → LLM Agents → Metrics & Scoring → Outcome Runner
+ * 
+ * **Key Differences:**
+ * - `/api/enhance/*` = Single LLM call, single result, immediate enhancement
+ * - Best Prompt Pipeline = Multiple agents, multiple candidates, scoring, best-of-N selection
+ * 
+ * Both can coexist, serving different use cases:
+ * - Use `/api/enhance/*` for quick enhancements
+ * - Use Best Prompt Pipeline for comprehensive optimization with scoring
+ * 
+ * ============================================
  * PROMPT OPTIMIZATION PROCESS (6 Layers)
  * ============================================
  * 
@@ -13,11 +33,12 @@
  *    - 反向澄清钩子：当缺少 prompt 时直接返回 400
  *    - 结构化输入：附件被封装为 [ATTACHMENT_METADATA] 块
  * 
- * 2) Spec Layer (规格封装)
+ * 2) Spec Layer (规格封装) - Note: This is "Agent Policy Layer", not "Spec Builder"
  *    - 核心构件：后端在调用 LLM 之前组合包含背景与约束的 system prompt
  *    - 标准化：文件类别与尺寸统一格式化
  *    - 版本稳定性：增强模板是固定文案，确保多次调用保持一致行为
  *    - 强调"清晰、分段、易懂、利于模型解析"
+ *    - Note: The "Spec Builder" (raw idea → structured spec) is in `/api/specs/from-idea`
  * 
  * 3) Compiler Layer (Prompt 生成)
  *    - 分块生成：用户正文 + [ATTACHMENT_METADATA_START/END] 作为输入块

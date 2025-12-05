@@ -1,10 +1,10 @@
 import { Router } from "express";
 import { nanoid } from "nanoid";
 import { z } from "zod";
-import { db } from "../lib/db.js";
+import { db, ensureUser } from "../lib/db.js";
 import { compileSpecToPrompt } from "../lib/specCompiler.js";
 import { evaluatePrompt } from "../lib/evaluationEngine.js";
-import { LlmDisabledError } from "../lib/openaiClient.js";
+import { chatJson, LlmDisabledError } from "../lib/openaiClient.js";
 
 export const specsRouter = Router();
 
@@ -490,4 +490,177 @@ specsRouter.get("/:id/evaluations", (req, res) => {
     ok: true,
     evaluations: formattedEvaluations
   });
+});
+
+/**
+ * Best Prompt Pipeline - Spec Builder
+ * POST /api/specs/from-idea
+ * 
+ * Turn a raw idea into a structured Spec JSON (matches UI: "Turn your raw idea into a structured spec…").
+ * 
+ * This endpoint is part of the Best Prompt Pipeline:
+ * Spec Builder → Question Engine → LLM Agents → Metrics & Scoring → Outcome Runner
+ */
+const FromIdeaRequestSchema = z.object({
+  idea: z.string().trim().min(1, "Idea is required"),
+  attachments: z.array(z.object({
+    name: z.string(),
+    type: z.string(),
+    size: z.number().int().nonnegative()
+  })).optional()
+});
+
+specsRouter.post("/from-idea", async (req, res) => {
+  const userId = getUserId(req);
+  ensureUser(userId);
+
+  const parsed = FromIdeaRequestSchema.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({ ok: false, error: parsed.error.flatten() });
+  }
+
+  const { idea, attachments = [] } = parsed.data;
+
+  try {
+    console.log(`[promptly] 📝 /api/specs/from-idea: Request received`);
+    console.log(`[promptly] Idea length: ${idea.length} chars, Attachments: ${attachments.length}`);
+
+    // Build attachment context if provided
+    let attachmentContext = "";
+    if (attachments.length > 0) {
+      attachmentContext = "\n\nAttached files:\n" + 
+        attachments.map((att, i) => `  ${i + 1}. ${att.name} (${att.type}, ${att.size} bytes)`).join("\n");
+    }
+
+    // System prompt for Spec Builder
+    const system = `You are a Spec Builder agent in Promptly's Best Prompt Pipeline.
+
+Your task is to analyze a raw user idea and extract/infer structured information to create a comprehensive specification.
+
+REQUIREMENTS:
+1. Extract the core user goal from the idea
+2. Infer or identify target audience if mentioned or implied
+3. Identify any constraints, requirements, or preferences
+4. Determine tone/style preferences if indicated
+5. Note format requirements if specified
+6. Identify domain/context if relevant
+7. Extract any examples or references mentioned
+
+OUTPUT FORMAT:
+Return ONLY valid JSON matching this structure:
+{
+  "userGoal": "string - The main goal or objective",
+  "audience": "string | null - Target users/audience",
+  "constraints": ["string"] - Array of constraints or requirements,
+  "tone": "string | null - Desired tone (e.g., professional, casual, formal)",
+  "format": "string | null - Output format requirements",
+  "domain": "string | null - Domain/context (e.g., coding, writing, analysis)",
+  "examples": ["string"] - Array of examples or references mentioned
+}
+
+IMPORTANT:
+- Return ONLY valid JSON, no other text
+- Use null for optional fields that cannot be inferred
+- Be specific and actionable
+- Extract all relevant information from the idea`;
+
+    const userPrompt = `Raw Idea:
+${idea}${attachmentContext}
+
+Please extract structured information from this idea and return a JSON spec object.`;
+
+    console.log(`[promptly] 🔄 About to call LLM (chatJson) for spec generation...`);
+
+    // Call LLM to generate structured spec
+    const { data, model: modelUsed, completionId } = await chatJson({
+      system,
+      user: userPrompt
+    });
+
+    console.log(`[promptly] ✅ Received spec from LLM`);
+
+    // Extract structured fields
+    const userGoal = data.userGoal || idea; // Fallback to original idea if extraction fails
+    const audience = data.audience || null;
+    const constraints = Array.isArray(data.constraints) ? data.constraints : [];
+    const tone = data.tone || null;
+    const format = data.format || null;
+    const domain = data.domain || null;
+    const examples = Array.isArray(data.examples) ? data.examples : [];
+
+    // Create structured spec object
+    const specData = {
+      project_goal: userGoal,
+      target_users: audience,
+      constraints: constraints.length > 0 ? constraints : null,
+      tone: tone,
+      format: format,
+      domain: domain,
+      examples: examples.length > 0 ? examples : null
+    };
+
+    // Generate a title from the goal (first 100 chars)
+    const title = userGoal.length > 100 ? userGoal.substring(0, 97) + "..." : userGoal;
+
+    const now = new Date().toISOString();
+    const specId = `spec_${nanoid(12)}`;
+
+    // Save to database
+    db.prepare(`
+      INSERT INTO specs (id, owner_id, kind, title, summary, tech_stack, pages, data_model, constraints, spec_json, status, version, completeness_score, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      specId,
+      userId,
+      domain || null, // kind
+      title,
+      userGoal, // summary
+      null, // tech_stack
+      null, // pages
+      null, // data_model
+      constraints.length > 0 ? JSON.stringify(constraints) : null, // constraints
+      JSON.stringify(specData), // spec_json
+      "draft", // status
+      1, // version
+      0.0, // completeness_score (will be updated by Question Engine)
+      now,
+      now
+    );
+
+    console.log(`[promptly] ✅ Spec saved to database: ${specId}`);
+
+    // Return structured spec
+    const spec = {
+      id: specId,
+      rawIdea: idea,
+      userGoal,
+      audience,
+      constraints,
+      tone,
+      format,
+      domain,
+      examples,
+      completenessScore: 0.0,
+      createdAt: now,
+      updatedAt: now
+    };
+
+    res.json({
+      ok: true,
+      spec
+    });
+
+  } catch (err) {
+    console.error(`[promptly] ❌ /api/specs/from-idea error:`, err.message || err);
+    if (err instanceof LlmDisabledError) {
+      return res.status(503).json({
+        ok: false,
+        error: "LLM disabled: OPENAI_API_KEY not set"
+      });
+    }
+    return res.status(500).json({
+      ok: false,
+      error: "Failed to generate spec from idea"
+    });
+  }
 });

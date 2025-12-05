@@ -381,6 +381,7 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
 
       currentSessionId = data.session.id;
       window.promptlyWizardSession?.markRunning?.(currentSessionId);
+      window.globalStatus?.setSession?.(currentSessionId);
 
       if (ideaInput && data.session.initial_description) {
         ideaInput.value = data.session.initial_description;
@@ -994,6 +995,7 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
       const data = await res.json();
       currentSessionId = data.session_id;
       window.promptlyWizardSession?.markRunning?.(currentSessionId);
+      window.globalStatus?.setSession?.(currentSessionId);
       log(`Session created: ${currentSessionId}`);
       
       // Hide loading overlay
@@ -1018,7 +1020,8 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
       window.globalStatus?.complete?.({
         message: `✅ ${allQuestions.length} questions ready!`,
         autoHide: true,
-        autoHideDelay: 3000
+        autoHideDelay: 3000,
+        sessionId: currentSessionId
       });
 
       // Keep button disabled after successful start

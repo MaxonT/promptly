@@ -1533,10 +1533,8 @@ document.addEventListener('DOMContentLoaded', () => {
   console.log('[Promptly] DOMContentLoaded fired - Initializing pipeline animation and Run Optimization button...');
   
   // ============================================
-  // Constants for metric calculations
+  // Constants
   // ============================================
-  const SCORE_MAX = 10;  // Maximum score for finalScore and llmScore (0-10 scale)
-  const TOKENS_PER_CANDIDATE = 500;  // Estimated tokens per candidate
   const DEFAULT_CANDIDATE_COUNT = 4;  // Default number of candidates to generate
   
   // Use global showToast if available, otherwise create a local one
@@ -1557,6 +1555,18 @@ document.addEventListener('DOMContentLoaded', () => {
   // ============================================
   // Metrics Loading State Functions
   // ============================================
+  // 
+  // METRICS FLOW:
+  // 1. User clicks "Run Optimization" button
+  // 2. showMetricsLoading() displays "⏳" loading state
+  // 3. API call to /api/outcome-runs (outcomeRuns.js)
+  // 4. Backend calculates metrics using buildEvaluationMetrics() (metricsEngine.js)
+  // 5. Response includes: { ok: true, result: { metrics: { accuracy, f1, passRate, tokenCost, progress } } }
+  // 6. updateMetricsFromResponse() displays real values from backend
+  // 7. If metrics unavailable, displays "—" (no placeholder values)
+  //
+  // KEY PRINCIPLE: Display only real backend values. No frontend estimation or placeholders.
+  // ============================================
   
   // Show skeleton loading on all metrics
   function showMetricsLoading() {
@@ -1571,11 +1581,12 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   
   // Update metrics with real data from Outcome Runner response
+  // Uses backend metrics from buildEvaluationMetrics() - no hardcoded placeholders
   function updateMetricsFromResponse(result) {
-    const metrics = ['valAcc', 'valF1', 'valPass', 'valCost', 'valProg'];
+    const metricIds = ['valAcc', 'valF1', 'valPass', 'valCost', 'valProg'];
     
     // Remove loading state from all metrics first
-    metrics.forEach(id => {
+    metricIds.forEach(id => {
       const el = document.getElementById(id);
       if (el) {
         el.classList.remove('skeleton-loading');
@@ -1583,8 +1594,8 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     
     if (!result || !result.best) {
-      // If no data, show dashes
-      metrics.forEach(id => {
+      // If no data, show "—" (unavailable state)
+      metricIds.forEach(id => {
         const el = document.getElementById(id);
         if (el) el.textContent = '—';
       });
@@ -1593,112 +1604,106 @@ document.addEventListener('DOMContentLoaded', () => {
     
     const best = result.best;
     
-    // Use metrics from backend if available, otherwise fallback to calculated values
-    const metrics = result.metrics || best.metrics || {};
+    // Use metrics from backend buildEvaluationMetrics() - no fallback to placeholder values
+    const backendMetrics = result.metrics || best.metrics || {};
     
-    // Accuracy - use backend calculated value or calculate from test stats
+    // Accuracy - display real backend value only
     const valAcc = document.getElementById('valAcc');
     if (valAcc) {
-      let accuracy = null;
-      if (metrics.accuracy != null) {
-        accuracy = (metrics.accuracy * 100).toFixed(1) + '%';
-      } else if (best.finalScore != null) {
-        // Fallback: use finalScore as accuracy proxy
-        accuracy = ((best.finalScore / SCORE_MAX) * 100).toFixed(1) + '%';
+      if (backendMetrics.accuracy != null) {
+        valAcc.textContent = (backendMetrics.accuracy * 100).toFixed(1) + '%';
+      } else {
+        valAcc.textContent = '—'; // Unavailable
       }
-      valAcc.textContent = accuracy || '—';
     }
     
-    // F1 Score - use backend calculated value
+    // F1 Score - display real backend value only
     const valF1 = document.getElementById('valF1');
     if (valF1) {
-      let f1 = null;
-      if (metrics.f1 != null) {
-        f1 = metrics.f1.toFixed(2);
-      } else if (best.llmScore != null) {
-        // Fallback: use llmScore as F1 proxy
-        f1 = (best.llmScore / SCORE_MAX).toFixed(2);
+      if (backendMetrics.f1 != null) {
+        valF1.textContent = backendMetrics.f1.toFixed(2);
+      } else {
+        valF1.textContent = '—'; // Unavailable
       }
-      valF1.textContent = f1 || '—';
     }
     
-    // Pass Rate - use backend calculated value
+    // Pass Rate - display real backend value only
     const valPass = document.getElementById('valPass');
     if (valPass) {
-      let passRate = null;
-      if (metrics.passRate != null) {
-        passRate = (metrics.passRate * 100).toFixed(1) + '%';
-      } else if (best.tests?.passed === true) {
-        passRate = '100%';
-      } else if (best.tests?.passed === false) {
-        passRate = '0%';
+      if (backendMetrics.passRate != null) {
+        valPass.textContent = (backendMetrics.passRate * 100).toFixed(1) + '%';
+      } else {
+        valPass.textContent = '—'; // Unavailable
       }
-      valPass.textContent = passRate || '—';
     }
     
-    // Token Cost - use backend calculated value
+    // Token Cost - display real backend value only (no candidate count estimation)
     const valCost = document.getElementById('valCost');
     if (valCost) {
-      let tokenCost = null;
-      if (metrics.tokenCost != null) {
-        tokenCost = Math.round(metrics.tokenCost).toLocaleString();
+      if (backendMetrics.tokenCost != null) {
+        valCost.textContent = Math.round(backendMetrics.tokenCost).toLocaleString();
       } else {
-        // Fallback: estimate based on candidates count
-        const candidateCount = result.candidates?.length || 0;
-        tokenCost = candidateCount > 0 
-          ? (candidateCount * TOKENS_PER_CANDIDATE).toLocaleString()
-          : null;
+        valCost.textContent = '—'; // Unavailable
       }
-      valCost.textContent = tokenCost || '—';
     }
     
-    // Progress - use backend calculated value
+    // Progress - display real backend value only (no hardcoded 100%)
     const valProg = document.getElementById('valProg');
     if (valProg) {
-      let progress = null;
-      if (metrics.progress != null) {
-        progress = metrics.progress.toFixed(1) + '%';
+      if (backendMetrics.progress != null) {
+        valProg.textContent = backendMetrics.progress.toFixed(1) + '%';
       } else {
-        // Fallback: 100% when complete
-        progress = '100%';
+        valProg.textContent = '—'; // Unavailable
       }
-      valProg.textContent = progress || '—';
     }
     
-    // Update charts with the same metrics
+    // Update charts only if we have real backend metrics data
+    // Skip chart updates if all metrics are null/undefined to avoid showing misleading 0 values
+    const hasAnyMetric = backendMetrics.accuracy != null || 
+                         backendMetrics.f1 != null || 
+                         backendMetrics.passRate != null || 
+                         backendMetrics.tokenCost != null ||
+                         backendMetrics.progress != null;
+    
+    if (!hasAnyMetric) {
+      // No real metrics available - charts will retain their previous state
+      console.log('[Promptly] No backend metrics available, skipping chart update');
+      return;
+    }
+    
     const chartMetrics = {
-      accuracy: metrics.accuracy || 0,
-      f1: metrics.f1 || 0,
-      pass_rate: metrics.passRate || 0,
-      token_cost: metrics.tokenCost || 0,
-      progress_pct: metrics.progress || 0
+      accuracy: backendMetrics.accuracy ?? 0,
+      f1: backendMetrics.f1 ?? 0,
+      pass_rate: backendMetrics.passRate ?? 0,
+      token_cost: backendMetrics.tokenCost ?? 0,
+      progress_pct: backendMetrics.progress ?? 0
     };
     
     // Render charts using core.js functions if available
     if (typeof renderCharts === 'function') {
       renderCharts(chartMetrics);
     } else {
-      // Fallback: direct chart update
-      const progress = Math.max(0, Math.min(1, (chartMetrics.progress_pct || 0) / 100));
+      // Fallback: direct chart update with real metrics data
+      const progressValue = Math.max(0, Math.min(1, (chartMetrics.progress_pct || 0) / 100));
       const line = document.getElementById('lineGrowth');
       const bar = document.getElementById('barContrib');
       const pie = document.getElementById('piePass');
       const gauge = document.getElementById('gaugeProg');
       
       if (line && typeof drawLine === 'function') {
-        const history = [progress * 100, progress * 100, progress * 100];
+        const history = [progressValue * 100, progressValue * 100, progressValue * 100];
         drawLine(line, history);
       }
       if (bar && typeof drawBars === 'function') {
-        const contrib = [progress * 100, progress * 100, progress * 100];
+        const contrib = [progressValue * 100, progressValue * 100, progressValue * 100];
         drawBars(bar, contrib);
       }
       if (pie && typeof drawPie === 'function') {
-        const passRate = Math.round((chartMetrics.pass_rate || 0) * 100);
-        drawPie(pie, [passRate, 100 - passRate]);
+        const passRateValue = Math.round((chartMetrics.pass_rate || 0) * 100);
+        drawPie(pie, [passRateValue, 100 - passRateValue]);
       }
       if (gauge && typeof drawGauge === 'function') {
-        drawGauge(gauge, progress);
+        drawGauge(gauge, progressValue);
       }
     }
   }
@@ -1819,10 +1824,10 @@ document.addEventListener('DOMContentLoaded', () => {
     processingCancelled = false;
     const n = candidateCount || DEFAULT_CANDIDATE_COUNT;
     const stages = [
-      { text: "⏳ 正在生成最佳 Prompt...\n\n处理中：\n1. ⏳ 生成候选 prompts...", delay: 600 },
-      { text: `⏳ 正在生成最佳 Prompt...\n\n处理中：\n1. ✓ 已生成 ${n} 个候选\n2. ⏳ LLM 评分中...`, delay: 800 },
-      { text: `⏳ 正在生成最佳 Prompt...\n\n处理中：\n1. ✓ 已生成 ${n} 个候选\n2. ✓ 评分完成\n3. ⏳ 应用测试规则...`, delay: 500 },
-      { text: `⏳ 正在生成最佳 Prompt...\n\n处理中：\n1. ✓ 已生成 ${n} 个候选\n2. ✓ 评分完成\n3. ✓ 测试通过\n4. ⏳ 选择最佳候选...`, delay: 400 }
+      { text: "⏳ Generating Best Prompt...\n\nProcessing:\n1. ⏳ Generating candidate prompts...", delay: 600 },
+      { text: `⏳ Generating Best Prompt...\n\nProcessing:\n1. ✓ Generated ${n} candidates\n2. ⏳ LLM scoring in progress...`, delay: 800 },
+      { text: `⏳ Generating Best Prompt...\n\nProcessing:\n1. ✓ Generated ${n} candidates\n2. ✓ Scoring complete\n3. ⏳ Applying test rules...`, delay: 500 },
+      { text: `⏳ Generating Best Prompt...\n\nProcessing:\n1. ✓ Generated ${n} candidates\n2. ✓ Scoring complete\n3. ✓ Tests passed\n4. ⏳ Selecting best candidate...`, delay: 400 }
     ];
     
     for (const stage of stages) {
@@ -1976,7 +1981,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // ✅ Show loading state in Best Prompt area
     if (bestPromptEl) {
-      bestPromptEl.value = "⏳ 正在生成最佳 Prompt...\n\n处理中：\n1. ⏳ 生成候选 prompts...";
+      bestPromptEl.value = "⏳ Generating Best Prompt...\n\nProcessing:\n1. ⏳ Generating candidate prompts...";
       bestPromptEl.style.borderColor = '#7C3AED';
       bestPromptEl.classList.add('processing-animation');
       bestPromptEl.classList.remove('success-highlight', 'error-state');
@@ -2064,6 +2069,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!response.ok) {
           // Try to parse error message from response body
           let errorMsg = `HTTP ${response.status}: ${response.statusText}`;
+          let isLlmError = false;
           try {
             const errorData = await response.json();
             errorMsg = errorData.error || errorMsg;
@@ -2073,17 +2079,38 @@ document.addEventListener('DOMContentLoaded', () => {
           
           console.warn('[Promptly] API returned HTTP error:', errorMsg);
           
+          // Determine error type for specific messaging
+          let userMessage = errorMsg;
+          let pipelineMessage = 'Pipeline stopped due to server error.';
+          
+          if (response.status === 503 || errorMsg.includes('LLM disabled')) {
+            isLlmError = true;
+            userMessage = 'LLM features are unavailable. The API key may not be configured.';
+            pipelineMessage = '⚠️ LLM Unavailable - Check API configuration';
+          } else if (response.status === 502) {
+            isLlmError = true;
+            if (errorMsg.includes('Invalid OpenAI API Key') || errorMsg.includes('invalid_api_key')) {
+              userMessage = 'Invalid API Key. Please check your OPENAI_API_KEY configuration.';
+            } else {
+              userMessage = 'AI service temporarily unavailable. Please try again later.';
+            }
+            pipelineMessage = '⚠️ AI Service Error - Try again later';
+          }
+          
           if (bestPromptEl) {
-            bestPromptEl.value = `❌ 服务器错误\n\n${errorMsg}\n\n请稍后重试`;
+            const displayMsg = isLlmError 
+              ? `⚠️ LLM Unavailable\n\n${userMessage}\n\nThe optimization pipeline requires a working LLM connection.\nPlease ensure OPENAI_API_KEY is configured correctly.`
+              : `❌ Server Error\n\n${errorMsg}\n\nPlease try again later.`;
+            bestPromptEl.value = displayMsg;
             bestPromptEl.classList.remove('processing-animation', 'success-highlight');
             bestPromptEl.classList.add('error-state');
             bestPromptEl.style.borderColor = '#EF4444';
           }
 
-          stopPipelineTimeline('Pipeline stopped due to server error.');
+          stopPipelineTimeline(pipelineMessage);
 
           resetMetrics();
-          showToast(`⚠ ${errorMsg}`, 'error');
+          showToast(`⚠ ${userMessage}`, 'error');
           return;
         }
         
@@ -2096,7 +2123,7 @@ document.addEventListener('DOMContentLoaded', () => {
           const bestContent = data.result.best.content;
           
           if (bestPromptEl) {
-            bestPromptEl.value = bestContent || '未生成最佳 prompt';
+            bestPromptEl.value = bestContent || 'No best prompt generated';
             bestPromptEl.classList.remove('processing-animation');
             bestPromptEl.classList.add('success-highlight');
             bestPromptEl.classList.remove('error-state');
@@ -2117,8 +2144,14 @@ document.addEventListener('DOMContentLoaded', () => {
           const errorMsg = data.error || 'Unknown error';
           console.warn('[Promptly] API returned error:', errorMsg);
           
+          // Check if this is an LLM-related error
+          const isLlmError = errorMsg.includes('LLM') || errorMsg.includes('API') || errorMsg.includes('disabled');
+          
           if (bestPromptEl) {
-            bestPromptEl.value = `❌ 生成失败\n\n错误: ${errorMsg}\n\n请检查输入或稍后重试`;
+            const displayMsg = isLlmError
+              ? `⚠️ Generation Failed\n\nError: ${errorMsg}\n\nThe LLM service may be unavailable. Please check the API configuration.`
+              : `❌ Generation Failed\n\nError: ${errorMsg}\n\nPlease check your input and try again.`;
+            bestPromptEl.value = displayMsg;
             bestPromptEl.classList.remove('processing-animation', 'success-highlight');
             bestPromptEl.classList.add('error-state');
             bestPromptEl.style.borderColor = '#EF4444';
@@ -2138,7 +2171,7 @@ document.addEventListener('DOMContentLoaded', () => {
         console.error('[Promptly] API call failed:', apiError);
         
         if (bestPromptEl) {
-          bestPromptEl.value = `❌ 网络请求失败\n\n错误: ${apiError.message}\n\n可能的原因：\n• 后端服务未启动\n• 网络连接问题\n• API 地址配置错误\n\n请检查网络连接后重试`;
+          bestPromptEl.value = `❌ Network Request Failed\n\nError: ${apiError.message}\n\nPossible causes:\n• Backend service not running\n• Network connection issues\n• API address misconfigured\n\nPlease check your network connection and try again.`;
           bestPromptEl.classList.remove('processing-animation', 'success-highlight');
           bestPromptEl.classList.add('error-state');
           bestPromptEl.style.borderColor = '#EF4444';
@@ -2175,7 +2208,7 @@ document.addEventListener('DOMContentLoaded', () => {
       console.error('[Promptly] Error during optimization:', error);
       showToast('⚠ An error occurred. Check console for details.', 'error');
       if (bestPromptEl) {
-        bestPromptEl.value = `❌ 发生错误\n\n${error.message}\n\n请检查浏览器控制台获取详细信息`;
+        bestPromptEl.value = `❌ Error Occurred\n\n${error.message}\n\nCheck the browser console for more details.`;
         bestPromptEl.style.borderColor = '#EF4444';
         bestPromptEl.classList.remove('processing-animation', 'success-highlight');
         bestPromptEl.classList.add('error-state');
@@ -2188,7 +2221,7 @@ document.addEventListener('DOMContentLoaded', () => {
       runBtn.style.opacity = '';
       runBtn.style.cursor = '';
       const lang = localStorage.getItem('promptly.lang') || 'en';
-      runBtn.textContent = originalText || (lang === 'zh' ? '运行优化' : 'Run Optimization');
+      runBtn.textContent = originalText || 'Run Optimization';
       
       // Reset border color after a moment for success cases
       if (bestPromptEl && bestPromptEl.classList.contains('success-highlight')) {

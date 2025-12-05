@@ -81,6 +81,28 @@ export function computeProgress({ accuracy, f1, passRate, tokenCost, targets = {
   return Math.max(0, Math.min(100, rawProgress * 100));
 }
 
+/**
+ * Build evaluation metrics for the frontend dashboard.
+ * 
+ * This is the central function that computes all metrics displayed in the UI:
+ * - accuracy: Percentage of test cases passed (0-1 scale)
+ * - f1: F1 score combining precision and recall (0-1 scale)  
+ * - passRate: Ratio of passed constraints to total constraints (0-1 scale)
+ * - tokenCost: Total tokens used (prompt + completion)
+ * - progress: Combined progress percentage (0-100 scale)
+ * 
+ * Frontend Integration:
+ * - Called by outcomeRuns.js POST handler
+ * - Response sent as: { result: { metrics: {...}, best: {...} } }
+ * - Frontend updateMetricsFromResponse() displays these values directly
+ * - No frontend placeholders - if a metric is null, UI shows "—"
+ * 
+ * @param {Object} options
+ * @param {Object|null} options.testStats - Test statistics (correct_count, total_cases, tp, fp, fn, etc.)
+ * @param {Object|null} options.usage - Token usage (prompt_tokens, completion_tokens, total_tokens)
+ * @param {Object|null} options.targets - Target values for progress calculation
+ * @returns {Object} Metrics object with all computed values (null if not computable)
+ */
 export function buildEvaluationMetrics({ testStats = null, usage = null, targets = null }) {
   const accuracy = computeAccuracy(testStats);
   const precision = computePrecision(testStats);

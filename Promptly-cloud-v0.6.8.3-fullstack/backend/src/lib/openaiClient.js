@@ -31,6 +31,41 @@ export class LlmDisabledError extends Error {
 }
 
 const DEFAULT_TEMPERATURE = 0.2;
+const DEFAULT_MAX_RETRIES = 1;
+const DEFAULT_MIN_CHANGE_SIMILARITY = 0.85;
+const DEFAULT_FORCE_REWRITE_PROMPT =
+  "OUTPUT POLICY: Do not repeat the user's prompt. Your response must be substantially different; otherwise append '> needs more change'.";
+
+function levenshteinDistance(a, b) {
+  const matrix = Array.from({ length: b.length + 1 }, () =>
+    new Array(a.length + 1).fill(0)
+  );
+  for (let i = 0; i <= b.length; i++) {
+    matrix[i][0] = i;
+  }
+  for (let j = 0; j <= a.length; j++) {
+    matrix[0][j] = j;
+  }
+
+  for (let i = 1; i <= b.length; i++) {
+    for (let j = 1; j <= a.length; j++) {
+      const cost = b[i - 1] === a[j - 1] ? 0 : 1;
+      matrix[i][j] = Math.min(
+        matrix[i - 1][j] + 1,
+        matrix[i][j - 1] + 1,
+        matrix[i - 1][j - 1] + cost
+      );
+    }
+  }
+
+  return matrix[b.length][a.length];
+}
+
+function normalizedSimilarity(a = "", b = "") {
+  const maxLen = Math.max(a.length, b.length, 1);
+  const distance = levenshteinDistance(a, b);
+  return 1 - distance / maxLen;
+}
 
 /**
  * Resolve the actual OpenAI model name from a Promptly model ID
@@ -132,61 +167,90 @@ export async function chatJson({ system, user, model, promptlyModelId }) {
   }
 }
 
-/**
- * Text completion
- * Similar to chatJson but returns plain text instead of JSON
- * @param {Object} options
- * @param {string} options.system - System prompt
- * @param {string} options.user - User message
- * @param {string} options.model - OpenAI model name OR Promptly model ID
- * @param {string} [options.promptlyModelId] - Optional Promptly model ID for system prompt enhancement
- */
-export async function chatText({ system, user, model, promptlyModelId }) {
+async function executeChatText(
+  {
+    system,
+    model,
+    promptlyModelId,
+    baseUser,
+    temperature,
+    forceRewritePrompt,
+    minSimilarity,
+    maxRetries
+  },
+  attempt
+) {
   if (!client) {
     console.error("[promptly] ❌ LLM call blocked: OpenAI client not initialized (OPENAI_API_KEY not set)");
     throw new LlmDisabledError();
   }
-  
-  // Resolve model and potentially enhance system prompt
+
   const usedModel = resolveModel(model);
-  console.log(`[promptly] 🚀 Starting LLM call - Model: ${usedModel}, Type: chatText`);
+  console.log(`[promptly] 🚀 Starting LLM call - Model: ${usedModel}, Type: chatText, Attempt: ${attempt + 1}`);
   console.log(`[promptly] System prompt length: ${system?.length || 0} chars`);
-  console.log(`[promptly] User prompt length: ${user?.length || 0} chars`);
-  
+  console.log(`[promptly] Base user prompt length: ${baseUser?.length || 0} chars`);
+
   let enhancedSystem = system;
-  
-  // If a Promptly model ID is provided, apply system prompt suffix if applicable
   if (promptlyModelId) {
     const suffix = getSystemPromptSuffix(promptlyModelId);
     if (suffix) {
       enhancedSystem = buildSystemPrompt(system, promptlyModelId);
     }
   }
-  
+
+  const appliedTemperature = temperature ?? DEFAULT_TEMPERATURE;
+  const promptSuffix = attempt > 0 ? `\n\n${forceRewritePrompt || DEFAULT_FORCE_REWRITE_PROMPT}` : "";
+  const userContent = `${baseUser}${promptSuffix}`;
+
   const startTime = Date.now();
   try {
-    console.log(`[promptly] 📡 Calling OpenAI API: client.chat.completions.create()`);
     const completion = await client.chat.completions.create({
       model: usedModel,
-      temperature: DEFAULT_TEMPERATURE,
+      temperature: appliedTemperature,
       messages: [
         { role: "system", content: enhancedSystem },
-        { role: "user", content: user }
+        { role: "user", content: userContent }
       ]
     });
-    
+
     const duration = Date.now() - startTime;
-    const responseLength = completion.choices?.[0]?.message?.content?.length || 0;
+    const responseText = completion.choices?.[0]?.message?.content || "";
     const tokensUsed = completion.usage?.total_tokens || 0;
-    
-    console.log(`[promptly] ✅ LLM call succeeded - Duration: ${duration}ms, Response: ${responseLength} chars, Tokens: ${tokensUsed}`);
-    console.log(`[promptly] Completion ID: ${completion.id || 'N/A'}`);
-    
+
+    console.log(
+      `[promptly] ✅ LLM call succeeded - Duration: ${duration}ms, Response: ${responseText.length} chars, Tokens: ${tokensUsed}`
+    );
+    console.log(`[promptly] Completion ID: ${completion.id || "N/A"}`);
+
+    const similarity = normalizedSimilarity(baseUser, responseText);
+    console.log(`[promptly] Similarity score vs user prompt: ${similarity.toFixed(3)}`);
+
+    const threshold = minSimilarity ?? DEFAULT_MIN_CHANGE_SIMILARITY;
+    const retryLimit = typeof maxRetries === "number" ? maxRetries : DEFAULT_MAX_RETRIES;
+
+    if (similarity >= threshold && attempt < retryLimit) {
+      console.warn("[promptly] 🚩 Output too similar; retrying with stronger rewrite instruction");
+      return executeChatText(
+        {
+          system,
+          model,
+          promptlyModelId,
+          baseUser,
+          temperature: Math.max(appliedTemperature, 0.35),
+          forceRewritePrompt,
+          minSimilarity,
+          maxRetries
+        },
+        attempt + 1
+      );
+    }
+
     return {
-      text: completion.choices?.[0]?.message?.content || "",
+      text: responseText,
       usage: completion.usage || {},
       model: usedModel,
-      completionId: completion.id || null
+      completionId: completion.id || null,
+      similarity
     };
   } catch (error) {
     const duration = Date.now() - startTime;
@@ -198,4 +262,29 @@ export async function chatText({ system, user, model, promptlyModelId }) {
     }
     throw error;
   }
+}
+
+export async function chatText({
+  system,
+  user,
+  model,
+  promptlyModelId,
+  temperature,
+  forceRewritePrompt,
+  minSimilarity,
+  maxRetries
+}) {
+  return executeChatText(
+    {
+      system,
+      model,
+      promptlyModelId,
+      baseUser: user,
+      temperature,
+      forceRewritePrompt,
+      minSimilarity,
+      maxRetries
+    },
+    0
+  );
 }

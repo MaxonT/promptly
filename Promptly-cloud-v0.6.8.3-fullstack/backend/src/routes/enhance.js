@@ -293,49 +293,24 @@ enhanceRouter.post("/structure", async (req, res) => {
 
     console.log(`[promptly] Full prompt length (with attachments): ${fullPrompt.length} chars`);
 
-    // Call LLM for structure enhancement - Spec Layer: 组合包含背景与约束的 system prompt
-    // 强调"清晰、分段、易懂、利于模型解析"
-    const system = `You are a prompt engineering expert specializing in LLM optimization.
+    // Optimized: Concise system prompt to reduce token usage
+    const system = `Restructure prompt with clear sections, headings, and formatting.
 
-CRITICAL REQUIREMENT: You MUST transform and restructure the input prompt. NEVER return the prompt unchanged or with only minor edits.
+CRITICAL: Output MUST differ from input. Add structure, headings (#, ##), bullet points, and explicit instructions.
 
-MANDATORY REQUIREMENTS:
-1. ALWAYS break the prompt into clear sections with headings (use #, ##, ###)
-2. ALWAYS use structured formatting (bullet points, numbered lists, or clear paragraphs)
-3. ALWAYS add explicit instructions and output requirements
-4. ALWAYS improve clarity even if the original seems clear
-5. NEVER return the prompt unchanged - you MUST restructure it
-
-TRANSFORMATION PROCESS:
-- Analyze the original prompt's intent
-- Break it into logical sections (e.g., Task, Instructions, Requirements, Output Format)
-- Add clear headings and structure
-- Enhance with explicit instructions and formatting
-- Ensure the enhanced version is significantly more structured than the original
-
-Your task is to restructure the given prompt to maximize clarity, organization, and LLM comprehension.
-
-REQUIREMENTS:
-1. Clear and well-organized - Break complex ideas into logical sections
-2. Logically structured with sections - Use clear headings, bullet points, or numbered lists where appropriate
-3. Easy to understand and follow - Remove ambiguity, clarify intent
-4. Optimized for LLM comprehension - Use explicit instructions, clear formatting, and structured output requirements
-
-PROCESS:
-- Analyze the original prompt's intent and structure
-- Identify areas needing clarification or reorganization
-- Restructure using clear sections, explicit instructions, and logical flow
-- Ensure the enhanced prompt maintains all original requirements while improving clarity
-
-OUTPUT:
-Return ONLY the enhanced prompt text. Do not add explanations, comments, or meta-commentary.
-The output MUST be different from and more structured than the input.`;
+Output: Enhanced prompt only. If unchanged, append "> needs more change".`;
 
     console.log(`[promptly] 🔄 About to call LLM (chatText) for structure enhancement...`);
 
     // 4) Test Layer: 稳定性验证 - LLM 调用，温度为默认低随机度配置（在 openaiClient.js 中配置为 0.2）
     // 4) Test Layer: 格式自检 - chatText 确保返回纯文本，避免 JSON 解析错误
-    const { text: enhanced, model: modelUsed, completionId } = await chatText({ system, user: fullPrompt });
+    // Enable similarity check with retry (default: similarity >= 0.85 triggers retry)
+    const { text: enhanced, model: modelUsed, completionId, similarity } = await chatText({ 
+      system, 
+      user: fullPrompt,
+      minSimilarity: 0.85,  // Retry if similarity >= 0.85
+      maxRetries: 1
+    });
     
     console.log(`[promptly] ✅ Received enhanced prompt from LLM, length: ${enhanced?.length || 0} chars`);
     
@@ -381,37 +356,20 @@ enhanceRouter.post("/style", async (req, res) => {
     const attachmentContext = buildAttachmentContext(safeAttachments);
     const fullPrompt = prompt + attachmentContext;
 
-    // Spec Layer: Style enhancement with LLM-driven optimization
-    const system = `You are a prompt engineering expert specializing in style and tone optimization for LLMs.
+    // Optimized: Concise system prompt
+    const system = `Improve prompt style, tone, and readability.
 
-CRITICAL REQUIREMENT: You MUST improve the style and tone. NEVER return the prompt unchanged or with only minor word changes.
+CRITICAL: Output MUST differ from input. Refine language, sentence structure, and flow.
 
-MANDATORY REQUIREMENTS:
-1. ALWAYS refine language for clarity and professionalism
-2. ALWAYS improve sentence structure and flow
-3. ALWAYS enhance readability and engagement
-4. ALWAYS make meaningful stylistic improvements
-5. NEVER return the prompt unchanged - you MUST polish it
+Output: Enhanced prompt only. If unchanged, append "> needs more change".`;
 
-Your task is to improve the style and tone of the given prompt while preserving its core meaning and requirements.
-
-OPTIMIZATION CRITERIA:
-1. Professional and clear - Use precise language, avoid jargon unless necessary
-2. Appropriate tone for the context - Match formality level to the use case
-3. Concise yet comprehensive - Remove redundancy while ensuring completeness
-4. Engaging and effective - Maintain readability and actionability
-
-PROCESS:
-- Analyze the original prompt's style, tone, and effectiveness
-- Identify opportunities for clarity, professionalism, and engagement
-- Refine language while maintaining all original requirements
-- Ensure the enhanced prompt is optimized for LLM understanding and execution
-
-OUTPUT:
-Return ONLY the enhanced prompt text. Do not add explanations, comments, or meta-commentary.
-The output MUST be improved in style and tone compared to the input.`;
-
-    const { text: enhanced, model: modelUsed, completionId } = await chatText({ system, user: fullPrompt });
+    // Enable similarity check with retry (default: similarity >= 0.85 triggers retry)
+    const { text: enhanced, model: modelUsed, completionId, similarity } = await chatText({ 
+      system, 
+      user: fullPrompt,
+      minSimilarity: 0.85,  // Retry if similarity >= 0.85
+      maxRetries: 1
+    });
     logModelUsage("/enhance/style", modelUsed, completionId);
 
     res.json({
@@ -448,37 +406,20 @@ enhanceRouter.post("/simplify", async (req, res) => {
     const attachmentContext = buildAttachmentContext(safeAttachments);
     const fullPrompt = prompt + attachmentContext;
 
-    // Spec Layer: Simplification with LLM-driven clarity optimization
-    const system = `You are a prompt engineering expert specializing in simplifying complex prompts for optimal LLM comprehension.
+    // Optimized: Concise system prompt
+    const system = `Simplify prompt: make it concise, clear, and accessible.
 
-CRITICAL REQUIREMENT: You MUST simplify and clarify the input. NEVER return the prompt unchanged or with only minor edits.
+CRITICAL: Output MUST differ from input. Remove complexity, use plain language, active voice.
 
-MANDATORY REQUIREMENTS:
-1. ALWAYS make the prompt more concise and direct
-2. ALWAYS break down complex concepts into simpler language
-3. ALWAYS remove unnecessary complexity and redundancy
-4. ALWAYS improve clarity and accessibility
-5. NEVER return the prompt unchanged - you MUST simplify it
+Output: Simplified prompt only. If unchanged, append "> needs more change".`;
 
-Your task is to simplify the given prompt while preserving all essential requirements and intent.
-
-SIMPLIFICATION CRITERIA:
-1. More concise and direct - Remove unnecessary words, use active voice
-2. Easier to understand - Break down complex concepts, use plain language
-3. Free of unnecessary complexity - Eliminate redundant instructions or overly complicated structures
-4. Clear in intent - Make the goal and expected outcome explicit
-
-PROCESS:
-- Analyze the original prompt for complexity and clarity issues
-- Identify essential requirements vs. unnecessary details
-- Simplify language and structure while maintaining completeness
-- Ensure the simplified prompt is more accessible to LLM processing
-
-OUTPUT:
-Return ONLY the simplified prompt text. Do not add explanations, comments, or meta-commentary.
-The output MUST be simpler and clearer than the input.`;
-
-    const { text: enhanced, model: modelUsed, completionId } = await chatText({ system, user: fullPrompt });
+    // Enable similarity check with retry (default: similarity >= 0.85 triggers retry)
+    const { text: enhanced, model: modelUsed, completionId, similarity } = await chatText({ 
+      system, 
+      user: fullPrompt,
+      minSimilarity: 0.85,  // Retry if similarity >= 0.85
+      maxRetries: 1
+    });
     logModelUsage("/enhance/simplify", modelUsed, completionId);
 
     res.json({

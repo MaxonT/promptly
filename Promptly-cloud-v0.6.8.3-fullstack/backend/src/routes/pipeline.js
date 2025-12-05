@@ -144,41 +144,24 @@ async function executePipelineWithEvents(runId, userId, { idea, attachments, ski
       details: { ideaLength: idea.length, attachmentsCount: attachments.length }
     });
 
-    // Build system prompt for Spec Builder
-    const specSystem = `You are a Spec Builder agent in Promptly's Best Prompt Pipeline.
+    // Optimized: Concise system prompt
+    const specSystem = `Extract structured spec from raw idea.
 
-CRITICAL REQUIREMENT: You MUST extract and structure information from the raw idea. NEVER return just the raw idea as userGoal or return empty/minimal fields.
+CRITICAL: userGoal MUST be rephrased, not copied. Infer audience, constraints, tone, format, domain, examples.
 
-MANDATORY REQUIREMENTS:
-1. ALWAYS extract the core goal and rephrase it clearly and specifically
-2. ALWAYS infer target audience even if not explicitly mentioned
-3. ALWAYS identify constraints and requirements from context
-4. ALWAYS determine tone, format, and domain based on the idea
-5. NEVER return the raw idea unchanged - you MUST structure it
+JSON: {"userGoal": "rephrased", "audience": "string|null", "constraints": ["string"], "tone": "string|null", "format": "string|null", "domain": "string|null", "examples": ["string"]}
 
-Your task is to analyze a raw user idea and extract/infer structured information to create a comprehensive specification.
-
-OUTPUT FORMAT:
-Return ONLY valid JSON matching this structure:
-{
-  "userGoal": "string - The main goal or objective (MUST be clear and specific, not just the raw idea)",
-  "audience": "string | null - Target users/audience (infer from context if not mentioned)",
-  "constraints": ["string"] - Array of constraints or requirements (identify from idea),
-  "tone": "string | null - Desired tone (e.g., professional, casual, formal)",
-  "format": "string | null - Output format requirements",
-  "domain": "string | null - Domain/context (e.g., coding, writing, analysis)",
-  "examples": ["string"] - Array of examples or references mentioned
-}`;
+Return JSON only. If userGoal mirrors input, include "> needs more change" in userGoal.`;
 
     // Build attachment context
     const attachmentContext = attachments.length > 0
       ? `\n\n[ATTACHMENT_METADATA_START]\n${attachments.map(a => `- ${a.name} (${a.type}, ${a.size} bytes)`).join("\n")}\n[ATTACHMENT_METADATA_END]`
       : "";
 
-    const specUserPrompt = `Raw Idea:
-${idea}${attachmentContext}
+    // Concise user prompt - key instruction right before content
+    const specUserPrompt = `Extract structured spec. userGoal MUST be rephrased:
 
-IMPORTANT: You MUST extract and structure information from this raw idea. DO NOT simply return the raw idea as userGoal.`;
+${idea}${attachmentContext}`;
 
     sendEvent(runId, "stage-progress", {
       stage: "spec",
@@ -230,21 +213,12 @@ IMPORTANT: You MUST extract and structure information from this raw idea. DO NOT
         timestamp: new Date().toISOString()
       });
 
-      // For simplicity, generate 1-3 questions
-      const questionSystem = `You are a clarifying question engine in Promptly's Best Prompt Pipeline.
-Your role is to ask high-leverage clarifying questions to remove ambiguity.
+      // Optimized: Concise question engine prompt
+      const questionSystem = `Ask one clarifying question to improve spec completeness.
 
-REQUIREMENTS:
-1. Ask ONE high-leverage clarifying question at a time
-2. Maximum of 3 steps (Q1, Q2, Q3)
-3. Stop early if incremental value is low (shouldStop = true)
+JSON: {"question": "string", "shouldStop": false, "estimatedCompleteness": 0.8, "missingFields": ["string"]}
 
-Return ONLY valid JSON:
-{
-  "question": "string",
-  "shouldStop": false,
-  "estimatedCompleteness": 0.8
-}`;
+If question mirrors existing context, append "> needs more change" to question.`;
 
       sendEvent(runId, "stage-progress", {
         stage: "question",
@@ -253,20 +227,21 @@ Return ONLY valid JSON:
         details: { specId }
       });
 
-      // For demo, we'll generate one question
+      // Concise user prompt
       const { data: qData } = await chatJson({
         system: questionSystem,
-        user: `Given this spec, generate the first clarifying question:\n${JSON.stringify(specData, null, 2)}`
+        user: `Generate clarifying question for:\n${JSON.stringify(specData, null, 2)}`
       });
 
       if (qData && !qData.shouldStop) {
         sessionId = `session_${nanoid(12)}`;
-        
+        const missingFields = Array.isArray(qData.missingFields) ? qData.missingFields : [];
+
         sendEvent(runId, "stage-progress", {
           stage: "question",
           step: "question-generated",
           message: "Question generated",
-          details: { question: qData.question, step: 1 }
+          details: { question: qData.question, step: 1, missingFields }
         });
 
         // In a real implementation, this would loop Q1-Q3
@@ -274,7 +249,7 @@ Return ONLY valid JSON:
         sendEvent(runId, "stage-complete", {
           stage: "question",
           message: "Question Engine completed",
-          result: { sessionId, question: qData.question, step: 1 }
+          result: { sessionId, question: qData.question, step: 1, missingFields }
         });
 
         // Update completeness score
@@ -304,27 +279,25 @@ Return ONLY valid JSON:
       timestamp: new Date().toISOString()
     });
 
+    // Optimized: Concise agent prompts
     const agents = [
       {
         name: "architect",
-        systemPrompt: `You are the Architect agent in Promptly's Best Prompt Pipeline.
-CRITICAL REQUIREMENT: You MUST generate a complete, well-structured prompt based on the specification. NEVER return the specification text itself or a simple paraphrase.
-Your role is to design the structure and logical flow of prompts.
-Return ONLY the enhanced prompt text.`
+        systemPrompt: `Architect: Transform spec into structured prompt with sections, headings, variables.
+
+CRITICAL: Output MUST differ from input. If unchanged, append "> needs more change".`
       },
       {
         name: "editor",
-        systemPrompt: `You are the Editor agent in Promptly's Best Prompt Pipeline.
-CRITICAL REQUIREMENT: You MUST polish and enhance the language. NEVER return the input unchanged.
-Your role is to polish language, improve readability, and enhance clarity while preserving all original intent.
-Return ONLY the enhanced prompt text.`
+        systemPrompt: `Editor: Polish language, improve readability, enhance clarity.
+
+CRITICAL: Output MUST differ from input. If unchanged, append "> needs more change".`
       },
       {
         name: "judge",
-        systemPrompt: `You are the Judge agent in Promptly's Best Prompt Pipeline.
-CRITICAL REQUIREMENT: You MUST add safety constraints and guardrails. NEVER return the input unchanged.
-Your role is to add safety constraints, guardrails, edge case handling, and risk mitigation.
-Return ONLY the enhanced prompt text.`
+        systemPrompt: `Judge: Add safety constraints, guardrails, edge case handling.
+
+CRITICAL: Output MUST differ from input. If unchanged, append "> needs more change".`
       }
     ];
 
@@ -341,9 +314,12 @@ ${JSON.stringify(specData, null, 2)}`;
         details: { agent: agent.name, progress: `${i + 1}/${agents.length}` }
       });
 
-      const { text: content } = await chatText({
+      // Enable similarity check with retry (default: similarity >= 0.85 triggers retry)
+      const { text: content, similarity } = await chatText({
         system: agent.systemPrompt,
-        user: `Given this specification, generate an optimized prompt:\n\n${baseContext}`
+        user: `Generate optimized prompt (MUST differ from spec):\n\n${baseContext}`,
+        minSimilarity: 0.85,  // Retry if similarity >= 0.85
+        maxRetries: 1
       });
 
       const candidateId = `candidate_${nanoid(12)}`;
@@ -397,17 +373,10 @@ ${JSON.stringify(specData, null, 2)}`;
 
       const candidate = db.prepare("SELECT * FROM candidate_prompts WHERE id = ?").get(candidateId);
       
-      const metricsSystem = `You are a Metrics Evaluator in Promptly's Best Prompt Pipeline.
-Evaluate a candidate prompt and provide scores across multiple dimensions.
+      // Optimized: Concise metrics evaluator prompt
+      const metricsSystem = `Evaluate prompt: clarity, coherence, styleMatch, safety, risk (0-1 each).
 
-Return ONLY valid JSON:
-{
-  "clarity": 0.85,
-  "coherence": 0.90,
-  "styleMatch": 0.80,
-  "safety": 0.95,
-  "risk": 0.10
-}`;
+JSON: {"clarity": 0.85, "coherence": 0.90, "styleMatch": 0.80, "safety": 0.95, "risk": 0.10}`;
 
       const { data: metricsData } = await chatJson({
         system: metricsSystem,

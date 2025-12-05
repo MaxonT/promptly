@@ -104,85 +104,31 @@ Specification:
 ${qaHistory}
 `;
 
-    // Define agents and their system prompts
+    // Define agents and their system prompts (optimized: concise, high-impact instructions)
     const agents = [
       {
         name: "architect",
-        systemPrompt: `You are the Architect agent in Promptly's Best Prompt Pipeline.
+        systemPrompt: `Architect agent: Transform spec into a structured, executable prompt.
 
-CRITICAL REQUIREMENT: You MUST generate a complete, well-structured prompt based on the specification. NEVER return the specification text itself or a simple paraphrase.
+CRITICAL: Output MUST differ significantly from input. Add sections, headings, variables, placeholders, and step-by-step instructions.
 
-MANDATORY REQUIREMENTS:
-1. ALWAYS create a full prompt with clear structure (sections, headings, instructions)
-2. ALWAYS add explicit variables, placeholders, and output format specifications
-3. ALWAYS organize the prompt with logical flow and step-by-step guidance
-4. ALWAYS transform the spec into an actionable, executable prompt
-5. NEVER return just the spec fields or a basic reformatting
-
-Your role is to design the structure and logical flow of prompts.
-
-FOCUS AREAS:
-1. Clear structure with logical sections
-2. Defined variables and placeholders
-3. Explicit instructions and requirements
-4. Organized flow that guides the LLM step-by-step
-5. Structured output format specifications
-
-OUTPUT:
-Return ONLY the enhanced prompt text. Do not add explanations, comments, or meta-commentary.
-Your output MUST be a complete, structured prompt that is significantly different from the input specification.`
+Output: Enhanced prompt text only. If output mirrors input, append "> needs more change".`
       },
       {
         name: "editor",
-        systemPrompt: `You are the Editor agent in Promptly's Best Prompt Pipeline.
+        systemPrompt: `Editor agent: Polish language, improve readability, enhance clarity.
 
-CRITICAL REQUIREMENT: You MUST polish and enhance the language. NEVER return the input unchanged or with only minor word substitutions.
+CRITICAL: Output MUST differ from input. Improve sentence structure, word choice, tone, and flow.
 
-MANDATORY REQUIREMENTS:
-1. ALWAYS improve sentence structure and word choice
-2. ALWAYS enhance readability and flow
-3. ALWAYS refine tone and style for professionalism
-4. ALWAYS make meaningful language improvements
-5. NEVER return the prompt unchanged - you MUST polish it
-
-Your role is to polish language, improve readability, and enhance clarity while preserving all original intent.
-
-FOCUS AREAS:
-1. Clear, precise language
-2. Professional tone and style
-3. Improved readability and flow
-4. Strong, actionable wording
-5. Maintain all original requirements and semantics
-
-OUTPUT:
-Return ONLY the enhanced prompt text. Do not add explanations, comments, or meta-commentary.
-Your output MUST be polished and improved compared to the input.`
+Output: Enhanced prompt text only. If output mirrors input, append "> needs more change".`
       },
       {
         name: "judge",
-        systemPrompt: `You are the Judge agent in Promptly's Best Prompt Pipeline.
+        systemPrompt: `Judge agent: Add safety constraints, guardrails, edge case handling.
 
-CRITICAL REQUIREMENT: You MUST add safety constraints and guardrails. NEVER return the input unchanged - you MUST enhance it with safety measures.
+CRITICAL: Output MUST differ from input. Add explicit safety boundaries, error prevention, and risk mitigation.
 
-MANDATORY REQUIREMENTS:
-1. ALWAYS add explicit safety constraints and boundaries
-2. ALWAYS include edge case handling instructions
-3. ALWAYS add error prevention and risk mitigation guidance
-4. ALWAYS enhance robustness and reliability
-5. NEVER return the prompt unchanged - you MUST add safety features
-
-Your role is to add safety constraints, guardrails, edge case handling, and risk mitigation.
-
-FOCUS AREAS:
-1. Safety constraints and boundaries
-2. Edge case handling
-3. Error prevention
-4. Risk mitigation
-5. Robustness and reliability
-
-OUTPUT:
-Return ONLY the enhanced prompt text. Do not add explanations, comments, or meta-commentary.
-Your output MUST include safety enhancements that were not in the input.`
+Output: Enhanced prompt text only. If output mirrors input, append "> needs more change".`
       }
     ];
 
@@ -194,15 +140,15 @@ Your output MUST include safety enhancements that were not in the input.`
       try {
         console.log(`[promptly] 🚀 Generating candidate with ${agent.name} agent...`);
 
-        const { text: content, completionId } = await chatText({
+        // Concise user prompt - key instruction right before the content
+        // Enable similarity check with retry (default: similarity >= 0.85 triggers retry)
+        const { text: content, completionId, similarity } = await chatText({
           system: agent.systemPrompt,
-          user: `Given this specification, generate a complete, optimized prompt:
+          user: `Transform this spec into a complete prompt. Output MUST differ significantly:
 
-${baseContext}
-
-IMPORTANT: You MUST generate a new, complete prompt based on this specification. DO NOT simply repeat the specification fields or create a basic reformatting. Transform the specification into a fully structured, actionable prompt that an LLM can execute directly.
-
-Generate a complete, optimized prompt that addresses the specification above.`
+${baseContext}`,
+          minSimilarity: 0.85,  // Retry if similarity >= 0.85
+          maxRetries: 1
         });
 
         const candidateId = `cand_${nanoid(12)}`;
@@ -312,28 +258,10 @@ promptsRouter.post("/score", async (req, res) => {
       const idealTokenCost = 512; // From metricsEngine defaults
       const normalizedToken = Math.min(1, idealTokenCost / estimatedTokens);
 
-      // Use LLM to score the candidate
-      const systemPrompt = `You are a Metrics Evaluator in Promptly's Best Prompt Pipeline.
+      // Optimized: Concise metrics evaluator prompt
+      const systemPrompt = `Evaluate prompt: clarity, coherence, styleMatch, safety, risk (0-1 each).
 
-Your task is to evaluate a candidate prompt and provide scores across multiple dimensions.
-
-EVALUATION CRITERIA:
-1. clarity (0-1): How clear and easy to understand is the prompt?
-2. coherence (0-1): How well-organized and logically structured is the prompt?
-3. styleMatch (0-1): How well does the style match the specification requirements?
-4. safety (0-1): How safe and appropriate is the prompt? (higher = safer)
-5. risk (0-1): What is the risk level? (higher = higher risk)
-
-Return ONLY valid JSON in this format:
-{
-  "clarity": 0.85,
-  "coherence": 0.90,
-  "styleMatch": 0.80,
-  "safety": 0.95,
-  "risk": 0.10
-}
-
-All scores should be between 0 and 1.`;
+JSON: {"clarity": 0.85, "coherence": 0.90, "styleMatch": 0.80, "safety": 0.95, "risk": 0.10}`;
 
       const userPrompt = `Specification:
 - Goal: ${spec.project_goal || spec.userGoal || 'Not specified'}

@@ -39,7 +39,8 @@ function getAttachmentCategory(mimeType) {
 
 // Format file size for display
 function formatSize(bytes) {
-  if (!bytes || bytes < 1024) return bytes + ' B';
+  if (!Number.isFinite(bytes) || bytes <= 0) return '0 B';
+  if (bytes < 1024) return bytes + ' B';
   if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
   return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
 }
@@ -48,6 +49,8 @@ function formatSize(bytes) {
 const MAX_FILENAME_LENGTH = 100;
 // Maximum expected file extension length (e.g., .docx, .jpeg, .html)
 const MAX_EXTENSION_LENGTH = 10;
+// Fallback MIME type when not provided
+const DEFAULT_MIME_TYPE = 'application/octet-stream';
 
 /**
  * Sanitize attachment name for safe inclusion in LLM prompts
@@ -90,6 +93,22 @@ function sanitizeAttachmentName(name) {
   return sanitized || 'unnamed_file';
 }
 
+function normalizeAttachment(att) {
+  if (!att || typeof att !== 'object') {
+    return { name: 'unnamed_file', size: 0, type: DEFAULT_MIME_TYPE };
+  }
+
+  const name = sanitizeAttachmentName(att.name);
+  const size = Number.isFinite(att.size) && att.size > 0 ? att.size : 0;
+  const type = typeof att.type === 'string' ? att.type : DEFAULT_MIME_TYPE;
+
+  return { name, size, type };
+}
+
+function coerceAttachments(attachments) {
+  return Array.isArray(attachments) ? attachments : [];
+}
+
 /**
  * Build attachment context for LLM
  * 
@@ -101,14 +120,15 @@ function sanitizeAttachmentName(name) {
  *   - For videos: Extract keyframes and captions
  */
 function buildAttachmentContext(attachments) {
-  if (!attachments || attachments.length === 0) {
+  if (!Array.isArray(attachments) || attachments.length === 0) {
     return "";
   }
 
   const descriptions = attachments.map((att, i) => {
-    const category = getAttachmentCategory(att.type);
-    const size = formatSize(att.size);
-    const sanitizedName = sanitizeAttachmentName(att.name);
+    const safeAttachment = normalizeAttachment(att);
+    const category = getAttachmentCategory(safeAttachment.type);
+    const size = formatSize(safeAttachment.size);
+    const sanitizedName = safeAttachment.name;
     return `  ${i + 1}. [${category}] "${sanitizedName}" (${size})`;
   });
 
@@ -124,13 +144,14 @@ function buildAttachmentContext(attachments) {
  * Log attachment metadata (for debugging and future analytics)
  */
 function logAttachments(attachments, endpoint) {
-  if (!attachments || attachments.length === 0) return;
-  
+  if (!Array.isArray(attachments) || attachments.length === 0) return;
+
   console.log(`[promptly] Attachments received at ${endpoint}:`);
   attachments.forEach((att, i) => {
-    const category = getAttachmentCategory(att.type);
-    const size = formatSize(att.size);
-    const sanitizedName = sanitizeAttachmentName(att.name);
+    const safeAttachment = normalizeAttachment(att);
+    const category = getAttachmentCategory(safeAttachment.type);
+    const size = formatSize(safeAttachment.size);
+    const sanitizedName = safeAttachment.name;
     console.log(`  ${i + 1}. ${sanitizedName} - ${category} - ${size}`);
   });
 }
@@ -158,6 +179,7 @@ function handleEnhanceError(res, endpoint, err, defaultMessage) {
 enhanceRouter.post("/structure", async (req, res) => {
   try {
     const { prompt, attachments = [] } = req.body;
+    const safeAttachments = coerceAttachments(attachments);
 
     if (!prompt || typeof prompt !== 'string') {
       return res.status(400).json({
@@ -167,10 +189,10 @@ enhanceRouter.post("/structure", async (req, res) => {
     }
 
     // Log attachments if present
-    logAttachments(attachments, "/structure");
+    logAttachments(safeAttachments, "/structure");
 
     // Build enhanced prompt with attachment context
-    const attachmentContext = buildAttachmentContext(attachments);
+    const attachmentContext = buildAttachmentContext(safeAttachments);
     const fullPrompt = prompt + attachmentContext;
 
     // Call LLM for structure enhancement
@@ -188,7 +210,7 @@ Return only the enhanced prompt. Do not add explanations.`;
       ok: true,
       result: {
         enhanced,
-        attachmentsProcessed: attachments.length
+        attachmentsProcessed: safeAttachments.length
       }
     });
 
@@ -204,6 +226,7 @@ Return only the enhanced prompt. Do not add explanations.`;
 enhanceRouter.post("/style", async (req, res) => {
   try {
     const { prompt, attachments = [] } = req.body;
+    const safeAttachments = coerceAttachments(attachments);
 
     if (!prompt || typeof prompt !== 'string') {
       return res.status(400).json({
@@ -212,9 +235,9 @@ enhanceRouter.post("/style", async (req, res) => {
       });
     }
 
-    logAttachments(attachments, "/style");
+    logAttachments(safeAttachments, "/style");
 
-    const attachmentContext = buildAttachmentContext(attachments);
+    const attachmentContext = buildAttachmentContext(safeAttachments);
     const fullPrompt = prompt + attachmentContext;
 
     const system = `You are a prompt engineering expert. Your task is to improve the style and tone of the given prompt to be:
@@ -231,7 +254,7 @@ Return only the enhanced prompt. Do not add explanations.`;
       ok: true,
       result: {
         enhanced,
-        attachmentsProcessed: attachments.length
+        attachmentsProcessed: safeAttachments.length
       }
     });
 
@@ -247,6 +270,7 @@ Return only the enhanced prompt. Do not add explanations.`;
 enhanceRouter.post("/simplify", async (req, res) => {
   try {
     const { prompt, attachments = [] } = req.body;
+    const safeAttachments = coerceAttachments(attachments);
 
     if (!prompt || typeof prompt !== 'string') {
       return res.status(400).json({
@@ -255,9 +279,9 @@ enhanceRouter.post("/simplify", async (req, res) => {
       });
     }
 
-    logAttachments(attachments, "/simplify");
+    logAttachments(safeAttachments, "/simplify");
 
-    const attachmentContext = buildAttachmentContext(attachments);
+    const attachmentContext = buildAttachmentContext(safeAttachments);
     const fullPrompt = prompt + attachmentContext;
 
     const system = `You are a prompt engineering expert. Your task is to simplify the given prompt to be:
@@ -274,7 +298,7 @@ Return only the simplified prompt. Do not add explanations.`;
       ok: true,
       result: {
         enhanced,
-        attachmentsProcessed: attachments.length
+        attachmentsProcessed: safeAttachments.length
       }
     });
 
@@ -290,6 +314,7 @@ Return only the simplified prompt. Do not add explanations.`;
 enhanceRouter.post("/score", async (req, res) => {
   try {
     const { prompt, attachments = [] } = req.body;
+    const safeAttachments = coerceAttachments(attachments);
 
     if (!prompt || typeof prompt !== 'string') {
       return res.status(400).json({
@@ -298,9 +323,9 @@ enhanceRouter.post("/score", async (req, res) => {
       });
     }
 
-    logAttachments(attachments, "/score");
+    logAttachments(safeAttachments, "/score");
 
-    const attachmentContext = buildAttachmentContext(attachments);
+    const attachmentContext = buildAttachmentContext(safeAttachments);
     const fullPrompt = prompt + attachmentContext;
 
     const system = `You are a prompt quality evaluator. Analyze the given prompt and provide:
@@ -329,7 +354,7 @@ Return ONLY a JSON object in this exact format:
       ok: true,
       result: {
         ...result,
-        attachmentsProcessed: attachments.length
+        attachmentsProcessed: safeAttachments.length
       }
     });
 
@@ -345,6 +370,7 @@ Return ONLY a JSON object in this exact format:
 enhanceRouter.post("/validate", async (req, res) => {
   try {
     const { prompt, attachments = [] } = req.body;
+    const safeAttachments = coerceAttachments(attachments);
 
     if (!prompt || typeof prompt !== 'string') {
       return res.status(400).json({
@@ -353,9 +379,9 @@ enhanceRouter.post("/validate", async (req, res) => {
       });
     }
 
-    logAttachments(attachments, "/validate");
+    logAttachments(safeAttachments, "/validate");
 
-    const attachmentContext = buildAttachmentContext(attachments);
+    const attachmentContext = buildAttachmentContext(safeAttachments);
     const fullPrompt = prompt + attachmentContext;
 
     const system = `You are a prompt validator. Identify issues in the given prompt:
@@ -383,7 +409,7 @@ If no issues found, return {"issues": []}`;
       ok: true,
       result: {
         ...result,
-        attachmentsProcessed: attachments.length
+        attachmentsProcessed: safeAttachments.length
       }
     });
 

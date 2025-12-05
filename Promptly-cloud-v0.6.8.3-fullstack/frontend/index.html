@@ -1555,6 +1555,18 @@ document.addEventListener('DOMContentLoaded', () => {
   // ============================================
   // Metrics Loading State Functions
   // ============================================
+  // 
+  // METRICS FLOW:
+  // 1. User clicks "Run Optimization" button
+  // 2. showMetricsLoading() displays "⏳" loading state
+  // 3. API call to /api/outcome-runs (outcomeRuns.js)
+  // 4. Backend calculates metrics using buildEvaluationMetrics() (metricsEngine.js)
+  // 5. Response includes: { ok: true, result: { metrics: { accuracy, f1, passRate, tokenCost, progress } } }
+  // 6. updateMetricsFromResponse() displays real values from backend
+  // 7. If metrics unavailable, displays "—" (no placeholder values)
+  //
+  // KEY PRINCIPLE: Display only real backend values. No frontend estimation or placeholders.
+  // ============================================
   
   // Show skeleton loading on all metrics
   function showMetricsLoading() {
@@ -1645,7 +1657,19 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
     
-    // Update charts with real backend metrics (use 0 as default for missing values)
+    // Update charts only if we have real backend metrics data
+    // Skip chart updates if all metrics are null/undefined to avoid showing misleading 0 values
+    const hasAnyMetric = backendMetrics.accuracy != null || 
+                         backendMetrics.f1 != null || 
+                         backendMetrics.passRate != null || 
+                         backendMetrics.progress != null;
+    
+    if (!hasAnyMetric) {
+      // No real metrics available - charts will retain their previous state
+      console.log('[Promptly] No backend metrics available, skipping chart update');
+      return;
+    }
+    
     const chartMetrics = {
       accuracy: backendMetrics.accuracy ?? 0,
       f1: backendMetrics.f1 ?? 0,

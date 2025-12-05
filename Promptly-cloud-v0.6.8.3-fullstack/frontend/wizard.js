@@ -782,13 +782,11 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
     setWizardStatus(`Generating ${modeLabels[currentMode]} mode questions... (${modeEstimates[currentMode]})`, "info", { showTicks: true });
 
     // Show global status bar for cross-page visibility (compact floating notification)
-    if (typeof window.globalStatus !== 'undefined') {
-      window.globalStatus.show({
-        title: '🧙‍♂️ Wizard Running',
-        subtitle: 'Starting...',
-        mode: currentMode
-      });
-    }
+    window.globalStatus?.show?.({
+      title: '🧙‍♂️ Wizard Running',
+      subtitle: 'Starting...',
+      mode: currentMode
+    });
 
     // Wait for fade-out animation before starting API call
     await new Promise(resolve => setTimeout(resolve, 300));
@@ -905,21 +903,17 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
         setWizardStatus(userMessage, "error");
         hideLoadingInQuestionPanel();
         
-        // Show fallback notice in global status
-        if (typeof window.globalStatus !== 'undefined') {
-          window.globalStatus.error({
-            message: '❌ LLM Unavailable',
-            details: userMessage,
-            autoHide: false
-          });
-        }
+        // Show fallback notice in global status (using optional chaining for safety)
+        window.globalStatus?.error?.({
+          message: '❌ LLM Unavailable',
+          details: userMessage,
+          autoHide: false
+        });
         return;
       }
       const data = await res.json();
       currentSessionId = data.session_id;
-      if (window.promptlyWizardSession && typeof window.promptlyWizardSession.markRunning === "function") {
-        window.promptlyWizardSession.markRunning(currentSessionId);
-      }
+      window.promptlyWizardSession?.markRunning?.(currentSessionId);
       log(`Session created: ${currentSessionId}`);
       
       // Hide loading overlay
@@ -941,13 +935,11 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
       updateWizardStepper('questions');
 
       // Update global status to show questions are ready
-      if (typeof window.globalStatus !== 'undefined') {
-        window.globalStatus.complete({
-          message: `✅ ${allQuestions.length} questions ready!`,
-          autoHide: true,
-          autoHideDelay: 3000
-        });
-      }
+      window.globalStatus?.complete?.({
+        message: `✅ ${allQuestions.length} questions ready!`,
+        autoHide: true,
+        autoHideDelay: 3000
+      });
 
       // Keep button disabled after successful start
       startBtn.textContent = "Session started";
@@ -957,29 +949,21 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
         log("Wizard start cancelled by user.");
         setWizardStatus("Wizard cancelled. You can edit your idea and start again.", "warn");
         // Hide global status on cancel
-        if (typeof window.globalStatus !== 'undefined') {
-          window.globalStatus.hide();
-        }
+        window.globalStatus?.hide?.();
         // Clear status indicator on cancellation
-        if (window.promptlyWizardSession && typeof window.promptlyWizardSession.clear === "function") {
-          window.promptlyWizardSession.clear();
-        }
+        window.promptlyWizardSession?.clear?.();
       } else {
         console.error(err);
         log("Error while starting wizard: " + err.message);
         setWizardStatus("Something went wrong while preparing questions. Please try again.", "error");
         // Show error in global status
-        if (typeof window.globalStatus !== 'undefined') {
-          window.globalStatus.error({
-            message: '❌ Question generation failed',
-            details: err.message || 'Unknown error',
-            autoHide: false
-          });
-        }
+        window.globalStatus?.error?.({
+          message: '❌ Question generation failed',
+          details: err.message || 'Unknown error',
+          autoHide: false
+        });
         // Clear status indicator on error
-        if (window.promptlyWizardSession && typeof window.promptlyWizardSession.clear === "function") {
-          window.promptlyWizardSession.clear();
-        }
+        window.promptlyWizardSession?.clear?.();
       }
       // Revert animations on error
       ideaPanel?.classList.remove("is-starting");
@@ -1127,9 +1111,7 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
       explanationOutput.textContent = data.explanation || data.compiled_prompt?.explanation || "(no explanation provided)";
 
       // Clear wizard status indicator when finalization completes
-      if (window.promptlyWizardSession && typeof window.promptlyWizardSession.clear === "function") {
-        window.promptlyWizardSession.clear();
-      }
+      window.promptlyWizardSession?.clear?.();
       
       // Update status to show completion
       setWizardStatus("Spec finalized successfully! You can now view the compiled prompt below.", "info");
@@ -1150,9 +1132,7 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
       log("Error while finalizing session: " + err.message);
       setWizardStatus("Failed to finalize session. Please try again.", "error");
       // Clear status indicator on error
-      if (window.promptlyWizardSession && typeof window.promptlyWizardSession.clear === "function") {
-        window.promptlyWizardSession.clear();
-      }
+      window.promptlyWizardSession?.clear?.();
     }
   }
 

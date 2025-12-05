@@ -1,7 +1,53 @@
 /**
- * ATTACHMENT FEATURE - Enhance Routes
+ * PROMPT OPTIMIZATION PROCESS - Enhance Routes
  * 
- * Handles prompt enhancement requests with optional file attachments.
+ * 此模块实现了 Promptly 的 enhancer 优化流程，确保用户理解从输入到最终清理后的 prompt 之间发生的过程。
+ * 
+ * ============================================
+ * PROMPT OPTIMIZATION PROCESS (6 Layers)
+ * ============================================
+ * 
+ * 1) Input Layer (结构化输入)
+ *    - 用户意图提取：收集原始 prompt，允许附加文件元数据
+ *    - 文件清洗：后端对文件名进行安全清洗以避免注入
+ *    - 反向澄清钩子：当缺少 prompt 时直接返回 400
+ *    - 结构化输入：附件被封装为 [ATTACHMENT_METADATA] 块
+ * 
+ * 2) Spec Layer (规格封装)
+ *    - 核心构件：后端在调用 LLM 之前组合包含背景与约束的 system prompt
+ *    - 标准化：文件类别与尺寸统一格式化
+ *    - 版本稳定性：增强模板是固定文案，确保多次调用保持一致行为
+ *    - 强调"清晰、分段、易懂、利于模型解析"
+ * 
+ * 3) Compiler Layer (Prompt 生成)
+ *    - 分块生成：用户正文 + [ATTACHMENT_METADATA_START/END] 作为输入块
+ *    - system 块定义角色与输出要求
+ *    - 最终构成对 LLM 的调用载荷
+ *    - 模板化：增强提示使用确定性描述，避免随机指令漂移
+ *    - 安全补全：对缺失或异常字段提供默认安全值
+ * 
+ * 4) Test Layer (稳定性验证)
+ *    - 格式自检：检查 prompt 是否存在、类型是否正确
+ *    - 行为校验：温度为默认低随机度配置（0.2），追求一致输出
+ *    - 错误路径集中处理，确保异常返回 JSON 而非崩溃
+ *    - 边界案例：无附件、多附件、异常文件名均被标准化
+ * 
+ * 5) Iteration Layer (迭代修复)
+ *    - 错误捕获：handleEnhanceError 统一捕获并报告 LLM 停用、内部错误等场景
+ *    - 返回稳定的错误结构
+ *    - 体验反馈：前端横幅和按钮禁用提示 LLM 状态
+ * 
+ * 6) Outcome Layer (结果交付)
+ *    - 最终输出：响应只包含增强后的 prompt 及处理的附件数量
+ *    - 可解释性：日志打印附件摘要，帮助诊断输入与输出的关系
+ * 
+ * ============================================
+ * LLM 在此流程中起重大作用！
+ * ============================================
+ * - 所有增强操作都通过 LLM 调用实现（chatText/chatJson）
+ * - System prompt 精心设计以指导 LLM 进行优化
+ * - 温度配置为 0.2 以确保一致性和确定性
+ * - 每个端点都有独立的 system prompt 针对特定优化目标
  * 
  * Current implementation:
  * - Accepts JSON requests with prompt text and optional attachments array
@@ -53,7 +99,8 @@ const MAX_EXTENSION_LENGTH = 10;
 const DEFAULT_MIME_TYPE = 'application/octet-stream';
 
 /**
- * Sanitize attachment name for safe inclusion in LLM prompts
+ * Input Layer: 用户意图提取 - 文件名安全清洗
+ * 后端对文件名进行安全清洗以避免注入，并将类型与大小标准化
  * 
  * - Removes or escapes special characters that could be used for prompt injection
  * - Limits filename length to prevent overly long inputs
@@ -110,7 +157,8 @@ function coerceAttachments(attachments) {
 }
 
 /**
- * Build attachment context for LLM
+ * Compiler Layer: Prompt 生成 - 结构化输入
+ * 附件被封装为 [ATTACHMENT_METADATA] 块，确保额外上下文与用户正文分隔
  * 
  * Current: Generates text descriptions of attached files
  * Security: Sanitizes filenames to prevent prompt injection
@@ -132,8 +180,8 @@ function buildAttachmentContext(attachments) {
     return `  ${i + 1}. [${category}] "${sanitizedName}" (${size})`;
   });
 
-  // Use clear, distinctive boundaries that are unlikely to be confused
-  // with user content or system instructions
+  // Compiler Layer: 使用清晰、独特的边界，避免与用户内容或系统指令混淆
+  // 结构化输入：附件被封装为 [ATTACHMENT_METADATA_START/END] 块
   return "\n\n[ATTACHMENT_METADATA_START]\n" +
     "The following is a list of attached files (metadata only, contents not parsed):\n" +
     descriptions.join("\n") +
@@ -156,6 +204,18 @@ function logAttachments(attachments, endpoint) {
   });
 }
 
+/**
+ * Log model usage for analytics and debugging
+ * @param {string} endpoint - The API endpoint
+ * @param {string} model - The model used
+ * @param {string} completionId - The completion ID from OpenAI
+ */
+function logModelUsage(endpoint, model, completionId) {
+  if (model && completionId) {
+    console.log(`[promptly] ${endpoint} - Model: ${model}, Completion ID: ${completionId}`);
+  }
+}
+
 function handleEnhanceError(res, endpoint, err, defaultMessage) {
   console.error(`[promptly] ${endpoint} error:`, err);
 
@@ -175,12 +235,22 @@ function handleEnhanceError(res, endpoint, err, defaultMessage) {
 /**
  * POST /api/enhance/structure
  * Enhance prompt with structural improvements
+ * 
+ * PROMPT OPTIMIZATION PROCESS:
+ * 1) Input Layer - 结构化输入：收集原始 prompt，文件元数据清洗
+ * 2) Spec Layer - 规格封装：组合 system prompt，强调"清晰、分段、易懂、利于模型解析"
+ * 3) Compiler Layer - Prompt 生成：用户正文 + ATTACHMENT_METADATA 作为输入块
+ * 4) Test Layer - 稳定性验证：格式自检，温度配置
+ * 5) Iteration Layer - 迭代修复：错误捕获
+ * 6) Outcome Layer - 结果交付：返回增强后的 prompt
  */
 enhanceRouter.post("/structure", async (req, res) => {
   try {
+    // 1) Input Layer: 结构化输入 - 收集原始 prompt 和附件
     const { prompt, attachments = [] } = req.body;
     const safeAttachments = coerceAttachments(attachments);
 
+    // Input Layer: 反向澄清钩子 - 当缺少 prompt 时直接返回 400
     if (!prompt || typeof prompt !== 'string') {
       return res.status(400).json({
         ok: false,
@@ -188,25 +258,42 @@ enhanceRouter.post("/structure", async (req, res) => {
       });
     }
 
-    // Log attachments if present
+    // Input Layer: 日志打印附件摘要，帮助诊断
     logAttachments(safeAttachments, "/structure");
 
-    // Build enhanced prompt with attachment context
+    // 3) Compiler Layer: Prompt 生成 - 用户正文 + ATTACHMENT_METADATA 块
     const attachmentContext = buildAttachmentContext(safeAttachments);
     const fullPrompt = prompt + attachmentContext;
 
-    // Call LLM for structure enhancement
-    const system = `You are a prompt engineering expert. Your task is to restructure the given prompt to be:
-1. Clear and well-organized
-2. Logically structured with sections
-3. Easy to understand and follow
-4. Optimized for LLM comprehension
+    // Call LLM for structure enhancement - Spec Layer: 组合包含背景与约束的 system prompt
+    // 强调"清晰、分段、易懂、利于模型解析"
+    const system = `You are a prompt engineering expert specializing in LLM optimization.
 
-Return only the enhanced prompt. Do not add explanations.`;
+Your task is to restructure the given prompt to maximize clarity, organization, and LLM comprehension.
 
+REQUIREMENTS:
+1. Clear and well-organized - Break complex ideas into logical sections
+2. Logically structured with sections - Use clear headings, bullet points, or numbered lists where appropriate
+3. Easy to understand and follow - Remove ambiguity, clarify intent
+4. Optimized for LLM comprehension - Use explicit instructions, clear formatting, and structured output requirements
+
+PROCESS:
+- Analyze the original prompt's intent and structure
+- Identify areas needing clarification or reorganization
+- Restructure using clear sections, explicit instructions, and logical flow
+- Ensure the enhanced prompt maintains all original requirements while improving clarity
+
+OUTPUT:
+Return ONLY the enhanced prompt text. Do not add explanations, comments, or meta-commentary.`;
+
+    // 4) Test Layer: 稳定性验证 - LLM 调用，温度为默认低随机度配置（在 openaiClient.js 中配置为 0.2）
+    // 4) Test Layer: 格式自检 - chatText 确保返回纯文本，避免 JSON 解析错误
     const { text: enhanced, model: modelUsed, completionId } = await chatText({ system, user: fullPrompt });
+    
+    // 4) Test Layer: 行为校验 - 记录模型使用情况
     logModelUsage("/enhance/structure", modelUsed, completionId);
 
+    // 6) Outcome Layer: 结果交付 - 最终输出只包含增强后的 prompt 及处理的附件数量
     res.json({
       ok: true,
       result: {
@@ -216,6 +303,7 @@ Return only the enhanced prompt. Do not add explanations.`;
     });
 
   } catch (err) {
+    // 5) Iteration Layer: 迭代修复 - 错误捕获，统一处理 LLM 停用、内部错误等场景
     return handleEnhanceError(res, "/enhance/structure", err, "Enhancement failed");
   }
 });
@@ -241,13 +329,25 @@ enhanceRouter.post("/style", async (req, res) => {
     const attachmentContext = buildAttachmentContext(safeAttachments);
     const fullPrompt = prompt + attachmentContext;
 
-    const system = `You are a prompt engineering expert. Your task is to improve the style and tone of the given prompt to be:
-1. Professional and clear
-2. Appropriate tone for the context
-3. Concise yet comprehensive
-4. Engaging and effective
+    // Spec Layer: Style enhancement with LLM-driven optimization
+    const system = `You are a prompt engineering expert specializing in style and tone optimization for LLMs.
 
-Return only the enhanced prompt. Do not add explanations.`;
+Your task is to improve the style and tone of the given prompt while preserving its core meaning and requirements.
+
+OPTIMIZATION CRITERIA:
+1. Professional and clear - Use precise language, avoid jargon unless necessary
+2. Appropriate tone for the context - Match formality level to the use case
+3. Concise yet comprehensive - Remove redundancy while ensuring completeness
+4. Engaging and effective - Maintain readability and actionability
+
+PROCESS:
+- Analyze the original prompt's style, tone, and effectiveness
+- Identify opportunities for clarity, professionalism, and engagement
+- Refine language while maintaining all original requirements
+- Ensure the enhanced prompt is optimized for LLM understanding and execution
+
+OUTPUT:
+Return ONLY the enhanced prompt text. Do not add explanations, comments, or meta-commentary.`;
 
     const { text: enhanced, model: modelUsed, completionId } = await chatText({ system, user: fullPrompt });
     logModelUsage("/enhance/style", modelUsed, completionId);
@@ -286,13 +386,25 @@ enhanceRouter.post("/simplify", async (req, res) => {
     const attachmentContext = buildAttachmentContext(safeAttachments);
     const fullPrompt = prompt + attachmentContext;
 
-    const system = `You are a prompt engineering expert. Your task is to simplify the given prompt to be:
-1. More concise and direct
-2. Easier to understand
-3. Free of unnecessary complexity
-4. Clear in intent
+    // Spec Layer: Simplification with LLM-driven clarity optimization
+    const system = `You are a prompt engineering expert specializing in simplifying complex prompts for optimal LLM comprehension.
 
-Return only the simplified prompt. Do not add explanations.`;
+Your task is to simplify the given prompt while preserving all essential requirements and intent.
+
+SIMPLIFICATION CRITERIA:
+1. More concise and direct - Remove unnecessary words, use active voice
+2. Easier to understand - Break down complex concepts, use plain language
+3. Free of unnecessary complexity - Eliminate redundant instructions or overly complicated structures
+4. Clear in intent - Make the goal and expected outcome explicit
+
+PROCESS:
+- Analyze the original prompt for complexity and clarity issues
+- Identify essential requirements vs. unnecessary details
+- Simplify language and structure while maintaining completeness
+- Ensure the simplified prompt is more accessible to LLM processing
+
+OUTPUT:
+Return ONLY the simplified prompt text. Do not add explanations, comments, or meta-commentary.`;
 
     const { text: enhanced, model: modelUsed, completionId } = await chatText({ system, user: fullPrompt });
     logModelUsage("/enhance/simplify", modelUsed, completionId);

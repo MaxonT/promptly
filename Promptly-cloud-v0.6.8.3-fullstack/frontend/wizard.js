@@ -65,6 +65,23 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
   })();
 
   const currentAnswers = new Map();
+
+  function hasAnswerForQuestion(questionId) {
+    const answer = currentAnswers.get(questionId);
+    if (answer === undefined || answer === null) return false;
+    if (Array.isArray(answer)) {
+      return answer.some((value) => {
+        if (typeof value === "string") {
+          return value.trim().length > 0;
+        }
+        return Boolean(value);
+      });
+    }
+    if (typeof answer === "string") {
+      return answer.trim().length > 0;
+    }
+    return true;
+  }
   let startController = null;
   let loadingTimeoutRef = null;
   let slowWarningTimerRef = null;
@@ -580,14 +597,14 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
     questionsContainer.appendChild(pageIndicator);
     
     const pageQuestions = getCurrentPageQuestions();
-    
+
     pageQuestions.forEach((q, idx) => {
       const card = document.createElement("div");
       card.className = "wizard-question-card";
-      // Stagger animation: 0ms, 80ms, 160ms, 240ms, 320ms
       card.style.animationDelay = `${idx * 80}ms`;
-      
-      // Question number (fixed, permanent)
+
+      const answered = hasAnswerForQuestion(q.id);
+
       const numberDiv = document.createElement("div");
       numberDiv.className = "wizard-question-number";
       numberDiv.textContent = `Question ${q.questionNumber}`;
@@ -595,78 +612,101 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
       const typeSpan = document.createElement("div");
       typeSpan.className = "wizard-question-type";
       const typeLabels = {
-        "single_choice": "Single Choice (Pick one)",
-        "multi_choice": "Multiple Choice (Pick any)",
-        "yes_no": "Yes/No",
-        "short_text": "Short Text"
+        "single_choice": "单选",
+        "multi_choice": "多选",
+        "yes_no": "是 / 否",
+        "short_text": "简短回答"
       };
-      typeSpan.textContent = typeLabels[q.type] || q.type || "question";
+      typeSpan.textContent = typeLabels[q.type] || "问题";
+
+      const header = document.createElement("div");
+      header.className = "wizard-question-card-header";
+      const titleGroup = document.createElement("div");
+      titleGroup.className = "wizard-question-title-group";
+      titleGroup.appendChild(numberDiv);
+      titleGroup.appendChild(typeSpan);
+      header.appendChild(titleGroup);
+
+      const badge = document.createElement("span");
+      badge.className = "wizard-answer-badge";
+
+      function markAnsweredState(isAnswered) {
+        card.classList.toggle("is-answered", isAnswered);
+        badge.textContent = isAnswered ? "已回答" : "待作答";
+        badge.classList.toggle("answered", isAnswered);
+        badge.classList.toggle("pending", !isAnswered);
+      }
+
+      markAnsweredState(answered);
+      header.appendChild(badge);
+
+      const regenerateBtn = document.createElement("button");
+      regenerateBtn.type = "button";
+      regenerateBtn.className = "wizard-regenerate-icon";
+      regenerateBtn.setAttribute("aria-label", "Regenerate question");
+      regenerateBtn.title = "重新生成此问题";
+      regenerateBtn.innerHTML = `
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
+        </svg>
+      `;
+      regenerateBtn.addEventListener("click", () => regenerateQuestion(q.id, card));
+      header.appendChild(regenerateBtn);
 
       const textDiv = document.createElement("div");
       textDiv.className = "wizard-question-text";
       textDiv.textContent = q.content || "";
 
-      card.appendChild(numberDiv);
-      card.appendChild(typeSpan);
-      card.appendChild(textDiv);
+      const answerArea = document.createElement("div");
+      answerArea.className = "wizard-answer-area";
 
-      // Add regenerate button for each question (FIX 3)
-      const regenerateBtn = document.createElement("button");
-      regenerateBtn.type = "button";
-      regenerateBtn.className = "wizard-regenerate-icon";
-      regenerateBtn.innerHTML = `
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
-        </svg>
-        <span>Regenerate</span>
-      `;
-      regenerateBtn.style.marginTop = "8px";
-      regenerateBtn.addEventListener("click", () => regenerateQuestion(q.id, card));
-      card.appendChild(regenerateBtn);
+      const previewText = (q.content || "").replace(/\s+/g, " ").trim();
+      const truncatedPreview = previewText
+        ? `${previewText.slice(0, 40)}${previewText.length > 40 ? "..." : ""}`
+        : "此问题的核心内容";
+      const placeholderForShortText = q.hint || `请简要说明：${truncatedPreview}`;
 
       if (q.type === "short_text") {
         const input = document.createElement("input");
         input.className = "wizard-input-short";
         input.type = "text";
-        input.placeholder = "Type your answer here";
+        input.placeholder = placeholderForShortText;
         input.value = currentAnswers.get(q.id) ?? "";
         input.addEventListener("input", () => {
           currentAnswers.set(q.id, input.value);
-          // Phase 3: Track answer changes for auto-save and guidance
           onAnswerChange();
-          // Auto-save feedback (subtle visual)
           input.style.borderColor = "#22C55E";
           setTimeout(() => {
             input.style.borderColor = "";
           }, 300);
+          const hasValue = input.value.trim().length > 0;
+          markAnsweredState(hasValue);
         });
-        card.appendChild(input);
+        answerArea.appendChild(input);
       } else if (q.type === "yes_no") {
         const row = document.createElement("div");
         row.className = "wizard-choice-row";
 
         const yes = document.createElement("button");
         yes.type = "button";
-        yes.className = "wizard-pill";
-        yes.textContent = "Yes";
+        yes.className = "wizard-pill wizard-pill--yes";
+        yes.innerHTML = `<span class="wizard-pill-icon">✓</span><span>是</span>`;
 
         const no = document.createElement("button");
         no.type = "button";
-        no.className = "wizard-pill";
-        no.textContent = "No";
+        no.className = "wizard-pill wizard-pill--no";
+        no.innerHTML = `<span class="wizard-pill-icon">✗</span><span>否</span>`;
 
         function update(selected) {
           currentAnswers.set(q.id, selected);
           yes.classList.toggle("is-selected", selected === true);
           no.classList.toggle("is-selected", selected === false);
-          // Phase 3: Track answer changes for auto-save and guidance
           onAnswerChange();
-          // Auto-save feedback (subtle visual)
-          const row = yes.parentElement;
           row.style.borderColor = "#22C55E";
           setTimeout(() => {
             row.style.borderColor = "";
           }, 300);
+          markAnsweredState(true);
         }
 
         yes.addEventListener("click", () => update(true));
@@ -679,24 +719,26 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
 
         row.appendChild(yes);
         row.appendChild(no);
-        card.appendChild(row);
+        answerArea.appendChild(row);
       } else if (q.type === "single_choice" || q.type === "multi_choice") {
         const row = document.createElement("div");
         row.className = "wizard-choice-row";
         const options = q.options || [];
         const isMulti = q.type === "multi_choice";
 
-        // FIX 5: Handle missing options
         if (options.length === 0) {
           const missingDiv = document.createElement("div");
           missingDiv.className = "wizard-missing-options";
           missingDiv.innerHTML = `
             <span class="wizard-missing-options-icon">⚠️</span>
-            <span>No options available. Click "Regenerate" to try again.</span>
+            <span>无可用选项。点击“重新生成”尝试更多问题。</span>
           `;
-          card.appendChild(missingDiv);
+          answerArea.appendChild(missingDiv);
+          card.appendChild(header);
+          card.appendChild(textDiv);
+          card.appendChild(answerArea);
           questionsContainer.appendChild(card);
-          return; // Skip this question
+          return;
         }
 
         const existing = currentAnswers.get(q.id);
@@ -714,16 +756,13 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
           pill.textContent = opt.label || opt.value || "";
           pill.setAttribute("data-value", opt.value);
 
-          // FIX 4: Check if this is "Other" option
           const isOther = opt.is_other === true || (opt.label && opt.label.toLowerCase().includes("other"));
 
           function updateSelection() {
             if (isMulti) {
-              // Multi-choice: toggle selection
               if (selected.has(opt.value)) {
                 selected.delete(opt.value);
                 pill.classList.remove("is-selected");
-                // Hide other input if unselecting "Other"
                 if (isOther && otherInputContainer) {
                   otherInputContainer.remove();
                   otherInputContainer = null;
@@ -731,56 +770,46 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
               } else {
                 selected.add(opt.value);
                 pill.classList.add("is-selected");
-                // Show other input if selecting "Other"
                 if (isOther && !otherInputContainer) {
                   showOtherInput();
                 }
               }
               currentAnswers.set(q.id, Array.from(selected));
             } else {
-              // Single-choice: deselect all others, select this one
               selected.clear();
               selected.add(opt.value);
               currentAnswers.set(q.id, opt.value);
-              
-              // Update all pills in this row
               pills.forEach(p => p.classList.remove("is-selected"));
               pill.classList.add("is-selected");
-              
-              // Handle "Other" input field
               if (isOther) {
                 if (!otherInputContainer) {
                   showOtherInput();
                 }
-              } else {
-                // Remove other input if switching to different option
-                if (otherInputContainer) {
-                  otherInputContainer.remove();
-                  otherInputContainer = null;
-                }
+              } else if (otherInputContainer) {
+                otherInputContainer.remove();
+                otherInputContainer = null;
               }
             }
-            // Phase 3: Track answer changes for auto-save and guidance
             onAnswerChange();
-            // Auto-save feedback (subtle visual)
             row.style.borderColor = "#22C55E";
             setTimeout(() => {
               row.style.borderColor = "";
             }, 300);
+            const hasSelection = isMulti ? selected.size > 0 : Boolean(currentAnswers.get(q.id));
+            markAnsweredState(hasSelection);
           }
 
           function showOtherInput() {
-            if (otherInputContainer) return; // Already showing
-            
+            if (otherInputContainer) return;
+
             otherInputContainer = document.createElement("div");
             otherInputContainer.className = "wizard-other-input-container";
-            
+
             const input = document.createElement("input");
             input.type = "text";
             input.className = "wizard-other-input";
-            input.placeholder = "Please specify...";
+            input.placeholder = "请具体说明你的其他选项...";
             input.addEventListener("input", () => {
-              // Store custom text with the answer
               const customValue = `${opt.value}:${input.value}`;
               if (isMulti) {
                 selected.delete(opt.value);
@@ -789,12 +818,12 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
               } else {
                 currentAnswers.set(q.id, customValue);
               }
+              badge.textContent = "已回答";
+              badge.classList.add("answered");
             });
-            
+
             otherInputContainer.appendChild(input);
-            card.appendChild(otherInputContainer);
-            
-            // Auto-focus
+            answerArea.appendChild(otherInputContainer);
             setTimeout(() => input.focus(), 100);
           }
 
@@ -811,9 +840,12 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
           row.appendChild(pill);
         });
 
-        card.appendChild(row);
+        answerArea.appendChild(row);
       }
 
+      card.appendChild(header);
+      card.appendChild(textDiv);
+      card.appendChild(answerArea);
       questionsContainer.appendChild(card);
     });
 

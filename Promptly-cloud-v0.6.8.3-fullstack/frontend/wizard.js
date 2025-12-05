@@ -9,6 +9,7 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
   const startBtn = document.getElementById("startWizardBtn");
   const restoreSnapshotBtn = document.getElementById("restoreSnapshotBtn");
   const ideaError = document.getElementById("ideaError");
+  const WIZARD_SESSION_KEY = "promptly.wizard.session";
 
   const ideaPanel = document.querySelector(".wizard-panel--idea");
   const qaPanel = document.querySelector(".wizard-panel--qa");
@@ -54,6 +55,14 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
   const urlParams = new URLSearchParams(window.location.search || "");
   const prefillIdea = urlParams.get("idea");
   const prefillKind = urlParams.get("kind");
+  const resumeSessionId = urlParams.get("sessionId") || (() => {
+    try {
+      const raw = localStorage.getItem(WIZARD_SESSION_KEY);
+      return raw ? JSON.parse(raw).sessionId : null;
+    } catch (e) {
+      return null;
+    }
+  })();
 
   const currentAnswers = new Map();
   let startController = null;
@@ -324,9 +333,9 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
   // Update the answer guidance banner
   function updateAnswerGuidance() {
     if (!answerGuidance || allQuestions.length === 0) {
-      if (answerGuidance) answerGuidance.classList.add("hidden");
-      return;
-    }
+    if (answerGuidance) answerGuidance.classList.add("hidden");
+    return;
+  }
     
     const answeredCount = currentAnswers.size;
     const totalCount = allQuestions.length;
@@ -355,6 +364,76 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
   function onAnswerChange() {
     triggerAutoSave();
     updateAnswerGuidance();
+  }
+
+  async function hydrateExistingSession(sessionId) {
+    try {
+      const res = await fetch(`${API_BASE}/api/question-sessions/${encodeURIComponent(sessionId)}/state`);
+      if (!res.ok) {
+        log(`Could not restore session ${sessionId}: HTTP ${res.status}`);
+        return;
+      }
+      const data = await res.json();
+      if (!data.ok || !data.session) {
+        log(data.error || `Could not restore session ${sessionId}`);
+        return;
+      }
+
+      currentSessionId = data.session.id;
+      window.promptlyWizardSession?.markRunning?.(currentSessionId);
+
+      if (ideaInput && data.session.initial_description) {
+        ideaInput.value = data.session.initial_description;
+      }
+      if (kindSelect && data.session.kind) {
+        kindSelect.value = data.session.kind;
+      }
+
+      const remainingIds = new Set(data.remaining_question_ids || []);
+      const mappedQuestions = (data.questions || []).map((q) => ({
+        id: q.id,
+        type: q.type,
+        content: q.content,
+        options: q.options,
+        depth_enabled: q.depth_enabled,
+        depth_question: q.depth_question,
+        depth_levels: q.depth_levels
+      }));
+
+      clearQuestions();
+      addQuestions(mappedQuestions);
+
+      (data.answers || []).forEach((a) => {
+        if (a.value !== undefined && a.value !== null) {
+          currentAnswers.set(a.question_id, a.value);
+        }
+      });
+
+      const firstRemainingIndex = mappedQuestions.findIndex((q) => remainingIds.has(q.id));
+      if (firstRemainingIndex >= 0) {
+        currentPageIndex = Math.floor(firstRemainingIndex / PAGE_SIZE);
+      } else {
+        currentPageIndex = 0;
+      }
+
+      renderCurrentPage();
+      updateAnswerGuidance();
+      updateWizardStepper('questions');
+
+      const isActive = data.session.status === "active" || data.session.status === "ready_to_finalize";
+
+      if (startBtn) {
+        startBtn.disabled = isActive;
+        startBtn.textContent = isActive ? "Session in progress" : "Start wizard";
+      }
+      if (data.progress?.answered >= data.progress?.total && data.progress?.total > 0) {
+        setWizardStatus("All questions answered. You can finalize when ready.", "info");
+      } else {
+        setWizardStatus("Resumed your running session. Continue answering the remaining questions.", "info");
+      }
+    } catch (err) {
+      console.warn("[wizard] Failed to hydrate existing session", err);
+    }
   }
   
   // Add questions to the global list (with sequential numbering)
@@ -1464,6 +1543,11 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
     sessionStorage.removeItem("projectIdea");
     sessionStorage.removeItem("projectKind");
   })();
+
+  if (resumeSessionId) {
+    log(`Found active session ${resumeSessionId}. Restoring...`);
+    hydrateExistingSession(resumeSessionId);
+  }
 
   log("Wizard page loaded. Describe your idea on the left to begin.");
 })();

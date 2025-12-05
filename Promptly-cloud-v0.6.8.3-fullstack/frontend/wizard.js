@@ -875,7 +875,44 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
         startBtn.disabled = false;
         startBtn.textContent = "Start wizard";
         cancelWizardBtn?.classList.add("hidden");
-        setWizardStatus("Could not start the wizard. Please verify your connection or API key and try again.", "error");
+        
+        // Parse error message for user-friendly display
+        let errorData = {};
+        try {
+          errorData = JSON.parse(txt);
+        } catch (e) {
+          // txt is not JSON
+        }
+        
+        // Provide specific error messages based on error type
+        let userMessage = "Could not start the wizard. Please try again.";
+        if (res.status === 503 || txt.includes("LLM disabled")) {
+          userMessage = "⚠️ LLM features are currently unavailable. The API key may not be configured. Please contact support or try again later.";
+        } else if (res.status === 502) {
+          if (txt.includes("Invalid OpenAI API Key") || txt.includes("invalid_api_key")) {
+            userMessage = "⚠️ API key is invalid. Please check the OPENAI_API_KEY configuration.";
+          } else if (txt.includes("OpenAI API error")) {
+            userMessage = "⚠️ LLM service error. The AI service is temporarily unavailable. Please try again later.";
+          } else {
+            userMessage = "⚠️ Question engine failed. Please verify your connection and try again.";
+          }
+        } else if (res.status >= 500) {
+          userMessage = "⚠️ Server error. Please try again later.";
+        } else if (res.status === 400) {
+          userMessage = errorData.error || "Invalid request. Please check your input and try again.";
+        }
+        
+        setWizardStatus(userMessage, "error");
+        hideLoadingInQuestionPanel();
+        
+        // Show fallback notice in global status
+        if (typeof window.globalStatus !== 'undefined') {
+          window.globalStatus.error({
+            message: '❌ LLM Unavailable',
+            details: userMessage,
+            autoHide: false
+          });
+        }
         return;
       }
       const data = await res.json();
@@ -1028,6 +1065,8 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
     if (!currentSessionId) return;
     try {
       log("Finalizing session and generating spec + compiled prompt...");
+      setWizardStatus("Finalizing and generating your spec... This may take a moment.", "info", { showTicks: true });
+      
       const res = await fetch(`${API_BASE}/api/question-sessions/${encodeURIComponent(currentSessionId)}/finalize`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -1036,6 +1075,16 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
       if (!res.ok) {
         const txt = await res.text();
         log(`Failed to finalize session: HTTP ${res.status} ${txt}`);
+        
+        // Parse error for specific messaging
+        let userMessage = "Failed to finalize session. Please try again.";
+        if (res.status === 503 || txt.includes("LLM disabled")) {
+          userMessage = "⚠️ LLM features are unavailable. The AI service is not configured. Your progress has been saved - please try again later.";
+        } else if (res.status === 502) {
+          userMessage = "⚠️ AI service temporarily unavailable. Your progress has been saved - please try again shortly.";
+        }
+        
+        setWizardStatus(userMessage, "error");
         return;
       }
       const data = await res.json();
@@ -1324,6 +1373,13 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
         if (cardElement) {
           cardElement.classList.remove("is-regenerating");
           if (loadingOverlay) loadingOverlay.remove();
+        }
+        
+        // Show user-friendly error for LLM unavailable
+        if (res.status === 503 || txt.includes("LLM disabled")) {
+          setWizardStatus("⚠️ Question regeneration unavailable - AI service is not configured.", "warn");
+        } else if (res.status === 502) {
+          setWizardStatus("⚠️ Could not regenerate question - AI service temporarily unavailable.", "warn");
         }
         return;
       }

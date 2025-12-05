@@ -102,24 +102,39 @@ const GlobalStatusManager = (function() {
   /**
    * Attach element references
    */
+  function _getWizardUrl(sessionId) {
+    const url = new URL('/wizard.html', window.location.origin);
+    if (sessionId) {
+      url.searchParams.set('sessionId', sessionId);
+    }
+    return url.toString();
+  }
+
   function _attachElements() {
     titleElement = statusElement.querySelector('.global-status-title');
     subtitleElement = statusElement.querySelector('.global-status-subtitle');
     closeBtn = statusElement.querySelector('.global-status-close');
+
+    statusElement?.setAttribute('role', 'button');
+    statusElement?.setAttribute('tabindex', '0');
+    statusElement?.setAttribute('aria-label', 'Return to active Question Wizard');
 
     closeBtn?.addEventListener('click', (event) => {
       event.stopPropagation();
       hide();
     });
 
-    statusElement?.addEventListener('click', () => {
-      // Prefer the active session id if available
+    const handleActivate = () => {
       const sessionId = currentSessionId || window.promptlyWizardSession?.getActive?.()?.sessionId;
-      const url = new URL('wizard.html', window.location.href);
-      if (sessionId) {
-        url.searchParams.set('sessionId', sessionId);
+      window.location.assign(_getWizardUrl(sessionId));
+    };
+
+    statusElement?.addEventListener('click', handleActivate);
+    statusElement?.addEventListener('keydown', (evt) => {
+      if (evt.key === 'Enter' || evt.key === ' ' || evt.key === 'Spacebar') {
+        evt.preventDefault();
+        handleActivate();
       }
-      window.location.href = url.toString();
     });
   }
 

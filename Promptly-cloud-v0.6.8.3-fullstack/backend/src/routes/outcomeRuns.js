@@ -141,49 +141,83 @@ outcomeRunsRouter.post("/", (req, res) => {
   }
 
   // Build prompt content incorporating all Layer 2/3 inputs
-  const buildPromptContent = () => {
-    const parts = [task];
-    
-    // Layer 1: Examples/context
-    if (examples) parts.push(`\nExamples: ${examples}`);
-    if (input) parts.push(`\nContext: ${input}`);
-    if (style) parts.push(`\nStyle: ${style}`);
-    if (constraints) parts.push(`\nConstraints: ${constraints}`);
-    
-    // Layer 2: Blueprint sync fields
-    if (blueprintInstructions) {
-      parts.push(`\n\n[Blueprint Instructions]\n${blueprintInstructions}`);
-    }
-    if (blueprintExamples) {
-      parts.push(`\n\n[Blueprint Examples]\n${blueprintExamples}`);
-    }
-    if (blueprintConstraints) {
-      parts.push(`\n\n[Blueprint Constraints]\n${blueprintConstraints}`);
-    }
-    
-    // Layer 3: Expert lab fields
+  const buildPromptContent = (variantIndex = 0) => {
+    const variantGuidance = [
+      "Prioritize clarity with numbered steps and concise phrasing.",
+      "Emphasize safety checks, constraint adherence, and edge cases.",
+      "Highlight examples and schema alignment for structured outputs.",
+      "Favor brevity while preserving critical requirements."
+    ];
+
     const posNegData = posNegDataset || dataset;
     const schemaData = schemaTemplate || schema;
-    
-    if (posNegData) {
-      parts.push(`\n\n[POS/NEG Dataset]\n${posNegData}`);
-    }
-    if (schemaData) {
-      parts.push(`\n\n[Schema Template]\n${schemaData}`);
-    }
-    if (optimizationKnobs) {
-      parts.push(`\n\n[Optimization Knobs]\n${optimizationKnobs}`);
-    }
-    
+
+    const contextSections = [
+      input && `Context: ${input}`,
+      style && `Style preferences: ${style}`,
+      constraints && `Constraints: ${constraints}`
+    ].filter(Boolean);
+
+    const blueprintSections = [
+      blueprintInstructions && `Blueprint Instructions:\n${blueprintInstructions}`,
+      blueprintExamples && `Blueprint Examples:\n${blueprintExamples}`,
+      blueprintConstraints && `Blueprint Constraints:\n${blueprintConstraints}`
+    ].filter(Boolean);
+
+    const expertSections = [
+      posNegData && `POS/NEG Dataset:\n${posNegData}`,
+      schemaData && `Schema Template:\n${schemaData}`,
+      optimizationKnobs && `Optimization Knobs:\n${optimizationKnobs}`
+    ].filter(Boolean);
+
     // Log that Layer 2/3 data is being used in prompt construction
-    const hasLayer2 = blueprintInstructions || blueprintExamples || blueprintConstraints || input || style || constraints;
-    const hasLayer3 = posNegData || schemaData || optimizationKnobs;
-    
+    const hasLayer2 = blueprintSections.length > 0 || contextSections.length > 0;
+    const hasLayer3 = expertSections.length > 0;
+
     if (hasLayer2 || hasLayer3) {
       console.log(`[outcomeRunner] Prompt includes: Layer2=${!!hasLayer2}, Layer3=${!!hasLayer3}`);
     }
-    
-    return parts.join("");
+
+    const sections = [
+      "You are Promptly, an expert prompt engineer who crafts reliable, testable prompts.",
+      `Primary task: ${task}`,
+      `Guidance focus: ${variantGuidance[variantIndex % variantGuidance.length]}`
+    ];
+
+    if (contextSections.length) {
+      sections.push(`Additional context:\n- ${contextSections.join("\n- ")}`);
+    }
+
+    if (examples) {
+      sections.push(`Illustrative examples to mirror:\n${examples}`);
+    }
+
+    if (blueprintSections.length) {
+      sections.push(blueprintSections.map(section => `### ${section}`).join("\n\n"));
+    }
+
+    if (expertSections.length) {
+      sections.push(expertSections.map(section => `### ${section}`).join("\n\n"));
+    }
+
+    sections.push(
+      [
+        "Response expectations:",
+        "- Restate the task in one sentence to confirm understanding.",
+        "- Provide a concise, ordered plan to solve the task.",
+        "- Apply every constraint and schema requirement before final output.",
+        "- Call out any missing details as clarifying questions.",
+        "- Return the final answer after confirming checks are satisfied."
+      ].join("\n")
+    );
+
+    if (schemaData) {
+      sections.push(
+        "Output format reminder: follow the schema exactly; do not add extra fields or deviate from required casing."
+      );
+    }
+
+    return sections.join("\n\n");
   };
 
   // Build simple deterministic candidates
@@ -192,7 +226,7 @@ outcomeRunsRouter.post("/", (req, res) => {
     const testsResult = { passed: true, issues: [] };
     return {
       id: `cand_${nanoid(10)}`,
-      content: buildPromptContent(),
+      content: buildPromptContent(idx),
       llmScore,
       finalScore: llmScore,
       tests: testsResult

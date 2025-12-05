@@ -2,6 +2,7 @@ import { Router } from "express";
 import { nanoid } from "nanoid";
 import { z } from "zod";
 import { db } from "../lib/db.js";
+import { chatJson, LlmDisabledError } from "../lib/openaiClient.js";
 import { buildEvaluationMetrics } from "../lib/metricsEngine.js";
 import { isValidModel, getModelConfig, MODEL_REGISTRY } from "../lib/modelRegistry.js";
 
@@ -95,7 +96,7 @@ const OutcomeRunRequestSchema = z.object({
   }).optional()
 });
 
-outcomeRunsRouter.post("/", (req, res) => {
+outcomeRunsRouter.post("/", async (req, res) => {
   const parsed = OutcomeRunRequestSchema.safeParse(req.body);
   if (!parsed.success) {
     console.log("[outcomeRunner] Validation failed:", parsed.error.flatten());
@@ -220,23 +221,114 @@ outcomeRunsRouter.post("/", (req, res) => {
     return sections.join("\n\n");
   };
 
-  // Build simple deterministic candidates
-  const candidates = Array.from({ length: n }).map((_, idx) => {
-    const llmScore = 7 + (idx * 0.25);
-    const testsResult = { passed: true, issues: [] };
-    return {
-      id: `cand_${nanoid(10)}`,
-      content: buildPromptContent(idx),
-      llmScore,
-      finalScore: llmScore,
-      tests: testsResult
-    };
-  });
+  let candidates = [];
+  let best = null;
+  let llmUsage = null;
+  let generationSource = "fallback";
 
-  // Pick the first candidate as best (scores are deterministic)
-  const best = candidates.reduce((acc, cand) => {
-    return cand.finalScore > acc.finalScore ? cand : acc;
-  }, candidates[0]);
+  try {
+    const systemPrompt = [
+      "You are Promptly, an expert prompt engineer who optimizes user tasks into reliable prompts.",
+      "Return strict JSON with: best_prompt (string) and candidates (array of objects with prompt, score, rationale).",
+      "Use every detail provided (task, examples, constraints, datasets, schemas, knobs).",
+      "Prefer concise, testable prompts that restate the task, outline the plan, and honor schema/constraint rules."
+    ].join("\n");
+
+    const userPrompt = [
+      `Task: ${task}`,
+      `Candidates requested: ${n}`,
+      model && `Requested model: ${resolvedModel}`,
+      examples && `Examples to mirror:\n${examples}`,
+      (input || style || constraints) && "Layer 2 (Blueprint) details:",
+      input && `- Context: ${input}`,
+      style && `- Style: ${style}`,
+      constraints && `- Constraints: ${constraints}`,
+      (blueprintInstructions || blueprintExamples || blueprintConstraints) && "Blueprint sections:",
+      blueprintInstructions && `- Instructions:\n${blueprintInstructions}`,
+      blueprintExamples && `- Examples:\n${blueprintExamples}`,
+      blueprintConstraints && `- Constraints:\n${blueprintConstraints}`,
+      (posNegDataset || dataset || schemaTemplate || schema || optimizationKnobs) && "Layer 3 (Expert lab) details:",
+      (posNegDataset || dataset) && `- POS/NEG dataset:\n${posNegDataset || dataset}`,
+      (schemaTemplate || schema) && `- Schema template:\n${schemaTemplate || schema}`,
+      optimizationKnobs && `- Optimization knobs:\n${optimizationKnobs}`,
+      tests && `Tests config (optional): ${JSON.stringify(tests)}`,
+      temperature !== undefined && `Preferred temperature: ${temperature}`,
+      "Produce diverse candidates that emphasize clarity, safety, and schema alignment."
+    ]
+      .filter(Boolean)
+      .join("\n");
+
+    const { data, usage } = await chatJson({
+      system: systemPrompt,
+      user: userPrompt,
+      model: resolvedModel,
+      promptlyModelId: model || resolvedModel
+    });
+
+    llmUsage = usage || null;
+
+    const llmCandidates = Array.isArray(data?.candidates) ? data.candidates : [];
+    const normalizedCandidates = llmCandidates
+      .map((cand, idx) => ({
+        id: cand.id || `cand_llm_${idx + 1}`,
+        content: cand.prompt || cand.content || "",
+        rationale: cand.rationale || cand.reason || "",
+        llmScore: Number.isFinite(cand.score) ? Number(cand.score) : 8 + (idx * 0.1),
+        finalScore: Number.isFinite(cand.score) ? Number(cand.score) : 8 + (idx * 0.1),
+        tests: { passed: true, issues: [] }
+      }))
+      .filter(c => c.content);
+
+    const bestPromptText = data?.best_prompt || data?.bestPrompt || normalizedCandidates[0]?.content;
+
+    if (!normalizedCandidates.length && bestPromptText) {
+      normalizedCandidates.push({
+        id: "cand_llm_best",
+        content: bestPromptText,
+        rationale: "Chosen as best_prompt",
+        llmScore: 9,
+        finalScore: 9,
+        tests: { passed: true, issues: [] }
+      });
+    }
+
+    if (!normalizedCandidates.length) {
+      console.warn("[outcomeRunner] LLM returned no candidates; falling back to deterministic prompts.");
+    } else {
+      generationSource = "llm";
+      candidates = normalizedCandidates;
+      best = normalizedCandidates.reduce((acc, cand) => (cand.finalScore > acc.finalScore ? cand : acc), normalizedCandidates[0]);
+    }
+  } catch (err) {
+    if (err instanceof LlmDisabledError) {
+      console.warn("[outcomeRunner] LLM disabled; OPENAI_API_KEY not configured.");
+      return res.status(503).json({
+        ok: false,
+        error: "LLM features are disabled. Please configure OPENAI_API_KEY to generate optimized prompts."
+      });
+    }
+
+    console.error("[outcomeRunner] LLM generation failed, falling back to deterministic prompts", err);
+  }
+
+  // Build deterministic candidates as a reliable fallback
+  if (!candidates.length) {
+    candidates = Array.from({ length: n }).map((_, idx) => {
+      const llmScore = 7 + (idx * 0.25);
+      const testsResult = { passed: true, issues: [] };
+      return {
+        id: `cand_${nanoid(10)}`,
+        content: buildPromptContent(idx),
+        llmScore,
+        finalScore: llmScore,
+        tests: testsResult
+      };
+    });
+
+    best = candidates.reduce((acc, cand) => {
+      return cand.finalScore > acc.finalScore ? cand : acc;
+    }, candidates[0]);
+  }
 
   // Calculate metrics using metricsEngine
   // For now, we use simulated test stats since this is a simplified implementation
@@ -251,11 +343,19 @@ outcomeRunsRouter.post("/", (req, res) => {
     total_constraints: n
   };
 
-  const simulatedUsage = {
-    prompt_tokens: n * 150, // Estimated tokens per candidate
-    completion_tokens: n * 350,
-    total_tokens: n * 500
-  };
+  const usageMetrics = llmUsage
+    ? {
+        prompt_tokens: llmUsage.prompt_tokens || llmUsage.input_tokens || 0,
+        completion_tokens: llmUsage.completion_tokens || llmUsage.output_tokens || 0,
+        total_tokens:
+          llmUsage.total_tokens ||
+          ((llmUsage.prompt_tokens || llmUsage.input_tokens || 0) + (llmUsage.completion_tokens || llmUsage.output_tokens || 0))
+      }
+    : {
+        prompt_tokens: n * 150, // Estimated tokens per candidate
+        completion_tokens: n * 350,
+        total_tokens: n * 500
+      };
 
   const targets = {
     accuracy: 1.0,
@@ -266,7 +366,7 @@ outcomeRunsRouter.post("/", (req, res) => {
 
   const evaluationMetrics = buildEvaluationMetrics({
     testStats: simulatedTestStats,
-    usage: simulatedUsage,
+    usage: usageMetrics,
     targets: targets
   });
 
@@ -322,7 +422,7 @@ outcomeRunsRouter.post("/", (req, res) => {
       "success",
       best.id,
       JSON.stringify(fullRequestData),
-      JSON.stringify({ best, candidates }),
+      JSON.stringify({ best, candidates, usage: usageMetrics, source: generationSource }),
       now
     );
 
@@ -365,7 +465,9 @@ outcomeRunsRouter.post("/", (req, res) => {
         }
       },
       candidates,
-      metrics: evaluationMetrics
+      metrics: evaluationMetrics,
+      usage: usageMetrics,
+      source: generationSource
     }
   });
 });

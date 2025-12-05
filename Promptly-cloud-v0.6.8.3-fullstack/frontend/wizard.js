@@ -143,10 +143,12 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
     wizardStatus.classList.add(`wizard-status--${tone}`);
     const icon = tone === "error" ? "✕" : tone === "warn" ? "⚠️" : "ℹ️";
     const ticks = showTicks ? '<div class="wizard-loading-ticks" aria-hidden="true"></div>' : "";
+    const note = '<div class="wizard-status-note">请不要退出页面 · Please do not exit the page.</div>';
     wizardStatus.innerHTML = `
       <span class="wizard-status-icon">${icon}</span>
       <div class="wizard-status-text">${message}</div>
       ${ticks}
+      ${note}
     `;
   }
 

@@ -878,8 +878,9 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
         let errorData = {};
         try {
           errorData = JSON.parse(txt);
-        } catch (e) {
-          // txt is not JSON
+        } catch {
+          // Response is plain text, not JSON - this is expected for some error responses
+          // The fallback userMessage below handles this case
         }
         
         // Provide specific error messages based on error type

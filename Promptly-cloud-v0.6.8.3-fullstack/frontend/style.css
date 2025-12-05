@@ -2173,6 +2173,119 @@ html[data-theme="light"] .error-state {
   opacity: 1;
 }
 
+/* Expand button */
+.pipeline-node {
+  position: relative;
+}
+
+.node-expand-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: rgba(124, 58, 237, 0.2);
+  border: 1px solid rgba(124, 58, 237, 0.4);
+  color: #A78BFA;
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  opacity: 0.6;
+}
+
+.node-expand-btn:hover {
+  opacity: 1;
+  background: rgba(124, 58, 237, 0.3);
+  border-color: rgba(124, 58, 237, 0.6);
+  transform: scale(1.1);
+}
+
+.pipeline-node.active .node-expand-btn,
+.pipeline-node.expanded .node-expand-btn {
+  opacity: 1;
+  border-color: rgba(34, 211, 238, 0.6);
+  background: rgba(34, 211, 238, 0.15);
+}
+
+/* Node details/log area */
+.node-details {
+  grid-column: 1 / -1;
+  margin-top: 12px;
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.3s ease-out;
+  border-top: 1px solid rgba(124, 58, 237, 0.2);
+  padding-top: 0;
+}
+
+.pipeline-node.expanded .node-details {
+  padding-top: 12px;
+}
+
+.node-log {
+  max-height: 400px;
+  overflow-y: auto;
+  font-family: 'SF Mono', 'Monaco', 'Cascadia Code', 'Roboto Mono', monospace;
+  font-size: 11px;
+  line-height: 1.6;
+  color: rgba(255, 255, 255, 0.7);
+  background: rgba(10, 14, 25, 0.5);
+  border-radius: 8px;
+  padding: 12px;
+  border: 1px solid rgba(124, 58, 237, 0.15);
+}
+
+.log-entry {
+  margin-bottom: 8px;
+  padding: 6px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  animation: logEntryFadeIn 0.3s ease;
+}
+
+.log-entry:last-child {
+  border-bottom: none;
+}
+
+@keyframes logEntryFadeIn {
+  from {
+    opacity: 0;
+    transform: translateX(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.log-time {
+  color: rgba(124, 58, 237, 0.6);
+  margin-right: 8px;
+  font-size: 10px;
+}
+
+.log-message {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.log-details {
+  margin-top: 6px;
+  margin-left: 60px;
+  padding: 8px;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 4px;
+  border-left: 2px solid rgba(34, 211, 238, 0.4);
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.6);
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
 .pipeline-visuals {
   position: relative;
   display: grid;

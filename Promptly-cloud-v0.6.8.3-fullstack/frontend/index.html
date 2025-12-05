@@ -477,6 +477,10 @@ html[data-theme="light"] .grey-gradient-text{
                 <small>Structure</small>
               </div>
               <span class="node-check">✓</span>
+              <button class="node-expand-btn" aria-label="Expand details">▾</button>
+              <div class="node-details">
+                <div class="node-log" id="node-log-spec"></div>
+              </div>
             </div>
             <div class="pipeline-node" data-step="question">
               <span class="node-icon">2</span>
@@ -485,6 +489,10 @@ html[data-theme="light"] .grey-gradient-text{
                 <small>Clarify</small>
               </div>
               <span class="node-check">✓</span>
+              <button class="node-expand-btn" aria-label="Expand details">▾</button>
+              <div class="node-details">
+                <div class="node-log" id="node-log-question"></div>
+              </div>
             </div>
             <div class="pipeline-node" data-step="agents">
               <span class="node-icon">3</span>
@@ -493,6 +501,10 @@ html[data-theme="light"] .grey-gradient-text{
                 <small>Draft</small>
               </div>
               <span class="node-check">✓</span>
+              <button class="node-expand-btn" aria-label="Expand details">▾</button>
+              <div class="node-details">
+                <div class="node-log" id="node-log-agents"></div>
+              </div>
             </div>
             <div class="pipeline-node" data-step="metrics">
               <span class="node-icon">4</span>
@@ -501,6 +513,10 @@ html[data-theme="light"] .grey-gradient-text{
                 <small>Score</small>
               </div>
               <span class="node-check">✓</span>
+              <button class="node-expand-btn" aria-label="Expand details">▾</button>
+              <div class="node-details">
+                <div class="node-log" id="node-log-metrics"></div>
+              </div>
             </div>
             <div class="pipeline-node" data-step="outcome">
               <span class="node-icon">5</span>
@@ -509,6 +525,10 @@ html[data-theme="light"] .grey-gradient-text{
                 <small>Select</small>
               </div>
               <span class="node-check">✓</span>
+              <button class="node-expand-btn" aria-label="Expand details">▾</button>
+              <div class="node-details">
+                <div class="node-log" id="node-log-outcome"></div>
+              </div>
             </div>
           </div>
           <div class="pipeline-visuals">
@@ -1814,6 +1834,21 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   resetPipelineTimeline();
+
+  // Node expand/collapse functionality
+  document.querySelectorAll('.node-expand-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const node = btn.closest('.pipeline-node');
+      const details = node.querySelector('.node-details');
+      if (details) {
+        const isExpanded = node.classList.contains('expanded');
+        node.classList.toggle('expanded');
+        btn.textContent = isExpanded ? '▾' : '▴';
+        details.style.maxHeight = isExpanded ? '0' : '400px';
+      }
+    });
+  });
   
   // ============================================
   // Show real processing stages in Best Prompt
@@ -1953,17 +1988,117 @@ document.addEventListener('DOMContentLoaded', () => {
   // Store original button text before i18n potentially changes it
   const originalButtonText = runBtn.textContent;
   
+  // Real-time Pipeline Visualization with SSE
+  let currentPipelineEventSource = null;
+
+  function addLogEntry(stage, message, details = null) {
+    const logEl = document.getElementById(`node-log-${stage}`);
+    if (!logEl) return;
+
+    const entry = document.createElement('div');
+    entry.className = 'log-entry';
+    const time = new Date().toLocaleTimeString();
+    entry.innerHTML = `<span class="log-time">${time}</span> <span class="log-message">${message}</span>`;
+    
+    if (details) {
+      const detailsEl = document.createElement('div');
+      detailsEl.className = 'log-details';
+      detailsEl.textContent = typeof details === 'string' ? details : JSON.stringify(details, null, 2);
+      entry.appendChild(detailsEl);
+    }
+
+    logEl.appendChild(entry);
+    logEl.scrollTop = logEl.scrollHeight;
+  }
+
+  function setPipelineStepFromStage(stage) {
+    const stageMap = { spec: 0, question: 1, agents: 2, metrics: 3, outcome: 4 };
+    const index = stageMap[stage];
+    if (index !== undefined) {
+      setPipelineStep(index);
+    }
+  }
+
+  function handlePipelineEvent(runId, event, data) {
+    console.log(`[pipeline] Event: ${event}`, data);
+
+    switch (event) {
+      case 'connected':
+        addLogEntry('spec', 'Pipeline connected', { runId });
+        break;
+
+      case 'stage-start':
+        setPipelineStepFromStage(data.stage);
+        const stageNames = {
+          spec: 'Spec Builder',
+          question: 'Question Engine',
+          agents: 'LLM Agents',
+          metrics: 'Metrics & Scoring',
+          outcome: 'Outcome Runner'
+        };
+        addLogEntry(data.stage, `🚀 ${stageNames[data.stage]}: ${data.message}`);
+        break;
+
+      case 'stage-progress':
+        const stepNames = {
+          extracting: 'Extracting structured information...',
+          'llm-call': 'Calling LLM...',
+          saving: 'Saving to database...',
+          analyzing: 'Analyzing spec...',
+          'question-generated': 'Question generated',
+          'generating-architect': 'Generating with Architect agent...',
+          'generating-editor': 'Generating with Editor agent...',
+          'generating-judge': 'Generating with Judge agent...',
+          'completed-architect': 'Architect agent completed',
+          'completed-editor': 'Editor agent completed',
+          'completed-judge': 'Judge agent completed',
+          scoring: 'Scoring candidates...',
+          selecting: 'Selecting best candidate...'
+        };
+        const stepMsg = stepNames[data.step] || data.message;
+        addLogEntry(data.stage, `⚙️ ${stepMsg}`, data.details);
+        break;
+
+      case 'stage-complete':
+        addLogEntry(data.stage, `✅ ${data.message}`, data.result);
+        const node = document.querySelector(`[data-step="${data.stage}"]`);
+        if (node) {
+          node.classList.add('completed');
+        }
+        break;
+
+      case 'stage-skipped':
+        addLogEntry(data.stage, `⏭️ ${data.message}`);
+        break;
+
+      case 'error':
+        addLogEntry('spec', `❌ Error: ${data.message}`, data.error);
+        stopPipelineTimeline(`Pipeline error: ${data.message}`);
+        break;
+
+      case 'complete':
+        if (data.success && data.bestCandidate) {
+          completePipelineTimeline();
+          if (bestPromptEl && data.bestCandidate.content) {
+            bestPromptEl.value = data.bestCandidate.content;
+            bestPromptEl.classList.remove('processing-animation');
+            bestPromptEl.classList.add('success-highlight');
+            bestPromptEl.style.borderColor = '#22C55E';
+          }
+          showToast('✓ Best Prompt generated successfully!', 'success');
+        } else {
+          stopPipelineTimeline('Pipeline completed with errors');
+          showToast('⚠ Pipeline completed with errors', 'error');
+        }
+        break;
+    }
+  }
+
   runBtn.addEventListener("click", async function(e) {
     e.preventDefault();
     e.stopPropagation();
 
     console.log('[Promptly] Run Optimization button clicked!');
-
-    // Decide whether to run the optional auto-scroll animation (1% chance)
-    const shouldAutoScroll = Math.random() < 0.01;
-    if (!shouldAutoScroll) {
-      console.log('[Promptly] Skipping auto-scroll animation for this run.');
-    }
 
     // Get task input
     const task = (taskEl?.value || '').trim();
@@ -1972,6 +2107,18 @@ document.addEventListener('DOMContentLoaded', () => {
       if (taskEl) taskEl.focus();
       return;
     }
+
+    // Close any existing SSE connection
+    if (currentPipelineEventSource) {
+      currentPipelineEventSource.close();
+      currentPipelineEventSource = null;
+    }
+
+    // Clear previous logs
+    ['spec', 'question', 'agents', 'metrics', 'outcome'].forEach(stage => {
+      const logEl = document.getElementById(`node-log-${stage}`);
+      if (logEl) logEl.innerHTML = '';
+    });
     
     // Immediate visual feedback - disable button and show processing
     runBtn.disabled = true;
@@ -1980,9 +2127,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const originalText = runBtn.textContent;
     runBtn.textContent = "Processing...";
     
+    // Reset pipeline UI
+    resetPipelineTimeline();
+    startPipelineTimeline();
+    
     // ✅ Show loading state in Best Prompt area
     if (bestPromptEl) {
-      bestPromptEl.value = "⏳ Generating Best Prompt...\n\nProcessing:\n1. ⏳ Generating candidate prompts...";
+      bestPromptEl.value = "⏳ Generating Best Prompt...\n\nConnecting to pipeline...";
       bestPromptEl.style.borderColor = '#7C3AED';
       bestPromptEl.classList.add('processing-animation');
       bestPromptEl.classList.remove('success-highlight', 'error-state');
@@ -1992,136 +2143,95 @@ document.addEventListener('DOMContentLoaded', () => {
     showMetricsLoading();
     
     try {
-      // 0. Scroll to algorithm section so user can see the animation (1% of the time)
-      const algorithmSection = document.querySelector('.algorithm-section-enhanced');
-      if (algorithmSection && shouldAutoScroll) {
-        algorithmSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        algorithmSection.style.transition = 'all 0.3s ease';
-        algorithmSection.style.boxShadow = '0 0 40px rgba(124, 58, 237, 0.4)';
-        setTimeout(() => {
-          algorithmSection.style.boxShadow = '';
-        }, 2000);
-      }
-
-      // 1. Play pipeline animation and show processing stages in parallel
-      console.log('[Promptly] Starting pipeline animation...');
-      await new Promise(resolve => setTimeout(resolve, 300)); // Wait a bit for scroll
-
-      // Start both animations in parallel
-      startPipelineTimeline();
-      showRealProcessingStages(bestPromptEl, 4);
-
-      // 2. Call Outcome Runner API with data from all layers
-      console.log('[Promptly] Calling Outcome Runner API...');
       const apiBase = window.PROMPTLY_API_BASE || '';
       
-      // Collect data from all layers - prefer PromptlyDataAggregator if available, otherwise manual collection
-      let requestBody;
-      if (typeof PromptlyDataAggregator !== 'undefined') {
-        // Use PromptlyDataAggregator to collect data from all 3 layers
-        const aggregator = new PromptlyDataAggregator();
-        aggregator.collect();
-        requestBody = aggregator.toAPI();
-        
-        // Log summary of collected data
-        const summary = aggregator.getSummary();
-        console.log('[Promptly] Data collected from layers:', summary.description);
-        console.log('[Promptly] Layer 2 used:', summary.layer2.used);
-        console.log('[Promptly] Layer 3 used:', summary.layer3.used);
-      } else {
-        // Fallback: Manual collection of Layer 2/3 fields
-        const blueprintInstructions = document.getElementById('blueprintInstructions')?.value?.trim() || null;
-        const blueprintExamples = document.getElementById('blueprintExamples')?.value?.trim() || null;
-        const blueprintConstraints = document.getElementById('blueprintConstraints')?.value?.trim() || null;
-        
-        const posNegDataset = document.getElementById('posNegDataset')?.value?.trim() || null;
-        const schemaTemplate = document.getElementById('schemaTemplate')?.value?.trim() || null;
-        const optimizationKnobs = document.getElementById('optimizationKnobs')?.value?.trim() || null;
-        
-        const examples = document.getElementById('examples')?.value?.trim() || null;
+      // 1. Start pipeline execution
+      const response = await fetch(`${apiBase}/api/pipeline/run`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          idea: task,
+          attachments: [],
+          skipQuestions: false,
+          model: currentModel
+        })
+      });
 
-        requestBody = {
-          task: task,
-          input: examples,
-          n: DEFAULT_CANDIDATE_COUNT,
-          model: currentModel,
-          blueprintInstructions: blueprintInstructions,
-          blueprintExamples: blueprintExamples,
-          blueprintConstraints: blueprintConstraints,
-          posNegDataset: posNegDataset,
-          schemaTemplate: schemaTemplate,
-          optimizationKnobs: optimizationKnobs
-        };
+      if (!response.ok) {
+        throw new Error(`Pipeline start failed: ${response.statusText}`);
       }
-      
-      try {
-        const response = await fetch(`${apiBase}/api/outcome-runs`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(requestBody)
-        });
-        
-        // ✅ Cancel the processing animation before updating content
-        cancelProcessingAnimation();
-        
-        // ✅ Validate response status before parsing JSON
-        if (!response.ok) {
-          // Try to parse error message from response body
-          let errorMsg = `HTTP ${response.status}: ${response.statusText}`;
-          let isLlmError = false;
-          try {
-            const errorData = await response.json();
-            errorMsg = errorData.error || errorMsg;
-          } catch {
-            // Ignore JSON parse error, use default error message
-          }
-          
-          console.warn('[Promptly] API returned HTTP error:', errorMsg);
-          
-          // Determine error type for specific messaging
-          let userMessage = errorMsg;
-          let pipelineMessage = 'Pipeline stopped due to server error.';
-          
-          if (response.status === 503 || errorMsg.includes('LLM disabled')) {
-            isLlmError = true;
-            userMessage = 'LLM features are unavailable. The API key may not be configured.';
-            pipelineMessage = '⚠️ LLM Unavailable - Check API configuration';
-          } else if (response.status === 502) {
-            isLlmError = true;
-            if (errorMsg.includes('Invalid OpenAI API Key') || errorMsg.includes('invalid_api_key')) {
-              userMessage = 'Invalid API Key. Please check your OPENAI_API_KEY configuration.';
-            } else {
-              userMessage = 'AI service temporarily unavailable. Please try again later.';
-            }
-            pipelineMessage = '⚠️ AI Service Error - Try again later';
-          }
-          
-          if (bestPromptEl) {
-            const displayMsg = isLlmError 
-              ? `⚠️ LLM Unavailable\n\n${userMessage}\n\nThe optimization pipeline requires a working LLM connection.\nPlease ensure OPENAI_API_KEY is configured correctly.`
-              : `❌ Server Error\n\n${errorMsg}\n\nPlease try again later.`;
-            bestPromptEl.value = displayMsg;
-            bestPromptEl.classList.remove('processing-animation', 'success-highlight');
-            bestPromptEl.classList.add('error-state');
-            bestPromptEl.style.borderColor = '#EF4444';
-          }
 
-          stopPipelineTimeline(pipelineMessage);
+      const { runId, streamUrl } = await response.json();
+      console.log('[Promptly] Pipeline started, runId:', runId);
 
-          resetMetrics();
-          showToast(`⚠ ${userMessage}`, 'error');
-          return;
+      // 2. Connect to SSE stream
+      const fullStreamUrl = `${apiBase}${streamUrl}`;
+      currentPipelineEventSource = new EventSource(fullStreamUrl);
+
+      currentPipelineEventSource.onopen = () => {
+        console.log('[Promptly] SSE connection opened');
+      };
+
+      currentPipelineEventSource.onerror = (err) => {
+        console.error('[Promptly] SSE connection error:', err);
+        if (currentPipelineEventSource && currentPipelineEventSource.readyState === EventSource.CLOSED) {
+          stopPipelineTimeline('Connection lost');
+          showToast('⚠ Pipeline connection lost', 'error');
         }
-        
-        const data = await response.json();
-        console.log('[Promptly] API response:', data);
-        
-        // ✅ Process API response
-        if (data.ok && data.result && data.result.best) {
-          // Success - display real best prompt content
-          const bestContent = data.result.best.content;
+      };
+
+      // Handle all event types
+      const eventTypes = ['connected', 'stage-start', 'stage-progress', 'stage-complete', 'stage-skipped', 'error', 'complete'];
+      eventTypes.forEach(eventType => {
+        currentPipelineEventSource.addEventListener(eventType, (e) => {
+          try {
+            const data = JSON.parse(e.data);
+            handlePipelineEvent(runId, eventType, data);
+            
+            // Close connection on completion
+            if (eventType === 'complete') {
+              if (currentPipelineEventSource) {
+                currentPipelineEventSource.close();
+                currentPipelineEventSource = null;
+              }
+              runBtn.disabled = false;
+              runBtn.style.opacity = '1';
+              runBtn.style.cursor = 'pointer';
+              runBtn.textContent = originalText;
+            }
+          } catch (err) {
+            console.error('[Promptly] Failed to parse SSE event:', err);
+          }
+        });
+      });
+      
+    } catch (err) {
+      console.error('[Promptly] Pipeline execution failed:', err);
+      
+      if (currentPipelineEventSource) {
+        currentPipelineEventSource.close();
+        currentPipelineEventSource = null;
+      }
+
+      stopPipelineTimeline('Pipeline failed to start');
+      
+      if (bestPromptEl) {
+        bestPromptEl.value = `❌ Pipeline Error\n\n${err.message}\n\nPlease try again.`;
+        bestPromptEl.classList.remove('processing-animation', 'success-highlight');
+        bestPromptEl.classList.add('error-state');
+        bestPromptEl.style.borderColor = '#EF4444';
+      }
+
+      resetMetrics();
+      showToast(`⚠ Pipeline failed: ${err.message}`, 'error');
+      
+      runBtn.disabled = false;
+      runBtn.style.opacity = '1';
+      runBtn.style.cursor = 'pointer';
+      runBtn.textContent = originalText;
+    }
 
           if (bestPromptEl) {
             if (bestContent) {

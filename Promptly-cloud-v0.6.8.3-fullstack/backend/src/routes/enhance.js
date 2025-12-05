@@ -204,7 +204,8 @@ enhanceRouter.post("/structure", async (req, res) => {
 
 Return only the enhanced prompt. Do not add explanations.`;
 
-    const { text: enhanced } = await chatText({ system, user: fullPrompt });
+    const { text: enhanced, model: modelUsed, completionId } = await chatText({ system, user: fullPrompt });
+    logModelUsage("/enhance/structure", modelUsed, completionId);
 
     res.json({
       ok: true,
@@ -248,7 +249,8 @@ enhanceRouter.post("/style", async (req, res) => {
 
 Return only the enhanced prompt. Do not add explanations.`;
 
-    const { text: enhanced } = await chatText({ system, user: fullPrompt });
+    const { text: enhanced, model: modelUsed, completionId } = await chatText({ system, user: fullPrompt });
+    logModelUsage("/enhance/style", modelUsed, completionId);
 
     res.json({
       ok: true,
@@ -292,7 +294,8 @@ enhanceRouter.post("/simplify", async (req, res) => {
 
 Return only the simplified prompt. Do not add explanations.`;
 
-    const { text: enhanced } = await chatText({ system, user: fullPrompt });
+    const { text: enhanced, model: modelUsed, completionId } = await chatText({ system, user: fullPrompt });
+    logModelUsage("/enhance/simplify", modelUsed, completionId);
 
     res.json({
       ok: true,
@@ -348,7 +351,8 @@ Return ONLY a JSON object in this exact format:
   ]
 }`;
 
-    const { data: result } = await chatJson({ system, user: fullPrompt });
+    const { data: result, model: modelUsed, completionId } = await chatJson({ system, user: fullPrompt });
+    logModelUsage("/enhance/score", modelUsed, completionId);
 
     res.json({
       ok: true,
@@ -403,7 +407,8 @@ Return ONLY a JSON object in this exact format:
 
 If no issues found, return {"issues": []}`;
 
-    const { data: result } = await chatJson({ system, user: fullPrompt });
+    const { data: result, model: modelUsed, completionId } = await chatJson({ system, user: fullPrompt });
+    logModelUsage("/enhance/validate", modelUsed, completionId);
 
     res.json({
       ok: true,

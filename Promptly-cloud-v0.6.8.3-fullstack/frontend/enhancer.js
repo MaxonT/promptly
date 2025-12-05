@@ -123,7 +123,10 @@
         return null;
       }
       log(`Enhancer OK on ${path}`);
-      
+      if (data.result?.modelUsed) {
+        log(`LLM model in use: ${data.result.modelUsed} (completion ${data.result.completionId || 'n/a'})`);
+      }
+
       // Clear attachments after successful request
       clearAttachments();
       

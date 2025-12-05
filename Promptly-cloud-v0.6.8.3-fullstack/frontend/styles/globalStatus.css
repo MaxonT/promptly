@@ -19,12 +19,18 @@
   transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease;
   max-width: 320px;
   min-width: 200px;
+  cursor: pointer;
 }
 
 .global-status-bar.hidden {
   transform: translateY(20px) scale(0.95);
   opacity: 0;
   pointer-events: none;
+}
+
+.global-status-bar:focus-visible {
+  outline: 2px solid rgba(124, 58, 237, 0.6);
+  outline-offset: 3px;
 }
 
 /* Light theme */

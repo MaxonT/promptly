@@ -115,6 +115,27 @@
   function getStoredWizardSession(){try{const raw=localStorage.getItem(WIZARD_SESSION_KEY);return raw?JSON.parse(raw):null;}catch{return null;}}
   function setStoredWizardSession(sessionId){if(!sessionId)return;try{localStorage.setItem(WIZARD_SESSION_KEY,JSON.stringify({sessionId,startedAt:Date.now()}));}catch{}}
   function clearStoredWizardSession(){try{localStorage.removeItem(WIZARD_SESSION_KEY);}catch{}}
+  function navigateToWizardSession(){
+    const session = getStoredWizardSession();
+    const sessionId = session?.sessionId;
+    const url = new URL("/wizard.html", window.location.origin);
+    if (sessionId) {
+      url.searchParams.set("sessionId", sessionId);
+    }
+    window.location.assign(url.toString());
+  }
+  function bindWizardIndicatorInteractions(){
+    if(!wizardIndicatorEl || wizardIndicatorEl.dataset.bound==="1")return;
+    const handleActivate=(evt)=>{
+      evt.preventDefault();
+      navigateToWizardSession();
+    };
+    wizardIndicatorEl.addEventListener("click",handleActivate);
+    wizardIndicatorEl.addEventListener("keydown",(evt)=>{
+      if(evt.key==="Enter"||evt.key===" "||evt.key==="Spacebar"){handleActivate(evt);} 
+    });
+    wizardIndicatorEl.dataset.bound="1";
+  }
   function ensureWizardIndicator(){
     if(wizardIndicatorEl)return;
     wizardIndicatorEl=document.getElementById("wizardStatusIndicator");
@@ -124,6 +145,10 @@
       wizardIndicatorEl.className="wizard-status-indicator";
       document.body.appendChild(wizardIndicatorEl);
     }
+    wizardIndicatorEl.removeAttribute("onclick");
+    wizardIndicatorEl.setAttribute("role","button");
+    wizardIndicatorEl.setAttribute("tabindex","0");
+    wizardIndicatorEl.setAttribute("aria-label","Return to active Question Wizard session");
     if(!wizardIndicatorEl.querySelector(".wizard-status-indicator__content")){
       wizardIndicatorEl.innerHTML=`
         <span class="spinner" aria-hidden="true"></span>
@@ -171,17 +196,7 @@
       spin.setAttribute("aria-hidden","true");
       wizardIndicatorEl.prepend(spin);
     }
-    wizardIndicatorEl.onclick=()=>{
-      const session = getStoredWizardSession();
-      const sessionId = session?.sessionId;
-      if (sessionId) {
-        const url = new URL("wizard.html", window.location.href);
-        url.searchParams.set("sessionId", sessionId);
-        window.location.href = url.toString();
-      } else {
-        window.location.href = "wizard.html";
-      }
-    };
+    bindWizardIndicatorInteractions();
   }
   function hideWizardIndicator(){if(wizardIndicatorEl){wizardIndicatorEl.classList.remove("active");}}
   function updateWizardProgress(answered,total){

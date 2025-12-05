@@ -19,6 +19,8 @@ export class LlmDisabledError extends Error {
   }
 }
 
+const DEFAULT_TEMPERATURE = 0.2;
+
 /**
  * Resolve the actual OpenAI model name from a Promptly model ID
  * @param {string} model - The model ID (e.g., 'promptly-mini' or 'gpt-4o-mini')
@@ -60,6 +62,7 @@ export async function chatJson({ system, user, model, promptlyModelId }) {
   
   const completion = await client.chat.completions.create({
     model: usedModel,
+    temperature: DEFAULT_TEMPERATURE,
     response_format: { type: "json_object" },
     messages: [
       { role: "system", content: enhancedSystem },
@@ -107,6 +110,7 @@ export async function chatText({ system, user, model, promptlyModelId }) {
   
   const completion = await client.chat.completions.create({
     model: usedModel,
+    temperature: DEFAULT_TEMPERATURE,
     messages: [
       { role: "system", content: enhancedSystem },
       { role: "user", content: user }

@@ -2824,10 +2824,6 @@ html[data-theme="light"] .text-keyword {
   border: 1px solid rgba(255, 255, 255, 0.12);
   backdrop-filter: blur(8px);
   transition: transform 180ms ease, box-shadow 180ms ease, opacity 180ms ease;
-  appearance: none;
-  text-align: left;
-  font: inherit;
-  pointer-events: auto;
 }
 
 .wizard-status-indicator.active {

@@ -61,4 +61,7 @@ See `others/openapi.yaml`.
 - **Render (Backend)**: `OPENAI_API_KEY`, `CORS_ORIGIN`, `NODE_ENV`, `PORT` (optional)
 - **Vercel (Frontend)**: 直接编辑 `frontend/config.js`（无需环境变量）
 
+## Prompt Optimization Process
+- 了解 Promptly 如何分层处理输入、模板化编译，并通过可用性提示与错误捕获保持输出稳定，参见 [docs/OPTIMIZATION_PROCESS.md](docs/OPTIMIZATION_PROCESS.md).
+
 License: MIT

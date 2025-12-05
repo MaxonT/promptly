@@ -1038,23 +1038,97 @@ html[data-theme="light"] .wizard-mode-option.is-selected{
     box-shadow:0 0 0 8px rgba(245,158,11,0), 0 0 30px 10px rgba(245,158,11,0.8);
   }
 }
+
+/* Fixed top warning banner */
+.wizard-running-warning{
+  position:fixed;
+  top:60px;
+  left:0;
+  right:0;
+  z-index:2000;
+  background:linear-gradient(135deg, rgba(245,158,11,0.95), rgba(251,191,36,0.95));
+  border-bottom:3px solid #F59E0B;
+  box-shadow:0 4px 20px rgba(245,158,11,0.6), 0 0 40px rgba(245,158,11,0.4);
+  animation:slideDown 0.3s ease-out, pulse-glow-banner 2s ease-in-out infinite;
+  backdrop-filter:blur(8px);
+}
+.wizard-running-warning.hidden{
+  display:none;
+}
+.wizard-running-warning-content{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:1rem;
+  padding:1rem 2rem;
+  color:#FFF;
+  font-size:1.1rem;
+  font-weight:900;
+  text-transform:uppercase;
+  letter-spacing:0.15em;
+  text-shadow:0 2px 4px rgba(0,0,0,0.3);
+}
+.wizard-running-warning-icon{
+  font-size:1.8rem;
+  animation:bounce-icon 1s ease-in-out infinite;
+}
+.wizard-running-warning-text{
+  flex:1;
+  text-align:center;
+}
+@keyframes slideDown{
+  from{
+    transform:translateY(-100%);
+    opacity:0;
+  }
+  to{
+    transform:translateY(0);
+    opacity:1;
+  }
+}
+@keyframes pulse-glow-banner{
+  0%, 100%{
+    box-shadow:0 4px 20px rgba(245,158,11,0.6), 0 0 40px rgba(245,158,11,0.4);
+  }
+  50%{
+    box-shadow:0 4px 30px rgba(245,158,11,0.9), 0 0 60px rgba(245,158,11,0.7);
+  }
+}
+@keyframes bounce-icon{
+  0%, 100%{
+    transform:translateY(0) scale(1);
+  }
+  50%{
+    transform:translateY(-4px) scale(1.1);
+  }
+}
 .wizard-loading-warning{
   display:flex !important;
   align-items:center;
   justify-content:center;
-  gap:0.5rem;
-  margin-top:1.5rem;
-  padding:1rem 1.5rem;
-  background:rgba(245,158,11,0.2) !important;
-  border:3px solid #F59E0B !important;
-  border-radius:12px;
-  font-size:1.1rem !important;
-  font-weight:800 !important;
-  color:#FCD34D !important;
+  gap:0.75rem;
+  margin-top:2rem !important;
+  padding:1.25rem 2rem !important;
+  background:rgba(245,158,11,0.3) !important;
+  border:4px solid #F59E0B !important;
+  border-radius:16px;
+  font-size:1.3rem !important;
+  font-weight:900 !important;
+  color:#FFF !important;
+  text-shadow:0 2px 4px rgba(0,0,0,0.3);
   animation:pulse-attention 1.5s ease-in-out infinite !important;
   text-transform:uppercase;
-  letter-spacing:0.05em;
-  box-shadow:0 4px 20px rgba(245,158,11,0.5);
+  letter-spacing:0.1em;
+  box-shadow:0 0 30px rgba(245,158,11,0.8), 0 4px 20px rgba(0,0,0,0.5) !important;
+  position:relative;
+  z-index:1000;
+  min-width:400px;
+  backdrop-filter:blur(4px);
+}
+.wizard-loading-warning span:first-child,
+.wizard-loading-warning span:last-child{
+  font-size:2rem !important;
+  animation:none;
 }
 
 /* Modern regenerate icon with SVG */

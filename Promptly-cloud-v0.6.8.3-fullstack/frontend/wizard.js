@@ -892,7 +892,15 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
     startBtn.disabled = true;
     startBtn.textContent = "Starting...";
     cancelWizardBtn?.classList.remove("hidden");
-    setWizardStatus(`Generating ${modeLabels[currentMode]} mode questions... (${modeEstimates[currentMode]})`, "info", { showTicks: true });
+    
+    // Show fixed top warning banner
+    const warningBanner = document.getElementById("wizardRunningWarning");
+    if (warningBanner) {
+      warningBanner.classList.remove("hidden");
+    }
+    
+    // Initial status with warning - will be updated when loading starts
+    setWizardStatus(`⚠️ DO NOT EXIT THIS PAGE ⚠️ Generating ${modeLabels[currentMode]} mode questions...`, "warn", { showTicks: true });
 
     // Global status removed - no cross-page indicator
 
@@ -917,12 +925,15 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
         <div class="wizard-loading-text wizard-loading-main" style="font-size:1rem;margin-top:0.5rem;">Generating questions...</div>
         <div class="wizard-loading-text wizard-loading-elapsed" style="font-size:0.875rem;opacity:0.8;margin-top:0.3rem;">0s elapsed • ~${Math.round((estimate.min + estimate.max) / 2)}s estimated</div>
         <div class="wizard-loading-text" style="font-size:0.75rem;margin-top:0.5rem;opacity:0.6;">Analyzing your project to create personalized questions</div>
-        <div class="wizard-loading-warning">
-          <span style="font-size:1.5rem;">⚠️</span>
+        <div class="wizard-loading-warning" style="display:flex !important; visibility:visible !important; opacity:1 !important;">
+          <span>⚠️</span>
           <span>DO NOT EXIT THIS PAGE</span>
-          <span style="font-size:1.5rem;">⚠️</span>
+          <span>⚠️</span>
         </div>
       `);
+      
+      // Also add warning to status bar
+      setWizardStatus(`Generating ${modeLabels[currentMode]} mode questions... ⚠️ DO NOT EXIT THIS PAGE ⚠️`, "warn", { showTicks: true });
       
       // Start real-time elapsed counter
       const elapsedCounterRef = setInterval(() => {
@@ -1038,6 +1049,12 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
       renderCurrentPage();
       log(`Loaded ${allQuestions.length} questions (showing page 1/${getTotalPages()})`);
 
+      // Hide warning banner when questions are loaded
+      const warningBanner = document.getElementById("wizardRunningWarning");
+      if (warningBanner) {
+        warningBanner.classList.add("hidden");
+      }
+      
       setWizardStatus("Answer the questions below. Use Next/Back to navigate.");
       cancelWizardBtn?.classList.add("hidden");
       
@@ -1060,8 +1077,14 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
     } catch (err) {
       if (err.name === "AbortError") {
         log("Wizard start cancelled by user.");
+        
+        // Hide warning banner on cancel
+        const warningBanner = document.getElementById("wizardRunningWarning");
+        if (warningBanner) {
+          warningBanner.classList.add("hidden");
+        }
+        
         setWizardStatus("Wizard cancelled. You can edit your idea and start again.", "warn");
-        // Hide global status on cancel
         // Clear status indicator on cancellation
         window.promptlyWizardSession?.clear?.();
       } else {

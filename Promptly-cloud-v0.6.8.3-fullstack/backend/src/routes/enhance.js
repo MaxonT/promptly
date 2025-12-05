@@ -16,7 +16,7 @@
  */
 
 import express from "express";
-import { chatJson, chatText } from "../lib/openaiClient.js";
+import { chatJson, chatText, LlmDisabledError } from "../lib/openaiClient.js";
 
 const enhanceRouter = express.Router();
 
@@ -135,6 +135,22 @@ function logAttachments(attachments, endpoint) {
   });
 }
 
+function handleEnhanceError(res, endpoint, err, defaultMessage) {
+  console.error(`[promptly] ${endpoint} error:`, err);
+
+  if (err instanceof LlmDisabledError || err.code === "LLM_DISABLED") {
+    return res.status(503).json({
+      ok: false,
+      error: "LLM disabled: set OPENAI_API_KEY to enable enhancement"
+    });
+  }
+
+  return res.status(500).json({
+    ok: false,
+    error: err.message || defaultMessage
+  });
+}
+
 /**
  * POST /api/enhance/structure
  * Enhance prompt with structural improvements
@@ -177,11 +193,7 @@ Return only the enhanced prompt. Do not add explanations.`;
     });
 
   } catch (err) {
-    console.error("[promptly] /enhance/structure error:", err);
-    res.status(500).json({
-      ok: false,
-      error: err.message || "Enhancement failed"
-    });
+    return handleEnhanceError(res, "/enhance/structure", err, "Enhancement failed");
   }
 });
 
@@ -224,11 +236,7 @@ Return only the enhanced prompt. Do not add explanations.`;
     });
 
   } catch (err) {
-    console.error("[promptly] /enhance/style error:", err);
-    res.status(500).json({
-      ok: false,
-      error: err.message || "Enhancement failed"
-    });
+    return handleEnhanceError(res, "/enhance/style", err, "Enhancement failed");
   }
 });
 
@@ -271,11 +279,7 @@ Return only the simplified prompt. Do not add explanations.`;
     });
 
   } catch (err) {
-    console.error("[promptly] /enhance/simplify error:", err);
-    res.status(500).json({
-      ok: false,
-      error: err.message || "Enhancement failed"
-    });
+    return handleEnhanceError(res, "/enhance/simplify", err, "Enhancement failed");
   }
 });
 
@@ -330,11 +334,7 @@ Return ONLY a JSON object in this exact format:
     });
 
   } catch (err) {
-    console.error("[promptly] /enhance/score error:", err);
-    res.status(500).json({
-      ok: false,
-      error: err.message || "Scoring failed"
-    });
+    return handleEnhanceError(res, "/enhance/score", err, "Scoring failed");
   }
 });
 
@@ -388,11 +388,7 @@ If no issues found, return {"issues": []}`;
     });
 
   } catch (err) {
-    console.error("[promptly] /enhance/validate error:", err);
-    res.status(500).json({
-      ok: false,
-      error: err.message || "Validation failed"
-    });
+    return handleEnhanceError(res, "/enhance/validate", err, "Validation failed");
   }
 });
 

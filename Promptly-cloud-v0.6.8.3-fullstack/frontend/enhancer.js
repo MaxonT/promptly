@@ -11,6 +11,7 @@
   const scoreResultEl = document.getElementById("scoreResult");
   const validationResultEl = document.getElementById("validationResult");
   const logEl = document.getElementById("enhancerLog");
+  const llmStatusEl = document.getElementById("llmStatus");
 
   /**
    * ATTACHMENT FEATURE
@@ -25,6 +26,43 @@
     const ts = new Date().toISOString().slice(11, 19);
     logEl.textContent += `[${ts}] ${line}\n`;
     logEl.scrollTop = logEl.scrollHeight;
+  }
+
+  function setLlmStatus(message, level = "ok") {
+    if (!llmStatusEl) return;
+    llmStatusEl.textContent = message;
+    llmStatusEl.classList.remove("hidden", "enhancer-status--ok", "enhancer-status--warning", "enhancer-status--error");
+    llmStatusEl.classList.add(`enhancer-status--${level}`);
+  }
+
+  function disableLlmActions() {
+    [runEnhanceBtn, runScoreBtn, runValidateBtn, attachBtn].forEach((btn) => {
+      if (btn) btn.disabled = true;
+    });
+  }
+
+  async function checkLlmStatus() {
+    try {
+      const res = await fetch("/api/settings");
+      const data = await res.json();
+
+      if (!res.ok || !data.ok) {
+        throw new Error(`Settings unavailable (HTTP ${res.status})`);
+      }
+
+      const enabled = !!data.settings?.llmEnabled;
+      const model = data.settings?.defaultModel || "gpt-4o-mini";
+      if (!enabled) {
+        setLlmStatus("LLM features are disabled. Set OPENAI_API_KEY on the backend to enable prompt rewriting.", "error");
+        disableLlmActions();
+        log("LLM disabled: set OPENAI_API_KEY on backend");
+      } else {
+        setLlmStatus(`LLM online. Using model ${model} for enhancement.`, "ok");
+      }
+    } catch (err) {
+      setLlmStatus("Unable to verify LLM status. Enhancement may not work until the backend is reachable.", "warning");
+      log(`Failed to load settings: ${err.message}`);
+    }
   }
 
   function getPrompt() {
@@ -75,11 +113,20 @@
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok || !data.ok) {
-        log(`Enhancer error on ${path}: HTTP ${res.status} ${JSON.stringify(data)}`);
+        const errorMsg = data?.error || `HTTP ${res.status}`;
+        log(`Enhancer error on ${path}: ${errorMsg}`);
+        showError(`Enhancer unavailable: ${errorMsg}`);
+        if (res.status === 503 && errorMsg.toLowerCase().includes("llm")) {
+          setLlmStatus(errorMsg, "error");
+          disableLlmActions();
+        }
         return null;
       }
       log(`Enhancer OK on ${path}`);
-      
+      if (data.result?.modelUsed) {
+        log(`LLM model in use: ${data.result.modelUsed} (completion ${data.result.completionId || 'n/a'})`);
+      }
+
       // Clear attachments after successful request
       clearAttachments();
       
@@ -314,5 +361,6 @@
   runValidateBtn?.addEventListener("click", onRunValidate);
   copyEnhancedBtn?.addEventListener("click", onCopyEnhanced);
 
+  checkLlmStatus();
   log("Prompt Enhancer loaded. Paste a prompt to get started.");
 })();

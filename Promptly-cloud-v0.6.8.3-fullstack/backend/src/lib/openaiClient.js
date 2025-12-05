@@ -3,6 +3,10 @@ import { resolveModelName, getSystemPromptSuffix, buildSystemPrompt } from "./mo
 
 const apiKey = process.env.OPENAI_API_KEY || "";
 
+// Resolve the configured default model (prefers OPENAI_DEFAULT_MODEL but
+// also supports legacy OPENAI_MODEL).
+const DEFAULT_MODEL = process.env.OPENAI_DEFAULT_MODEL || process.env.OPENAI_MODEL || "gpt-4o-mini";
+
 let client = null;
 
 if (apiKey) {
@@ -19,6 +23,8 @@ export class LlmDisabledError extends Error {
   }
 }
 
+const DEFAULT_TEMPERATURE = 0.2;
+
 /**
  * Resolve the actual OpenAI model name from a Promptly model ID
  * @param {string} model - The model ID (e.g., 'promptly-mini' or 'gpt-4o-mini')
@@ -30,7 +36,15 @@ function resolveModel(model) {
     return resolveModelName(model);
   }
   // Otherwise use as-is (already an OpenAI model name)
-  return model || process.env.OPENAI_MODEL || "gpt-4o-mini";
+  return model || DEFAULT_MODEL;
+}
+
+export function getResolvedDefaultModel() {
+  return resolveModel(DEFAULT_MODEL);
+}
+
+export function isLlmEnabled() {
+  return !!client;
 }
 
 /**
@@ -60,6 +74,7 @@ export async function chatJson({ system, user, model, promptlyModelId }) {
   
   const completion = await client.chat.completions.create({
     model: usedModel,
+    temperature: DEFAULT_TEMPERATURE,
     response_format: { type: "json_object" },
     messages: [
       { role: "system", content: enhancedSystem },
@@ -75,7 +90,9 @@ export async function chatJson({ system, user, model, promptlyModelId }) {
   }
   return {
     data: parsed,
-    usage: completion.usage || {}
+    usage: completion.usage || {},
+    model: usedModel,
+    completionId: completion.id || null
   };
 }
 
@@ -107,6 +124,7 @@ export async function chatText({ system, user, model, promptlyModelId }) {
   
   const completion = await client.chat.completions.create({
     model: usedModel,
+    temperature: DEFAULT_TEMPERATURE,
     messages: [
       { role: "system", content: enhancedSystem },
       { role: "user", content: user }
@@ -114,6 +132,8 @@ export async function chatText({ system, user, model, promptlyModelId }) {
   });
   return {
     text: completion.choices?.[0]?.message?.content || "",
-    usage: completion.usage || {}
+    usage: completion.usage || {},
+    model: usedModel,
+    completionId: completion.id || null
   };
 }

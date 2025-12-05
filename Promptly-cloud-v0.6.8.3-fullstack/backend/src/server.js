@@ -4,6 +4,7 @@ import helmet from "helmet";
 import cookieParser from "cookie-parser";
 import dotenv from "dotenv";
 import { db } from "./lib/db.js";
+import { getResolvedDefaultModel, isLlmEnabled } from "./lib/openaiClient.js";
 import { authRouter } from "./routes/auth.js";
 import { docRouter } from "./routes/doc.js";
 import { shareRouter } from "./routes/share.js";
@@ -30,8 +31,8 @@ app.get("/api/health", (req, res) => {
 // settings endpoint used by settings.html
 app.get("/api/settings", (req, res) => {
   const env = process.env.NODE_ENV || "development";
-  const llmEnabled = !!process.env.OPENAI_API_KEY;
-  const defaultModel = process.env.OPENAI_DEFAULT_MODEL || "gpt-4o-mini";
+  const llmEnabled = isLlmEnabled();
+  const defaultModel = getResolvedDefaultModel();
   const outcomeModel = process.env.OUTCOME_MODEL || null;
   const maxCandidates = Number(process.env.MAX_CANDIDATES || 8);
 

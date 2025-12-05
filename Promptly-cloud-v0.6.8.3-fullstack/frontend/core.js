@@ -64,9 +64,8 @@
     const cx=w/2,cy=h*0.9,r=Math.min(w,h)*0.75,start=Math.PI,end=2*Math.PI;ctx.lineWidth=14;ctx.strokeStyle="#333a";ctx.beginPath();ctx.arc(cx,cy,r*0.5,start,end);ctx.stroke();
     ctx.strokeStyle=getComputedStyle(document.documentElement).getPropertyValue("--accent")||"#06b6d4";ctx.beginPath();ctx.arc(cx,cy,r*0.5,start,start+(end-start)*Math.max(0,Math.min(1,p)));ctx.stroke();
     ctx.fillStyle=getComputedStyle(document.documentElement).getPropertyValue("--text")||"#eaf0fb";ctx.font="bold 24px Inter, system-ui";ctx.textAlign="center";ctx.fillText(Math.round(p*100)+"%",cx,cy-10);}
-  const runIdParam = new URLSearchParams(window.location.search).get("runId");
   function getRunUrl() {
-    return runIdParam ? `/api/runs/${runIdParam}` : "/api/runs/latest";
+    return "/api/outcome-runs/latest";
   }
   function formatPercent(value) {
     return value == null ? "—" : `${(value * 100).toFixed(1)}%`;
@@ -103,10 +102,14 @@
   async function fetchLatestRun() {
     try {
       const res = await fetch(getRunUrl());
+      if (!res.ok) {
+        console.warn("[promptly] fetchLatestRun returned non-OK status", res.status);
+        return { ok: false, error: `HTTP ${res.status}` };
+      }
       return await res.json();
     } catch (err) {
       console.error("[promptly] fetchLatestRun error", err);
-      return null;
+      return { ok: false, error: err.message };
     }
   }
   function getStoredWizardSession(){try{const raw=localStorage.getItem(WIZARD_SESSION_KEY);return raw?JSON.parse(raw):null;}catch{return null;}}
@@ -168,7 +171,17 @@
       spin.setAttribute("aria-hidden","true");
       wizardIndicatorEl.prepend(spin);
     }
-    wizardIndicatorEl.onclick=()=>{window.location.href="wizard.html";};
+    wizardIndicatorEl.onclick=()=>{
+      const session = getStoredWizardSession();
+      const sessionId = session?.sessionId;
+      if (sessionId) {
+        const url = new URL("wizard.html", window.location.href);
+        url.searchParams.set("sessionId", sessionId);
+        window.location.href = url.toString();
+      } else {
+        window.location.href = "wizard.html";
+      }
+    };
   }
   function hideWizardIndicator(){if(wizardIndicatorEl){wizardIndicatorEl.classList.remove("active");}}
   function updateWizardProgress(answered,total){
@@ -262,19 +275,37 @@
 
   async function refreshMetrics() {
     const data = await fetchLatestRun();
-    if (!data) {
-      console.warn("[promptly] refreshMetrics: No data returned from fetchLatestRun()");
-      return;
-    }
-    const run = data.run || null;
-    if (!run) {
-      console.warn("[promptly] refreshMetrics: No 'run' property in fetched data");
-      return;
-    }
-    renderMetrics(run.metrics);
     const bestPromptEl = document.getElementById("bestPrompt");
+
+    if (!data || !data.ok || !data.run) {
+      console.warn("[promptly] refreshMetrics: No data returned from fetchLatestRun()", data?.error);
+      if (bestPromptEl) {
+        bestPromptEl.value = "❌ Could not load optimized prompt. Please try running the optimizer again.";
+        bestPromptEl.classList.add("error-state");
+        bestPromptEl.classList.remove("success-highlight", "processing-animation");
+        bestPromptEl.style.borderColor = "#EF4444";
+      }
+      return;
+    }
+
+    const run = data.run;
+    const bestContent = run?.result?.best?.content || "";
+    const metrics = run.metrics || run.result?.metrics || run.result?.best?.metrics || {};
+
+    renderMetrics(metrics);
+
     if (bestPromptEl) {
-      bestPromptEl.value = formatBestPrompt(run.raw_output);
+      if (bestContent) {
+        bestPromptEl.value = formatBestPrompt(bestContent);
+        bestPromptEl.classList.remove("error-state", "processing-animation");
+        bestPromptEl.classList.add("success-highlight");
+        bestPromptEl.style.borderColor = "#22C55E";
+      } else {
+        bestPromptEl.value = "❌ Backend returned an empty optimized prompt. Please retry.";
+        bestPromptEl.classList.add("error-state");
+        bestPromptEl.classList.remove("success-highlight", "processing-animation");
+        bestPromptEl.style.borderColor = "#EF4444";
+      }
     }
   }
   // Expose refreshMetrics globally so other scripts can call it

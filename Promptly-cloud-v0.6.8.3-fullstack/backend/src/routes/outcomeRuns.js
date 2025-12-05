@@ -336,6 +336,45 @@ outcomeRunsRouter.post("/", (req, res) => {
   });
 });
 
+// GET /api/outcome-runs/latest - return the most recent outcome run with best prompt content
+outcomeRunsRouter.get("/latest", (req, res) => {
+  const row = db
+    .prepare("SELECT * FROM outcome_runs ORDER BY created_at DESC LIMIT 1")
+    .get();
+
+  if (!row) {
+    return res.status(404).json({ ok: false, error: "No outcome runs found" });
+  }
+
+  let request = null;
+  let result = null;
+
+  try {
+    request = row.request_json ? JSON.parse(row.request_json) : null;
+  } catch (e) {
+    console.warn("[outcomeRuns] Failed to parse request_json", e);
+  }
+
+  try {
+    result = row.result_json ? JSON.parse(row.result_json) : null;
+  } catch (e) {
+    console.warn("[outcomeRuns] Failed to parse result_json", e);
+  }
+
+  const best = result?.best || null;
+  const metrics = result?.metrics || best?.metrics || null;
+
+  return res.json({
+    ok: true,
+    run: {
+      ...row,
+      request,
+      result,
+      metrics
+    }
+  });
+});
+
 /**
  * GET /api/outcome-runs/models/status
  * 

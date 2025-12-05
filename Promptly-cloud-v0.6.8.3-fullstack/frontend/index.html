@@ -2018,6 +2018,12 @@ document.addEventListener('DOMContentLoaded', () => {
     switch (event) {
       case 'connected':
         addLogEntry('spec', 'Pipeline connected', { runId });
+        // Show AI reasoning chain
+        showAIReasoningChain('spec', [
+          '🔍 Analyzing user input...',
+          '📝 Extracting structured information...',
+          '🎯 Identifying key requirements...'
+        ]);
         break;
 
       case 'stage-start':
@@ -2030,6 +2036,22 @@ document.addEventListener('DOMContentLoaded', () => {
           outcome: 'Outcome Runner'
         };
         addLogEntry(data.stage, `🚀 ${stageNames[data.stage]}: ${data.message}`);
+        
+        // Activate visual for this stage
+        const visual = document.querySelector(`.pipeline-visual[data-step="${data.stage}"]`);
+        if (visual) {
+          visual.classList.add('active');
+        }
+        
+        // Show stage-specific AI reasoning
+        const stageReasonings = {
+          spec: ['🔍 Analyzing user input...', '📝 Extracting structured spec...', '🎯 Identifying requirements...'],
+          question: ['🤔 Analyzing spec gaps...', '❓ Generating clarifying questions...', '📊 Estimating completeness...'],
+          agents: ['🤖 Architect agent drafting...', '✍️ Editor agent refining...', '⚖️ Judge agent validating...'],
+          metrics: ['📊 Calculating clarity score...', '🎨 Evaluating style match...', '🛡️ Assessing safety...', '💰 Computing token cost...'],
+          outcome: ['🏆 Comparing candidates...', '📈 Ranking by composite score...', '✅ Selecting best result...']
+        };
+        showAIReasoningChain(data.stage, stageReasonings[data.stage] || []);
         break;
 
       case 'stage-progress':
@@ -2050,6 +2072,11 @@ document.addEventListener('DOMContentLoaded', () => {
         };
         const stepMsg = stepNames[data.step] || data.message;
         addLogEntry(data.stage, `⚙️ ${stepMsg}`, data.details);
+        
+        // Show intermediate result if available
+        if (data.details && (data.details.content || data.details.question || data.details.metrics)) {
+          showIntermediateResult(data.stage, data.details);
+        }
         break;
 
       case 'stage-complete':
@@ -2057,6 +2084,17 @@ document.addEventListener('DOMContentLoaded', () => {
         const node = document.querySelector(`[data-step="${data.stage}"]`);
         if (node) {
           node.classList.add('completed');
+        }
+        
+        // Deactivate visual for completed stage
+        const completedVisual = document.querySelector(`.pipeline-visual[data-step="${data.stage}"]`);
+        if (completedVisual) {
+          completedVisual.classList.remove('active');
+        }
+        
+        // Show completion stats if metrics stage
+        if (data.stage === 'metrics' && data.result && data.result.count) {
+          showPipelineStats({ candidatesScored: data.result.count });
         }
         break;
 
@@ -2078,12 +2116,108 @@ document.addEventListener('DOMContentLoaded', () => {
             bestPromptEl.classList.add('success-highlight');
             bestPromptEl.style.borderColor = '#22C55E';
           }
+          
+          // Update metrics if available
+          if (data.bestCandidate.metrics) {
+            updateMetricsFromPipeline(data.bestCandidate.metrics);
+          }
+          
           showToast('✓ Best Prompt generated successfully!', 'success');
         } else {
           stopPipelineTimeline('Pipeline completed with errors');
           showToast('⚠ Pipeline completed with errors', 'error');
         }
         break;
+    }
+  }
+  
+  // P4.3: Show AI reasoning chain (Chain-of-Thought style)
+  function showAIReasoningChain(stage, lines) {
+    const logEl = document.getElementById(`node-log-${stage}`);
+    if (!logEl) return;
+    
+    // Create reasoning chain container
+    const chainEl = document.createElement('div');
+    chainEl.className = 'ai-reasoning-chain';
+    
+    lines.forEach((line, i) => {
+      const lineEl = document.createElement('div');
+      lineEl.className = 'ai-reasoning-line';
+      lineEl.style.animationDelay = `${i * 0.3}s`;
+      lineEl.textContent = line;
+      chainEl.appendChild(lineEl);
+    });
+    
+    logEl.appendChild(chainEl);
+  }
+  
+  // P3.3: Show intermediate result in node details
+  function showIntermediateResult(stage, details) {
+    const logEl = document.getElementById(`node-log-${stage}`);
+    if (!logEl) return;
+    
+    const resultEl = document.createElement('div');
+    resultEl.className = 'intermediate-result';
+    
+    let label = 'Result';
+    let content = '';
+    
+    if (details.content) {
+      label = 'Generated Content';
+      content = details.content.substring(0, 200) + (details.content.length > 200 ? '...' : '');
+    } else if (details.question) {
+      label = 'Question';
+      content = details.question;
+    } else if (details.metrics) {
+      label = 'Metrics';
+      content = JSON.stringify(details.metrics, null, 2);
+    } else if (details.compositeScore !== undefined) {
+      label = 'Composite Score';
+      content = details.compositeScore.toFixed(3);
+    }
+    
+    resultEl.innerHTML = `
+      <div class="intermediate-result-label">${label}</div>
+      <div class="intermediate-result-content">${content}</div>
+    `;
+    
+    logEl.appendChild(resultEl);
+    logEl.scrollTop = logEl.scrollHeight;
+  }
+  
+  // Show pipeline stats
+  function showPipelineStats(stats) {
+    const pipelineStatusText = document.getElementById('pipelineStatusText');
+    if (pipelineStatusText && stats.candidatesScored) {
+      pipelineStatusText.textContent = `Scored ${stats.candidatesScored} candidates. Selecting the best...`;
+    }
+  }
+  
+  // Update metrics from pipeline completion
+  function updateMetricsFromPipeline(metrics) {
+    if (!metrics) return;
+    
+    const valAcc = document.getElementById('valAcc');
+    const valF1 = document.getElementById('valF1');
+    const valPass = document.getElementById('valPass');
+    const valCost = document.getElementById('valCost');
+    const valProg = document.getElementById('valProg');
+    
+    // Metrics from pipeline: clarity, coherence, styleMatch, safety, tokenCost, compositeScore
+    if (valAcc && metrics.clarity !== undefined) {
+      valAcc.textContent = (metrics.clarity * 100).toFixed(1) + '%';
+    }
+    if (valF1 && metrics.coherence !== undefined) {
+      valF1.textContent = metrics.coherence.toFixed(2);
+    }
+    if (valPass && metrics.safety !== undefined) {
+      valPass.textContent = (metrics.safety * 100).toFixed(1) + '%';
+    }
+    if (valCost && metrics.tokenCost !== undefined) {
+      valCost.textContent = Math.round(metrics.tokenCost).toLocaleString();
+    }
+    if (valProg && metrics.compositeScore !== undefined) {
+      valProg.textContent = (metrics.compositeScore * 100).toFixed(1) + '%';
     }
   }
 
@@ -2226,122 +2360,6 @@ document.addEventListener('DOMContentLoaded', () => {
       runBtn.textContent = originalText;
     }
 
-          if (bestPromptEl) {
-            if (bestContent) {
-              bestPromptEl.value = bestContent;
-              bestPromptEl.classList.remove('processing-animation');
-              bestPromptEl.classList.add('success-highlight');
-              bestPromptEl.classList.remove('error-state');
-              bestPromptEl.style.borderColor = '#22C55E';
-            } else {
-              bestPromptEl.value = '❌ No optimized prompt was returned. Please try again.';
-              bestPromptEl.classList.remove('processing-animation', 'success-highlight');
-              bestPromptEl.classList.add('error-state');
-              bestPromptEl.style.borderColor = '#EF4444';
-            }
-          }
-
-          // ✅ Update metrics with real data
-          updateMetricsFromResponse(data.result);
-
-          // Mark pipeline as completed
-          completePipelineTimeline();
-
-          // Show success toast
-          showToast('✓ Best Prompt has been updated!', 'success');
-
-        } else {
-          // API returned ok: false or missing data
-          const errorMsg = data.error || 'Unknown error';
-          console.warn('[Promptly] API returned error:', errorMsg);
-          
-          // Check if this is an LLM-related error
-          const isLlmError = errorMsg.includes('LLM') || errorMsg.includes('API') || errorMsg.includes('disabled');
-          
-          if (bestPromptEl) {
-            const displayMsg = isLlmError
-              ? `⚠️ Generation Failed\n\nError: ${errorMsg}\n\nThe LLM service may be unavailable. Please check the API configuration.`
-              : `❌ Generation Failed\n\nError: ${errorMsg}\n\nPlease check your input and try again.`;
-            bestPromptEl.value = displayMsg;
-            bestPromptEl.classList.remove('processing-animation', 'success-highlight');
-            bestPromptEl.classList.add('error-state');
-            bestPromptEl.style.borderColor = '#EF4444';
-          }
-
-          // Reset metrics to default
-          resetMetrics();
-
-          stopPipelineTimeline('Pipeline stopped due to error.');
-
-          showToast(`⚠ ${errorMsg}`, 'error');
-        }
-        
-      } catch (apiError) {
-        // Network error or timeout - cancel animation first
-        cancelProcessingAnimation();
-        console.error('[Promptly] API call failed:', apiError);
-        
-        if (bestPromptEl) {
-          bestPromptEl.value = `❌ Network Request Failed\n\nError: ${apiError.message}\n\nPossible causes:\n• Backend service not running\n• Network connection issues\n• API address misconfigured\n\nPlease check your network connection and try again.`;
-          bestPromptEl.classList.remove('processing-animation', 'success-highlight');
-          bestPromptEl.classList.add('error-state');
-          bestPromptEl.style.borderColor = '#EF4444';
-        }
-
-        // Reset metrics to default
-        resetMetrics();
-
-        stopPipelineTimeline('Pipeline stopped due to network error.');
-
-        showToast('⚠ Network error. Check your connection.', 'error');
-      }
-
-      // 4. Scroll to best prompt section
-      if (bestPromptEl && shouldAutoScroll) {
-        const bestPromptCard = bestPromptEl.closest('.card') || bestPromptEl.closest('.layer-default__output');
-        if (bestPromptCard) {
-          setTimeout(() => {
-            bestPromptCard.scrollIntoView({
-              behavior: 'smooth',
-              block: 'center'
-            });
-
-            // Add highlight pulse animation
-            bestPromptCard.style.transition = 'all 0.3s ease';
-            bestPromptCard.style.boxShadow = '0 0 30px rgba(124, 58, 237, 0.5)';
-            setTimeout(() => {
-              bestPromptCard.style.boxShadow = '';
-            }, 2000);
-          }, 100);
-        }
-      }
-    } catch (error) {
-      console.error('[Promptly] Error during optimization:', error);
-      showToast('⚠ An error occurred. Check console for details.', 'error');
-      if (bestPromptEl) {
-        bestPromptEl.value = `❌ Error Occurred\n\n${error.message}\n\nCheck the browser console for more details.`;
-        bestPromptEl.style.borderColor = '#EF4444';
-        bestPromptEl.classList.remove('processing-animation', 'success-highlight');
-        bestPromptEl.classList.add('error-state');
-      }
-      stopPipelineTimeline('Pipeline stopped. Something went wrong.');
-      resetMetrics();
-    } finally {
-      // Re-enable button
-      runBtn.disabled = false;
-      runBtn.style.opacity = '';
-      runBtn.style.cursor = '';
-      const lang = localStorage.getItem('promptly.lang') || 'en';
-      runBtn.textContent = originalText || 'Run Optimization';
-      
-      // Reset border color after a moment for success cases
-      if (bestPromptEl && bestPromptEl.classList.contains('success-highlight')) {
-        setTimeout(() => {
-          bestPromptEl.style.borderColor = '';
-          bestPromptEl.classList.remove('success-highlight');
-        }, 5000);
-      }
-    }
   }, { capture: true }); // Use capture phase to ensure we get the event
   
   console.log('[Promptly] Pipeline animation initialization complete!');

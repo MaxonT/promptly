@@ -243,7 +243,8 @@ questionSessionRouter.post("/", async (req, res) => {
     );
 
     choiceQuestions.forEach((q, index) => {
-      const qid = q.id || `q_${nanoid(12)}`;
+      // Always generate session-scoped IDs to avoid collisions across sessions
+      const qid = `q_${sessionId}_${q.id || nanoid(12)}`;
       // Store complete question data including depth structure
       const questionData = {
         depth_enabled: q.depth_enabled,

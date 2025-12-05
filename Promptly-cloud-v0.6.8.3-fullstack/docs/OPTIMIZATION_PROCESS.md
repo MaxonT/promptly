@@ -20,7 +20,6 @@ This guide summarizes how Promptly's enhancer runs the optimization flow so user
 ## 4) Test Layer (稳定性验证)
 - **格式自检**：后端在写入 LLM 前检查 `prompt` 是否存在、类型是否正确。
 - **行为校验**：LLM 调用统一使用低随机度温度（0.2）以追求一致输出；错误路径集中处理，确保异常返回 JSON 而非崩溃。
-- **模型确认**：后端在调用后记录 `model` 与 `completionId`，并把模型名写入响应，方便前端日志直接证明 GPT 已被调用。
 - **边界案例**：无附件、多附件、异常文件名均被标准化，减少极端输入的影响。
 
 ## 5) Iteration Layer (迭代修复)
@@ -29,7 +28,7 @@ This guide summarizes how Promptly's enhancer runs the optimization flow so user
 - **版本滚动**：改动通过 Git 记录，便于对比与回滚，形成可复现的 Prompt 演进历史。
 
 ## 6) Outcome Layer (结果交付)
-- **最终输出**：响应包含增强后的 prompt、处理的附件数量，以及 LLM 使用的模型与 completion id，避免多余解释，同时明确由 LLM 生成改写结果（中间不会跳过模型）。
+- **最终输出**：响应只包含增强后的 prompt 及处理的附件数量，避免多余解释，同时明确由 LLM 生成改写结果（中间不会跳过模型）。
 - **可解释性**：日志打印附件摘要，帮助诊断输入与输出的关系；文档说明清晰描述了各层的职责。
 
 ## 快速复用

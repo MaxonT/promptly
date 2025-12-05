@@ -156,10 +156,6 @@ function logAttachments(attachments, endpoint) {
   });
 }
 
-function logModelUsage(endpoint, model, completionId) {
-  console.log(`[promptly] ${endpoint} routed to LLM model=${model} completion=${completionId || 'n/a'}`);
-}
-
 function handleEnhanceError(res, endpoint, err, defaultMessage) {
   console.error(`[promptly] ${endpoint} error:`, err);
 
@@ -215,9 +211,7 @@ Return only the enhanced prompt. Do not add explanations.`;
       ok: true,
       result: {
         enhanced,
-        attachmentsProcessed: safeAttachments.length,
-        modelUsed,
-        completionId
+        attachmentsProcessed: safeAttachments.length
       }
     });
 
@@ -262,9 +256,7 @@ Return only the enhanced prompt. Do not add explanations.`;
       ok: true,
       result: {
         enhanced,
-        attachmentsProcessed: safeAttachments.length,
-        modelUsed,
-        completionId
+        attachmentsProcessed: safeAttachments.length
       }
     });
 
@@ -309,9 +301,7 @@ Return only the simplified prompt. Do not add explanations.`;
       ok: true,
       result: {
         enhanced,
-        attachmentsProcessed: safeAttachments.length,
-        modelUsed,
-        completionId
+        attachmentsProcessed: safeAttachments.length
       }
     });
 
@@ -368,9 +358,7 @@ Return ONLY a JSON object in this exact format:
       ok: true,
       result: {
         ...result,
-        attachmentsProcessed: safeAttachments.length,
-        modelUsed,
-        completionId
+        attachmentsProcessed: safeAttachments.length
       }
     });
 
@@ -426,9 +414,7 @@ If no issues found, return {"issues": []}`;
       ok: true,
       result: {
         ...result,
-        attachmentsProcessed: safeAttachments.length,
-        modelUsed,
-        completionId
+        attachmentsProcessed: safeAttachments.length
       }
     });
 

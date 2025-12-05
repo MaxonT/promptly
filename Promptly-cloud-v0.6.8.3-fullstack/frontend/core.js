@@ -115,6 +115,15 @@
   function getStoredWizardSession(){try{const raw=localStorage.getItem(WIZARD_SESSION_KEY);return raw?JSON.parse(raw):null;}catch{return null;}}
   function setStoredWizardSession(sessionId){if(!sessionId)return;try{localStorage.setItem(WIZARD_SESSION_KEY,JSON.stringify({sessionId,startedAt:Date.now()}));}catch{}}
   function clearStoredWizardSession(){try{localStorage.removeItem(WIZARD_SESSION_KEY);}catch{}}
+  function navigateToWizardSession(){
+    const session = getStoredWizardSession();
+    const sessionId = session?.sessionId;
+    const url = new URL("wizard.html", window.location.href);
+    if (sessionId) {
+      url.searchParams.set("sessionId", sessionId);
+    }
+    window.location.href = url.toString();
+  }
   function ensureWizardIndicator(){
     if(wizardIndicatorEl)return;
     wizardIndicatorEl=document.getElementById("wizardStatusIndicator");
@@ -124,6 +133,9 @@
       wizardIndicatorEl.className="wizard-status-indicator";
       document.body.appendChild(wizardIndicatorEl);
     }
+    wizardIndicatorEl.setAttribute("role","button");
+    wizardIndicatorEl.setAttribute("tabindex","0");
+    wizardIndicatorEl.setAttribute("aria-label","Return to active Question Wizard session");
     if(!wizardIndicatorEl.querySelector(".wizard-status-indicator__content")){
       wizardIndicatorEl.innerHTML=`
         <span class="spinner" aria-hidden="true"></span>
@@ -171,16 +183,9 @@
       spin.setAttribute("aria-hidden","true");
       wizardIndicatorEl.prepend(spin);
     }
-    wizardIndicatorEl.onclick=()=>{
-      const session = getStoredWizardSession();
-      const sessionId = session?.sessionId;
-      if (sessionId) {
-        const url = new URL("wizard.html", window.location.href);
-        url.searchParams.set("sessionId", sessionId);
-        window.location.href = url.toString();
-      } else {
-        window.location.href = "wizard.html";
-      }
+    wizardIndicatorEl.onclick=navigateToWizardSession;
+    wizardIndicatorEl.onkeydown=(evt)=>{
+      if(evt.key==="Enter"||evt.key===" "||evt.key==="Spacebar"){evt.preventDefault();navigateToWizardSession();}
     };
   }
   function hideWizardIndicator(){if(wizardIndicatorEl){wizardIndicatorEl.classList.remove("active");}}

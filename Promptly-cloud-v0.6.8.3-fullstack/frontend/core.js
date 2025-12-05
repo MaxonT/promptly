@@ -205,8 +205,10 @@
   function showWizardIndicator(message, detail, progressInfo){
     ensureWizardIndicator();
     if(wizardIndicatorLabel)wizardIndicatorLabel.textContent=message;
-    if(wizardIndicatorDetail)wizardIndicatorDetail.textContent=detail||"Stay on any page — we’ll keep going in the background.";
+    if(wizardIndicatorDetail)wizardIndicatorDetail.textContent=detail||"Stay on any page — we'll keep going in the background.";
     if(progressInfo)updateWizardProgress(progressInfo.answered,progressInfo.total);
+    // Ensure click handler is set when indicator becomes active
+    wizardIndicatorEl.onclick=navigateToWizardSession;
     wizardIndicatorEl.classList.add("active");
   }
   function showWizardCheckingFallback(sessionId){

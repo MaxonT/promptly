@@ -812,7 +812,8 @@ temperature: 0.5</textarea>
     </section>
 
     <!-- Question Wizard Status Indicator (shows when running in background) -->
-    <div id="wizardStatusIndicator" class="wizard-status-indicator" onclick="window.location.href='wizard.html'">
+    <!-- Note: This element is managed by core.js - click functionality is added dynamically -->
+    <div id="wizardStatusIndicator" class="wizard-status-indicator" style="display: none;">
       <span class="spinner"></span>
       <span>Question Wizard Running...</span>
     </div>

@@ -923,6 +923,11 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
         <div class="wizard-loading-text wizard-loading-main" style="font-size:1rem;margin-top:0.5rem;">Generating questions...</div>
         <div class="wizard-loading-text wizard-loading-elapsed" style="font-size:0.875rem;opacity:0.8;margin-top:0.3rem;">0s elapsed • ~${Math.round((estimate.min + estimate.max) / 2)}s estimated</div>
         <div class="wizard-loading-text" style="font-size:0.75rem;margin-top:0.5rem;opacity:0.6;">Analyzing your project to create personalized questions</div>
+        <div class="wizard-loading-warning" style="display:flex;align-items:center;justify-content:center;gap:0.5rem;margin-top:1.5rem;padding:0.75rem 1rem;background:rgba(245,158,11,0.15);border:2px solid rgba(245,158,11,0.6);border-radius:12px;font-size:0.95rem;font-weight:700;color:#FCD34D;animation:pulse-attention 1.5s ease-in-out infinite;">
+          <span style="font-size:1.2rem;">⚠️</span>
+          <span>Do not exit this page</span>
+          <span style="font-size:1.2rem;">⚠️</span>
+        </div>
       `);
       
       // Start real-time elapsed counter

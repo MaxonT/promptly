@@ -122,19 +122,7 @@
     if (sessionId) {
       url.searchParams.set("sessionId", sessionId);
     }
-    window.location.assign(url.toString());
-  }
-  function bindWizardIndicatorInteractions(){
-    if(!wizardIndicatorEl || wizardIndicatorEl.dataset.bound==="1")return;
-    const handleActivate=(evt)=>{
-      evt.preventDefault();
-      navigateToWizardSession();
-    };
-    wizardIndicatorEl.addEventListener("click",handleActivate);
-    wizardIndicatorEl.addEventListener("keydown",(evt)=>{
-      if(evt.key==="Enter"||evt.key===" "||evt.key==="Spacebar"){handleActivate(evt);} 
-    });
-    wizardIndicatorEl.dataset.bound="1";
+    window.location.href = url.toString();
   }
   function ensureWizardIndicator(){
     if(wizardIndicatorEl)return;
@@ -145,7 +133,6 @@
       wizardIndicatorEl.className="wizard-status-indicator";
       document.body.appendChild(wizardIndicatorEl);
     }
-    wizardIndicatorEl.removeAttribute("onclick");
     wizardIndicatorEl.setAttribute("role","button");
     wizardIndicatorEl.setAttribute("tabindex","0");
     wizardIndicatorEl.setAttribute("aria-label","Return to active Question Wizard session");
@@ -196,7 +183,10 @@
       spin.setAttribute("aria-hidden","true");
       wizardIndicatorEl.prepend(spin);
     }
-    bindWizardIndicatorInteractions();
+    wizardIndicatorEl.onclick=navigateToWizardSession;
+    wizardIndicatorEl.onkeydown=(evt)=>{
+      if(evt.key==="Enter"||evt.key===" "||evt.key==="Spacebar"){evt.preventDefault();navigateToWizardSession();}
+    };
   }
   function hideWizardIndicator(){if(wizardIndicatorEl){wizardIndicatorEl.classList.remove("active");}}
   function updateWizardProgress(answered,total){

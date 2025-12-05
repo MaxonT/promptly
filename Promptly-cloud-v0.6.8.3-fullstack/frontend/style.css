@@ -2926,3 +2926,127 @@ html[data-theme="light"] .text-keyword {
   60% { transform: scale(1.25); opacity: 0.35; }
   100% { transform: scale(1); opacity: 1; }
 }
+
+/* ============================================
+   P1: Global Wizard Status Indicator
+   - Shows when Question Wizard is running
+   - Fixed position at top of page
+   - Visible across all pages
+   ============================================ */
+
+.promptly-global-status {
+  position: fixed;
+  top: 60px;
+  left: 0;
+  right: 0;
+  z-index: 9999;
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.95), rgba(251, 191, 36, 0.95));
+  border-bottom: 3px solid #F59E0B;
+  box-shadow: 0 4px 24px rgba(245, 158, 11, 0.6), 0 0 50px rgba(245, 158, 11, 0.3);
+  animation: globalStatus-slideDown 0.3s ease-out, globalStatus-glow 2s ease-in-out infinite;
+  backdrop-filter: blur(8px);
+  transition: transform 0.3s ease, opacity 0.3s ease;
+}
+
+.promptly-global-status.hidden {
+  display: none !important;
+  transform: translateY(-100%);
+  opacity: 0;
+}
+
+.global-status-content {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  padding: 0.875rem 2rem;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.global-status-icon {
+  font-size: 1.5rem;
+  animation: globalStatus-bounce 1s ease-in-out infinite;
+}
+
+.global-status-message {
+  color: #fff;
+  font-size: 1rem;
+  font-weight: 800;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.25);
+  letter-spacing: 0.05em;
+}
+
+.global-status-cta {
+  background: rgba(255, 255, 255, 0.25);
+  color: #fff;
+  text-decoration: none;
+  padding: 0.5rem 1rem;
+  border-radius: 999px;
+  font-size: 0.875rem;
+  font-weight: 700;
+  transition: all 0.2s ease;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.global-status-cta:hover {
+  background: rgba(255, 255, 255, 0.4);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.global-status-dismiss {
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 1.5rem;
+  cursor: pointer;
+  padding: 0.25rem 0.5rem;
+  line-height: 1;
+  transition: opacity 0.2s ease;
+}
+
+.global-status-dismiss:hover {
+  opacity: 0.7;
+}
+
+@keyframes globalStatus-slideDown {
+  from {
+    transform: translateY(-100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes globalStatus-glow {
+  0%, 100% {
+    box-shadow: 0 4px 24px rgba(245, 158, 11, 0.6), 0 0 50px rgba(245, 158, 11, 0.3);
+  }
+  50% {
+    box-shadow: 0 4px 32px rgba(245, 158, 11, 0.8), 0 0 70px rgba(245, 158, 11, 0.5);
+  }
+}
+
+@keyframes globalStatus-bounce {
+  0%, 100% {
+    transform: translateY(0) scale(1);
+  }
+  50% {
+    transform: translateY(-3px) scale(1.1);
+  }
+}
+
+/* Ensure warning banner on wizard page is always visible */
+.wizard-running-warning {
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  z-index: 2000 !important;
+}
+
+.wizard-running-warning.hidden {
+  display: none !important;
+}

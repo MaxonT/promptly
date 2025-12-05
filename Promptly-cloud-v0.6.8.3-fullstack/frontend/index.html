@@ -2121,13 +2121,20 @@ document.addEventListener('DOMContentLoaded', () => {
         if (data.ok && data.result && data.result.best) {
           // Success - display real best prompt content
           const bestContent = data.result.best.content;
-          
+
           if (bestPromptEl) {
-            bestPromptEl.value = bestContent || 'No best prompt generated';
-            bestPromptEl.classList.remove('processing-animation');
-            bestPromptEl.classList.add('success-highlight');
-            bestPromptEl.classList.remove('error-state');
-            bestPromptEl.style.borderColor = '#22C55E';
+            if (bestContent) {
+              bestPromptEl.value = bestContent;
+              bestPromptEl.classList.remove('processing-animation');
+              bestPromptEl.classList.add('success-highlight');
+              bestPromptEl.classList.remove('error-state');
+              bestPromptEl.style.borderColor = '#22C55E';
+            } else {
+              bestPromptEl.value = '❌ No optimized prompt was returned. Please try again.';
+              bestPromptEl.classList.remove('processing-animation', 'success-highlight');
+              bestPromptEl.classList.add('error-state');
+              bestPromptEl.style.borderColor = '#EF4444';
+            }
           }
 
           // ✅ Update metrics with real data

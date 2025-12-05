@@ -408,6 +408,78 @@ questionSessionRouter.get("/:sessionId", (req, res) => {
   });
 });
 
+// GET /api/question-sessions/:sessionId/state - hydrate in-progress sessions without creating a new one
+questionSessionRouter.get("/:sessionId/state", (req, res) => {
+  const { sessionId } = req.params;
+
+  const session = db
+    .prepare(
+      `SELECT id, owner_id, kind, status, initial_description, mode, model, created_at, updated_at
+       FROM question_sessions
+       WHERE id = ?`
+    )
+    .get(sessionId);
+
+  if (!session) {
+    return res.status(404).json({ ok: false, error: "Session not found" });
+  }
+
+  const questions = db
+    .prepare("SELECT * FROM question_questions WHERE session_id = ? ORDER BY order_index ASC")
+    .all(sessionId);
+
+  const answers = db
+    .prepare("SELECT * FROM question_answers WHERE session_id = ? ORDER BY created_at ASC")
+    .all(sessionId);
+
+  const answeredIds = new Set(answers.map((a) => a.question_id));
+
+  const mappedQuestions = questions.map((q) => {
+    const questionData = q.options_json ? JSON.parse(q.options_json) : {};
+    return {
+      id: q.id,
+      type: q.type,
+      content: q.content,
+      depth_enabled: questionData.depth_enabled || false,
+      options: questionData.options || null,
+      depth_question: questionData.depth_question || null,
+      depth_levels: questionData.depth_levels || null
+    };
+  });
+
+  return res.json({
+    ok: true,
+    session: {
+      id: session.id,
+      status: session.status,
+      mode: session.mode || "deep",
+      model: session.model || "promptly",
+      kind: session.kind || null,
+      initial_description: session.initial_description || "",
+      created_at: session.created_at,
+      updated_at: session.updated_at
+    },
+    progress: {
+      answered: answers.length,
+      total: questions.length
+    },
+    questions: mappedQuestions,
+    answers: answers.map((a) => ({
+      id: a.id,
+      question_id: a.question_id,
+      value: (() => {
+        try {
+          return JSON.parse(a.answer_json);
+        } catch (e) {
+          return a.answer_json;
+        }
+      })(),
+      created_at: a.created_at
+    })),
+    remaining_question_ids: mappedQuestions.filter((q) => !answeredIds.has(q.id)).map((q) => q.id)
+  });
+});
+
 questionSessionRouter.post("/:sessionId/answer", (req, res) => {
   const parsed = AnswerPayloadSchema.safeParse(req.body);
   if (!parsed.success) {

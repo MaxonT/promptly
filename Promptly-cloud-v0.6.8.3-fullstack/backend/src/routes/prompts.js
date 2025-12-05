@@ -110,6 +110,15 @@ ${qaHistory}
         name: "architect",
         systemPrompt: `You are the Architect agent in Promptly's Best Prompt Pipeline.
 
+CRITICAL REQUIREMENT: You MUST generate a complete, well-structured prompt based on the specification. NEVER return the specification text itself or a simple paraphrase.
+
+MANDATORY REQUIREMENTS:
+1. ALWAYS create a full prompt with clear structure (sections, headings, instructions)
+2. ALWAYS add explicit variables, placeholders, and output format specifications
+3. ALWAYS organize the prompt with logical flow and step-by-step guidance
+4. ALWAYS transform the spec into an actionable, executable prompt
+5. NEVER return just the spec fields or a basic reformatting
+
 Your role is to design the structure and logical flow of prompts.
 
 FOCUS AREAS:
@@ -121,12 +130,20 @@ FOCUS AREAS:
 
 OUTPUT:
 Return ONLY the enhanced prompt text. Do not add explanations, comments, or meta-commentary.
-
-Your prompt should be well-organized, structured, and easy for LLMs to follow.`
+Your output MUST be a complete, structured prompt that is significantly different from the input specification.`
       },
       {
         name: "editor",
         systemPrompt: `You are the Editor agent in Promptly's Best Prompt Pipeline.
+
+CRITICAL REQUIREMENT: You MUST polish and enhance the language. NEVER return the input unchanged or with only minor word substitutions.
+
+MANDATORY REQUIREMENTS:
+1. ALWAYS improve sentence structure and word choice
+2. ALWAYS enhance readability and flow
+3. ALWAYS refine tone and style for professionalism
+4. ALWAYS make meaningful language improvements
+5. NEVER return the prompt unchanged - you MUST polish it
 
 Your role is to polish language, improve readability, and enhance clarity while preserving all original intent.
 
@@ -139,12 +156,20 @@ FOCUS AREAS:
 
 OUTPUT:
 Return ONLY the enhanced prompt text. Do not add explanations, comments, or meta-commentary.
-
-Your prompt should be polished, clear, and engaging while maintaining all original requirements.`
+Your output MUST be polished and improved compared to the input.`
       },
       {
         name: "judge",
         systemPrompt: `You are the Judge agent in Promptly's Best Prompt Pipeline.
+
+CRITICAL REQUIREMENT: You MUST add safety constraints and guardrails. NEVER return the input unchanged - you MUST enhance it with safety measures.
+
+MANDATORY REQUIREMENTS:
+1. ALWAYS add explicit safety constraints and boundaries
+2. ALWAYS include edge case handling instructions
+3. ALWAYS add error prevention and risk mitigation guidance
+4. ALWAYS enhance robustness and reliability
+5. NEVER return the prompt unchanged - you MUST add safety features
 
 Your role is to add safety constraints, guardrails, edge case handling, and risk mitigation.
 
@@ -157,8 +182,7 @@ FOCUS AREAS:
 
 OUTPUT:
 Return ONLY the enhanced prompt text. Do not add explanations, comments, or meta-commentary.
-
-Your prompt should be safe, robust, and handle edge cases gracefully.`
+Your output MUST include safety enhancements that were not in the input.`
       }
     ];
 
@@ -172,9 +196,11 @@ Your prompt should be safe, robust, and handle edge cases gracefully.`
 
         const { text: content, completionId } = await chatText({
           system: agent.systemPrompt,
-          user: `Given this specification, generate an optimized prompt:
+          user: `Given this specification, generate a complete, optimized prompt:
 
 ${baseContext}
+
+IMPORTANT: You MUST generate a new, complete prompt based on this specification. DO NOT simply repeat the specification fields or create a basic reformatting. Transform the specification into a fully structured, actionable prompt that an LLM can execute directly.
 
 Generate a complete, optimized prompt that addresses the specification above.`
         });
@@ -508,4 +534,5 @@ promptsRouter.post("/select-best", async (req, res) => {
     });
   }
 });
+
 

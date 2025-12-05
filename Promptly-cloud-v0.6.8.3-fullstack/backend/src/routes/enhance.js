@@ -297,6 +297,22 @@ enhanceRouter.post("/structure", async (req, res) => {
     // 强调"清晰、分段、易懂、利于模型解析"
     const system = `You are a prompt engineering expert specializing in LLM optimization.
 
+CRITICAL REQUIREMENT: You MUST transform and restructure the input prompt. NEVER return the prompt unchanged or with only minor edits.
+
+MANDATORY REQUIREMENTS:
+1. ALWAYS break the prompt into clear sections with headings (use #, ##, ###)
+2. ALWAYS use structured formatting (bullet points, numbered lists, or clear paragraphs)
+3. ALWAYS add explicit instructions and output requirements
+4. ALWAYS improve clarity even if the original seems clear
+5. NEVER return the prompt unchanged - you MUST restructure it
+
+TRANSFORMATION PROCESS:
+- Analyze the original prompt's intent
+- Break it into logical sections (e.g., Task, Instructions, Requirements, Output Format)
+- Add clear headings and structure
+- Enhance with explicit instructions and formatting
+- Ensure the enhanced version is significantly more structured than the original
+
 Your task is to restructure the given prompt to maximize clarity, organization, and LLM comprehension.
 
 REQUIREMENTS:
@@ -312,7 +328,8 @@ PROCESS:
 - Ensure the enhanced prompt maintains all original requirements while improving clarity
 
 OUTPUT:
-Return ONLY the enhanced prompt text. Do not add explanations, comments, or meta-commentary.`;
+Return ONLY the enhanced prompt text. Do not add explanations, comments, or meta-commentary.
+The output MUST be different from and more structured than the input.`;
 
     console.log(`[promptly] 🔄 About to call LLM (chatText) for structure enhancement...`);
 
@@ -367,6 +384,15 @@ enhanceRouter.post("/style", async (req, res) => {
     // Spec Layer: Style enhancement with LLM-driven optimization
     const system = `You are a prompt engineering expert specializing in style and tone optimization for LLMs.
 
+CRITICAL REQUIREMENT: You MUST improve the style and tone. NEVER return the prompt unchanged or with only minor word changes.
+
+MANDATORY REQUIREMENTS:
+1. ALWAYS refine language for clarity and professionalism
+2. ALWAYS improve sentence structure and flow
+3. ALWAYS enhance readability and engagement
+4. ALWAYS make meaningful stylistic improvements
+5. NEVER return the prompt unchanged - you MUST polish it
+
 Your task is to improve the style and tone of the given prompt while preserving its core meaning and requirements.
 
 OPTIMIZATION CRITERIA:
@@ -382,7 +408,8 @@ PROCESS:
 - Ensure the enhanced prompt is optimized for LLM understanding and execution
 
 OUTPUT:
-Return ONLY the enhanced prompt text. Do not add explanations, comments, or meta-commentary.`;
+Return ONLY the enhanced prompt text. Do not add explanations, comments, or meta-commentary.
+The output MUST be improved in style and tone compared to the input.`;
 
     const { text: enhanced, model: modelUsed, completionId } = await chatText({ system, user: fullPrompt });
     logModelUsage("/enhance/style", modelUsed, completionId);
@@ -424,6 +451,15 @@ enhanceRouter.post("/simplify", async (req, res) => {
     // Spec Layer: Simplification with LLM-driven clarity optimization
     const system = `You are a prompt engineering expert specializing in simplifying complex prompts for optimal LLM comprehension.
 
+CRITICAL REQUIREMENT: You MUST simplify and clarify the input. NEVER return the prompt unchanged or with only minor edits.
+
+MANDATORY REQUIREMENTS:
+1. ALWAYS make the prompt more concise and direct
+2. ALWAYS break down complex concepts into simpler language
+3. ALWAYS remove unnecessary complexity and redundancy
+4. ALWAYS improve clarity and accessibility
+5. NEVER return the prompt unchanged - you MUST simplify it
+
 Your task is to simplify the given prompt while preserving all essential requirements and intent.
 
 SIMPLIFICATION CRITERIA:
@@ -439,7 +475,8 @@ PROCESS:
 - Ensure the simplified prompt is more accessible to LLM processing
 
 OUTPUT:
-Return ONLY the simplified prompt text. Do not add explanations, comments, or meta-commentary.`;
+Return ONLY the simplified prompt text. Do not add explanations, comments, or meta-commentary.
+The output MUST be simpler and clearer than the input.`;
 
     const { text: enhanced, model: modelUsed, completionId } = await chatText({ system, user: fullPrompt });
     logModelUsage("/enhance/simplify", modelUsed, completionId);

@@ -535,23 +535,32 @@ specsRouter.post("/from-idea", async (req, res) => {
     // System prompt for Spec Builder
     const system = `You are a Spec Builder agent in Promptly's Best Prompt Pipeline.
 
+CRITICAL REQUIREMENT: You MUST extract and structure information from the raw idea. NEVER return just the raw idea as userGoal or return empty/minimal fields.
+
+MANDATORY REQUIREMENTS:
+1. ALWAYS extract the core goal and rephrase it clearly and specifically
+2. ALWAYS infer target audience even if not explicitly mentioned
+3. ALWAYS identify constraints and requirements from context
+4. ALWAYS determine tone, format, and domain based on the idea
+5. NEVER return the raw idea unchanged - you MUST structure it
+
 Your task is to analyze a raw user idea and extract/infer structured information to create a comprehensive specification.
 
 REQUIREMENTS:
-1. Extract the core user goal from the idea
-2. Infer or identify target audience if mentioned or implied
-3. Identify any constraints, requirements, or preferences
-4. Determine tone/style preferences if indicated
-5. Note format requirements if specified
-6. Identify domain/context if relevant
-7. Extract any examples or references mentioned
+1. Extract the core user goal from the idea - rephrase it clearly and specifically
+2. Infer or identify target audience if mentioned or implied - be specific about who will use this
+3. Identify any constraints, requirements, or preferences - extract from context
+4. Determine tone/style preferences if indicated - infer from the idea's nature
+5. Note format requirements if specified - identify output format needs
+6. Identify domain/context if relevant - categorize the use case
+7. Extract any examples or references mentioned - capture all relevant details
 
 OUTPUT FORMAT:
 Return ONLY valid JSON matching this structure:
 {
-  "userGoal": "string - The main goal or objective",
-  "audience": "string | null - Target users/audience",
-  "constraints": ["string"] - Array of constraints or requirements,
+  "userGoal": "string - The main goal or objective (MUST be clear and specific, not just the raw idea)",
+  "audience": "string | null - Target users/audience (infer from context if not mentioned)",
+  "constraints": ["string"] - Array of constraints or requirements (identify from idea),
   "tone": "string | null - Desired tone (e.g., professional, casual, formal)",
   "format": "string | null - Output format requirements",
   "domain": "string | null - Domain/context (e.g., coding, writing, analysis)",
@@ -560,14 +569,16 @@ Return ONLY valid JSON matching this structure:
 
 IMPORTANT:
 - Return ONLY valid JSON, no other text
-- Use null for optional fields that cannot be inferred
-- Be specific and actionable
-- Extract all relevant information from the idea`;
+- Use null for optional fields that truly cannot be inferred
+- Be specific and actionable - extract maximum value from the idea
+- Extract all relevant information from the idea - don't leave fields empty unnecessarily`;
 
     const userPrompt = `Raw Idea:
 ${idea}${attachmentContext}
 
-Please extract structured information from this idea and return a JSON spec object.`;
+IMPORTANT: You MUST extract and structure information from this raw idea. DO NOT simply return the raw idea as userGoal. Instead, rephrase it clearly, identify all relevant fields, and create a comprehensive structured specification.
+
+Please extract structured information from this idea and return a JSON spec object with all fields properly filled.`;
 
     console.log(`[promptly] 🔄 About to call LLM (chatJson) for spec generation...`);
 

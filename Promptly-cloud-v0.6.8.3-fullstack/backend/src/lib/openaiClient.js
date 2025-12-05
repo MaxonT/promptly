@@ -11,8 +11,15 @@ let client = null;
 
 if (apiKey) {
   client = new OpenAI({ apiKey });
+  console.log(`[promptly] ✅ OpenAI client initialized successfully`);
+  console.log(`[promptly] Default model: ${DEFAULT_MODEL}`);
+  const maskedKey = apiKey.length > 11 
+    ? `${apiKey.substring(0, 7)}...${apiKey.substring(apiKey.length - 4)}` 
+    : "***";
+  console.log(`[promptly] API Key: ${maskedKey} (masked)`);
 } else {
-  console.warn("[promptly] OPENAI_API_KEY is not set; LLM features are disabled.");
+  console.warn("[promptly] ⚠️  OPENAI_API_KEY is not set; LLM features are disabled.");
+  console.warn("[promptly] ⚠️  All enhancement endpoints will return 503 errors.");
 }
 
 export class LlmDisabledError extends Error {
@@ -57,11 +64,16 @@ export function isLlmEnabled() {
  */
 export async function chatJson({ system, user, model, promptlyModelId }) {
   if (!client) {
+    console.error("[promptly] ❌ LLM call blocked: OpenAI client not initialized (OPENAI_API_KEY not set)");
     throw new LlmDisabledError();
   }
   
   // Resolve model and potentially enhance system prompt
   const usedModel = resolveModel(model);
+  console.log(`[promptly] 🚀 Starting LLM call - Model: ${usedModel}, Type: chatJson`);
+  console.log(`[promptly] System prompt length: ${system?.length || 0} chars`);
+  console.log(`[promptly] User prompt length: ${user?.length || 0} chars`);
+  
   let enhancedSystem = system;
   
   // If a Promptly model ID is provided, apply system prompt suffix if applicable
@@ -72,28 +84,52 @@ export async function chatJson({ system, user, model, promptlyModelId }) {
     }
   }
   
-  const completion = await client.chat.completions.create({
-    model: usedModel,
-    temperature: DEFAULT_TEMPERATURE,
-    response_format: { type: "json_object" },
-    messages: [
-      { role: "system", content: enhancedSystem },
-      { role: "user", content: user }
-    ]
-  });
-  const content = completion.choices?.[0]?.message?.content || "{}";
-  let parsed;
+  const startTime = Date.now();
   try {
-    parsed = JSON.parse(content);
-  } catch {
-    parsed = {};
+    console.log(`[promptly] 📡 Calling OpenAI API: client.chat.completions.create() with JSON format`);
+    const completion = await client.chat.completions.create({
+      model: usedModel,
+      temperature: DEFAULT_TEMPERATURE,
+      response_format: { type: "json_object" },
+      messages: [
+        { role: "system", content: enhancedSystem },
+        { role: "user", content: user }
+      ]
+    });
+    
+    const duration = Date.now() - startTime;
+    const content = completion.choices?.[0]?.message?.content || "{}";
+    const tokensUsed = completion.usage?.total_tokens || 0;
+    
+    console.log(`[promptly] ✅ LLM call succeeded - Duration: ${duration}ms, Response: ${content.length} chars, Tokens: ${tokensUsed}`);
+    console.log(`[promptly] Completion ID: ${completion.id || 'N/A'}`);
+    
+    let parsed;
+    try {
+      parsed = JSON.parse(content);
+      console.log(`[promptly] ✅ JSON parsed successfully`);
+    } catch (parseError) {
+      console.error(`[promptly] ⚠️  JSON parse failed:`, parseError.message);
+      console.error(`[promptly] Raw content:`, content.substring(0, 200));
+      parsed = {};
+    }
+    
+    return {
+      data: parsed,
+      usage: completion.usage || {},
+      model: usedModel,
+      completionId: completion.id || null
+    };
+  } catch (error) {
+    const duration = Date.now() - startTime;
+    console.error(`[promptly] ❌ LLM call failed after ${duration}ms:`, error.message);
+    console.error(`[promptly] Error type: ${error.constructor.name}`);
+    if (error.response) {
+      console.error(`[promptly] Error response status: ${error.response?.status}`);
+      console.error(`[promptly] Error response data:`, error.response?.data);
+    }
+    throw error;
   }
-  return {
-    data: parsed,
-    usage: completion.usage || {},
-    model: usedModel,
-    completionId: completion.id || null
-  };
 }
 
 /**
@@ -107,11 +143,16 @@ export async function chatJson({ system, user, model, promptlyModelId }) {
  */
 export async function chatText({ system, user, model, promptlyModelId }) {
   if (!client) {
+    console.error("[promptly] ❌ LLM call blocked: OpenAI client not initialized (OPENAI_API_KEY not set)");
     throw new LlmDisabledError();
   }
   
   // Resolve model and potentially enhance system prompt
   const usedModel = resolveModel(model);
+  console.log(`[promptly] 🚀 Starting LLM call - Model: ${usedModel}, Type: chatText`);
+  console.log(`[promptly] System prompt length: ${system?.length || 0} chars`);
+  console.log(`[promptly] User prompt length: ${user?.length || 0} chars`);
+  
   let enhancedSystem = system;
   
   // If a Promptly model ID is provided, apply system prompt suffix if applicable
@@ -122,18 +163,39 @@ export async function chatText({ system, user, model, promptlyModelId }) {
     }
   }
   
-  const completion = await client.chat.completions.create({
-    model: usedModel,
-    temperature: DEFAULT_TEMPERATURE,
-    messages: [
-      { role: "system", content: enhancedSystem },
-      { role: "user", content: user }
-    ]
-  });
-  return {
-    text: completion.choices?.[0]?.message?.content || "",
-    usage: completion.usage || {},
-    model: usedModel,
-    completionId: completion.id || null
-  };
+  const startTime = Date.now();
+  try {
+    console.log(`[promptly] 📡 Calling OpenAI API: client.chat.completions.create()`);
+    const completion = await client.chat.completions.create({
+      model: usedModel,
+      temperature: DEFAULT_TEMPERATURE,
+      messages: [
+        { role: "system", content: enhancedSystem },
+        { role: "user", content: user }
+      ]
+    });
+    
+    const duration = Date.now() - startTime;
+    const responseLength = completion.choices?.[0]?.message?.content?.length || 0;
+    const tokensUsed = completion.usage?.total_tokens || 0;
+    
+    console.log(`[promptly] ✅ LLM call succeeded - Duration: ${duration}ms, Response: ${responseLength} chars, Tokens: ${tokensUsed}`);
+    console.log(`[promptly] Completion ID: ${completion.id || 'N/A'}`);
+    
+    return {
+      text: completion.choices?.[0]?.message?.content || "",
+      usage: completion.usage || {},
+      model: usedModel,
+      completionId: completion.id || null
+    };
+  } catch (error) {
+    const duration = Date.now() - startTime;
+    console.error(`[promptly] ❌ LLM call failed after ${duration}ms:`, error.message);
+    console.error(`[promptly] Error type: ${error.constructor.name}`);
+    if (error.response) {
+      console.error(`[promptly] Error response status: ${error.response?.status}`);
+      console.error(`[promptly] Error response data:`, error.response?.data);
+    }
+    throw error;
+  }
 }

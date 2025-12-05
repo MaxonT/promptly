@@ -246,17 +246,22 @@ function handleEnhanceError(res, endpoint, err, defaultMessage) {
  */
 enhanceRouter.post("/structure", async (req, res) => {
   try {
+    console.log(`[promptly] 📝 /enhance/structure: Request received`);
+    
     // 1) Input Layer: 结构化输入 - 收集原始 prompt 和附件
     const { prompt, attachments = [] } = req.body;
     const safeAttachments = coerceAttachments(attachments);
 
     // Input Layer: 反向澄清钩子 - 当缺少 prompt 时直接返回 400
     if (!prompt || typeof prompt !== 'string') {
+      console.warn(`[promptly] ⚠️  /enhance/structure: Missing or invalid prompt field`);
       return res.status(400).json({
         ok: false,
         error: "Missing or invalid 'prompt' field"
       });
     }
+
+    console.log(`[promptly] Prompt length: ${prompt.length} chars, Attachments: ${safeAttachments.length}`);
 
     // Input Layer: 日志打印附件摘要，帮助诊断
     logAttachments(safeAttachments, "/structure");
@@ -264,6 +269,8 @@ enhanceRouter.post("/structure", async (req, res) => {
     // 3) Compiler Layer: Prompt 生成 - 用户正文 + ATTACHMENT_METADATA 块
     const attachmentContext = buildAttachmentContext(safeAttachments);
     const fullPrompt = prompt + attachmentContext;
+
+    console.log(`[promptly] Full prompt length (with attachments): ${fullPrompt.length} chars`);
 
     // Call LLM for structure enhancement - Spec Layer: 组合包含背景与约束的 system prompt
     // 强调"清晰、分段、易懂、利于模型解析"
@@ -286,9 +293,13 @@ PROCESS:
 OUTPUT:
 Return ONLY the enhanced prompt text. Do not add explanations, comments, or meta-commentary.`;
 
+    console.log(`[promptly] 🔄 About to call LLM (chatText) for structure enhancement...`);
+
     // 4) Test Layer: 稳定性验证 - LLM 调用，温度为默认低随机度配置（在 openaiClient.js 中配置为 0.2）
     // 4) Test Layer: 格式自检 - chatText 确保返回纯文本，避免 JSON 解析错误
     const { text: enhanced, model: modelUsed, completionId } = await chatText({ system, user: fullPrompt });
+    
+    console.log(`[promptly] ✅ Received enhanced prompt from LLM, length: ${enhanced?.length || 0} chars`);
     
     // 4) Test Layer: 行为校验 - 记录模型使用情况
     logModelUsage("/enhance/structure", modelUsed, completionId);
@@ -302,7 +313,10 @@ Return ONLY the enhanced prompt text. Do not add explanations, comments, or meta
       }
     });
 
+    console.log(`[promptly] ✅ /enhance/structure: Request completed successfully`);
+
   } catch (err) {
+    console.error(`[promptly] ❌ /enhance/structure error:`, err.message || err);
     // 5) Iteration Layer: 迭代修复 - 错误捕获，统一处理 LLM 停用、内部错误等场景
     return handleEnhanceError(res, "/enhance/structure", err, "Enhancement failed");
   }

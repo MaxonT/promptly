@@ -1027,6 +1027,35 @@ html[data-theme="light"] .wizard-mode-option.is-selected{
   from{opacity:0;}
   to{opacity:1;}
 }
+/* Warning box animation - very prominent */
+@keyframes pulse-attention{
+  0%, 100%{
+    transform:scale(1);
+    box-shadow:0 0 0 0 rgba(245,158,11,0.7), 0 0 0 0 rgba(245,158,11,0.4);
+  }
+  50%{
+    transform:scale(1.05);
+    box-shadow:0 0 0 8px rgba(245,158,11,0), 0 0 30px 10px rgba(245,158,11,0.8);
+  }
+}
+.wizard-loading-warning{
+  display:flex !important;
+  align-items:center;
+  justify-content:center;
+  gap:0.5rem;
+  margin-top:1.5rem;
+  padding:1rem 1.5rem;
+  background:rgba(245,158,11,0.2) !important;
+  border:3px solid #F59E0B !important;
+  border-radius:12px;
+  font-size:1.1rem !important;
+  font-weight:800 !important;
+  color:#FCD34D !important;
+  animation:pulse-attention 1.5s ease-in-out infinite !important;
+  text-transform:uppercase;
+  letter-spacing:0.05em;
+  box-shadow:0 4px 20px rgba(245,158,11,0.5);
+}
 
 /* Modern regenerate icon with SVG */
 .wizard-regenerate-icon{

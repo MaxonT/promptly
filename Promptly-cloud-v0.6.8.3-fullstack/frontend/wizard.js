@@ -400,7 +400,6 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
 
       currentSessionId = data.session.id;
       window.promptlyWizardSession?.markRunning?.(currentSessionId);
-      window.globalStatus?.setSession?.(currentSessionId);
 
       if (ideaInput && data.session.initial_description) {
         ideaInput.value = data.session.initial_description;
@@ -895,12 +894,7 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
     cancelWizardBtn?.classList.remove("hidden");
     setWizardStatus(`Generating ${modeLabels[currentMode]} mode questions... (${modeEstimates[currentMode]})`, "info", { showTicks: true });
 
-    // Show global status bar for cross-page visibility (compact floating notification)
-    window.globalStatus?.show?.({
-      title: '🧙‍♂️ Wizard Running',
-      subtitle: 'Starting...',
-      mode: currentMode
-    });
+    // Global status removed - no cross-page indicator
 
     // Wait for fade-out animation before starting API call
     await new Promise(resolve => setTimeout(resolve, 300));
@@ -923,10 +917,10 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
         <div class="wizard-loading-text wizard-loading-main" style="font-size:1rem;margin-top:0.5rem;">Generating questions...</div>
         <div class="wizard-loading-text wizard-loading-elapsed" style="font-size:0.875rem;opacity:0.8;margin-top:0.3rem;">0s elapsed • ~${Math.round((estimate.min + estimate.max) / 2)}s estimated</div>
         <div class="wizard-loading-text" style="font-size:0.75rem;margin-top:0.5rem;opacity:0.6;">Analyzing your project to create personalized questions</div>
-        <div class="wizard-loading-warning" style="display:flex;align-items:center;justify-content:center;gap:0.5rem;margin-top:1.5rem;padding:0.75rem 1rem;background:rgba(245,158,11,0.15);border:2px solid rgba(245,158,11,0.6);border-radius:12px;font-size:0.95rem;font-weight:700;color:#FCD34D;animation:pulse-attention 1.5s ease-in-out infinite;">
-          <span style="font-size:1.2rem;">⚠️</span>
-          <span>Do not exit this page</span>
-          <span style="font-size:1.2rem;">⚠️</span>
+        <div class="wizard-loading-warning">
+          <span style="font-size:1.5rem;">⚠️</span>
+          <span>DO NOT EXIT THIS PAGE</span>
+          <span style="font-size:1.5rem;">⚠️</span>
         </div>
       `);
       
@@ -1024,7 +1018,6 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
         hideLoadingInQuestionPanel();
         
         // Show fallback notice in global status (using optional chaining for safety)
-        window.globalStatus?.error?.({
           message: '❌ LLM Unavailable',
           details: userMessage,
           autoHide: false
@@ -1034,7 +1027,6 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
       const data = await res.json();
       currentSessionId = data.session_id;
       window.promptlyWizardSession?.markRunning?.(currentSessionId);
-      window.globalStatus?.setSession?.(currentSessionId);
       log(`Session created: ${currentSessionId}`);
       
       // Hide loading overlay
@@ -1056,7 +1048,6 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
       updateWizardStepper('questions');
 
       // Update global status to show questions are ready
-      window.globalStatus?.complete?.({
         message: `✅ ${allQuestions.length} questions ready!`,
         autoHide: true,
         autoHideDelay: 3000,
@@ -1071,7 +1062,6 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
         log("Wizard start cancelled by user.");
         setWizardStatus("Wizard cancelled. You can edit your idea and start again.", "warn");
         // Hide global status on cancel
-        window.globalStatus?.hide?.();
         // Clear status indicator on cancellation
         window.promptlyWizardSession?.clear?.();
       } else {
@@ -1079,7 +1069,6 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
         log("Error while starting wizard: " + err.message);
         setWizardStatus("Something went wrong while preparing questions. Please try again.", "error");
         // Show error in global status
-        window.globalStatus?.error?.({
           message: '❌ Question generation failed',
           details: err.message || 'Unknown error',
           autoHide: false

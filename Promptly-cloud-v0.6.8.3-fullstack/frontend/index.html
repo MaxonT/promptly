@@ -1714,13 +1714,20 @@ document.addEventListener('DOMContentLoaded', () => {
       const pie = document.getElementById('piePass');
       const gauge = document.getElementById('gaugeProg');
       
+      // Use real historical data if available
+      const historyData = chartMetrics.history && chartMetrics.history.length > 0
+        ? chartMetrics.history
+        : [progressValue * 100, progressValue * 100, progressValue * 100];
+      
+      const contributionData = chartMetrics.contributions && chartMetrics.contributions.length > 0
+        ? chartMetrics.contributions
+        : [progressValue * 100, progressValue * 100, progressValue * 100];
+      
       if (line && typeof drawLine === 'function') {
-        const history = [progressValue * 100, progressValue * 100, progressValue * 100];
-        drawLine(line, history);
+        drawLine(line, historyData);
       }
       if (bar && typeof drawBars === 'function') {
-        const contrib = [progressValue * 100, progressValue * 100, progressValue * 100];
-        drawBars(bar, contrib);
+        drawBars(bar, contributionData);
       }
       if (pie && typeof drawPie === 'function') {
         const passRateValue = Math.round((chartMetrics.pass_rate || 0) * 100);
@@ -2622,6 +2629,17 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     if (valProg && metrics.compositeScore !== undefined) {
       valProg.textContent = (metrics.compositeScore * 100).toFixed(1) + '%';
+    }
+    
+    // Update charts with real historical data if available
+    if (typeof renderCharts === 'function') {
+      const chartMetrics = {
+        progress_pct: metrics.compositeScore ? metrics.compositeScore * 100 : 0,
+        pass_rate: metrics.safety || 0,
+        history: metrics.history,           // Real historical data from backend
+        contributions: metrics.contributions // Real contribution data from backend
+      };
+      renderCharts(chartMetrics);
     }
   }
 

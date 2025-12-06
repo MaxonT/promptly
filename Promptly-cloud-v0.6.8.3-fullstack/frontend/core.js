@@ -43,22 +43,385 @@
   function consentBanner(){if(localStorage.getItem("promptly.consent"))return; const b=document.createElement("div"); b.className="banner";
     const d=translations[localStorage.getItem(LANG_KEY)||"en"]||translations.en; b.innerHTML=`<span data-i18n="consent_text">${d.consent_text}</span><button class="btn" id="consentBtn" data-i18n="consent_btn">${d.consent_btn}</button>`;
     document.body.appendChild(b); document.getElementById("consentBtn").addEventListener("click",()=>{localStorage.setItem("promptly.consent","1"); b.remove();});}
-  // Canvas charts
-  function drawLine(c,series,col="--accent"){const ctx=c.getContext("2d");const w=c.width=c.clientWidth,h=c.height=c.clientHeight;ctx.clearRect(0,0,w,h);
-    const pad=24;const xs=series.map((_,i)=>pad+i*((w-2*pad)/Math.max(series.length-1,1)));const min=Math.min(...series,0),max=Math.max(...series,1);
-    const ys=series.map(v=>h-pad-((v-min)/(max-min||1))*(h-2*pad)); ctx.lineWidth=2; ctx.strokeStyle=getComputedStyle(document.documentElement).getPropertyValue(col)||"#06b6d4";
-    ctx.beginPath(); xs.forEach((x,i)=>{const y=ys[i]; i?ctx.lineTo(x,y):ctx.moveTo(x,y)}); ctx.stroke();}
-  function drawBars(c,series,col="--primary"){const ctx=c.getContext("2d");const w=c.width=c.clientWidth,h=c.height=c.clientHeight;ctx.clearRect(0,0,w,h);
-    const pad=24;const bw=(w-2*pad)/series.length*0.7;const max=Math.max(...series,1);
-    series.forEach((v,i)=>{const x=pad+i*((w-2*pad)/series.length)+((w-2*pad)/series.length-bw)/2;const bh=(v/max)*(h-2*pad);
-      ctx.fillStyle=getComputedStyle(document.documentElement).getPropertyValue(col)||"#7c3aed";ctx.fillRect(x,h-pad-bh,bw,bh);});}
-  function drawPie(c,vals,cols=["--ok","--err"]){const ctx=c.getContext("2d");const w=c.width=c.clientWidth,h=c.height=c.clientHeight;ctx.clearRect(0,0,w,h);
-    const r=Math.min(w,h)/2-10,cx=w/2,cy=h/2,sum=vals.reduce((a,b)=>a+b,0)||1;let a=-Math.PI/2;vals.forEach((v,i)=>{const col=getComputedStyle(document.documentElement).getPropertyValue(cols[i]||"--accent")||"#06b6d4";
-      const seg=(v/sum)*Math.PI*2;ctx.beginPath();ctx.moveTo(cx,cy);ctx.fillStyle=col;ctx.arc(cx,cy,r,a,a+seg);ctx.closePath();ctx.fill();a+=seg;});}
-  function drawGauge(c,p){const ctx=c.getContext("2d");const w=c.width=c.clientWidth,h=c.height=c.clientHeight;ctx.clearRect(0,0,w,h);
-    const cx=w/2,cy=h*0.9,r=Math.min(w,h)*0.75,start=Math.PI,end=2*Math.PI;ctx.lineWidth=14;ctx.strokeStyle="#333a";ctx.beginPath();ctx.arc(cx,cy,r*0.5,start,end);ctx.stroke();
-    ctx.strokeStyle=getComputedStyle(document.documentElement).getPropertyValue("--accent")||"#06b6d4";ctx.beginPath();ctx.arc(cx,cy,r*0.5,start,start+(end-start)*Math.max(0,Math.min(1,p)));ctx.stroke();
-    ctx.fillStyle=getComputedStyle(document.documentElement).getPropertyValue("--text")||"#eaf0fb";ctx.font="bold 24px Inter, system-ui";ctx.textAlign="center";ctx.fillText(Math.round(p*100)+"%",cx,cy-10);}
+  // ============================================
+  // Enhanced Professional Data Visualization
+  // ============================================
+  
+  // 1. Growth Over Iterations - Line Chart with Growth %
+  function drawLine(c, series, col = "--accent") {
+    const ctx = c.getContext("2d");
+    const w = c.width = c.clientWidth;
+    const h = c.height = c.clientHeight;
+    ctx.clearRect(0, 0, w, h);
+    
+    const pad = 40; // Increased padding for labels
+    const padBottom = 50;
+    const padLeft = 50;
+    
+    // Calculate min/max with some padding for visual appeal
+    const min = Math.min(...series, 0);
+    const max = Math.max(...series, 1);
+    const range = max - min || 1;
+    
+    // Draw grid lines (horizontal)
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
+    ctx.lineWidth = 1;
+    for (let i = 0; i <= 5; i++) {
+      const y = h - padBottom - (i / 5) * (h - pad - padBottom);
+      ctx.beginPath();
+      ctx.moveTo(padLeft, y);
+      ctx.lineTo(w - 20, y);
+      ctx.stroke();
+      
+      // Y-axis labels
+      const value = min + (range * i / 5);
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+      ctx.font = '10px Inter, system-ui';
+      ctx.textAlign = 'right';
+      ctx.fillText(value.toFixed(1), padLeft - 10, y + 4);
+    }
+    
+    // Calculate coordinates
+    const xs = series.map((_, i) => padLeft + i * ((w - padLeft - 20) / Math.max(series.length - 1, 1)));
+    const ys = series.map(v => h - padBottom - ((v - min) / range) * (h - pad - padBottom));
+    
+    // Draw area fill under line
+    ctx.fillStyle = 'rgba(34, 211, 238, 0.1)';
+    ctx.beginPath();
+    ctx.moveTo(xs[0], h - padBottom);
+    xs.forEach((x, i) => ctx.lineTo(x, ys[i]));
+    ctx.lineTo(xs[xs.length - 1], h - padBottom);
+    ctx.closePath();
+    ctx.fill();
+    
+    // Draw main line
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue(col) || "#06b6d4";
+    ctx.shadowColor = 'rgba(34, 211, 238, 0.5)';
+    ctx.shadowBlur = 8;
+    ctx.beginPath();
+    xs.forEach((x, i) => {
+      const y = ys[i];
+      i ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
+    });
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+    
+    // Draw data points
+    ctx.fillStyle = '#22D3EE';
+    xs.forEach((x, i) => {
+      ctx.beginPath();
+      ctx.arc(x, ys[i], 4, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#0B0F1A';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    });
+    
+    // Calculate and display growth percentage (green)
+    if (series.length >= 2) {
+      const firstValue = series[0];
+      const lastValue = series[series.length - 1];
+      const growth = ((lastValue - firstValue) / (firstValue || 1)) * 100;
+      
+      ctx.fillStyle = growth >= 0 ? '#22C55E' : '#EF4444';
+      ctx.font = 'bold 16px Inter, system-ui';
+      ctx.textAlign = 'right';
+      const growthText = `${growth >= 0 ? '+' : ''}${growth.toFixed(1)}%`;
+      ctx.fillText(growthText, w - 25, 30);
+      
+      // Growth label
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+      ctx.font = '10px Inter, system-ui';
+      ctx.fillText('Growth', w - 25, 45);
+    }
+    
+    // X-axis labels
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+    ctx.font = '10px Inter, system-ui';
+    ctx.textAlign = 'center';
+    xs.forEach((x, i) => {
+      ctx.fillText(`Run ${i + 1}`, x, h - padBottom + 20);
+    });
+  }
+  // 2. Change Contribution - Bar Chart with Labels
+  function drawBars(c, series, col = "--primary") {
+    const ctx = c.getContext("2d");
+    const w = c.width = c.clientWidth;
+    const h = c.height = c.clientHeight;
+    ctx.clearRect(0, 0, w, h);
+    
+    const pad = 40;
+    const padBottom = 50;
+    const padLeft = 50;
+    const max = Math.max(...series, 1);
+    const bw = (w - padLeft - 20) / series.length * 0.6;
+    
+    // Draw grid lines (horizontal)
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
+    ctx.lineWidth = 1;
+    for (let i = 0; i <= 5; i++) {
+      const y = h - padBottom - (i / 5) * (h - pad - padBottom);
+      ctx.beginPath();
+      ctx.moveTo(padLeft, y);
+      ctx.lineTo(w - 20, y);
+      ctx.stroke();
+      
+      // Y-axis labels
+      const value = (max * i / 5).toFixed(0);
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+      ctx.font = '10px Inter, system-ui';
+      ctx.textAlign = 'right';
+      ctx.fillText(value, padLeft - 10, y + 4);
+    }
+    
+    // Draw bars with gradient
+    series.forEach((v, i) => {
+      const x = padLeft + i * ((w - padLeft - 20) / series.length) + ((w - padLeft - 20) / series.length - bw) / 2;
+      const bh = (v / max) * (h - pad - padBottom);
+      
+      // Create gradient
+      const gradient = ctx.createLinearGradient(x, h - padBottom - bh, x, h - padBottom);
+      const baseColor = getComputedStyle(document.documentElement).getPropertyValue(col) || "#7c3aed";
+      gradient.addColorStop(0, baseColor);
+      gradient.addColorStop(1, baseColor + '80');
+      
+      // Draw bar
+      ctx.fillStyle = gradient;
+      ctx.fillRect(x, h - padBottom - bh, bw, bh);
+      
+      // Draw bar outline
+      ctx.strokeStyle = baseColor;
+      ctx.lineWidth = 2;
+      ctx.strokeRect(x, h - padBottom - bh, bw, bh);
+      
+      // Value on top of bar
+      ctx.fillStyle = '#22D3EE';
+      ctx.font = 'bold 11px Inter, system-ui';
+      ctx.textAlign = 'center';
+      ctx.fillText(v.toFixed(1), x + bw / 2, h - padBottom - bh - 8);
+      
+      // X-axis labels
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+      ctx.font = '10px Inter, system-ui';
+      ctx.fillText(`Change ${i + 1}`, x + bw / 2, h - padBottom + 20);
+    });
+    
+    // Y-axis label
+    ctx.save();
+    ctx.translate(15, h / 2);
+    ctx.rotate(-Math.PI / 2);
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+    ctx.font = '11px Inter, system-ui';
+    ctx.textAlign = 'center';
+    ctx.fillText('Impact Score', 0, 0);
+    ctx.restore();
+  }
+  // 3. Pass vs Fail - Donut Chart with Percentages and Legend
+  function drawPie(c, vals, cols = ["--ok", "--err"]) {
+    const ctx = c.getContext("2d");
+    const w = c.width = c.clientWidth;
+    const h = c.height = c.clientHeight;
+    ctx.clearRect(0, 0, w, h);
+    
+    const r = Math.min(w, h) / 2 - 40;
+    const innerR = r * 0.6; // Donut hole
+    const cx = w / 2;
+    const cy = h / 2 - 10;
+    const sum = vals.reduce((a, b) => a + b, 0) || 1;
+    let a = -Math.PI / 2;
+    
+    const labels = ['Pass', 'Fail'];
+    const colorValues = [
+      getComputedStyle(document.documentElement).getPropertyValue(cols[0]) || "#22C55E",
+      getComputedStyle(document.documentElement).getPropertyValue(cols[1]) || "#EF4444"
+    ];
+    
+    // Draw donut segments
+    vals.forEach((v, i) => {
+      const seg = (v / sum) * Math.PI * 2;
+      
+      // Draw segment
+      ctx.beginPath();
+      ctx.arc(cx, cy, r, a, a + seg);
+      ctx.arc(cx, cy, innerR, a + seg, a, true);
+      ctx.closePath();
+      ctx.fillStyle = colorValues[i];
+      ctx.fill();
+      
+      // Add subtle shadow
+      ctx.strokeStyle = 'rgba(0, 0, 0, 0.3)';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+      
+      // Draw percentage label in the middle of segment
+      const midAngle = a + seg / 2;
+      const labelR = (r + innerR) / 2;
+      const labelX = cx + Math.cos(midAngle) * labelR;
+      const labelY = cy + Math.sin(midAngle) * labelR;
+      
+      const percentage = ((v / sum) * 100).toFixed(1);
+      ctx.fillStyle = '#FFFFFF';
+      ctx.font = 'bold 14px Inter, system-ui';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(`${percentage}%`, labelX, labelY);
+      
+      a += seg;
+    });
+    
+    // Draw center circle (donut hole)
+    ctx.beginPath();
+    ctx.arc(cx, cy, innerR, 0, Math.PI * 2);
+    ctx.fillStyle = '#0B0F1A';
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    
+    // Center text - total
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+    ctx.font = 'bold 20px Inter, system-ui';
+    ctx.textAlign = 'center';
+    ctx.fillText(`${sum}`, cx, cy - 8);
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+    ctx.font = '11px Inter, system-ui';
+    ctx.fillText('Total', cx, cy + 10);
+    
+    // Legend at bottom
+    const legendY = h - 20;
+    const legendSpacing = 80;
+    const startX = cx - (labels.length * legendSpacing) / 2;
+    
+    labels.forEach((label, i) => {
+      const x = startX + i * legendSpacing;
+      
+      // Color box
+      ctx.fillStyle = colorValues[i];
+      ctx.fillRect(x, legendY - 8, 12, 12);
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+      ctx.strokeRect(x, legendY - 8, 12, 12);
+      
+      // Label text
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+      ctx.font = '11px Inter, system-ui';
+      ctx.textAlign = 'left';
+      ctx.fillText(`${label}: ${vals[i]}`, x + 18, legendY);
+    });
+  }
+  // 4. Progress Meter - Semi-Circle Gauge with Color Gradient
+  function drawGauge(c, p) {
+    const ctx = c.getContext("2d");
+    const w = c.width = c.clientWidth;
+    const h = c.height = c.clientHeight;
+    ctx.clearRect(0, 0, w, h);
+    
+    const cx = w / 2;
+    const cy = h * 0.75;
+    const r = Math.min(w, h) * 0.35;
+    const lineWidth = 18;
+    const start = Math.PI;
+    const end = 2 * Math.PI;
+    const progress = Math.max(0, Math.min(1, p));
+    
+    // Draw background arc
+    ctx.lineWidth = lineWidth;
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, start, end);
+    ctx.stroke();
+    
+    // Draw progress arc with gradient
+    const progressAngle = start + (end - start) * progress;
+    
+    // Create gradient based on progress
+    let gradient;
+    if (progress < 0.5) {
+      // Red to Yellow
+      gradient = ctx.createLinearGradient(cx - r, cy, cx + r, cy);
+      gradient.addColorStop(0, '#EF4444');
+      gradient.addColorStop(1, '#F59E0B');
+    } else if (progress < 0.75) {
+      // Yellow to Cyan
+      gradient = ctx.createLinearGradient(cx - r, cy, cx + r, cy);
+      gradient.addColorStop(0, '#F59E0B');
+      gradient.addColorStop(1, '#22D3EE');
+    } else {
+      // Cyan to Green
+      gradient = ctx.createLinearGradient(cx - r, cy, cx + r, cy);
+      gradient.addColorStop(0, '#22D3EE');
+      gradient.addColorStop(1, '#22C55E');
+    }
+    
+    ctx.strokeStyle = gradient;
+    ctx.shadowColor = progress >= 0.75 ? 'rgba(34, 197, 94, 0.5)' : 'rgba(34, 211, 238, 0.5)';
+    ctx.shadowBlur = 15;
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, start, progressAngle);
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+    
+    // Draw tick marks
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+    ctx.lineWidth = 2;
+    for (let i = 0; i <= 10; i++) {
+      const angle = start + (end - start) * (i / 10);
+      const x1 = cx + Math.cos(angle) * (r - lineWidth / 2 - 5);
+      const y1 = cy + Math.sin(angle) * (r - lineWidth / 2 - 5);
+      const x2 = cx + Math.cos(angle) * (r - lineWidth / 2 - 12);
+      const y2 = cy + Math.sin(angle) * (r - lineWidth / 2 - 12);
+      
+      ctx.beginPath();
+      ctx.moveTo(x1, y1);
+      ctx.lineTo(x2, y2);
+      ctx.stroke();
+      
+      // Labels for 0%, 50%, 100%
+      if (i === 0 || i === 5 || i === 10) {
+        const labelX = cx + Math.cos(angle) * (r - lineWidth / 2 - 25);
+        const labelY = cy + Math.sin(angle) * (r - lineWidth / 2 - 25);
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+        ctx.font = '10px Inter, system-ui';
+        ctx.textAlign = 'center';
+        ctx.fillText(`${i * 10}%`, labelX, labelY);
+      }
+    }
+    
+    // Draw needle
+    const needleAngle = start + (end - start) * progress;
+    const needleLength = r - lineWidth / 2 - 15;
+    ctx.strokeStyle = '#FFFFFF';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.lineTo(
+      cx + Math.cos(needleAngle) * needleLength,
+      cy + Math.sin(needleAngle) * needleLength
+    );
+    ctx.stroke();
+    
+    // Center dot
+    ctx.beginPath();
+    ctx.arc(cx, cy, 6, 0, Math.PI * 2);
+    ctx.fillStyle = '#FFFFFF';
+    ctx.fill();
+    ctx.strokeStyle = '#0B0F1A';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    
+    // Center percentage text
+    ctx.fillStyle = progress >= 0.75 ? '#22C55E' : '#22D3EE';
+    ctx.font = 'bold 32px Inter, system-ui';
+    ctx.textAlign = 'center';
+    ctx.fillText(`${Math.round(progress * 100)}%`, cx, cy + r + 35);
+    
+    // Status label
+    const status = progress >= 0.75 ? 'Excellent' : progress >= 0.5 ? 'Good' : progress >= 0.25 ? 'Fair' : 'Poor';
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+    ctx.font = '12px Inter, system-ui';
+    ctx.fillText(status, cx, cy + r + 55);
+  }
   function getRunUrl() {
     return null;
   }
@@ -89,8 +452,18 @@
     const bar = document.getElementById("barContrib");
     const pie = document.getElementById("piePass");
     const gauge = document.getElementById("gaugeProg");
-    if (line) drawLine(line, [progress * 100, progress * 100, progress * 100]);
-    if (bar) drawBars(bar, [progress * 100, progress * 100, progress * 100]);
+    
+    // Use real historical data if available, otherwise fallback to current progress
+    const historyData = metrics.history && metrics.history.length > 0 
+      ? metrics.history 
+      : [progress * 100, progress * 100, progress * 100];
+    
+    const contributionData = metrics.contributions && metrics.contributions.length > 0
+      ? metrics.contributions
+      : [progress * 100, progress * 100, progress * 100];
+    
+    if (line) drawLine(line, historyData);
+    if (bar) drawBars(bar, contributionData);
     if (pie) drawPie(pie, [Math.round((metrics.pass_rate ?? metrics.passRate ?? 0) * 100), Math.round((1 - (metrics.pass_rate ?? metrics.passRate ?? 0)) * 100)]);
     if (gauge) drawGauge(gauge, progress);
   }
@@ -118,7 +491,7 @@
         <span class="global-status-message">Question Wizard is running</span>
         <a href="wizard.html" class="global-status-cta">Go to Wizard →</a>
         <button class="global-status-dismiss" aria-label="Dismiss">&times;</button>
-      </div>
+          </div>
     `;
     
     // Add dismiss handler
@@ -198,10 +571,10 @@
     renderMetrics(metrics);
 
     if (bestPromptEl && bestContent) {
-      bestPromptEl.value = formatBestPrompt(bestContent);
-      bestPromptEl.classList.remove("error-state", "processing-animation");
-      bestPromptEl.classList.add("success-highlight");
-      bestPromptEl.style.borderColor = "#22C55E";
+        bestPromptEl.value = formatBestPrompt(bestContent);
+        bestPromptEl.classList.remove("error-state", "processing-animation");
+        bestPromptEl.classList.add("success-highlight");
+        bestPromptEl.style.borderColor = "#22C55E";
     }
   }
   // Expose refreshMetrics globally so other scripts can call it

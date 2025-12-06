@@ -122,39 +122,39 @@ export async function chatJson({ system, user, model, promptlyModelId }) {
   const startTime = Date.now();
   try {
     console.log(`[promptly] 📡 Calling OpenAI API: client.chat.completions.create() with JSON format`);
-    const completion = await client.chat.completions.create({
-      model: usedModel,
-      temperature: DEFAULT_TEMPERATURE,
-      response_format: { type: "json_object" },
-      messages: [
-        { role: "system", content: enhancedSystem },
-        { role: "user", content: user }
-      ]
-    });
+  const completion = await client.chat.completions.create({
+    model: usedModel,
+    temperature: DEFAULT_TEMPERATURE,
+    response_format: { type: "json_object" },
+    messages: [
+      { role: "system", content: enhancedSystem },
+      { role: "user", content: user }
+    ]
+  });
     
     const duration = Date.now() - startTime;
-    const content = completion.choices?.[0]?.message?.content || "{}";
+  const content = completion.choices?.[0]?.message?.content || "{}";
     const tokensUsed = completion.usage?.total_tokens || 0;
     
     console.log(`[promptly] ✅ LLM call succeeded - Duration: ${duration}ms, Response: ${content.length} chars, Tokens: ${tokensUsed}`);
     console.log(`[promptly] Completion ID: ${completion.id || 'N/A'}`);
     
-    let parsed;
-    try {
-      parsed = JSON.parse(content);
+  let parsed;
+  try {
+    parsed = JSON.parse(content);
       console.log(`[promptly] ✅ JSON parsed successfully`);
     } catch (parseError) {
       console.error(`[promptly] ⚠️  JSON parse failed:`, parseError.message);
       console.error(`[promptly] Raw content:`, content.substring(0, 200));
-      parsed = {};
-    }
+    parsed = {};
+  }
     
-    return {
-      data: parsed,
-      usage: completion.usage || {},
-      model: usedModel,
-      completionId: completion.id || null
-    };
+  return {
+    data: parsed,
+    usage: completion.usage || {},
+    model: usedModel,
+    completionId: completion.id || null
+  };
   } catch (error) {
     const duration = Date.now() - startTime;
     console.error(`[promptly] ❌ LLM call failed after ${duration}ms:`, error.message);
@@ -184,7 +184,7 @@ async function executeChatText(
     console.error("[promptly] ❌ LLM call blocked: OpenAI client not initialized (OPENAI_API_KEY not set)");
     throw new LlmDisabledError();
   }
-
+  
   const usedModel = resolveModel(model);
   console.log(`[promptly] 🚀 Starting LLM call - Model: ${usedModel}, Type: chatText, Attempt: ${attempt + 1}`);
   console.log(`[promptly] System prompt length: ${system?.length || 0} chars`);
@@ -197,21 +197,21 @@ async function executeChatText(
       enhancedSystem = buildSystemPrompt(system, promptlyModelId);
     }
   }
-
+  
   const appliedTemperature = temperature ?? DEFAULT_TEMPERATURE;
   const promptSuffix = attempt > 0 ? `\n\n${forceRewritePrompt || DEFAULT_FORCE_REWRITE_PROMPT}` : "";
   const userContent = `${baseUser}${promptSuffix}`;
 
   const startTime = Date.now();
   try {
-    const completion = await client.chat.completions.create({
-      model: usedModel,
+  const completion = await client.chat.completions.create({
+    model: usedModel,
       temperature: appliedTemperature,
-      messages: [
-        { role: "system", content: enhancedSystem },
+    messages: [
+      { role: "system", content: enhancedSystem },
         { role: "user", content: userContent }
-      ]
-    });
+    ]
+  });
 
     const duration = Date.now() - startTime;
     const responseText = completion.choices?.[0]?.message?.content || "";
@@ -253,13 +253,13 @@ async function executeChatText(
       console.warn(`[promptly] ⚠️ Final output similarity still high (${similarity.toFixed(3)}), but retry limit reached`);
     }
 
-    return {
+  return {
       text: responseText,
-      usage: completion.usage || {},
-      model: usedModel,
+    usage: completion.usage || {},
+    model: usedModel,
       completionId: completion.id || null,
       similarity
-    };
+  };
   } catch (error) {
     const duration = Date.now() - startTime;
     console.error(`[promptly] ❌ LLM call failed after ${duration}ms:`, error.message);

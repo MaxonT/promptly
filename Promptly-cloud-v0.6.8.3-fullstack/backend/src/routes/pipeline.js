@@ -675,7 +675,62 @@ Provide honest, objective scores based on the criteria.`;
       }
     });
 
-    // Final completion event
+    // Query historical runs for this user to build history and contributions
+    const historicalRuns = db.prepare(`
+      SELECT 
+        or_data.result_json,
+        or_data.created_at
+      FROM outcome_runs or_data
+      WHERE or_data.user_id = ?
+        AND or_data.status = 'completed'
+      ORDER BY or_data.created_at DESC
+      LIMIT 10
+    `).all(userId);
+    
+    // Build history array (progress/composite scores from recent runs)
+    const history = [];
+    const contributions = [];
+    
+    historicalRuns.reverse().forEach((run, index) => {
+      try {
+        const resultData = JSON.parse(run.result_json || '{}');
+        const compositeScore = resultData.bestCandidate?.metrics?.compositeScore;
+        
+        if (compositeScore !== undefined) {
+          const progressValue = Math.round(compositeScore * 100);
+          history.push(progressValue);
+          
+          // Calculate contribution (delta from previous run)
+          if (index > 0) {
+            const contribution = Math.abs(progressValue - history[index - 1]);
+            contributions.push(contribution);
+          } else {
+            contributions.push(progressValue); // First run's contribution is its absolute value
+          }
+        }
+      } catch (parseError) {
+        console.warn(`[pipeline] Could not parse historical run data:`, parseError);
+      }
+    });
+    
+    // Add current run to history
+    const currentProgress = Math.round(bestCandidate.metrics.compositeScore * 100);
+    history.push(currentProgress);
+    
+    if (history.length > 1) {
+      const lastContribution = Math.abs(currentProgress - history[history.length - 2]);
+      contributions.push(lastContribution);
+    } else {
+      contributions.push(currentProgress);
+    }
+    
+    // Ensure we have at least 3 data points for visualization (pad with current value if needed)
+    while (history.length < 3) {
+      history.unshift(currentProgress);
+      contributions.unshift(0);
+    }
+    
+    // Final completion event with historical data
     sendEvent(runId, "complete", {
       success: true,
       specId,
@@ -684,7 +739,11 @@ Provide honest, objective scores based on the criteria.`;
         id: bestCandidate.id,
         content: bestCandidate.content,
         agent: bestCandidate.agent,
-        metrics: bestCandidate.metrics
+        metrics: {
+          ...bestCandidate.metrics,
+          history: history,           // Historical progress values
+          contributions: contributions // Change contributions per run
+        }
       }
     });
 

@@ -66,6 +66,10 @@ app.use("/api/enhance", enhanceRouter);
 app.use("/api/prompts", promptsRouter);
 app.use("/api/pipeline", pipelineRouter);
 
+// Log registered routes for debugging
+console.log(`[promptly] ✅ Pipeline router registered at /api/pipeline`);
+console.log(`[promptly] ✅ Available pipeline routes: POST /api/pipeline/run, GET /api/pipeline/stream/:runId`);
+
 const PORT = process.env.PORT || 8080;
 app.listen(PORT, () => {
   console.log(`[promptly] backend listening on :${PORT}`);

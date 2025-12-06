@@ -31,10 +31,10 @@ export class LlmDisabledError extends Error {
 }
 
 const DEFAULT_TEMPERATURE = 0.2;
-const DEFAULT_MAX_RETRIES = 1;
-const DEFAULT_MIN_CHANGE_SIMILARITY = 0.85;
+const DEFAULT_MAX_RETRIES = 2; // Increased from 1 to 2 for better change detection
+const DEFAULT_MIN_CHANGE_SIMILARITY = 0.75; // Lowered from 0.85 to 0.75 to catch more unchanged outputs
 const DEFAULT_FORCE_REWRITE_PROMPT =
-  "OUTPUT POLICY: Do not repeat the user's prompt. Your response must be substantially different; otherwise append '> needs more change'.";
+  "CRITICAL: Your output MUST be substantially different from the input. Rewrite, restructure, and enhance. Do NOT simply copy or rephrase. If output is too similar, append '> needs more change'.";
 
 function levenshteinDistance(a, b) {
   const matrix = Array.from({ length: b.length + 1 }, () =>
@@ -229,20 +229,28 @@ async function executeChatText(
     const retryLimit = typeof maxRetries === "number" ? maxRetries : DEFAULT_MAX_RETRIES;
 
     if (similarity >= threshold && attempt < retryLimit) {
-      console.warn("[promptly] 🚩 Output too similar; retrying with stronger rewrite instruction");
+      console.warn(`[promptly] 🚩 Output too similar (${similarity.toFixed(3)} >= ${threshold}); retrying with stronger rewrite instruction (attempt ${attempt + 1}/${retryLimit + 1})`);
+      // Increase temperature more aggressively on retry
+      const retryTemperature = Math.max(appliedTemperature + 0.15, 0.4);
+      console.log(`[promptly] Retry with temperature: ${retryTemperature}`);
       return executeChatText(
         {
           system,
           model,
           promptlyModelId,
           baseUser,
-          temperature: Math.max(appliedTemperature, 0.35),
+          temperature: retryTemperature,
           forceRewritePrompt,
           minSimilarity,
           maxRetries
         },
         attempt + 1
       );
+    }
+    
+    // Log final similarity if still high
+    if (similarity >= threshold) {
+      console.warn(`[promptly] ⚠️ Final output similarity still high (${similarity.toFixed(3)}), but retry limit reached`);
     }
 
     return {

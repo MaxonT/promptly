@@ -20,6 +20,23 @@ export const pipelineRouter = Router();
 // Store active SSE connections by runId
 const activeStreams = new Map();
 
+/**
+ * GET /api/pipeline/health
+ * Health check endpoint to verify pipeline routes are working
+ */
+pipelineRouter.get("/health", (req, res) => {
+  res.json({
+    ok: true,
+    message: "Pipeline routes are working",
+    routes: {
+      "POST /api/pipeline/run": "Execute full pipeline with SSE events",
+      "GET /api/pipeline/stream/:runId": "SSE stream for pipeline events",
+      "GET /api/pipeline/health": "Health check (this endpoint)"
+    },
+    activeStreams: activeStreams.size
+  });
+});
+
 // Helper to get user ID from request
 function getUserId(req) {
   if (req.user && req.user.sub) return req.user.sub;
@@ -86,18 +103,22 @@ const PipelineRunRequestSchema = z.object({
 });
 
 pipelineRouter.post("/run", async (req, res) => {
+  console.log(`[pipeline] POST /run received`);
   const userId = getUserId(req);
   ensureUser(userId);
 
   const parsed = PipelineRunRequestSchema.safeParse(req.body);
   if (!parsed.success) {
+    console.error(`[pipeline] Validation failed:`, parsed.error.flatten());
     return res.status(400).json({ ok: false, error: parsed.error.flatten() });
   }
 
   const { idea, attachments = [], skipQuestions = false, model = null } = parsed.data;
+  console.log(`[pipeline] Starting pipeline - idea length: ${idea.length}, skipQuestions: ${skipQuestions}, model: ${model || 'default'}`);
 
   // Generate a unique runId for this pipeline execution
   const runId = `run_${nanoid(16)}`;
+  console.log(`[pipeline] Generated runId: ${runId}`);
 
   // Immediately return runId and SSE endpoint
   res.json({
@@ -155,14 +176,19 @@ async function executePipelineWithEvents(runId, userId, { idea, attachments, ski
       details: { ideaLength: idea.length, attachmentsCount: attachments.length }
     });
 
-    // Optimized: Concise system prompt
+    // Enhanced: Strong system prompt to ensure transformation
     const specSystem = `Extract structured spec from raw idea.
 
-CRITICAL: userGoal MUST be rephrased, not copied. Infer audience, constraints, tone, format, domain, examples.
+CRITICAL REQUIREMENTS:
+1. userGoal MUST be rephrased and expanded, NEVER copied verbatim
+2. Infer missing details: audience, constraints, tone, format, domain, examples
+3. Transform vague ideas into concrete, actionable specifications
+4. If input is very specific, expand it with additional context
 
-JSON: {"userGoal": "rephrased", "audience": "string|null", "constraints": ["string"], "tone": "string|null", "format": "string|null", "domain": "string|null", "examples": ["string"]}
+OUTPUT FORMAT:
+JSON only: {"userGoal": "rephrased and expanded", "audience": "string|null", "constraints": ["string"], "tone": "string|null", "format": "string|null", "domain": "string|null", "examples": ["string"]}
 
-Return JSON only. If userGoal mirrors input, include "> needs more change" in userGoal.`;
+REQUIREMENT: userGoal must differ substantially from input. If too similar, append "> needs more change".`;
 
     // Build attachment context
     const attachmentContext = attachments.length > 0
@@ -178,14 +204,16 @@ ${idea}${attachmentContext}`;
       stage: "spec",
       step: "llm-call",
       message: "Calling LLM to generate structured spec...",
-      details: { model: model || "default" }
+      details: { model: model || "default", ideaLength: idea.length }
     });
 
     checkTimeout(); // Check timeout before LLM call
+    console.log(`[pipeline] [${runId}] Stage 1: Calling Spec Builder LLM...`);
     const { data: specData } = await chatJson({
       system: specSystem,
       user: specUserPrompt
     });
+    console.log(`[pipeline] [${runId}] Stage 1: Spec Builder completed, extracted ${Object.keys(specData || {}).length} fields`);
 
     sendEvent(runId, "stage-progress", {
       stage: "spec",
@@ -225,12 +253,19 @@ ${idea}${attachmentContext}`;
         timestamp: new Date().toISOString()
       });
 
-      // Optimized: Concise question engine prompt
-      const questionSystem = `Ask one clarifying question to improve spec completeness.
+      // Enhanced: Question engine prompt with stronger requirements
+      const questionSystem = `You are a Question Engine. Ask ONE high-value clarifying question to improve spec completeness.
 
-JSON: {"question": "string", "shouldStop": false, "estimatedCompleteness": 0.8, "missingFields": ["string"]}
+REQUIREMENTS:
+- Ask a specific, actionable question (not generic)
+- Focus on missing critical information
+- Stop if spec is already complete enough (estimatedCompleteness >= 0.9)
+- Maximum 3 questions (Q1-Q3)
 
-If question mirrors existing context, append "> needs more change" to question.`;
+OUTPUT FORMAT (JSON only):
+{"question": "specific clarifying question", "shouldStop": false, "estimatedCompleteness": 0.8, "missingFields": ["field1", "field2"]}
+
+CRITICAL: Question must be specific and valuable. If too generic, append "> needs more change".`;
 
       sessionId = `session_${nanoid(12)}`;
       const questionsAsked = [];
@@ -264,10 +299,12 @@ If question mirrors existing context, append "> needs more change" to question.`
         }
 
         // Generate next question
+        console.log(`[pipeline] [${runId}] Stage 2: Generating Q${currentStep}...`);
         const { data: qData } = await chatJson({
           system: questionSystem,
           user: `Generate Q${currentStep} for:\n${qaContext}`
         });
+        console.log(`[pipeline] [${runId}] Stage 2: Q${currentStep} generated, shouldStop: ${qData?.shouldStop || false}`);
 
         if (!qData || qData.shouldStop) {
           shouldStop = true;
@@ -351,27 +388,48 @@ If question mirrors existing context, append "> needs more change" to question.`
       timestamp: new Date().toISOString()
     });
 
-    // Optimized: Concise agent prompts
-    const agents = [
-      {
-        name: "architect",
-        systemPrompt: `Architect: Transform spec into structured prompt with sections, headings, variables.
+      // Enhanced: Strong agent prompts to ensure transformation
+      const agents = [
+        {
+          name: "architect",
+          systemPrompt: `You are an Architect agent. Transform the specification into a complete, structured prompt.
 
-CRITICAL: Output MUST differ from input. If unchanged, append "> needs more change".`
-      },
-      {
-        name: "editor",
-        systemPrompt: `Editor: Polish language, improve readability, enhance clarity.
+REQUIREMENTS:
+- Add clear sections with headings (##)
+- Include variables/placeholders for dynamic content
+- Structure instructions step-by-step
+- Add explicit formatting rules
+- Output MUST be substantially different from the input spec
 
-CRITICAL: Output MUST differ from input. If unchanged, append "> needs more change".`
-      },
-      {
-        name: "judge",
-        systemPrompt: `Judge: Add safety constraints, guardrails, edge case handling.
+CRITICAL: If output mirrors input, append "> needs more change" to signal insufficient transformation.`
+        },
+        {
+          name: "editor",
+          systemPrompt: `You are an Editor agent. Polish and enhance the prompt language.
 
-CRITICAL: Output MUST differ from input. If unchanged, append "> needs more change".`
-      }
-    ];
+REQUIREMENTS:
+- Improve sentence structure and flow
+- Enhance clarity and precision
+- Refine word choices for impact
+- Optimize readability
+- Output MUST be substantially improved from input
+
+CRITICAL: If output is too similar to input, append "> needs more change" to signal insufficient enhancement.`
+        },
+        {
+          name: "judge",
+          systemPrompt: `You are a Judge agent. Add safety, robustness, and edge case handling.
+
+REQUIREMENTS:
+- Add explicit safety constraints
+- Include guardrails for misuse
+- Handle edge cases and error scenarios
+- Add validation rules
+- Output MUST include substantial safety enhancements
+
+CRITICAL: If output lacks safety improvements, append "> needs more change" to signal insufficient additions.`
+        }
+      ];
 
     const baseContext = `Specification:
 ${JSON.stringify(specData, null, 2)}`;
@@ -388,13 +446,20 @@ ${JSON.stringify(specData, null, 2)}`;
         details: { agent: agent.name, progress: `${i + 1}/${agents.length}` }
       });
 
-      // Enable similarity check with retry (default: similarity >= 0.85 triggers retry)
+      console.log(`[pipeline] [${runId}] Stage 3: Generating candidate with ${agent.name} agent...`);
+      // Enable similarity check with retry (lowered threshold for better change detection)
       const { text: content, similarity } = await chatText({
         system: agent.systemPrompt,
-        user: `Generate optimized prompt (MUST differ from spec):\n\n${baseContext}`,
-        minSimilarity: 0.85,  // Retry if similarity >= 0.85
-        maxRetries: 1
+        user: `Generate optimized prompt. The output MUST be substantially different from the spec. Transform and enhance it:\n\n${baseContext}`,
+        minSimilarity: 0.75,  // Retry if similarity >= 0.75 (lowered from 0.85)
+        maxRetries: 2  // Increased from 1 to 2 retries
       });
+      
+      // Log similarity for debugging
+      console.log(`[pipeline] [${runId}] Stage 3: ${agent.name} completed - similarity: ${similarity.toFixed(3)}, length: ${content.length}`);
+      if (similarity > 0.7) {
+        console.warn(`[pipeline] [${runId}] ⚠️ ${agent.name} output similarity is high: ${similarity.toFixed(3)}`);
+      }
 
       const candidateId = `candidate_${nanoid(12)}`;
       candidateIds.push(candidateId);
@@ -449,10 +514,20 @@ ${JSON.stringify(specData, null, 2)}`;
 
       const candidate = db.prepare("SELECT * FROM candidate_prompts WHERE id = ?").get(candidateId);
       
-      // Optimized: Concise metrics evaluator prompt
-      const metricsSystem = `Evaluate prompt: clarity, coherence, styleMatch, safety, risk (0-1 each).
+      // Enhanced: Metrics evaluator prompt with detailed criteria
+      const metricsSystem = `Evaluate the candidate prompt and provide scores (0-1 scale).
 
-JSON: {"clarity": 0.85, "coherence": 0.90, "styleMatch": 0.80, "safety": 0.95, "risk": 0.10}`;
+SCORING CRITERIA:
+- clarity: How clear and understandable is the prompt? (0-1)
+- coherence: How well does it flow and make logical sense? (0-1)
+- styleMatch: How well does it match the specified style/tone? (0-1)
+- safety: How safe is it from misuse/abuse? (0-1, higher = safer)
+- risk: What is the risk level? (0-1, higher = more risky)
+
+OUTPUT FORMAT (JSON only):
+{"clarity": 0.85, "coherence": 0.90, "styleMatch": 0.80, "safety": 0.95, "risk": 0.10}
+
+Provide honest, objective scores based on the criteria.`;
 
       const { data: metricsData } = await chatJson({
         system: metricsSystem,
@@ -591,21 +666,29 @@ JSON: {"clarity": 0.85, "coherence": 0.90, "styleMatch": 0.80, "safety": 0.95, "
     });
 
   } catch (err) {
-    console.error(`[pipeline] Error in pipeline execution:`, err);
+    console.error(`[pipeline] ❌ Error in pipeline execution for ${runId}:`, err);
+    console.error(`[pipeline] Error stack:`, err.stack);
     const errorMessage = err.message || "Pipeline execution failed";
     const isTimeout = errorMessage.includes("timeout");
     
+    // Send detailed error event
     sendEvent(runId, "error", {
       stage: "pipeline",
       message: errorMessage,
       error: err.toString(),
-      isTimeout
+      isTimeout,
+      stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
     });
+    
     sendEvent(runId, "complete", { 
       success: false,
       error: errorMessage,
-      isTimeout
+      isTimeout,
+      runId
     });
+    
+    // Clean up stream connection
+    activeStreams.delete(runId);
   }
 }
 

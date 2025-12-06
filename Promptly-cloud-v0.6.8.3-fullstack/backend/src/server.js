@@ -25,6 +25,19 @@ app.use(helmet());
 app.use(express.json({ limit: "2mb" }));
 app.use(cookieParser());
 
+// Request logging middleware for debugging
+app.use((req, res, next) => {
+  const start = Date.now();
+  console.log(`[promptly] ← ${req.method} ${req.path}`);
+  
+  res.on('finish', () => {
+    const duration = Date.now() - start;
+    console.log(`[promptly] → ${req.method} ${req.path} ${res.statusCode} (${duration}ms)`);
+  });
+  
+  next();
+});
+
 // basic health check
 app.get("/api/health", (req, res) => {
   res.json({ ok: true, status: "healthy", time: new Date().toISOString() });
@@ -55,20 +68,44 @@ app.get("/api/settings", (req, res) => {
   });
 });
 
-app.use("/api/auth", authRouter);
-app.use("/api/docs", docRouter);
-app.use("/api/share", shareRouter);
-app.use("/api/specs", specsRouter);
-app.use("/api/question-sessions", questionSessionRouter);
-app.use("/api/runs", runsRouter);
-app.use("/api/outcome-runs", outcomeRunsRouter);
-app.use("/api/enhance", enhanceRouter);
-app.use("/api/prompts", promptsRouter);
-app.use("/api/pipeline", pipelineRouter);
+// Register all API routes
+console.log(`[promptly] 🔧 Registering API routes...`);
 
-// Log registered routes for debugging
-console.log(`[promptly] ✅ Pipeline router registered at /api/pipeline`);
-console.log(`[promptly] ✅ Available pipeline routes: POST /api/pipeline/run, GET /api/pipeline/stream/:runId`);
+app.use("/api/auth", authRouter);
+console.log(`[promptly]   ✓ /api/auth`);
+
+app.use("/api/docs", docRouter);
+console.log(`[promptly]   ✓ /api/docs`);
+
+app.use("/api/share", shareRouter);
+console.log(`[promptly]   ✓ /api/share`);
+
+app.use("/api/specs", specsRouter);
+console.log(`[promptly]   ✓ /api/specs`);
+
+app.use("/api/question-sessions", questionSessionRouter);
+console.log(`[promptly]   ✓ /api/question-sessions`);
+
+app.use("/api/runs", runsRouter);
+console.log(`[promptly]   ✓ /api/runs`);
+
+app.use("/api/outcome-runs", outcomeRunsRouter);
+console.log(`[promptly]   ✓ /api/outcome-runs`);
+
+app.use("/api/enhance", enhanceRouter);
+console.log(`[promptly]   ✓ /api/enhance`);
+
+app.use("/api/prompts", promptsRouter);
+console.log(`[promptly]   ✓ /api/prompts`);
+
+app.use("/api/pipeline", pipelineRouter);
+console.log(`[promptly]   ✓ /api/pipeline (health, run, stream)`);
+
+console.log(`[promptly] ✅ All API routes registered successfully!`);
+console.log(`[promptly] 📋 Pipeline routes:`);
+console.log(`[promptly]    GET  /api/pipeline/health`);
+console.log(`[promptly]    POST /api/pipeline/run`);
+console.log(`[promptly]    GET  /api/pipeline/stream/:runId`);
 
 const PORT = process.env.PORT || 8080;
 app.listen(PORT, () => {

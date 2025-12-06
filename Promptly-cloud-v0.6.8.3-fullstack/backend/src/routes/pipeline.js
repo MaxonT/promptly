@@ -25,9 +25,11 @@ const activeStreams = new Map();
  * Health check endpoint to verify pipeline routes are working
  */
 pipelineRouter.get("/health", (req, res) => {
+  console.log(`[pipeline] GET /health called - Pipeline routes are working!`);
   res.json({
     ok: true,
     message: "Pipeline routes are working",
+    timestamp: new Date().toISOString(),
     routes: {
       "POST /api/pipeline/run": "Execute full pipeline with SSE events",
       "GET /api/pipeline/stream/:runId": "SSE stream for pipeline events",

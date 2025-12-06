@@ -4,6 +4,11 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <!-- Cache busting for deployment updates -->
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
+  <meta name="version" content="2024-12-06-pipeline-fix" />
   <title>Promptly v0.5.3-fusion PRO — Demo</title>
   <link rel="icon" href="assets/promptly-icon.svg" type="image/svg+xml"/>
   <link rel="apple-touch-icon" href="assets/promptly-icon.svg"/>
@@ -1881,6 +1886,11 @@ document.addEventListener('DOMContentLoaded', () => {
   const taskEl = document.getElementById('task');
   const modelToggle = document.getElementById('modelDropdownToggle');
   const modelMenu = document.getElementById('modelDropdownMenu');
+  // Frontend version identifier (for debugging cache issues)
+  const FRONTEND_VERSION = '2024-12-06-pipeline-fix';
+  console.log(`[Promptly] Frontend version: ${FRONTEND_VERSION}`);
+  console.log(`[Promptly] This frontend WILL call /api/pipeline/run (NOT /api/outcome-runs)`);
+  
   const MODEL_STORAGE_KEY = 'promptly:model-selection';
   const MODEL_OPTIONS = [
     { slug: 'promptly-mini', label: 'Promptly Mini' },
@@ -2271,9 +2281,14 @@ document.addEventListener('DOMContentLoaded', () => {
     
     try {
       const apiBase = window.PROMPTLY_API_BASE || '';
+      const pipelineUrl = `${apiBase}/api/pipeline/run`;
+      
+      console.log(`[Promptly] ✅ Calling Pipeline API: ${pipelineUrl}`);
+      console.log(`[Promptly] ✅ Frontend version: ${FRONTEND_VERSION}`);
+      console.log(`[Promptly] ✅ Request data:`, { idea: task.substring(0, 50) + '...', model: currentModel });
       
       // 1. Start pipeline execution
-      const response = await fetch(`${apiBase}/api/pipeline/run`, {
+      const response = await fetch(pipelineUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -2287,11 +2302,21 @@ document.addEventListener('DOMContentLoaded', () => {
       });
 
       if (!response.ok) {
-        throw new Error(`Pipeline start failed: ${response.statusText}`);
+        const errorText = await response.text().catch(() => 'Unable to read error response');
+        console.error(`[Promptly] ❌ Pipeline API failed:`, {
+          status: response.status,
+          statusText: response.statusText,
+          url: pipelineUrl,
+          errorBody: errorText
+        });
+        throw new Error(`Pipeline API返回 ${response.status}: ${response.statusText}. 请检查后端日志。`);
       }
 
-      const { runId, streamUrl } = await response.json();
-      console.log('[Promptly] Pipeline started, runId:', runId);
+      const responseData = await response.json();
+      console.log('[Promptly] ✅ Pipeline API响应:', responseData);
+      
+      const { runId, streamUrl } = responseData;
+      console.log('[Promptly] ✅ Pipeline已启动, runId:', runId);
 
       // 2. Connect to SSE stream
       const fullStreamUrl = `${apiBase}${streamUrl}`;

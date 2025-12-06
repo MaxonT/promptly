@@ -83,14 +83,80 @@
     if (delta) delta.textContent = "";
     renderCharts(metrics);
   }
+  const PROGRESS_HISTORY_KEY = "promptly_progress_history";
+  const CONTRIBUTIONS_KEY = "promptly_progress_contributions";
+
+  function normalizeSeries(values = [], { max = 100, min = 0 } = {}) {
+    if (!Array.isArray(values)) return [];
+    return values
+      .map((v) => Number.isFinite(v) ? v : null)
+      .filter((v) => v !== null)
+      .map((v) => Math.max(min, Math.min(max, v)));
+  }
+
+  function loadSeries(key) {
+    try {
+      const raw = localStorage.getItem(key);
+      const parsed = raw ? JSON.parse(raw) : null;
+      return Array.isArray(parsed) ? parsed : [];
+    } catch (err) {
+      console.warn(`[promptly] Failed to load ${key} from localStorage`, err);
+      return [];
+    }
+  }
+
+  function saveSeries(key, values = []) {
+    try {
+      localStorage.setItem(key, JSON.stringify(values.slice(-12)));
+    } catch (err) {
+      console.warn(`[promptly] Failed to save ${key} to localStorage`, err);
+    }
+  }
+
+  function buildProgressHistory(metrics, progressPct) {
+    const backendHistory = normalizeSeries(metrics.history ?? metrics.progress_history ?? [], { max: 100, min: 0 });
+    const storedHistory = loadSeries(PROGRESS_HISTORY_KEY);
+
+    const history = backendHistory.length ? backendHistory : storedHistory;
+    if (Number.isFinite(progressPct)) {
+      const updated = [...history, progressPct];
+      saveSeries(PROGRESS_HISTORY_KEY, updated);
+      return updated.slice(-12);
+    }
+
+    return history.slice(-12);
+  }
+
+  function buildContributions(metrics, history) {
+    const backendContrib = normalizeSeries(metrics.contributions ?? metrics.progress_deltas ?? [], { max: 100, min: -100 });
+    if (backendContrib.length) {
+      saveSeries(CONTRIBUTIONS_KEY, backendContrib);
+      return backendContrib.slice(-12);
+    }
+
+    const stored = loadSeries(CONTRIBUTIONS_KEY);
+    if (stored.length && stored.length === history.length) return stored.slice(-12);
+
+    if (history.length < 2) return history.length ? [history[history.length - 1]] : [];
+
+    const deltas = history.slice(1).map((v, idx) => +(v - history[idx]).toFixed(2));
+    saveSeries(CONTRIBUTIONS_KEY, deltas);
+    return deltas.slice(-12);
+  }
+
   function renderCharts(metrics = {}) {
-    const progress = Math.max(0, Math.min(1, (metrics.progress_pct ?? metrics.progressPct ?? 0) / 100));
+    const progressPct = Math.max(0, Math.min(100, metrics.progress_pct ?? metrics.progressPct ?? 0));
+    const progress = progressPct / 100;
     const line = document.getElementById("lineGrowth");
     const bar = document.getElementById("barContrib");
     const pie = document.getElementById("piePass");
     const gauge = document.getElementById("gaugeProg");
-    if (line) drawLine(line, [progress * 100, progress * 100, progress * 100]);
-    if (bar) drawBars(bar, [progress * 100, progress * 100, progress * 100]);
+
+    const history = buildProgressHistory(metrics, progressPct);
+    const contributions = buildContributions(metrics, history);
+
+    if (line) drawLine(line, history.length ? history : [progressPct]);
+    if (bar) drawBars(bar, contributions.length ? contributions : [progressPct]);
     if (pie) drawPie(pie, [Math.round((metrics.pass_rate ?? metrics.passRate ?? 0) * 100), Math.round((1 - (metrics.pass_rate ?? metrics.passRate ?? 0)) * 100)]);
     if (gauge) drawGauge(gauge, progress);
   }

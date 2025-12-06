@@ -1700,7 +1700,9 @@ document.addEventListener('DOMContentLoaded', () => {
       f1: backendMetrics.f1 ?? 0,
       pass_rate: backendMetrics.passRate ?? 0,
       token_cost: backendMetrics.tokenCost ?? 0,
-      progress_pct: backendMetrics.progress ?? 0
+      progress_pct: backendMetrics.progress ?? 0,
+      history: backendMetrics.history ?? backendMetrics.progressHistory ?? undefined,
+      contributions: backendMetrics.contributions ?? backendMetrics.progressDeltas ?? undefined
     };
     
     // Render charts using core.js functions if available
@@ -1714,13 +1716,20 @@ document.addEventListener('DOMContentLoaded', () => {
       const pie = document.getElementById('piePass');
       const gauge = document.getElementById('gaugeProg');
       
+      const progressPct = progressValue * 100;
+      const history = Array.isArray(chartMetrics.history)
+        ? chartMetrics.history.map(v => Math.max(0, Math.min(100, v)))
+        : [];
+      const historySeries = history.length ? history : [progressPct];
+      const contributionSeries = Array.isArray(chartMetrics.contributions)
+        ? chartMetrics.contributions.map(v => Math.max(-100, Math.min(100, v)))
+        : historySeries.slice(1).map((v, idx) => +(v - historySeries[idx]).toFixed(2));
+
       if (line && typeof drawLine === 'function') {
-        const history = [progressValue * 100, progressValue * 100, progressValue * 100];
-        drawLine(line, history);
+        drawLine(line, historySeries);
       }
       if (bar && typeof drawBars === 'function') {
-        const contrib = [progressValue * 100, progressValue * 100, progressValue * 100];
-        drawBars(bar, contrib);
+        drawBars(bar, contributionSeries.length ? contributionSeries : [progressPct]);
       }
       if (pie && typeof drawPie === 'function') {
         const passRateValue = Math.round((chartMetrics.pass_rate || 0) * 100);

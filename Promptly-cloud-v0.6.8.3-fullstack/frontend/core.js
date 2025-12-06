@@ -186,13 +186,8 @@
     const bestPromptEl = document.getElementById("bestPrompt");
 
     if (!data || !data.ok || !data.run) {
-      console.warn("[promptly] refreshMetrics: No data returned from fetchLatestRun()", data?.error);
-      if (bestPromptEl) {
-        bestPromptEl.value = "❌ Could not load optimized prompt. Please try running the optimizer again.";
-        bestPromptEl.classList.add("error-state");
-        bestPromptEl.classList.remove("success-highlight", "processing-animation");
-        bestPromptEl.style.borderColor = "#EF4444";
-      }
+      console.warn("[promptly] refreshMetrics: No data available (pipeline now uses SSE)");
+      // Do NOT modify the UI when data is unavailable - let SSE handle updates
       return;
     }
 
@@ -202,18 +197,11 @@
 
     renderMetrics(metrics);
 
-    if (bestPromptEl) {
-      if (bestContent) {
-        bestPromptEl.value = formatBestPrompt(bestContent);
-        bestPromptEl.classList.remove("error-state", "processing-animation");
-        bestPromptEl.classList.add("success-highlight");
-        bestPromptEl.style.borderColor = "#22C55E";
-      } else {
-        bestPromptEl.value = "❌ Backend returned an empty optimized prompt. Please retry.";
-        bestPromptEl.classList.add("error-state");
-        bestPromptEl.classList.remove("success-highlight", "processing-animation");
-        bestPromptEl.style.borderColor = "#EF4444";
-      }
+    if (bestPromptEl && bestContent) {
+      bestPromptEl.value = formatBestPrompt(bestContent);
+      bestPromptEl.classList.remove("error-state", "processing-animation");
+      bestPromptEl.classList.add("success-highlight");
+      bestPromptEl.style.borderColor = "#22C55E";
     }
   }
   // Expose refreshMetrics globally so other scripts can call it
@@ -256,7 +244,7 @@
     }
     consentBanner();
     // Note: runBtn click handler is now in index.html to coordinate with animation
-    refreshMetrics();
+    // refreshMetrics() - REMOVED: pipeline now uses SSE for all updates
     const ro = new ResizeObserver(() => renderCharts());
     ["lineGrowth", "barContrib", "piePass", "gaugeProg"].forEach(id => {
       const c = document.getElementById(id);

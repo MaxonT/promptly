@@ -110,8 +110,76 @@
   function getStoredWizardSession(){try{const raw=localStorage.getItem(WIZARD_SESSION_KEY);return raw?JSON.parse(raw):null;}catch{return null;}}
   function setStoredWizardSession(sessionId){if(!sessionId)return;try{localStorage.setItem(WIZARD_SESSION_KEY,JSON.stringify({sessionId,startedAt:Date.now()}));}catch{}}
   function clearStoredWizardSession(){try{localStorage.removeItem(WIZARD_SESSION_KEY);}catch{}}
-  // Simplified wizard session API - no global indicator
-  window.promptlyWizardSession={markRunning:(sessionId)=>{setStoredWizardSession(sessionId);},clear:()=>{clearStoredWizardSession();},getActive:getStoredWizardSession};
+  
+  // Global status indicator element
+  let globalStatusIndicator = null;
+  
+  function createGlobalStatusIndicator() {
+    if (globalStatusIndicator) return globalStatusIndicator;
+    
+    // Create the global status indicator if not exists
+    globalStatusIndicator = document.createElement('div');
+    globalStatusIndicator.id = 'promptlyGlobalStatus';
+    globalStatusIndicator.className = 'promptly-global-status hidden';
+    globalStatusIndicator.innerHTML = `
+      <div class="global-status-content">
+        <span class="global-status-icon">⚠️</span>
+        <span class="global-status-message">Question Wizard is running</span>
+        <a href="wizard.html" class="global-status-cta">Go to Wizard →</a>
+        <button class="global-status-dismiss" aria-label="Dismiss">&times;</button>
+      </div>
+    `;
+    
+    // Add dismiss handler
+    const dismissBtn = globalStatusIndicator.querySelector('.global-status-dismiss');
+    if (dismissBtn) {
+      dismissBtn.addEventListener('click', () => {
+        globalStatusIndicator.classList.add('hidden');
+      });
+    }
+    
+    document.body.appendChild(globalStatusIndicator);
+    return globalStatusIndicator;
+  }
+  
+  function updateGlobalStatus(options = {}) {
+    const { message, details, autoHide = false, autoHideDelay = 5000, sessionId } = options;
+    const indicator = createGlobalStatusIndicator();
+    
+    const msgEl = indicator.querySelector('.global-status-message');
+    if (msgEl && message) {
+      msgEl.textContent = message;
+    }
+    
+    indicator.classList.remove('hidden');
+    
+    if (autoHide) {
+      setTimeout(() => {
+        indicator.classList.add('hidden');
+      }, autoHideDelay);
+    }
+  }
+  
+  function hideGlobalStatus() {
+    if (globalStatusIndicator) {
+      globalStatusIndicator.classList.add('hidden');
+    }
+  }
+  
+  // Enhanced wizard session API - includes global status indicator
+  window.promptlyWizardSession = {
+    markRunning: (sessionId) => {
+      setStoredWizardSession(sessionId);
+    },
+    clear: () => {
+      clearStoredWizardSession();
+      hideGlobalStatus();
+    },
+    getActive: getStoredWizardSession,
+    update: updateGlobalStatus,
+    showGlobal: updateGlobalStatus,
+    hideGlobal: hideGlobalStatus
+  };
   function formatBestPrompt(rawOutput) {
     if (!rawOutput) return "";
     if (typeof rawOutput === "string") return rawOutput;

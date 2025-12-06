@@ -989,23 +989,28 @@ html[data-theme="light"] .wizard-mode-option.is-selected{
   transform:translateY(-1px);
   box-shadow:0 2px 8px rgba(124,58,237,0.2);
 }
-/* Loading spinner in question panel */
+/* Loading spinner in question panel - P1: Enhanced visibility */
 .wizard-loading-overlay{
   position:absolute;
   top:0;
   left:0;
   right:0;
   bottom:0;
-  background:rgba(15,23,42,0.95);
-  backdrop-filter:blur(8px);
-  display:flex;
+  background:rgba(15,23,42,0.98);
+  backdrop-filter:blur(12px);
+  display:flex !important;
+  visibility:visible !important;
+  opacity:1 !important;
   flex-direction:column;
   align-items:center;
   justify-content:center;
   gap:1rem;
   border-radius:0.75rem;
-  z-index:100;
-  animation:fadeIn 0.2s ease;
+  z-index:1000;
+  animation:fadeIn 0.3s ease;
+}
+.wizard-loading-overlay.hidden {
+  display:none !important;
 }
 .wizard-loading-spinner{
   width:48px;

@@ -1028,7 +1028,14 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
         setWizardStatus(userMessage, "error");
         hideLoadingInQuestionPanel();
         
+        // Hide warning banner on error
+        const errorWarningBanner = document.getElementById("wizardRunningWarning");
+        if (errorWarningBanner) {
+          errorWarningBanner.classList.add("hidden");
+        }
+        
         // Show fallback notice in global status (using optional chaining for safety)
+        window.promptlyWizardSession?.update({
           message: '❌ LLM Unavailable',
           details: userMessage,
           autoHide: false
@@ -1065,6 +1072,7 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
       updateWizardStepper('questions');
 
       // Update global status to show questions are ready
+      window.promptlyWizardSession?.update({
         message: `✅ ${allQuestions.length} questions ready!`,
         autoHide: true,
         autoHideDelay: 3000,
@@ -1092,6 +1100,7 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
         log("Error while starting wizard: " + err.message);
         setWizardStatus("Something went wrong while preparing questions. Please try again.", "error");
         // Show error in global status
+        window.promptlyWizardSession?.update({
           message: '❌ Question generation failed',
           details: err.message || 'Unknown error',
           autoHide: false

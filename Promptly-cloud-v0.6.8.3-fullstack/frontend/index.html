@@ -1739,7 +1739,11 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Pipeline animation setup for Best Prompt card
+  // ============================================
+  // Pipeline SSE-Driven Animation System
+  // ============================================
+  
+  // Pipeline stages configuration
   const PIPELINE_STEPS = [
     { key: 'spec', message: 'Structuring your idea into a spec…' },
     { key: 'question', message: 'Spotting gaps and asking 1–3 clarifying questions…' },
@@ -1747,6 +1751,38 @@ document.addEventListener('DOMContentLoaded', () => {
     { key: 'metrics', message: 'Scoring candidates on clarity, style, safety, and cost…' },
     { key: 'outcome', message: 'Selecting the best-of-N outcome for you…' }
   ];
+  
+  // Stage name mapping from backend events
+  const STAGE_MAP = {
+    'spec': 0,
+    'question': 1,
+    'agents': 2,
+    'metrics': 3,
+    'outcome': 4
+  };
+  
+  // Predefined status text templates (to avoid showing raw backend messages)
+  const STATUS_TEXT_TEMPLATES = {
+    'spec': '正在从你的想法构建结构化 Spec...',
+    'question': 'Question Engine 正在生成澄清问题...',
+    'agents': 'LLM Agents 正在起草候选 Prompt...',
+    'metrics': '正在基于 clarity / style / safety / cost 进行多维度评分...',
+    'outcome': 'Outcome Runner 正在从候选中选出 Top Pick...',
+    'error': '该阶段出错，请重试',
+    'complete': 'Selected by Outcome Runner after multi-metric scoring.'
+  };
+  
+  // Current pipeline state (SSE-driven)
+  let currentStageState = {
+    activeStage: null,      // Current active stage ('spec', 'question', etc.)
+    completedStages: [],    // Array of completed stages
+    errorStages: [],        // Array of stages with errors
+    meta: {
+      candidateCount: 0,
+      metricCount: 0,
+      topCandidateIndex: null
+    }
+  };
 
   const pipelineContainer = document.getElementById('bestPromptPipeline');
   const pipelineNodes = Array.from(document.querySelectorAll('.best-prompt-pipeline .pipeline-node'));
@@ -1797,29 +1833,101 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!pipelineContainer) return;
     resetPipelineTimeline();
     pipelineContainer.classList.add('is-processing');
-    setPipelineStep(0);
-
-    clearInterval(pipelineTimer);
-    pipelineTimer = setInterval(() => {
-      const nextIndex = currentPipelineIndex + 1;
-      if (nextIndex < PIPELINE_STEPS.length) {
-        setPipelineStep(nextIndex);
-      } else {
-        clearInterval(pipelineTimer);
+    
+    // Reset state (SSE-driven, no more timers!)
+    currentStageState = {
+      activeStage: null,
+      completedStages: [],
+      errorStages: [],
+      meta: {
+        candidateCount: 0,
+        metricCount: 0,
+        topCandidateIndex: null
       }
-    }, 1200);
+    };
+    
+    // Clear any old timer (safety)
+    if (pipelineTimer) {
+    clearInterval(pipelineTimer);
+      pipelineTimer = null;
+    }
+    
+    // Initial state text
+    if (pipelineStatusText) {
+      pipelineStatusText.textContent = '等待后端连接...';
+    }
+  }
+
+  // SSE-driven stage activation (replaces timer-based progression)
+  function activatePipelineStage(stageName, level = 'info') {
+    const stageIndex = STAGE_MAP[stageName];
+    if (stageIndex === undefined) {
+      console.warn(`[Pipeline] Unknown stage: ${stageName}`);
+      return;
+    }
+    
+    // Mark previous stages as completed
+    if (currentStageState.activeStage !== null) {
+      const prevIndex = STAGE_MAP[currentStageState.activeStage];
+      if (prevIndex !== undefined && prevIndex < stageIndex) {
+        currentStageState.completedStages.push(currentStageState.activeStage);
+      }
+    }
+    
+    // Update current active stage
+    currentStageState.activeStage = stageName;
+    
+    // Update visual states
+    pipelineNodes.forEach((node, idx) => {
+      const nodeStage = PIPELINE_STEPS[idx]?.key;
+      
+      // Remove all state classes first
+      node.classList.remove('active', 'completed', 'is-error');
+      
+      // Apply appropriate class
+      if (idx === stageIndex && level !== 'error') {
+        node.classList.add('active'); // Current stage is active
+      } else if (idx < stageIndex || currentStageState.completedStages.includes(nodeStage)) {
+        node.classList.add('completed'); // Previous stages are completed
+      }
+      
+      // Error state
+      if (level === 'error' && idx === stageIndex) {
+        node.classList.add('is-error');
+        currentStageState.errorStages.push(stageName);
+      }
+    });
+    
+    // Update progress bar
+    const completionRatio = PIPELINE_STEPS.length > 1 ? stageIndex / (PIPELINE_STEPS.length - 1) : 0;
+    if (pipelineEnergy) {
+      pipelineEnergy.style.width = `${Math.max(0, Math.min(1, completionRatio)) * 100}%`;
+    }
+    
+    // Update status text from templates
+    if (pipelineStatusText) {
+      pipelineStatusText.textContent = level === 'error' 
+        ? STATUS_TEXT_TEMPLATES['error'] 
+        : (STATUS_TEXT_TEMPLATES[stageName] || PIPELINE_STEPS[stageIndex]?.message || '');
+    }
   }
 
   function completePipelineTimeline() {
     if (!pipelineContainer) return;
-    clearInterval(pipelineTimer);
-    setPipelineStep(PIPELINE_STEPS.length - 1);
-    pipelineNodes.forEach((node) => node.classList.add('completed'));
+    
+    // Mark all stages as completed
+    pipelineNodes.forEach((node) => {
+      node.classList.remove('active', 'is-error');
+      node.classList.add('completed');
+    });
+    
     pipelineContainer.classList.remove('is-processing');
     pipelineContainer.classList.add('is-done');
+    
     if (pipelineEnergy) pipelineEnergy.style.width = '100%';
+    
     if (pipelineStatusText) {
-      pipelineStatusText.textContent = 'Selected by Outcome Runner after multi-metric scoring.';
+      pipelineStatusText.textContent = STATUS_TEXT_TEMPLATES['complete'];
     }
   }
 
@@ -2050,13 +2158,14 @@ document.addEventListener('DOMContentLoaded', () => {
     liveTraceLines = [];
   }
 
-  function setPipelineStepFromStage(stage) {
-    const stageMap = { spec: 0, question: 1, agents: 2, metrics: 3, outcome: 4 };
-    const index = stageMap[stage];
-    if (index !== undefined) {
-      setPipelineStep(index);
-    }
-  }
+  // Deprecated: Now using activatePipelineStage() (SSE-driven)
+  // function setPipelineStepFromStage(stage) {
+  //   const stageMap = { spec: 0, question: 1, agents: 2, metrics: 3, outcome: 4 };
+  //   const index = stageMap[stage];
+  //   if (index !== undefined) {
+  //     setPipelineStep(index);
+  //   }
+  // }
 
   function handlePipelineEvent(runId, event, data) {
     console.log(`[pipeline] Event: ${event}`, data);
@@ -2074,7 +2183,9 @@ document.addEventListener('DOMContentLoaded', () => {
         break;
 
       case 'stage-start':
-        setPipelineStepFromStage(data.stage);
+        // SSE-driven stage activation (no more timer-based progression!)
+        activatePipelineStage(data.stage, 'info');
+        
         const stageNames = {
           spec: 'Spec Builder',
           question: 'Question Engine',
@@ -2122,6 +2233,19 @@ document.addEventListener('DOMContentLoaded', () => {
         const stepMsg = stepNames[data.step] || data.message;
         addLogEntry(data.stage, `⚙️ ${stepMsg}`, data.details);
         
+        // Extract meta info from SSE events (safe defaults if not present)
+        if (data.details) {
+          // Track candidate count (agents stage)
+          if (data.step && data.step.includes('completed-')) {
+            currentStageState.meta.candidateCount = (currentStageState.meta.candidateCount || 0) + 1;
+          }
+          
+          // Track metric count (metrics stage)
+          if (data.stage === 'metrics' && data.details.compositeScore !== undefined) {
+            currentStageState.meta.metricCount = (currentStageState.meta.metricCount || 0) + 1;
+          }
+        }
+        
         // Add live trace for key progress steps
         if (data.details) {
           if (data.details.userGoal) {
@@ -2153,6 +2277,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
       case 'stage-complete':
         addLogEntry(data.stage, `✅ ${data.message}`, data.result);
+        
+        // Extract meta info from stage completion
+        if (data.result) {
+          if (data.result.candidatesGenerated) {
+            currentStageState.meta.candidateCount = data.result.candidatesGenerated;
+          }
+          if (data.result.count) {
+            currentStageState.meta.metricCount = data.result.count;
+          }
+          if (data.result.topCandidateIndex !== undefined) {
+            currentStageState.meta.topCandidateIndex = data.result.topCandidateIndex;
+          }
+        }
         
         // Show key results in live trace
         let summaryLine = `✅ ${data.message}`;
@@ -2189,9 +2326,17 @@ document.addEventListener('DOMContentLoaded', () => {
         break;
 
       case 'error':
-        addLogEntry('spec', `❌ Error: ${data.message}`, data.error);
+        // Activate error state on the stage where error occurred
+        const errorStage = data.stage || currentStageState.activeStage || 'spec';
+        activatePipelineStage(errorStage, 'error');
+        
+        addLogEntry(errorStage, `❌ Error: ${data.message}`, data.error);
         updateBestPromptLiveTrace(`❌ ERROR: ${data.message}`);
-        stopPipelineTimeline(`Pipeline error: ${data.message}`);
+        
+        // Stop pipeline processing
+        if (pipelineContainer) {
+          pipelineContainer.classList.remove('is-processing');
+        }
         break;
 
       case 'complete':
@@ -2216,7 +2361,7 @@ document.addEventListener('DOMContentLoaded', () => {
           }
           
           showToast('✓ Best Prompt generated successfully!', 'success');
-        } else {
+            } else {
           updateBestPromptLiveTrace('⚠️ Pipeline completed with errors');
           stopPipelineTimeline('Pipeline completed with errors');
           showToast('⚠ Pipeline completed with errors', 'error');

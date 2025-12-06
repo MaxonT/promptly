@@ -370,8 +370,8 @@ CRITICAL: Question must be specific and valuable. If too generic, append "> need
       const sessionDescription = normalizedSpec.userGoal || idea;
       const sessionNow = new Date().toISOString();
       db.prepare(`
-        INSERT INTO question_sessions (id, owner_id, spec_id, initial_description, step, is_complete, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO question_sessions (id, owner_id, spec_id, initial_description, step, is_complete, status, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
       `).run(
         sessionId,
         userId,
@@ -379,6 +379,7 @@ CRITICAL: Question must be specific and valuable. If too generic, append "> need
         sessionDescription,
         currentStep,
         shouldStop ? 1 : 0,
+        "completed",
         sessionNow,
         sessionNow
       );

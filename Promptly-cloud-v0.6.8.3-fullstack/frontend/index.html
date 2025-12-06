@@ -2014,6 +2014,42 @@ document.addEventListener('DOMContentLoaded', () => {
     logEl.scrollTop = logEl.scrollHeight;
   }
 
+  // ============================================
+  // Live Trace for Best Prompt Area
+  // ============================================
+  let liveTraceLines = [];
+  const MAX_TRACE_LINES = 20; // Keep only recent N lines
+
+  // Update Best Prompt with live trace
+  function updateBestPromptLiveTrace(line) {
+    if (!bestPromptEl) return;
+    
+    const timestamp = new Date().toLocaleTimeString('zh-CN', { 
+      hour: '2-digit', 
+      minute: '2-digit', 
+      second: '2-digit' 
+    });
+    
+    liveTraceLines.push(`[${timestamp}] ${line}`);
+    
+    // Keep only recent lines to avoid overflow
+    if (liveTraceLines.length > MAX_TRACE_LINES) {
+      liveTraceLines.shift();
+    }
+    
+    // Update textarea
+    const header = "⚡ Pipeline Running - Live Trace\n" + "=".repeat(50) + "\n\n";
+    bestPromptEl.value = header + liveTraceLines.join('\n');
+    
+    // Auto-scroll to bottom
+    bestPromptEl.scrollTop = bestPromptEl.scrollHeight;
+  }
+
+  // Clear trace and prepare for final result
+  function clearBestPromptTrace() {
+    liveTraceLines = [];
+  }
+
   function setPipelineStepFromStage(stage) {
     const stageMap = { spec: 0, question: 1, agents: 2, metrics: 3, outcome: 4 };
     const index = stageMap[stage];
@@ -2028,6 +2064,7 @@ document.addEventListener('DOMContentLoaded', () => {
     switch (event) {
       case 'connected':
         addLogEntry('spec', 'Pipeline connected', { runId });
+        updateBestPromptLiveTrace('🔌 Pipeline connected, starting Spec Builder...');
         // Show AI reasoning chain
         showAIReasoningChain('spec', [
           '🔍 Analyzing user input...',
@@ -2045,7 +2082,9 @@ document.addEventListener('DOMContentLoaded', () => {
           metrics: 'Metrics & Scoring',
           outcome: 'Outcome Runner'
         };
-        addLogEntry(data.stage, `🚀 ${stageNames[data.stage]}: ${data.message}`);
+        const stageName = stageNames[data.stage] || data.stage;
+        addLogEntry(data.stage, `🚀 ${stageName}: ${data.message}`);
+        updateBestPromptLiveTrace(`🚀 [${stageName}] ${data.message}`);
         
         // Activate visual for this stage
         const visual = document.querySelector(`.pipeline-visual[data-step="${data.stage}"]`);
@@ -2083,6 +2122,29 @@ document.addEventListener('DOMContentLoaded', () => {
         const stepMsg = stepNames[data.step] || data.message;
         addLogEntry(data.stage, `⚙️ ${stepMsg}`, data.details);
         
+        // Add live trace for key progress steps
+        if (data.details) {
+          if (data.details.userGoal) {
+            const truncated = data.details.userGoal.length > 60 
+              ? data.details.userGoal.substring(0, 60) + '...' 
+              : data.details.userGoal;
+            updateBestPromptLiveTrace(`   📝 Extracted goal: "${truncated}"`);
+          } else if (data.details.question) {
+            const truncated = data.details.question.length > 60 
+              ? data.details.question.substring(0, 60) + '...' 
+              : data.details.question;
+            updateBestPromptLiveTrace(`   ❓ Question: "${truncated}"`);
+          } else if (data.details.agent) {
+            updateBestPromptLiveTrace(`   🤖 ${data.details.agent} agent generated candidate`);
+          } else if (data.details.compositeScore !== undefined) {
+            updateBestPromptLiveTrace(`   📊 Score: ${(data.details.compositeScore * 100).toFixed(1)}%`);
+          } else {
+            updateBestPromptLiveTrace(`   ⚙️ ${stepMsg}`);
+          }
+        } else {
+          updateBestPromptLiveTrace(`   ⚙️ ${stepMsg}`);
+        }
+        
         // Show intermediate result if available
         if (data.details && (data.details.content || data.details.question || data.details.metrics)) {
           showIntermediateResult(data.stage, data.details);
@@ -2091,6 +2153,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
       case 'stage-complete':
         addLogEntry(data.stage, `✅ ${data.message}`, data.result);
+        
+        // Show key results in live trace
+        let summaryLine = `✅ ${data.message}`;
+        if (data.result) {
+          if (data.result.candidatesGenerated) {
+            summaryLine += ` (${data.result.candidatesGenerated} candidates)`;
+          } else if (data.result.count) {
+            summaryLine += ` (${data.result.count} scored)`;
+          }
+        }
+        updateBestPromptLiveTrace(summaryLine);
+        updateBestPromptLiveTrace(''); // Add blank line for separation
+        
         const node = document.querySelector(`[data-step="${data.stage}"]`);
         if (node) {
           node.classList.add('completed');
@@ -2110,22 +2185,30 @@ document.addEventListener('DOMContentLoaded', () => {
 
       case 'stage-skipped':
         addLogEntry(data.stage, `⏭️ ${data.message}`);
+        updateBestPromptLiveTrace(`⏭️ ${data.message}`);
         break;
 
       case 'error':
         addLogEntry('spec', `❌ Error: ${data.message}`, data.error);
+        updateBestPromptLiveTrace(`❌ ERROR: ${data.message}`);
         stopPipelineTimeline(`Pipeline error: ${data.message}`);
         break;
 
       case 'complete':
         if (data.success && data.bestCandidate) {
           completePipelineTimeline();
-          if (bestPromptEl && data.bestCandidate.content) {
-            bestPromptEl.value = data.bestCandidate.content;
-            bestPromptEl.classList.remove('processing-animation');
-            bestPromptEl.classList.add('success-highlight');
-            bestPromptEl.style.borderColor = '#22C55E';
-          }
+          
+          // Clear trace and show final result with smooth transition
+          updateBestPromptLiveTrace('🏆 Pipeline complete! Loading best prompt...');
+          setTimeout(() => {
+            clearBestPromptTrace();
+            if (bestPromptEl && data.bestCandidate.content) {
+              bestPromptEl.value = data.bestCandidate.content;
+              bestPromptEl.classList.remove('processing-animation');
+              bestPromptEl.classList.add('success-highlight');
+              bestPromptEl.style.borderColor = '#22C55E';
+            }
+          }, 800); // Brief delay for smooth transition
           
           // Update metrics if available
           if (data.bestCandidate.metrics) {
@@ -2134,6 +2217,7 @@ document.addEventListener('DOMContentLoaded', () => {
           
           showToast('✓ Best Prompt generated successfully!', 'success');
         } else {
+          updateBestPromptLiveTrace('⚠️ Pipeline completed with errors');
           stopPipelineTimeline('Pipeline completed with errors');
           showToast('⚠ Pipeline completed with errors', 'error');
         }
@@ -2267,10 +2351,11 @@ document.addEventListener('DOMContentLoaded', () => {
     // Reset pipeline UI
     resetPipelineTimeline();
     startPipelineTimeline();
+    clearBestPromptTrace(); // Clear previous trace
     
     // ✅ Show loading state in Best Prompt area
     if (bestPromptEl) {
-      bestPromptEl.value = "⏳ Generating Best Prompt...\n\nConnecting to pipeline...";
+      bestPromptEl.value = "⏳ Initializing pipeline...\n\nWaiting for backend connection...";
       bestPromptEl.style.borderColor = '#7C3AED';
       bestPromptEl.classList.add('processing-animation');
       bestPromptEl.classList.remove('success-highlight', 'error-state');

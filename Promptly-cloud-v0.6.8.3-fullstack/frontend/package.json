@@ -1,0 +1,12 @@
+{
+  "name": "promptly-frontend",
+  "version": "0.6.8.3",
+  "private": true,
+  "description": "Promptly Frontend - Prompt Optimizer Studio",
+  "scripts": {
+    "build": "node build.js",
+    "dev": "echo 'Open index.html in your browser for local development'"
+  },
+  "devDependencies": {}
+}
+

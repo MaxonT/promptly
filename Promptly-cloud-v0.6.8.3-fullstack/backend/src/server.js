@@ -107,7 +107,63 @@ console.log(`[promptly]    GET  /api/pipeline/health`);
 console.log(`[promptly]    POST /api/pipeline/run`);
 console.log(`[promptly]    GET  /api/pipeline/stream/:runId`);
 
+// Root path handler - useful for checking if backend is alive
+app.get("/", (req, res) => {
+  res.json({
+    ok: true,
+    service: "Promptly Backend API",
+    version: "0.6.8.3",
+    status: "running",
+    timestamp: new Date().toISOString(),
+    environment: process.env.NODE_ENV || "production",
+    availableEndpoints: {
+      health: {
+        path: "/api/health",
+        method: "GET",
+        description: "Basic health check"
+      },
+      settings: {
+        path: "/api/settings",
+        method: "GET",
+        description: "Get backend settings"
+      },
+      pipeline: {
+        health: "/api/pipeline/health",
+        run: "POST /api/pipeline/run",
+        stream: "GET /api/pipeline/stream/:runId"
+      },
+      specs: "/api/specs",
+      questionSessions: "/api/question-sessions",
+      enhance: {
+        structure: "POST /api/enhance/structure",
+        style: "POST /api/enhance/style",
+        simplify: "POST /api/enhance/simplify"
+      },
+      prompts: "/api/prompts",
+      outcomeRuns: "/api/outcome-runs"
+    },
+    cors: {
+      origin: process.env.CORS_ORIGIN || "*",
+      note: "Set CORS_ORIGIN env var to restrict origins"
+    },
+    documentation: "https://github.com/your-repo/promptly"
+  });
+});
+
+// Catch-all for unmatched API routes
+app.use("/api/*", (req, res) => {
+  res.status(404).json({
+    ok: false,
+    error: "API endpoint not found",
+    path: req.path,
+    method: req.method,
+    availableEndpoints: "Visit root path (/) for available endpoints"
+  });
+});
+
 const PORT = process.env.PORT || 8080;
 app.listen(PORT, () => {
   console.log(`[promptly] backend listening on :${PORT}`);
+  console.log(`[promptly] 🚀 Backend is ready!`);
+  console.log(`[promptly] 📍 Visit root path (/) for available endpoints`);
 });

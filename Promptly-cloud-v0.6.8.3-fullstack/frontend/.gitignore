@@ -1,2 +1,26 @@
-.vercel
-.env*.local
+# Auto-generated config (will be generated during build)
+config.js
+
+# Node modules
+node_modules/
+
+# Build outputs
+dist/
+.vercel/
+.next/
+
+# Environment files (local development only)
+.env
+.env.local
+.env.*.local
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~

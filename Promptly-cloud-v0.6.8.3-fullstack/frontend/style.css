@@ -2237,6 +2237,9 @@ html[data-theme="light"] .error-state {
   border-radius: 8px;
   padding: 12px;
   border: 1px solid rgba(124, 58, 237, 0.15);
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 .log-entry {
@@ -2244,6 +2247,8 @@ html[data-theme="light"] .error-state {
   padding: 6px 0;
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
   animation: logEntryFadeIn 0.3s ease;
+  width: 100%;
+  min-width: 0;
 }
 
 .log-entry:last-child {
@@ -2269,6 +2274,9 @@ html[data-theme="light"] .error-state {
 
 .log-message {
   color: rgba(255, 255, 255, 0.8);
+  word-break: break-word;
+  overflow-wrap: break-word;
+  min-width: 0;
 }
 
 .log-details {

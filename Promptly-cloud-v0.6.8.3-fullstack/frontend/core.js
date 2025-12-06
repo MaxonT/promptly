@@ -60,7 +60,7 @@
     ctx.strokeStyle=getComputedStyle(document.documentElement).getPropertyValue("--accent")||"#06b6d4";ctx.beginPath();ctx.arc(cx,cy,r*0.5,start,start+(end-start)*Math.max(0,Math.min(1,p)));ctx.stroke();
     ctx.fillStyle=getComputedStyle(document.documentElement).getPropertyValue("--text")||"#eaf0fb";ctx.font="bold 24px Inter, system-ui";ctx.textAlign="center";ctx.fillText(Math.round(p*100)+"%",cx,cy-10);}
   function getRunUrl() {
-    return "/api/outcome-runs/latest";
+    return null;
   }
   function formatPercent(value) {
     return value == null ? "—" : `${(value * 100).toFixed(1)}%`;
@@ -95,17 +95,8 @@
     if (gauge) drawGauge(gauge, progress);
   }
   async function fetchLatestRun() {
-    try {
-      const res = await fetch(getRunUrl());
-      if (!res.ok) {
-        console.warn("[promptly] fetchLatestRun returned non-OK status", res.status);
-        return { ok: false, error: `HTTP ${res.status}` };
-      }
-      return await res.json();
-    } catch (err) {
-      console.error("[promptly] fetchLatestRun error", err);
-      return { ok: false, error: err.message };
-    }
+    console.warn("[promptly] fetchLatestRun disabled - pipeline uses /api/pipeline/*");
+    return { ok: false, error: "Outcome runner retired" };
   }
   function getStoredWizardSession(){try{const raw=localStorage.getItem(WIZARD_SESSION_KEY);return raw?JSON.parse(raw):null;}catch{return null;}}
   function setStoredWizardSession(sessionId){if(!sessionId)return;try{localStorage.setItem(WIZARD_SESSION_KEY,JSON.stringify({sessionId,startedAt:Date.now()}));}catch{}}

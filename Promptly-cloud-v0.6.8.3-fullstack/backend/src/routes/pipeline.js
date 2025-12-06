@@ -676,12 +676,14 @@ Provide honest, objective scores based on the criteria.`;
     });
 
     // Query historical runs for this user to build history and contributions
+    // Note: outcome_runs doesn't have user_id, so we JOIN through specs table
     const historicalRuns = db.prepare(`
       SELECT 
         or_data.result_json,
         or_data.created_at
       FROM outcome_runs or_data
-      WHERE or_data.user_id = ?
+      JOIN specs ON or_data.spec_id = specs.id
+      WHERE specs.user_id = ?
         AND or_data.status = 'completed'
       ORDER BY or_data.created_at DESC
       LIMIT 10

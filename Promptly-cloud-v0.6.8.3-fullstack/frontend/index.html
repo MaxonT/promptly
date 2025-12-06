@@ -1874,7 +1874,11 @@ document.addEventListener('DOMContentLoaded', () => {
   function activatePipelineStage(stageName, level = 'info') {
     const stageIndex = STAGE_MAP[stageName];
     if (stageIndex === undefined) {
-      console.warn(`[Pipeline] Unknown stage: ${stageName}`);
+      // Silently ignore unknown stages (e.g., "pipeline" for global errors)
+      // This is expected behavior, not an error
+      if (stageName !== 'pipeline') {
+        console.warn(`[Pipeline] Unknown stage: ${stageName}`);
+      }
       return;
     }
     

@@ -3387,3 +3387,69 @@ html[data-theme="light"] .text-keyword {
   border-radius: 4px;
   transition: width 0.5s ease, background-color 0.3s ease;
 }
+
+/* ============================================ */
+/* Real Data Display in Middle Grid Panels */
+/* ============================================ */
+
+/* Spec Data Lines */
+.spec-data-line {
+  font-size: 10px;
+  line-height: 1.4;
+  color: rgba(255, 255, 255, 0.8);
+  margin-bottom: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+/* Question Data Lines */
+.question-data-line {
+  font-size: 9px;
+  line-height: 1.3;
+  color: rgba(255, 255, 255, 0.75);
+  margin-bottom: 3px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 140px;
+  padding: 2px 4px;
+  background: rgba(124, 58, 237, 0.1);
+  border-radius: 4px;
+}
+
+/* Agent Data Lines */
+.agent-data-line {
+  font-size: 10px;
+  line-height: 1.3;
+  color: rgba(255, 255, 255, 0.8);
+  margin-bottom: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+/* Metrics Value Display */
+.metric-bar .value {
+  font-size: 10px;
+  color: rgba(34, 211, 238, 0.9);
+  margin-left: 6px;
+  font-weight: 600;
+}
+
+.metric-bar .bar {
+  transition: width 0.6s ease;
+}
+
+/* Outcome Race Cards - Dynamic Visibility */
+.race-card {
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.race-card.best {
+  background: linear-gradient(135deg, rgba(34, 197, 94, 0.25), rgba(34, 211, 238, 0.2));
+  border-color: rgba(34, 197, 94, 0.6);
+  box-shadow: 0 0 20px rgba(34, 197, 94, 0.3);
+}

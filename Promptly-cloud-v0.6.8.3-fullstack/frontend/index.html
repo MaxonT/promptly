@@ -542,19 +542,19 @@ html[data-theme="light"] .grey-gradient-text{
                 <span class="fragment"></span>
                 <span class="fragment"></span>
               </div>
-              <div class="spec-card">
-                <div class="spec-line short"></div>
-                <div class="spec-line"></div>
-                <div class="spec-line"></div>
-                <div class="spec-line long"></div>
+              <div class="spec-card" id="spec-data-card">
+                <div class="spec-data-line" id="spec-goal">Goal: Analyzing...</div>
+                <div class="spec-data-line" id="spec-constraints">Constraints: ...</div>
+                <div class="spec-data-line" id="spec-tone">Tone: ...</div>
               </div>
             </div>
             <div class="pipeline-visual question-visual" data-step="question">
               <div class="spec-card ghost"></div>
-              <div class="question-bubbles">
+              <div class="question-bubbles" id="question-data-bubbles">
                 <span class="q-mark">?</span>
-                <span class="bubble question"></span>
-                <span class="bubble answer"></span>
+                <div class="question-data-line" id="question-1">Q1: Waiting...</div>
+                <div class="question-data-line" id="question-2">Q2: ...</div>
+                <div class="question-data-line" id="question-3">Q3: ...</div>
               </div>
             </div>
             <div class="pipeline-visual agents-visual" data-step="agents">
@@ -564,38 +564,43 @@ html[data-theme="light"] .grey-gradient-text{
                 <span class="agent"></span>
                 <span class="agent"></span>
               </div>
-              <div class="candidate-pool">
-                <span class="candidate">Draft A</span>
-                <span class="candidate">Draft B</span>
-                <span class="candidate">Draft C</span>
+              <div class="candidate-pool" id="agents-data-pool">
+                <div class="agent-data-line" id="agent-architect">Architect → ...</div>
+                <div class="agent-data-line" id="agent-editor">Editor → ...</div>
+                <div class="agent-data-line" id="agent-judge">Judge → ...</div>
               </div>
             </div>
             <div class="pipeline-visual metrics-visual" data-step="metrics">
               <div class="candidate-card">
-                <div class="metric-bar">
+                <div class="metric-bar" id="metric-clarity">
                   <span class="label">Clarity</span>
-                  <span class="bar"></span>
+                  <span class="bar" data-value="0"></span>
+                  <span class="value">0%</span>
                 </div>
-                <div class="metric-bar">
+                <div class="metric-bar" id="metric-style">
                   <span class="label">Style</span>
-                  <span class="bar"></span>
+                  <span class="bar" data-value="0"></span>
+                  <span class="value">0%</span>
                 </div>
-                <div class="metric-bar">
+                <div class="metric-bar" id="metric-safety">
                   <span class="label">Safety</span>
-                  <span class="bar"></span>
+                  <span class="bar" data-value="0"></span>
+                  <span class="value">0%</span>
                 </div>
-                <div class="metric-bar">
+                <div class="metric-bar" id="metric-cost">
                   <span class="label">Cost</span>
-                  <span class="bar"></span>
+                  <span class="bar" data-value="0"></span>
+                  <span class="value">0</span>
                 </div>
               </div>
               <div class="scan-line"></div>
             </div>
             <div class="pipeline-visual outcome-visual" data-step="outcome">
-              <div class="race-track">
-                <span class="race-card">Candidate 1</span>
-                <span class="race-card">Candidate 2</span>
-                <span class="race-card best">Top Pick</span>
+              <div class="race-track" id="outcome-race-track">
+                <span class="race-card" id="outcome-candidate-1">Candidate 1</span>
+                <span class="race-card" id="outcome-candidate-2">Candidate 2</span>
+                <span class="race-card" id="outcome-candidate-3">Candidate 3</span>
+                <span class="race-card best" id="outcome-top-pick">Top Pick</span>
               </div>
             </div>
           </div>
@@ -2158,6 +2163,145 @@ document.addEventListener('DOMContentLoaded', () => {
     liveTraceLines = [];
   }
 
+  // ============================================
+  // Real Data Update Functions for Middle Grid
+  // ============================================
+  
+  // Truncate text safely (English only, with ellipsis)
+  function truncateText(text, maxLength = 40) {
+    if (!text || typeof text !== 'string') return '';
+    text = text.trim();
+    if (text.length <= maxLength) return text;
+    return text.substring(0, maxLength) + '...';
+  }
+  
+  // Update Spec Visual with real spec data
+  function updateSpecVisual(specData) {
+    const goalEl = document.getElementById('spec-goal');
+    const constraintsEl = document.getElementById('spec-constraints');
+    const toneEl = document.getElementById('spec-tone');
+    
+    if (goalEl && specData.userGoal) {
+      goalEl.textContent = `Goal: ${truncateText(specData.userGoal, 50)}`;
+    }
+    if (constraintsEl && specData.constraints && specData.constraints.length > 0) {
+      constraintsEl.textContent = `Constraints: ${truncateText(specData.constraints[0], 45)}`;
+    }
+    if (toneEl && specData.tone) {
+      toneEl.textContent = `Tone: ${truncateText(specData.tone, 30)}`;
+    }
+  }
+  
+  // Update Question Visual with real questions
+  let questionCount = 0;
+  function updateQuestionVisual(questionText) {
+    questionCount++;
+    const questionId = `question-${Math.min(questionCount, 3)}`;
+    const questionEl = document.getElementById(questionId);
+    
+    if (questionEl) {
+      questionEl.textContent = `Q${questionCount}: ${truncateText(questionText, 45)}`;
+    }
+  }
+  
+  // Update Agents Visual with real agent actions
+  function updateAgentsVisual(agent, status = 'completed') {
+    const agentId = `agent-${agent.toLowerCase()}`;
+    const agentEl = document.getElementById(agentId);
+    
+    if (agentEl) {
+      const statusText = status === 'completed' ? '✓ Draft' : '⏳ Drafting...';
+      agentEl.textContent = `${agent.charAt(0).toUpperCase() + agent.slice(1)} → ${statusText}`;
+    }
+  }
+  
+  // Update Metrics Visual with real metrics
+  function updateMetricsVisual(metrics) {
+    if (!metrics) return;
+    
+    // Update clarity
+    if (metrics.clarity !== undefined) {
+      const clarityBar = document.querySelector('#metric-clarity .bar');
+      const clarityValue = document.querySelector('#metric-clarity .value');
+      if (clarityBar && clarityValue) {
+        const percentage = Math.round(metrics.clarity * 100);
+        clarityBar.style.width = `${percentage}%`;
+        clarityBar.setAttribute('data-value', percentage);
+        clarityValue.textContent = `${percentage}%`;
+      }
+    }
+    
+    // Update style (using styleMatch)
+    if (metrics.styleMatch !== undefined) {
+      const styleBar = document.querySelector('#metric-style .bar');
+      const styleValue = document.querySelector('#metric-style .value');
+      if (styleBar && styleValue) {
+        const percentage = Math.round(metrics.styleMatch * 100);
+        styleBar.style.width = `${percentage}%`;
+        styleBar.setAttribute('data-value', percentage);
+        styleValue.textContent = `${percentage}%`;
+      }
+    }
+    
+    // Update safety
+    if (metrics.safety !== undefined) {
+      const safetyBar = document.querySelector('#metric-safety .bar');
+      const safetyValue = document.querySelector('#metric-safety .value');
+      if (safetyBar && safetyValue) {
+        const percentage = Math.round(metrics.safety * 100);
+        safetyBar.style.width = `${percentage}%`;
+        safetyBar.setAttribute('data-value', percentage);
+        safetyValue.textContent = `${percentage}%`;
+      }
+    }
+    
+    // Update cost (tokenCost)
+    if (metrics.tokenCost !== undefined) {
+      const costBar = document.querySelector('#metric-cost .bar');
+      const costValue = document.querySelector('#metric-cost .value');
+      if (costBar && costValue) {
+        // Normalize token cost to 0-100 scale (assume max 1000 tokens)
+        const normalized = Math.min(100, Math.round((metrics.tokenCost / 1000) * 100));
+        costBar.style.width = `${normalized}%`;
+        costBar.setAttribute('data-value', normalized);
+        costValue.textContent = Math.round(metrics.tokenCost);
+      }
+    }
+  }
+  
+  // Update Outcome Visual with real candidates
+  function updateOutcomeVisual(candidateCount, topPickIndex) {
+    const raceTrack = document.getElementById('outcome-race-track');
+    if (!raceTrack) return;
+    
+    // Show/hide candidate cards based on actual count
+    for (let i = 1; i <= 3; i++) {
+      const card = document.getElementById(`outcome-candidate-${i}`);
+      if (card) {
+        if (i <= candidateCount) {
+          card.style.display = 'inline-block';
+          card.textContent = `Candidate ${i}`;
+          card.classList.remove('best');
+          
+          // Mark the top pick
+          if (topPickIndex !== null && i === topPickIndex + 1) {
+            card.classList.add('best');
+            card.textContent = `Candidate ${i} 👑`;
+          }
+      } else {
+          card.style.display = 'none';
+        }
+      }
+    }
+    
+    // Update Top Pick card
+    const topPickCard = document.getElementById('outcome-top-pick');
+    if (topPickCard && topPickIndex !== null) {
+      topPickCard.textContent = `Top Pick: #${topPickIndex + 1}`;
+      topPickCard.style.display = 'inline-block';
+    }
+  }
+
   // Deprecated: Now using activatePipelineStage() (SSE-driven)
   // function setPipelineStepFromStage(stage) {
   //   const stageMap = { spec: 0, question: 1, agents: 2, metrics: 3, outcome: 4 };
@@ -2246,23 +2390,36 @@ document.addEventListener('DOMContentLoaded', () => {
           }
         }
         
-        // Add live trace for key progress steps
+        // Add live trace for key progress steps + Update middle grid with real data
         if (data.details) {
+          // Spec stage: Update spec visual
           if (data.details.userGoal) {
             const truncated = data.details.userGoal.length > 60 
               ? data.details.userGoal.substring(0, 60) + '...' 
               : data.details.userGoal;
             updateBestPromptLiveTrace(`   📝 Extracted goal: "${truncated}"`);
-          } else if (data.details.question) {
+            updateSpecVisual(data.details); // Update spec grid
+          } 
+          // Question stage: Update question visual
+          else if (data.details.question) {
             const truncated = data.details.question.length > 60 
               ? data.details.question.substring(0, 60) + '...' 
               : data.details.question;
             updateBestPromptLiveTrace(`   ❓ Question: "${truncated}"`);
-          } else if (data.details.agent) {
+            updateQuestionVisual(data.details.question); // Update question grid
+          } 
+          // Agents stage: Update agents visual
+          else if (data.details.agent) {
             updateBestPromptLiveTrace(`   🤖 ${data.details.agent} agent generated candidate`);
-          } else if (data.details.compositeScore !== undefined) {
+            updateAgentsVisual(data.details.agent, 'completed'); // Update agents grid
+          } 
+          // Metrics stage: Update metrics visual
+          else if (data.details.compositeScore !== undefined) {
             updateBestPromptLiveTrace(`   📊 Score: ${(data.details.compositeScore * 100).toFixed(1)}%`);
-          } else {
+            if (data.details.metrics || data.details) {
+              updateMetricsVisual(data.details.metrics || data.details); // Update metrics grid
+            }
+            } else {
             updateBestPromptLiveTrace(`   ⚙️ ${stepMsg}`);
           }
         } else {
@@ -2288,6 +2445,14 @@ document.addEventListener('DOMContentLoaded', () => {
           }
           if (data.result.topCandidateIndex !== undefined) {
             currentStageState.meta.topCandidateIndex = data.result.topCandidateIndex;
+          }
+          
+          // Update Outcome visual when outcome stage completes
+          if (data.stage === 'outcome' && currentStageState.meta.candidateCount > 0) {
+            updateOutcomeVisual(
+              currentStageState.meta.candidateCount,
+              currentStageState.meta.topCandidateIndex
+            );
           }
         }
         

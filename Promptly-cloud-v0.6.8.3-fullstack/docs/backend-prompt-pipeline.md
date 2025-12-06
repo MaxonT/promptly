@@ -14,7 +14,7 @@ Implement the Best Prompt pipeline exactly as described in the UI:
 
 ---
 
-## 0. Core Concepts & Data Models
+## 0. Core Concepts & Data　 Models
 
 All examples use TypeScript-style types for clarity.
 

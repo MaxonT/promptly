@@ -120,8 +120,19 @@ pipelineRouter.post("/run", async (req, res) => {
 
 /**
  * Execute full pipeline and send SSE events
+ * With timeout protection (default: 5 minutes)
  */
 async function executePipelineWithEvents(runId, userId, { idea, attachments, skipQuestions, model }) {
+  const PIPELINE_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
+  const startTime = Date.now();
+  
+  const checkTimeout = () => {
+    const elapsed = Date.now() - startTime;
+    if (elapsed > PIPELINE_TIMEOUT_MS) {
+      throw new Error(`Pipeline timeout after ${Math.round(elapsed / 1000)}s`);
+    }
+  };
+  
   const now = new Date().toISOString();
   let specId = null;
   let sessionId = null;
@@ -170,6 +181,7 @@ ${idea}${attachmentContext}`;
       details: { model: model || "default" }
     });
 
+    checkTimeout(); // Check timeout before LLM call
     const { data: specData } = await chatJson({
       system: specSystem,
       user: specUserPrompt
@@ -204,12 +216,12 @@ ${idea}${attachmentContext}`;
     });
 
     // ============================================
-    // Stage 2: Question Engine (if not skipped)
+    // Stage 2: Question Engine (Q1-Q3 Loop)
     // ============================================
     if (!skipQuestions) {
       sendEvent(runId, "stage-start", {
         stage: "question",
-        message: "Starting Question Engine...",
+        message: "Starting Question Engine (Q1-Q3)...",
         timestamp: new Date().toISOString()
       });
 
@@ -220,49 +232,109 @@ JSON: {"question": "string", "shouldStop": false, "estimatedCompleteness": 0.8, 
 
 If question mirrors existing context, append "> needs more change" to question.`;
 
-      sendEvent(runId, "stage-progress", {
-        stage: "question",
-        step: "analyzing",
-        message: "Analyzing spec for gaps...",
-        details: { specId }
-      });
+      sessionId = `session_${nanoid(12)}`;
+      const questionsAsked = [];
+      const answers = [];
+      let currentStep = 0;
+      let shouldStop = false;
+      let finalCompletenessScore = 0.0;
 
-      // Concise user prompt
-      const { data: qData } = await chatJson({
-        system: questionSystem,
-        user: `Generate clarifying question for:\n${JSON.stringify(specData, null, 2)}`
-      });
+      // Q1-Q3 Loop: Ask up to 3 questions sequentially
+      while (currentStep < 3 && !shouldStop) {
+        checkTimeout(); // Check timeout before each question
+        
+        currentStep++;
+        sendEvent(runId, "stage-progress", {
+          stage: "question",
+          step: `q${currentStep}-analyzing`,
+          message: `Analyzing spec for Q${currentStep}...`,
+          details: { specId, step: currentStep, previousQuestions: questionsAsked.length }
+        });
 
-      if (qData && !qData.shouldStop) {
-        sessionId = `session_${nanoid(12)}`;
+        // Build context with previous Q&A
+        let qaContext = `Specification:\n${JSON.stringify(specData, null, 2)}`;
+        if (questionsAsked.length > 0) {
+          qaContext += "\n\nPrevious Questions & Answers:";
+          for (let i = 0; i < questionsAsked.length; i++) {
+            qaContext += `\nQ${i + 1}: ${questionsAsked[i]}`;
+            if (answers[i]) {
+              qaContext += `\nA${i + 1}: ${answers[i]}`;
+            }
+          }
+        }
+
+        // Generate next question
+        const { data: qData } = await chatJson({
+          system: questionSystem,
+          user: `Generate Q${currentStep} for:\n${qaContext}`
+        });
+
+        if (!qData || qData.shouldStop) {
+          shouldStop = true;
+          finalCompletenessScore = qData?.estimatedCompleteness || Math.min(0.9, 0.5 + currentStep * 0.15);
+          sendEvent(runId, "stage-progress", {
+            stage: "question",
+            step: `q${currentStep}-stopped`,
+            message: `Q${currentStep} stopped early (spec complete enough)`,
+            details: { step: currentStep, completenessScore: finalCompletenessScore }
+          });
+          break;
+        }
+
+        const question = qData.question || "";
         const missingFields = Array.isArray(qData.missingFields) ? qData.missingFields : [];
+        questionsAsked.push(question);
+        // For pipeline mode, we simulate answers (in real wizard, user would answer)
+        // Here we'll use empty answers and let the spec proceed
+        answers.push(""); // Empty answer for pipeline mode
 
         sendEvent(runId, "stage-progress", {
           stage: "question",
-          step: "question-generated",
-          message: "Question generated",
-          details: { question: qData.question, step: 1, missingFields }
+          step: `q${currentStep}-generated`,
+          message: `Q${currentStep} generated`,
+          details: { 
+            question, 
+            step: currentStep, 
+            missingFields,
+            estimatedCompleteness: qData.estimatedCompleteness || 0.0
+          }
         });
 
-        // In a real implementation, this would loop Q1-Q3
-        // For now, we'll mark as complete after first question
-        sendEvent(runId, "stage-complete", {
-          stage: "question",
-          message: "Question Engine completed",
-          result: { sessionId, question: qData.question, step: 1, missingFields }
-        });
-
-        // Update completeness score
-        const completenessScore = qData.estimatedCompleteness || 0.8;
+        // Update completeness score after each question
+        finalCompletenessScore = qData.estimatedCompleteness || Math.min(0.95, 0.5 + currentStep * 0.15);
         db.prepare("UPDATE specs SET completeness_score = ? WHERE id = ?")
-          .run(completenessScore, specId);
-      } else {
-        sendEvent(runId, "stage-complete", {
-          stage: "question",
-          message: "Question Engine skipped (spec is complete enough)",
-          result: { skipped: true }
-        });
+          .run(finalCompletenessScore, specId);
+
+        // Small delay between questions
+        await new Promise(resolve => setTimeout(resolve, 500));
       }
+
+      // Save question session to database
+      const sessionNow = new Date().toISOString();
+      db.prepare(`
+        INSERT INTO question_sessions (id, owner_id, spec_id, step, is_complete, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+      `).run(
+        sessionId,
+        userId,
+        specId,
+        currentStep,
+        shouldStop ? 1 : 0,
+        sessionNow,
+        sessionNow
+      );
+
+      sendEvent(runId, "stage-complete", {
+        stage: "question",
+        message: `Question Engine completed (${currentStep} questions asked)`,
+        result: { 
+          sessionId, 
+          questionsAsked, 
+          step: currentStep, 
+          completenessScore: finalCompletenessScore,
+          stoppedEarly: shouldStop
+        }
+      });
     } else {
       sendEvent(runId, "stage-skipped", {
         stage: "question",
@@ -306,6 +378,8 @@ ${JSON.stringify(specData, null, 2)}`;
 
     for (let i = 0; i < agents.length; i++) {
       const agent = agents[i];
+      
+      checkTimeout(); // Check timeout before each agent
       
       sendEvent(runId, "stage-progress", {
         stage: "agents",
@@ -363,6 +437,8 @@ ${JSON.stringify(specData, null, 2)}`;
 
     for (let i = 0; i < candidateIds.length; i++) {
       const candidateId = candidateIds[i];
+      
+      checkTimeout(); // Check timeout before each scoring
       
       sendEvent(runId, "stage-progress", {
         stage: "metrics",
@@ -516,12 +592,20 @@ JSON: {"clarity": 0.85, "coherence": 0.90, "styleMatch": 0.80, "safety": 0.95, "
 
   } catch (err) {
     console.error(`[pipeline] Error in pipeline execution:`, err);
+    const errorMessage = err.message || "Pipeline execution failed";
+    const isTimeout = errorMessage.includes("timeout");
+    
     sendEvent(runId, "error", {
       stage: "pipeline",
-      message: err.message || "Pipeline execution failed",
-      error: err.toString()
+      message: errorMessage,
+      error: err.toString(),
+      isTimeout
     });
-    sendEvent(runId, "complete", { success: false });
+    sendEvent(runId, "complete", { 
+      success: false,
+      error: errorMessage,
+      isTimeout
+    });
   }
 }
 

@@ -238,6 +238,8 @@ ensureColumn("question_sessions", "step", "step INTEGER DEFAULT 0");
 ensureColumn("question_sessions", "is_complete", "is_complete INTEGER DEFAULT 0");
 ensureColumn("question_sessions", "spec_id", "spec_id TEXT");
 ensureColumn("specs", "completeness_score", "completeness_score REAL DEFAULT 0.0");
+ensureColumn("specs", "raw_idea", "raw_idea TEXT");
+ensureColumn("candidate_prompts", "metrics_json", "metrics_json TEXT");
 
 // Whitelists for allowed table and column names
 const ALLOWED_TABLES = [

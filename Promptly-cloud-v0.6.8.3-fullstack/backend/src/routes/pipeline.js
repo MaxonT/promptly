@@ -211,11 +211,12 @@ ${idea}${attachmentContext}`;
 
     checkTimeout(); // Check timeout before LLM call
     console.log(`[pipeline] [${runId}] Stage 1: Calling Spec Builder LLM...`);
-    const { data: specData } = await chatJson({
+    const { data: rawSpecData } = await chatJson({
       system: specSystem,
       user: specUserPrompt
     });
-    console.log(`[pipeline] [${runId}] Stage 1: Spec Builder completed, extracted ${Object.keys(specData || {}).length} fields`);
+    const specData = rawSpecData || {};
+    console.log(`[pipeline] [${runId}] Stage 1: Spec Builder completed, extracted ${Object.keys(specData).length} fields`);
 
     sendEvent(runId, "stage-progress", {
       stage: "spec",
@@ -224,16 +225,33 @@ ${idea}${attachmentContext}`;
       details: { fields: Object.keys(specData || {}) }
     });
 
+    const normalizedSpec = {
+      userGoal: (specData.userGoal || idea).trim(),
+      audience: specData.audience || null,
+      constraints: Array.isArray(specData.constraints) ? specData.constraints.filter(Boolean) : [],
+      tone: specData.tone || null,
+      format: specData.format || null,
+      domain: specData.domain || null,
+      examples: Array.isArray(specData.examples) ? specData.examples.filter(Boolean) : []
+    };
+
+    const rawTitle = normalizedSpec.userGoal || idea;
+    const truncatedTitle = rawTitle.length > 120 ? `${rawTitle.substring(0, 117)}...` : rawTitle;
+    const title = truncatedTitle || "Promptly Spec";
+    const summary = normalizedSpec.userGoal;
+
     // Save spec to database
     specId = `spec_${nanoid(12)}`;
-    db.prepare(`
-      INSERT INTO specs (id, owner_id, raw_idea, spec_json, completeness_score, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
+      db.prepare(`
+      INSERT INTO specs (id, owner_id, raw_idea, title, summary, spec_json, completeness_score, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       specId,
       userId,
       idea,
-      JSON.stringify(specData),
+      title,
+      summary,
+      JSON.stringify(normalizedSpec),
       0,
       now,
       now
@@ -242,7 +260,7 @@ ${idea}${attachmentContext}`;
     sendEvent(runId, "stage-complete", {
       stage: "spec",
       message: "Spec Builder completed successfully",
-      result: { specId, ...specData }
+      result: { specId, title, summary, ...normalizedSpec }
     });
 
     // ============================================

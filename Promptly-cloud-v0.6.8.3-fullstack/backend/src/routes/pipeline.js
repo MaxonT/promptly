@@ -683,7 +683,7 @@ Provide honest, objective scores based on the criteria.`;
         or_data.created_at
       FROM outcome_runs or_data
       JOIN specs ON or_data.spec_id = specs.id
-      WHERE specs.user_id = ?
+      WHERE specs.owner_id = ?
         AND or_data.status = 'completed'
       ORDER BY or_data.created_at DESC
       LIMIT 10

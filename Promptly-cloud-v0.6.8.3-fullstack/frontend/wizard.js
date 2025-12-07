@@ -29,7 +29,6 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
   const nextBatchBtn = document.getElementById("nextBatchBtn");
   const finalizeBtn = document.getElementById("finalizeBtn");
   const backBtn = document.getElementById("backBtn");
-  const skipBtn = document.getElementById("skipBtn");
   const saveSnapshotBtn = document.getElementById("saveSnapshotBtn");
   const cancelWizardBtn = document.getElementById("cancelWizardBtn");
   const wizardStatus = document.getElementById("wizardStatus");
@@ -143,7 +142,7 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
     wizardStatus.classList.add(`wizard-status--${tone}`);
     const icon = tone === "error" ? "✕" : tone === "warn" ? "⚠️" : "ℹ️";
     const ticks = showTicks ? '<div class="wizard-loading-ticks" aria-hidden="true"></div>' : "";
-    const note = '<div class="wizard-status-note">请不要退出页面 · Please do not exit the page.</div>';
+    const note = '<div class="wizard-status-note">⚠️ Do not exit this page – exiting will stop the wizard.</div>';
     wizardStatus.innerHTML = `
       <span class="wizard-status-icon">${icon}</span>
       <div class="wizard-status-text">${message}</div>
@@ -307,7 +306,6 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
     nextBatchBtn.classList.add("hidden");
     finalizeBtn.classList.add("hidden");
     backBtn.classList.add("hidden");
-    skipBtn.classList.add("hidden");
     saveSnapshotBtn.classList.add("hidden");
     progressIndicator?.classList.add("hidden");
     // Clear auto-save timer when questions are cleared
@@ -464,6 +462,33 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
         questionNumber: startIndex + idx + 1 // 1-based numbering
       });
     });
+    
+    // If questions are already being displayed, update the page indicator
+    // This fixes the issue where the initial page count shows "1 of 1"
+    // even though more questions exist
+    if (questionsContainer && !questionsContainer.classList.contains("hidden")) {
+      updateProgressIndicator();
+      // Also update the inline page indicator if it exists
+      const existingPageIndicator = questionsContainer.querySelector(".wizard-page-indicator");
+      if (existingPageIndicator) {
+        const totalPages = getTotalPages();
+        const startQ = currentPageIndex * PAGE_SIZE + 1;
+        const endQ = Math.min((currentPageIndex + 1) * PAGE_SIZE, allQuestions.length);
+        const pageNumberSpan = existingPageIndicator.querySelector(".wizard-page-indicator-number");
+        if (pageNumberSpan) {
+          pageNumberSpan.textContent = `${currentPageIndex + 1}`;
+        }
+        // Update the entire indicator text
+        const indicatorDiv = existingPageIndicator.querySelector("div");
+        if (indicatorDiv) {
+          indicatorDiv.innerHTML = `
+            <span>Page <span class="wizard-page-indicator-number">${currentPageIndex + 1}</span> of ${totalPages}</span>
+            <span style="color:rgba(148,163,184,0.5);">•</span>
+            <span>Questions ${startQ}–${endQ} of ${allQuestions.length}</span>
+          `;
+        }
+      }
+    }
   }
   
   // Get current page of questions
@@ -549,9 +574,11 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
     const nextTextSpan = nextBatchBtn.querySelector("span:not(.wizard-button-icon)");
     if (nextTextSpan) {
       if (totalPages <= 1 || currentPageIndex >= totalPages - 1) {
-        nextTextSpan.textContent = "Submit & Continue";
+        // Last page - hide the button since there's no next page
+        nextBatchBtn.classList.add("hidden");
       } else {
-        nextTextSpan.textContent = `Next (Page ${currentPageIndex + 2}/${totalPages})`;
+        nextBatchBtn.classList.remove("hidden");
+        nextTextSpan.textContent = `Save & Continue (Page ${currentPageIndex + 2}/${totalPages})`;
       }
     }
     
@@ -613,10 +640,10 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
       const typeSpan = document.createElement("div");
       typeSpan.className = "wizard-question-type";
       const typeLabels = {
-        "single_choice": "单选",
-        "multi_choice": "多选",
-        "yes_no": "是 / 否",
-        "short_text": "简短回答"
+        "single_choice": "Single Choice",
+        "multi_choice": "Multiple Choice",
+        "yes_no": "Yes / No",
+        "short_text": "Short Answer"
       };
       typeSpan.textContent = typeLabels[q.type] || "问题";
 
@@ -633,7 +660,7 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
 
       function markAnsweredState(isAnswered) {
         card.classList.toggle("is-answered", isAnswered);
-        badge.textContent = isAnswered ? "已回答" : "待作答";
+        badge.textContent = isAnswered ? "Answered" : "Pending";
         badge.classList.toggle("answered", isAnswered);
         badge.classList.toggle("pending", !isAnswered);
       }
@@ -732,7 +759,7 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
           missingDiv.className = "wizard-missing-options";
           missingDiv.innerHTML = `
             <span class="wizard-missing-options-icon">⚠️</span>
-            <span>无可用选项。点击“重新生成”尝试更多问题。</span>
+            <span>No options available. Click "Regenerate" to try more questions.</span>
           `;
           answerArea.appendChild(missingDiv);
           card.appendChild(header);
@@ -809,7 +836,7 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
             const input = document.createElement("input");
             input.type = "text";
             input.className = "wizard-other-input";
-            input.placeholder = "请具体说明你的其他选项...";
+            input.placeholder = "Please specify your custom option...";
             input.addEventListener("input", () => {
               const customValue = `${opt.value}:${input.value}`;
               if (isMulti) {
@@ -819,7 +846,7 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
               } else {
                 currentAnswers.set(q.id, customValue);
               }
-              badge.textContent = "已回答";
+              badge.textContent = "Answered";
               badge.classList.add("answered");
             });
 
@@ -853,8 +880,7 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
     // Update pagination buttons
     updatePaginationButtons();
     
-    // Show all buttons
-    skipBtn.classList.remove("hidden");
+    // Show navigation buttons
     
     // Phase 3: Update guidance banner when page renders
     updateAnswerGuidance();
@@ -1419,43 +1445,6 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
     }
   }
 
-  // Q2: Skip current page of questions
-  async function skipCurrent() {
-    if (!currentSessionId || allQuestions.length === 0) return;
-    const pageQuestions = getCurrentPageQuestions();
-    if (pageQuestions.length === 0) return;
-    const firstQuestionId = pageQuestions[0].id;
-    try {
-      log("Skipping current question...");
-      const res = await fetch(`${API_BASE}/api/question-sessions/${encodeURIComponent(currentSessionId)}/answer`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          answers: [{ question_id: firstQuestionId, value: null }],
-          control: "skip",
-          model: currentModel
-        })
-      });
-      if (!res.ok) {
-        const txt = await res.text();
-        log(`Failed to skip: HTTP ${res.status} ${txt}`);
-        return;
-      }
-      const data = await res.json();
-      log(data.message || "Question skipped");
-      if (data.done) {
-        clearQuestions();
-      } else if (data.questions && data.questions.length > 0) {
-        clearQuestions();
-        addQuestions(data.questions);
-        currentPageIndex = 0;
-        renderCurrentPage();
-      }
-    } catch (err) {
-      console.error(err);
-      log("Error while skipping: " + err.message);
-    }
-  }
 
   // Q3: Regenerate a specific question
   async function regenerateQuestion(questionId, cardElement) {
@@ -1569,7 +1558,6 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
   nextBatchBtn?.addEventListener("click", handleNext);
   finalizeBtn?.addEventListener("click", finalizeSession);
   backBtn?.addEventListener("click", goBack);
-  skipBtn?.addEventListener("click", skipCurrent);
   saveSnapshotBtn?.addEventListener("click", saveSnapshot);
   restoreSnapshotBtn?.addEventListener("click", restoreSnapshot);
   cancelWizardBtn?.addEventListener("click", cancelWizard);

@@ -467,6 +467,10 @@
     if (pie) drawPie(pie, [Math.round((metrics.pass_rate ?? metrics.passRate ?? 0) * 100), Math.round((1 - (metrics.pass_rate ?? metrics.passRate ?? 0)) * 100)]);
     if (gauge) drawGauge(gauge, progress);
   }
+  
+  // Expose renderCharts to global scope for use in index.html
+  window.renderCharts = renderCharts;
+  
   async function fetchLatestRun() {
     console.warn("[promptly] fetchLatestRun disabled - pipeline uses /api/pipeline/*");
     return { ok: false, error: "Outcome runner retired" };

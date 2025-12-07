@@ -463,11 +463,13 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
       });
     });
     
-    // If questions are already being displayed, update the page indicator
+    // If questions are already being displayed, update the page indicator and buttons
     // This fixes the issue where the initial page count shows "1 of 1"
     // even though more questions exist
     if (questionsContainer && !questionsContainer.classList.contains("hidden")) {
       updateProgressIndicator();
+      updatePaginationButtons();
+      
       // Also update the inline page indicator if it exists
       const existingPageIndicator = questionsContainer.querySelector(".wizard-page-indicator");
       if (existingPageIndicator) {
@@ -570,15 +572,22 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
       }
     }
     
-    // Update Next button text
+    // Update Next button text and show/hide Finalize button based on current page
     const nextTextSpan = nextBatchBtn.querySelector("span:not(.wizard-button-icon)");
     if (nextTextSpan) {
-      if (totalPages <= 1 || currentPageIndex >= totalPages - 1) {
-        // Last page - hide the button since there's no next page
+      if (currentPageIndex >= totalPages - 1 && totalPages > 0) {
+        // Last page - show Finalize Spec button, hide Save & Continue
         nextBatchBtn.classList.add("hidden");
+        if (finalizeBtn) {
+          finalizeBtn.classList.remove("hidden");
+        }
       } else {
+        // Not last page - show Save & Continue, hide Finalize Spec
         nextBatchBtn.classList.remove("hidden");
-        nextTextSpan.textContent = `Save & Continue (Page ${currentPageIndex + 2}/${totalPages})`;
+        if (finalizeBtn) {
+          finalizeBtn.classList.add("hidden");
+        }
+        nextTextSpan.textContent = `Save & Continue`;
       }
     }
     

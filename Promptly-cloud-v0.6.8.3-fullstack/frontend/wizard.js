@@ -466,23 +466,27 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
       });
     });
     
-    // If questions are already being displayed, update the page indicator and buttons
-    // This fixes the issue where the initial page count shows "1 of 1"
-    // even though more questions exist
-    if (questionsContainer && !questionsContainer.classList.contains("hidden")) {
+    // Auto-update indicators when questions are added
+    // This fixes the issue where page count shows "1 of 1" initially
+    // Note: We check if indicators exist, not if container is visible,
+    // because we need to update even before first render
+    if (progressIndicator) {
       updateProgressIndicator();
+    }
+    
+    // Update pagination buttons if they exist
+    if (nextBatchBtn) {
       updatePaginationButtons();
-      
-      // Also update the inline page indicator if it exists
+    }
+    
+    // Also update the inline page indicator if it exists
+    if (questionsContainer) {
       const existingPageIndicator = questionsContainer.querySelector(".wizard-page-indicator");
       if (existingPageIndicator) {
         const totalPages = getTotalPages();
         const startQ = currentPageIndex * PAGE_SIZE + 1;
         const endQ = Math.min((currentPageIndex + 1) * PAGE_SIZE, allQuestions.length);
-        const pageNumberSpan = existingPageIndicator.querySelector(".wizard-page-indicator-number");
-        if (pageNumberSpan) {
-          pageNumberSpan.textContent = `${currentPageIndex + 1}`;
-        }
+        
         // Update the entire indicator text
         const indicatorDiv = existingPageIndicator.querySelector("div");
         if (indicatorDiv) {

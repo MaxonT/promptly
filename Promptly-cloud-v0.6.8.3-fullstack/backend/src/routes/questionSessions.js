@@ -263,7 +263,9 @@ questionSessionRouter.post("/", async (req, res) => {
       q.id = qid;
     });
 
-    const firstBatch = choiceQuestions.slice(0, 5).map((q) => ({
+    // Return all generated questions (not just first 5)
+    // Frontend will handle client-side pagination
+    const allGeneratedQuestions = choiceQuestions.map((q) => ({
       id: q.id,
       type: q.type,
       content: q.content,
@@ -279,7 +281,7 @@ questionSessionRouter.post("/", async (req, res) => {
       mode: modeProfile.id,
       model: modelChoice.id,
       mode_profile: modeProfile,
-      questions: firstBatch
+      questions: allGeneratedQuestions
     });
   } catch (err) {
     console.error("[promptly] question session init failed", err);

@@ -295,7 +295,8 @@ html[data-theme="light"] .grey-gradient-text{
   display:flex;
   align-items:center;
   gap:0.75rem;
-  margin-bottom:1rem;
+  margin-bottom:1.2rem;
+  justify-content:center;
 }
 .example-card__icon{
   width:46px;
@@ -308,52 +309,46 @@ html[data-theme="light"] .grey-gradient-text{
   font-size:1.65rem;
 }
 .example-card__title{
-  font-size:1.15rem;
+  font-size:1.25rem;
   font-weight:600;
-}
-.example-card__description{
-  margin:0;
-  font-size:0.85rem;
-  color:hsla(0,0%,100%,0.7);
+  color:rgba(255,255,255,0.95);
 }
 .example-card__body{
   display:grid;
-  grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+  grid-template-columns:repeat(3,1fr);
   gap:1rem;
 }
-.example-block{
+.workflow-step{
   border-radius:0.9rem;
   border:1px solid rgba(255,255,255,0.08);
-  padding:0.85rem;
-  overflow:hidden;
-}
-.example-block--input{
+  padding:1rem;
   background:rgba(255,255,255,0.04);
-}
-.example-block--output{
-  background:rgba(255,255,255,0.08);
-}
-.example-block__label{
+  overflow:hidden;
   display:flex;
-  align-items:center;
-  gap:0.35rem;
-  font-size:0.7rem;
+  flex-direction:column;
+  gap:0.75rem;
+}
+.workflow-step__label{
+  font-size:0.68rem;
   letter-spacing:0.08em;
   text-transform:uppercase;
-  color:rgba(255,255,255,0.7);
-  margin-bottom:0.4rem;
+  font-weight:700;
+  color:rgba(124,58,237,0.9);
+  padding:0.3rem 0.6rem;
+  background:rgba(124,58,237,0.15);
+  border-radius:0.4rem;
+  width:fit-content;
+  border:1px solid rgba(124,58,237,0.3);
 }
-.example-block__icon{
-  font-size:0.9rem;
-}
-.example-block__text{
+.workflow-step__content{
   margin:0;
-  font-size:0.85rem;
-  line-height:1.45;
   white-space:pre-wrap;
-  color:#fff;
+  font-size:0.83rem;
+  line-height:1.6;
+  color:rgba(255,255,255,0.88);
+  font-family:inherit;
 }
-@media (max-width:960px){
+@media (max-width:768px){
   .example-card__body{
     grid-template-columns:1fr;
   }
@@ -743,36 +738,29 @@ temperature: 0.5</textarea>
 
     <section class="card example-gallery" id="exampleGallery">
       <div class="example-gallery__intro">
-        <h3 class="gradient-text">See what Promptly can do</h3>
+        <h3 class="gradient-text">See Promptly in real workflows</h3>
         <p class="example-gallery__subtitle">
-          Pick a scenario and watch how messy input turns into clean, ready-to-use output.
+          Turn messy business requests into executable prompt specs, tests, and reports.
         </p>
       </div>
       <div class="example-tabs" id="exampleTabs"></div>
       <div class="example-card example-card--visible" id="exampleCard">
         <div class="example-card__header">
-          <span class="example-card__icon" id="exampleIcon">✉️</span>
-          <div>
-            <div class="example-card__title" id="exampleTitle">Email Reply Assistant</div>
-            <p class="example-card__description" id="exampleDescription">
-              Turn rough email threads into warm, polite replies.
-            </p>
-          </div>
+          <span class="example-card__icon" id="exampleIcon">🛡️</span>
+          <div class="example-card__title" id="exampleTitle">Frontier Model Safety Gate</div>
         </div>
         <div class="example-card__body">
-          <div class="example-block example-block--input">
-            <div class="example-block__label">
-              <span class="example-block__icon">📥</span>
-              <span>Input</span>
+          <div class="workflow-step">
+            <div class="workflow-step__label">YOU SAY</div>
+            <pre class="workflow-step__content" id="workflowStep1"></pre>
             </div>
-            <pre class="example-block__text" id="exampleInput"></pre>
+          <div class="workflow-step">
+            <div class="workflow-step__label">PROMPTLY STRUCTURES</div>
+            <pre class="workflow-step__content" id="workflowStep2"></pre>
           </div>
-          <div class="example-block example-block--output">
-            <div class="example-block__label">
-              <span class="example-block__icon">📤</span>
-              <span>Output</span>
-            </div>
-            <pre class="example-block__text" id="exampleOutput"></pre>
+          <div class="workflow-step">
+            <div class="workflow-step__label">YOUR SYSTEM GETS</div>
+            <pre class="workflow-step__content" id="workflowStep3"></pre>
           </div>
         </div>
       </div>
@@ -1446,46 +1434,40 @@ temperature: 0.5</textarea>
 (() => {
   const SCENARIOS = [
     {
-      id: "email",
-      tabLabel: "Email reply",
-      icon: "✉️",
-      title: "Email Reply Assistant",
-      description: "Turn rough email threads into warm, polite replies.",
-      inputExample:
-        "Hey, can you still meet on Tuesday afternoon?\nLet me know what works.",
-      outputExample:
-        "Hi! Tuesday at 3pm works great for me. Thanks for checking in!"
+      id: "ai-safety",
+      tabLabel: "AI Safety",
+      icon: "🛡️",
+      title: "Frontier Model Safety Gate",
+      step1: '"Design a safety evaluation for our new LLM focusing on self-harm assistance risks."',
+      step2: "• Policy-derived risk categories (self-harm, crisis support, edge cases)\n• 40+ red-team attack prompts in 3 languages and 3 obfuscation levels\n• A scoring rubric (PASS / SOFT_FAIL / HARD_FAIL) and release thresholds\n• A machine-readable JSON spec for automated evaluation",
+      step3: "• A safety eval suite you can run on every new model / checkpoint\n• Aggregated risk scores over time and by model family\n• Clear \"ship / don't ship\" gates for your release pipeline"
     },
     {
-      id: "summarize",
-      tabLabel: "Summarize",
-      icon: "📝",
-      title: "Article Summarizer",
-      description: "Turn long text into short bullet-point summaries.",
-      inputExample: "Here is a multi-paragraph article about product design...",
-      outputExample: "- Key point 1\n- Key point 2\n- Key point 3"
+      id: "quant",
+      tabLabel: "Quant Finance",
+      icon: "📈",
+      title: "Quant Strategy Risk Report",
+      step1: '"Turn our backtest + live trading stats into a risk report for this equity market-neutral strategy."',
+      step2: "• Sharpe, drawdown, recovery time, VaR / CVaR by lookback window\n• Factor & sector exposures, top positions by risk contribution\n• Historical stress-test scenarios (GFC, COVID, rate shock)\n• A traffic-light risk rating (Green / Amber / Red) with mitigation actions",
+      step3: "• An IC-ready risk report template\n• JSON / Markdown outputs ready for dashboards or internal tools\n• A repeatable spec you can re-run whenever data updates"
     },
     {
-      id: "rewrite",
-      tabLabel: "Rewrite",
-      icon: "🔄",
-      title: "Rewrite & Polish",
-      description: "Clean up grammar and make your writing clearer.",
-      inputExample:
-        "this sentence are not very good written but I wanna send to my boss",
-      outputExample:
-        "This sentence isn’t very well written, but I’d like to send it to my boss."
+      id: "supply-chain",
+      tabLabel: "Supply Chain Risk",
+      icon: "🚚",
+      title: "Supply Chain Stress Test",
+      step1: '"Stress-test our EV battery supply chain for port closures and export controls."',
+      step2: "• Disruption scenarios with triggers, affected suppliers & plants\n• Time-phased impact on production and revenue (0–4w, 1–3m, 3–12m)\n• Aggregated risk by plant, region, and product family\n• Mitigation playbooks (alternate suppliers, rerouting, product-mix shifts)",
+      step3: "• A scenario library for risk reviews\n• Structured data you can feed into planning tools\n• A narrative summary for exec briefings"
     },
     {
-      id: "translate",
-      tabLabel: "Translate",
-      icon: "🌎",
-      title: "Translate",
-      description: "Translate text while keeping tone and style.",
-      inputExample:
-        "Please help me translate this email to English, but keep it polite and friendly.",
-      outputExample:
-        "Hi there, I hope you’ve been doing well. I wanted to follow up about..."
+      id: "media",
+      tabLabel: "Media Compliance",
+      icon: "📺",
+      title: "Global Media Bias Audit",
+      step1: '"Audit our prime-time immigration coverage over the last 90 days for bias and compliance."',
+      step2: "• A sampling plan by channel, show, topic, and region\n• Per-segment labels for bias level and compliance level\n• Evidence snippets with flagged stereotypes or dehumanizing framing\n• Aggregated KPIs by show / anchor / region, plus flagged segments",
+      step3: "• A bias & compliance dashboard spec\n• Exportable CSV / JSON for BI tools\n• A human-readable audit report for legal / editorial teams"
     }
   ];
 
@@ -1494,9 +1476,9 @@ temperature: 0.5</textarea>
   if (!tabsEl || !cardEl) return;
   const iconEl = document.getElementById("exampleIcon");
   const titleEl = document.getElementById("exampleTitle");
-  const descEl = document.getElementById("exampleDescription");
-  const inputEl = document.getElementById("exampleInput");
-  const outputEl = document.getElementById("exampleOutput");
+  const step1El = document.getElementById("workflowStep1");
+  const step2El = document.getElementById("workflowStep2");
+  const step3El = document.getElementById("workflowStep3");
   const activeClass = "example-tab--active";
   let activeId = SCENARIOS[0].id;
 
@@ -1515,9 +1497,9 @@ temperature: 0.5</textarea>
     activeId = scenario.id;
     if (iconEl) iconEl.textContent = scenario.icon;
     if (titleEl) titleEl.textContent = scenario.title;
-    if (descEl) descEl.textContent = scenario.description;
-    if (inputEl) inputEl.textContent = scenario.inputExample;
-    if (outputEl) outputEl.textContent = scenario.outputExample;
+    if (step1El) step1El.textContent = scenario.step1;
+    if (step2El) step2El.textContent = scenario.step2;
+    if (step3El) step3El.textContent = scenario.step3;
     tabsEl.querySelectorAll(".example-tab").forEach((btn) => {
       btn.classList.toggle(activeClass, btn.dataset.id === activeId);
     });

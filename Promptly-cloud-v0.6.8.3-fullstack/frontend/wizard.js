@@ -387,7 +387,10 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
     try {
       const res = await fetch(`${API_BASE}/api/question-sessions/${encodeURIComponent(sessionId)}/state`);
       if (!res.ok) {
-        log(`Could not restore session ${sessionId}: HTTP ${res.status}`);
+        // Silently ignore 404 (no previous session) - this is expected behavior
+        if (res.status !== 404) {
+          log(`Could not restore session ${sessionId}: HTTP ${res.status}`);
+        }
         return;
       }
       const data = await res.json();

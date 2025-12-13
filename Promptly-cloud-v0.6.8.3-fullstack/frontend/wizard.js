@@ -1230,50 +1230,6 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
     }
   }
 
-  // 🔥 FORGE CEREMONY - Ultimate result reveal animation
-  function triggerForgeCeremony() {
-    // Get all the elements
-    const forgeBlocks = document.querySelectorAll('.forge-block');
-    const forgeBadge = document.querySelector('.forge-badge');
-    const forgeContents = document.querySelectorAll('.forge-content');
-    
-    // Trigger block animations with stagger
-    forgeBlocks.forEach((block, index) => {
-      // Add slight delay for each block
-      setTimeout(() => {
-        block.classList.add('forge-animate');
-      }, index * 50); // Stagger by 50ms
-    });
-    
-    // Trigger content reveal animations
-    forgeContents.forEach((content, index) => {
-      setTimeout(() => {
-        content.classList.add('forge-reveal');
-      }, 1800 + (index * 100));
-    });
-    
-    // Show and animate the SEALED badge
-    if (forgeBadge) {
-      setTimeout(() => {
-        forgeBadge.classList.remove('hidden');
-        forgeBadge.classList.add('visible');
-      }, 2500);
-    }
-    
-    // Scroll result panel into view smoothly
-    const resultPanel = document.querySelector('.wizard-panel--result');
-    if (resultPanel) {
-      setTimeout(() => {
-        resultPanel.scrollIntoView({ 
-          behavior: 'smooth', 
-          block: 'start' 
-        });
-      }, 300);
-    }
-    
-    log("🎉 Forge ceremony complete - your spec is SEALED!");
-  }
-
   async function finalizeSession() {
     if (!currentSessionId) return;
     try {
@@ -1321,9 +1277,6 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
         }
       };
       specOutput.textContent = JSON.stringify(specDisplay, null, 2);
-      
-      // 🔥 TRIGGER FORGE CEREMONY ANIMATION 🔥
-      triggerForgeCeremony();
       
       // Display the compiled prompt blocks (final merged result)
       if (data.compiled_prompt && data.compiled_prompt.blocks) {

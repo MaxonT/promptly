@@ -313,20 +313,31 @@
       <div id="resultEmptyState" class="wizard-empty">
         <p>Finish at least one wizard run to see results here.</p>
       </div>
-      <div id="resultContainer" class="wizard-result hidden">
-        <div class="wizard-result-section">
+      <div id="resultContainer" class="wizard-result wizard-result--forge hidden">
+        <!-- Forge ceremony decorations (only visible when result is shown) -->
+        <div class="forge-corner forge-corner--tl"></div>
+        <div class="forge-corner forge-corner--tr"></div>
+        <div class="forge-corner forge-corner--bl"></div>
+        <div class="forge-corner forge-corner--br"></div>
+        <div class="forge-scanline"></div>
+        <div class="forge-badge hidden">
+          <div class="forge-badge-icon">🔒</div>
+          <div class="forge-badge-text">SEALED</div>
+        </div>
+        
+        <div class="wizard-result-section forge-block" data-forge-delay="0">
           <h3>High-level spec</h3>
-          <pre id="specOutput" class="wizard-code"></pre>
+          <pre id="specOutput" class="wizard-code forge-content"></pre>
         </div>
-        <div class="wizard-result-section">
+        <div class="wizard-result-section forge-block" data-forge-delay="1">
           <h3>Compiled prompt blocks</h3>
-          <pre id="promptOutput" class="wizard-code"></pre>
+          <pre id="promptOutput" class="wizard-code forge-content"></pre>
         </div>
-    <div class="wizard-result-section">
+    <div class="wizard-result-section forge-block" data-forge-delay="2">
       <h3>Explanation</h3>
-      <pre id="explanationOutput" class="wizard-code wizard-code--plain"></pre>
+      <pre id="explanationOutput" class="wizard-code wizard-code--plain forge-content"></pre>
     </div>
-    <div class="wizard-result-section">
+    <div class="wizard-result-section forge-block" data-forge-delay="3">
       <h3>Result page</h3>
       <p class="wizard-panel-desc">
         Open this result in a dedicated view you can share or bookmark.

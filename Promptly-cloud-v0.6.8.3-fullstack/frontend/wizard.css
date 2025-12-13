@@ -1574,3 +1574,348 @@ html[data-theme="light"] .wizard-mode-option.is-selected{
     box-shadow:0 0 20px 4px rgba(245,158,11,0.6);
   }
 }
+
+/* ============================================ */
+/* FORGE CEREMONY - Ultimate Result Animation */
+/* ============================================ */
+
+/* Only apply forge effects when result container is visible */
+.wizard-result--forge {
+  position: relative;
+}
+
+/* Double-layer energy border (only visible when result shown) */
+.wizard-result--forge:not(.hidden)::before {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border: 2px solid transparent;
+  border-radius: 12px;
+  background: 
+    linear-gradient(var(--surface-2, #1A1D29), var(--surface-2, #1A1D29)) padding-box,
+    linear-gradient(135deg, 
+      rgba(124, 58, 237, 0.4), 
+      rgba(34, 211, 238, 0.4),
+      rgba(251, 191, 36, 0.4)
+    ) border-box;
+  pointer-events: none;
+  opacity: 0;
+  animation: forgeBorderAppear 1.5s ease-out 0.5s forwards;
+  z-index: 0;
+}
+
+/* Outer glow layer */
+.wizard-result--forge:not(.hidden)::after {
+  content: '';
+  position: absolute;
+  inset: -8px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, 
+    rgba(124, 58, 237, 0.15), 
+    rgba(34, 211, 238, 0.15),
+    rgba(251, 191, 36, 0.15)
+  );
+  filter: blur(16px);
+  opacity: 0;
+  pointer-events: none;
+  animation: forgeGlowAppear 1.5s ease-out 0.7s forwards;
+  z-index: -1;
+}
+
+/* Noise texture for premium feel */
+.wizard-result--forge .wizard-result-section {
+  position: relative;
+  z-index: 1;
+}
+
+/* Corner decorations - L-shaped with gradient glow */
+.forge-corner {
+  position: absolute;
+  width: 32px;
+  height: 32px;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 10;
+}
+
+.wizard-result--forge:not(.hidden) .forge-corner {
+  animation: forgeCornerAppear 0.8s ease-out forwards;
+}
+
+.forge-corner::before,
+.forge-corner::after {
+  content: '';
+  position: absolute;
+  background: linear-gradient(135deg, 
+    rgba(124, 58, 237, 0.9), 
+    rgba(34, 211, 238, 0.9)
+  );
+  box-shadow: 0 0 12px rgba(124, 58, 237, 0.6);
+}
+
+.forge-corner::before {
+  width: 2px;
+  height: 100%;
+}
+
+.forge-corner::after {
+  width: 100%;
+  height: 2px;
+}
+
+.forge-corner--tl {
+  top: 12px;
+  left: 12px;
+  animation-delay: 0.8s;
+}
+
+.forge-corner--tl::before { left: 0; top: 0; }
+.forge-corner--tl::after { left: 0; top: 0; }
+
+.forge-corner--tr {
+  top: 12px;
+  right: 12px;
+  animation-delay: 0.9s;
+}
+
+.forge-corner--tr::before { right: 0; top: 0; }
+.forge-corner--tr::after { right: 0; top: 0; }
+
+.forge-corner--bl {
+  bottom: 12px;
+  left: 12px;
+  animation-delay: 1s;
+}
+
+.forge-corner--bl::before { left: 0; bottom: 0; }
+.forge-corner--bl::after { left: 0; bottom: 0; }
+
+.forge-corner--br {
+  bottom: 12px;
+  right: 12px;
+  animation-delay: 1.1s;
+}
+
+.forge-corner--br::before { right: 0; bottom: 0; }
+.forge-corner--br::after { right: 0; bottom: 0; }
+
+/* Scanline effect - sweeps from top to bottom */
+.forge-scanline {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, 
+    transparent,
+    rgba(34, 211, 238, 0.9) 50%,
+    transparent
+  );
+  box-shadow: 0 0 16px rgba(34, 211, 238, 0.7);
+  opacity: 0;
+  pointer-events: none;
+  z-index: 20;
+}
+
+.wizard-result--forge:not(.hidden) .forge-scanline {
+  animation: forgeScanline 2s ease-out 0.3s;
+}
+
+/* SEALED badge - appears in top right */
+.forge-badge {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: linear-gradient(135deg, 
+    rgba(34, 197, 94, 0.25),
+    rgba(34, 211, 238, 0.25)
+  );
+  border: 2px solid rgba(34, 197, 94, 0.7);
+  border-radius: 20px;
+  box-shadow: 
+    0 0 24px rgba(34, 197, 94, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  z-index: 30;
+  transform-origin: top right;
+}
+
+.forge-badge.visible {
+  animation: forgeBadgeAppear 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) 2.5s forwards,
+              forgeBadgePulse 2s ease-in-out 3.1s infinite;
+}
+
+.forge-badge-icon {
+  font-size: 16px;
+  filter: drop-shadow(0 0 8px rgba(34, 197, 94, 0.8));
+}
+
+.forge-badge-text {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  color: rgba(34, 197, 94, 1);
+  text-shadow: 0 0 12px rgba(34, 197, 94, 0.6);
+}
+
+/* Content blocks - staggered slide in with float */
+.forge-block {
+  opacity: 0;
+  transform: translateX(-20px) translateY(10px);
+}
+
+.forge-block.forge-animate {
+  animation: forgeBlockAppear 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+.forge-block[data-forge-delay="0"].forge-animate { animation-delay: 1.2s; }
+.forge-block[data-forge-delay="1"].forge-animate { animation-delay: 1.5s; }
+.forge-block[data-forge-delay="2"].forge-animate { animation-delay: 1.8s; }
+.forge-block[data-forge-delay="3"].forge-animate { animation-delay: 2.1s; }
+
+/* Content reveal - line by line illuminate */
+.forge-content.forge-reveal {
+  animation: forgeContentReveal 1.2s ease-out 1.8s forwards;
+}
+
+/* Enhanced code blocks with inner glow */
+.forge-block.forge-animate .wizard-code {
+  border: 1px solid rgba(124, 58, 237, 0.3);
+  box-shadow: 
+    0 0 16px rgba(124, 58, 237, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+/* ============================================ */
+/* KEYFRAME ANIMATIONS */
+/* ============================================ */
+
+@keyframes forgeBorderAppear {
+  0% {
+    opacity: 0;
+    transform: scale(0.98);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes forgeGlowAppear {
+  0% { opacity: 0; }
+  100% { opacity: 1; }
+}
+
+@keyframes forgeCornerAppear {
+  0% {
+    opacity: 0;
+    transform: scale(0.4);
+  }
+  60% {
+    opacity: 1;
+    transform: scale(1.15);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes forgeScanline {
+  0% {
+    top: 0;
+    opacity: 0;
+  }
+  10% {
+    opacity: 0.9;
+  }
+  90% {
+    opacity: 0.9;
+  }
+  100% {
+    top: 100%;
+    opacity: 0;
+  }
+}
+
+@keyframes forgeBadgeAppear {
+  0% {
+    opacity: 0;
+    transform: scale(0.5) translateY(-20px) rotate(-12deg);
+  }
+  70% {
+    opacity: 1;
+    transform: scale(1.08) translateY(0) rotate(3deg);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0) rotate(0deg);
+  }
+}
+
+@keyframes forgeBadgePulse {
+  0%, 100% {
+    box-shadow: 
+      0 0 24px rgba(34, 197, 94, 0.4),
+      inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  }
+  50% {
+    box-shadow: 
+      0 0 36px rgba(34, 197, 94, 0.6),
+      0 0 60px rgba(34, 197, 94, 0.3),
+      inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  }
+}
+
+@keyframes forgeBlockAppear {
+  0% {
+    opacity: 0;
+    transform: translateX(-20px) translateY(10px);
+  }
+  60% {
+    opacity: 1;
+    transform: translateX(3px) translateY(-2px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0) translateY(0);
+  }
+}
+
+@keyframes forgeContentReveal {
+  0% {
+    opacity: 0.4;
+    filter: brightness(0.7);
+  }
+  100% {
+    opacity: 1;
+    filter: brightness(1);
+  }
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .forge-corner {
+    width: 24px;
+    height: 24px;
+  }
+  
+  .forge-badge {
+    top: 12px;
+    right: 12px;
+    padding: 6px 12px;
+  }
+  
+  .forge-badge-icon {
+    font-size: 14px;
+  }
+  
+  .forge-badge-text {
+    font-size: 10px;
+    letter-spacing: 1.5px;
+  }
+}
+

@@ -1270,7 +1270,51 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
       }, 300);
     }
     
+    // Initialize copy buttons
+    initializeCopyButtons();
+    
     log("🎉 Forge ceremony complete - your spec is SEALED!");
+  }
+  
+  // Initialize copy-to-clipboard functionality
+  function initializeCopyButtons() {
+    const copyButtons = document.querySelectorAll('.forge-copy-btn');
+    
+    copyButtons.forEach(button => {
+      // Remove any existing listeners
+      const newButton = button.cloneNode(true);
+      button.parentNode.replaceChild(newButton, button);
+      
+      newButton.addEventListener('click', async function() {
+        const targetId = this.getAttribute('data-copy-target');
+        const targetElement = document.getElementById(targetId);
+        
+        if (!targetElement) return;
+        
+        try {
+          await navigator.clipboard.writeText(targetElement.textContent);
+          
+          // Visual feedback
+          const originalText = this.querySelector('.forge-copy-text').textContent;
+          this.querySelector('.forge-copy-text').textContent = 'Copied!';
+          this.classList.add('copied');
+          
+          // Reset after 2 seconds
+          setTimeout(() => {
+            this.querySelector('.forge-copy-text').textContent = originalText;
+            this.classList.remove('copied');
+          }, 2000);
+          
+          log(`✅ Copied ${targetId} to clipboard`);
+        } catch (err) {
+          log(`❌ Failed to copy: ${err.message}`);
+          this.querySelector('.forge-copy-text').textContent = 'Failed';
+          setTimeout(() => {
+            this.querySelector('.forge-copy-text').textContent = 'Copy';
+          }, 2000);
+        }
+      });
+    });
   }
 
   async function finalizeSession() {

@@ -314,39 +314,81 @@
         <p>Finish at least one wizard run to see results here.</p>
       </div>
       <div id="resultContainer" class="wizard-result wizard-result--forge hidden">
-        <!-- Forge ceremony decorations (only visible when result is shown) -->
-        <div class="forge-corner forge-corner--tl"></div>
-        <div class="forge-corner forge-corner--tr"></div>
-        <div class="forge-corner forge-corner--bl"></div>
-        <div class="forge-corner forge-corner--br"></div>
-        <div class="forge-scanline"></div>
+        <!-- Forge ceremony decorations (moved to outer border) -->
+        <div class="forge-border-wrapper">
+          <div class="forge-corner forge-corner--tl"></div>
+          <div class="forge-corner forge-corner--tr"></div>
+          <div class="forge-corner forge-corner--bl"></div>
+          <div class="forge-corner forge-corner--br"></div>
+          <div class="forge-scanline"></div>
+        </div>
+        
+        <!-- SEALED badge with premium metal finish -->
         <div class="forge-badge hidden">
+          <div class="forge-badge-shine"></div>
           <div class="forge-badge-icon">🔒</div>
           <div class="forge-badge-text">SEALED</div>
         </div>
         
+        <!-- Spec section with copy button -->
         <div class="wizard-result-section forge-block" data-forge-delay="0">
-          <h3>High-level spec</h3>
-          <pre id="specOutput" class="wizard-code forge-content"></pre>
+          <div class="forge-section-header">
+            <h3 class="forge-section-title">High-level spec</h3>
+            <button class="forge-copy-btn" data-copy-target="specOutput" aria-label="Copy spec to clipboard">
+              <svg class="forge-copy-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+              </svg>
+              <span class="forge-copy-text">Copy</span>
+            </button>
+          </div>
+          <pre id="specOutput" class="wizard-code forge-content forge-code-enhanced"></pre>
         </div>
+        
+        <!-- Prompt blocks section with copy button -->
         <div class="wizard-result-section forge-block" data-forge-delay="1">
-          <h3>Compiled prompt blocks</h3>
-          <pre id="promptOutput" class="wizard-code forge-content"></pre>
+          <div class="forge-section-header">
+            <h3 class="forge-section-title">Compiled prompt blocks</h3>
+            <button class="forge-copy-btn" data-copy-target="promptOutput" aria-label="Copy prompt to clipboard">
+              <svg class="forge-copy-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+              </svg>
+              <span class="forge-copy-text">Copy</span>
+            </button>
+          </div>
+          <pre id="promptOutput" class="wizard-code forge-content forge-code-enhanced"></pre>
         </div>
-    <div class="wizard-result-section forge-block" data-forge-delay="2">
-      <h3>Explanation</h3>
-      <pre id="explanationOutput" class="wizard-code wizard-code--plain forge-content"></pre>
-    </div>
-    <div class="wizard-result-section forge-block" data-forge-delay="3">
-      <h3>Result page</h3>
-      <p class="wizard-panel-desc">
-        Open this result in a dedicated view you can share or bookmark.
-      </p>
-      <button id="resultPageLink" class="wizard-button-secondary hidden" type="button">
-        Open result page
-      </button>
-    </div>
-  </div>
+        
+        <!-- Explanation section -->
+        <div class="wizard-result-section forge-block" data-forge-delay="2">
+          <div class="forge-section-header">
+            <h3 class="forge-section-title">Explanation</h3>
+          </div>
+          <pre id="explanationOutput" class="wizard-code wizard-code--plain forge-content forge-code-enhanced"></pre>
+        </div>
+        
+        <!-- Result page section - HERO CTA -->
+        <div class="wizard-result-section wizard-result-section--hero forge-block" data-forge-delay="3">
+          <div class="forge-section-header">
+            <h3 class="forge-section-title forge-section-title--hero">Result page</h3>
+          </div>
+          <p class="wizard-panel-desc forge-hero-desc">
+            Open this result in a dedicated view you can share or bookmark.
+          </p>
+          <button id="resultPageLink" class="forge-hero-cta hidden" type="button">
+            <span class="forge-hero-cta-bg"></span>
+            <span class="forge-hero-cta-content">
+              <span class="forge-hero-cta-text">Open Result Page</span>
+              <svg class="forge-hero-cta-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+                <polyline points="15 3 21 3 21 9"></polyline>
+                <line x1="10" y1="14" x2="21" y2="3"></line>
+              </svg>
+            </span>
+          </button>
+        </div>
+      </div>
 </section>
 
     <section class="wizard-panel wizard-panel--log">

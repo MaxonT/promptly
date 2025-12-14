@@ -3453,3 +3453,128 @@ html[data-theme="light"] .text-keyword {
   border-color: rgba(34, 197, 94, 0.6);
   box-shadow: 0 0 20px rgba(34, 197, 94, 0.3);
 }
+
+/* ============================================ */
+/* GLOBAL LIGHT MODE FIXES FOR ALL PAGES */
+/* Applied to: Dashboard, Wizard, Results, Specs, Settings, etc. */
+/* ============================================ */
+
+[data-theme="light"] body {
+  background: radial-gradient(120% 140% at 50% -10%, rgba(124, 58, 237, 0.08), transparent 45%),
+              radial-gradient(80% 80% at 80% 20%, rgba(34, 211, 238, 0.12), transparent 60%),
+              #f6f8fb !important;
+}
+
+[data-theme="light"] .panel,
+[data-theme="light"] .card,
+[data-theme="light"] .modal-content,
+[data-theme="light"] .dropdown-content,
+[data-theme="light"] .pipeline-visual {
+  background: rgba(248, 250, 252, 0.8) !important;
+  border-color: rgba(148, 163, 184, 0.3) !important;
+  color: var(--text) !important;
+}
+
+[data-theme="light"] .node-log,
+[data-theme="light"] .log-entry {
+  background: rgba(248, 250, 252, 0.9) !important;
+  border-color: rgba(148, 163, 184, 0.2) !important;
+}
+
+[data-theme="light"] .log-message,
+[data-theme="light"] .metric-value,
+[data-theme="light"] .metric-label {
+  color: var(--text) !important;
+}
+
+[data-theme="light"] .chart-growth-percentage {
+  color: rgba(34, 197, 94, 1) !important;
+}
+
+[data-theme="light"] .best-prompt-display,
+[data-theme="light"] pre,
+[data-theme="light"] code {
+  background: rgba(248, 250, 252, 0.9) !important;
+  border-color: rgba(148, 163, 184, 0.3) !important;
+  color: rgba(15, 23, 42, 0.95) !important;
+}
+
+[data-theme="light"] .modal-overlay {
+  background: rgba(255, 255, 255, 0.95) !important;
+}
+
+[data-theme="light"] .tooltip {
+  background: rgba(30, 41, 59, 0.95) !important;
+  color: rgba(255, 255, 255, 0.95) !important;
+}
+
+[data-theme="light"] .btn-secondary {
+  background: rgba(124, 58, 237, 0.1) !important;
+  color: var(--text) !important;
+  border-color: rgba(124, 58, 237, 0.3) !important;
+}
+
+[data-theme="light"] .btn-secondary:hover {
+  background: rgba(124, 58, 237, 0.2) !important;
+}
+
+[data-theme="light"] tbody tr {
+  background: rgba(248, 250, 252, 0.5) !important;
+}
+
+[data-theme="light"] tbody tr:hover {
+  background: rgba(248, 250, 252, 0.8) !important;
+}
+
+[data-theme="light"] input:focus,
+[data-theme="light"] textarea:focus,
+[data-theme="light"] select:focus {
+  border-color: var(--primary) !important;
+  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.1) !important;
+}
+
+[data-theme="light"] .workflow-step {
+  background: rgba(248, 250, 252, 0.8) !important;
+  border-color: rgba(148, 163, 184, 0.2) !important;
+}
+
+[data-theme="light"] .status-pending {
+  background: rgba(251, 191, 36, 0.15) !important;
+  color: rgba(180, 83, 9, 1) !important;
+}
+
+[data-theme="light"] .status-running {
+  background: rgba(34, 211, 238, 0.15) !important;
+  color: rgba(14, 116, 144, 1) !important;
+}
+
+[data-theme="light"] .status-success {
+  background: rgba(34, 197, 94, 0.15) !important;
+  color: rgba(5, 150, 105, 1) !important;
+}
+
+[data-theme="light"] .status-error {
+  background: rgba(239, 68, 68, 0.15) !important;
+  color: rgba(185, 28, 28, 1) !important;
+}
+
+[data-theme="light"] .spec-data-line,
+[data-theme="light"] .question-data-line,
+[data-theme="light"] .agent-data-line {
+  color: rgba(30, 41, 59, 0.9) !important;
+}
+
+[data-theme="light"] .race-card {
+  background: rgba(248, 250, 252, 0.8) !important;
+  border-color: rgba(148, 163, 184, 0.3) !important;
+}
+
+[data-theme="light"] .race-card.best {
+  background: linear-gradient(135deg, rgba(34, 197, 94, 0.15), rgba(34, 211, 238, 0.1)) !important;
+  border-color: rgba(34, 197, 94, 0.4) !important;
+}
+
+[data-theme="light"] .metric-bar .bar {
+  background: linear-gradient(90deg, rgba(124, 58, 237, 0.7), rgba(34, 211, 238, 0.7)) !important;
+}
+

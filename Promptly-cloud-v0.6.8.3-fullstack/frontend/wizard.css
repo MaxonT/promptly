@@ -2401,3 +2401,192 @@ html[data-theme="light"] .wizard-mode-option.is-selected{
   .forge-section-header { flex-direction: column; align-items: flex-start; gap: 12px; }
 }
 
+
+/* ============================================ */
+/* LIGHT MODE FIXES - Theme-aware styles */
+/* ============================================ */
+
+[data-theme="light"] {
+  /* Fix code block backgrounds */
+}
+
+[data-theme="light"] .forge-code-enhanced,
+[data-theme="light"] .wizard-code {
+  background: rgba(248, 250, 252, 0.9) !important;
+  color: rgba(15, 23, 42, 0.95) !important;
+  border-color: rgba(148, 163, 184, 0.3) !important;
+  box-shadow: 
+    0 0 20px rgba(124, 58, 237, 0.05),
+    inset 0 1px 0 rgba(0, 0, 0, 0.03) !important;
+}
+
+/* Fix scrollbar for light mode */
+[data-theme="light"] .forge-code-enhanced::-webkit-scrollbar-track {
+  background: rgba(241, 245, 249, 0.5) !important;
+}
+
+[data-theme="light"] .forge-code-enhanced::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.4) !important;
+}
+
+[data-theme="light"] .forge-code-enhanced::-webkit-scrollbar-thumb:hover {
+  background: rgba(124, 58, 237, 0.5) !important;
+}
+
+/* Fix section backgrounds */
+[data-theme="light"] .wizard-result-section {
+  background: rgba(248, 250, 252, 0.4) !important;
+}
+
+/* Fix wizard panels */
+[data-theme="light"] .wizard-panel {
+  background: var(--card) !important;
+}
+
+/* Fix various dark backgrounds */
+[data-theme="light"] .wizard-question-option,
+[data-theme="light"] .wizard-snapshot-tooltip,
+[data-theme="light"] .wizard-status {
+  background: rgba(248, 250, 252, 0.9) !important;
+  color: var(--text) !important;
+}
+
+/* Fix loading overlay */
+[data-theme="light"] .wizard-loading-overlay {
+  background: rgba(255, 255, 255, 0.95) !important;
+}
+
+[data-theme="light"] .wizard-loading-text {
+  color: rgba(15, 23, 42, 0.9) !important;
+}
+
+/* Fix copy button */
+[data-theme="light"] .forge-copy-btn {
+  background: rgba(124, 58, 237, 0.08) !important;
+  border-color: rgba(124, 58, 237, 0.2) !important;
+  color: rgba(30, 41, 59, 0.9) !important;
+}
+
+[data-theme="light"] .forge-copy-btn:hover {
+  background: rgba(124, 58, 237, 0.15) !important;
+  color: rgba(15, 23, 42, 1) !important;
+}
+
+/* Fix section titles */
+[data-theme="light"] .forge-section-title {
+  background: linear-gradient(135deg, 
+    rgba(30, 41, 59, 1),
+    rgba(124, 58, 237, 0.8)
+  ) !important;
+  -webkit-background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+  background-clip: text !important;
+}
+
+/* Fix hero section */
+[data-theme="light"] .wizard-result-section--hero {
+  background: linear-gradient(135deg, 
+    rgba(34, 197, 94, 0.05),
+    rgba(16, 185, 129, 0.08),
+    rgba(34, 211, 238, 0.05)
+  ) !important;
+  border-color: rgba(34, 197, 94, 0.25) !important;
+}
+
+/* Fix hero description text */
+[data-theme="light"] .forge-hero-desc {
+  color: rgba(51, 65, 85, 0.9) !important;
+}
+
+/* Fix border decorations for visibility in light mode */
+[data-theme="light"] .forge-corner::before,
+[data-theme="light"] .forge-corner::after {
+  background: linear-gradient(135deg, 
+    rgba(124, 58, 237, 0.8), 
+    rgba(34, 211, 238, 0.7)
+  ) !important;
+  box-shadow: 0 0 12px rgba(124, 58, 237, 0.4) !important;
+}
+
+/* Fix section header borders */
+[data-theme="light"] .forge-section-header {
+  border-bottom-color: rgba(148, 163, 184, 0.2) !important;
+}
+
+/* Fix result container border */
+[data-theme="light"] .wizard-result--forge:not(.hidden)::before {
+  background: 
+    linear-gradient(var(--card), var(--card)) padding-box,
+    linear-gradient(135deg, 
+      rgba(124, 58, 237, 0.3), 
+      rgba(34, 211, 238, 0.3),
+      rgba(251, 191, 36, 0.3)
+    ) border-box !important;
+}
+
+/* Fix various text colors */
+[data-theme="light"] .wizard-panel-desc,
+[data-theme="light"] .wizard-label,
+[data-theme="light"] .wizard-inline-hint {
+  color: var(--muted) !important;
+}
+
+/* Fix question content backgrounds */
+[data-theme="light"] .wizard-question {
+  background: rgba(248, 250, 252, 0.6) !important;
+}
+
+/* Fix input fields */
+[data-theme="light"] .wizard-question textarea,
+[data-theme="light"] .wizard-question input {
+  background: rgba(255, 255, 255, 0.9) !important;
+  color: var(--text) !important;
+  border-color: var(--border) !important;
+}
+
+/* Fix progress indicator */
+[data-theme="light"] .wizard-progress-bar {
+  background: linear-gradient(90deg, 
+    rgba(124, 58, 237, 0.8), 
+    rgba(34, 211, 238, 0.8)
+  ) !important;
+}
+
+/* Fix status messages */
+[data-theme="light"] .wizard-status-text {
+  color: var(--text) !important;
+}
+
+/* Fix empty states */
+[data-theme="light"] .wizard-empty {
+  color: var(--muted) !important;
+}
+
+/* Fix mode cards */
+[data-theme="light"] .wizard-mode-option {
+  background: rgba(248, 250, 252, 0.6) !important;
+  border-color: rgba(148, 163, 184, 0.3) !important;
+}
+
+[data-theme="light"] .wizard-mode-option:hover {
+  background: rgba(124, 58, 237, 0.08) !important;
+}
+
+/* Fix answer badges */
+[data-theme="light"] .wizard-answer-badge {
+  background: rgba(34, 197, 94, 0.15) !important;
+  color: rgba(5, 150, 105, 1) !important;
+}
+
+/* Fix hero title glow in light mode */
+[data-theme="light"] .forge-section-title--hero {
+  background: linear-gradient(135deg, 
+    rgba(34, 197, 94, 0.9),
+    rgba(16, 185, 129, 1),
+    rgba(34, 211, 238, 0.8)
+  ) !important;
+  -webkit-background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+  filter: drop-shadow(0 0 15px rgba(34, 197, 94, 0.3)) !important;
+}
+

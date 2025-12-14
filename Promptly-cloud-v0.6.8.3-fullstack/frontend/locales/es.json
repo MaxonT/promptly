@@ -67,5 +67,14 @@
     "stillWorking": "Todavía trabajando...",
     "error": "Error",
     "success": "Éxito"
-  }
+  },
+  "kpi_accuracy": "Precisión",
+  "kpi_f1": "F1",
+  "kpi_pass": "Tasa de aprobación",
+  "kpi_cost": "Costo de tokens",
+  "kpi_prog": "Progreso %",
+  "growth_chart": "Crecimiento en iteraciones",
+  "contrib_chart": "Contribución del cambio",
+  "pass_pie": "Aprobado vs Fallido (%)",
+  "gauge": "Medidor de progreso (%)"
 }

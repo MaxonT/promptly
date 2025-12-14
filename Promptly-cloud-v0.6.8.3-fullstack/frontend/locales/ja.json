@@ -67,5 +67,14 @@
     "stillWorking": "まだ処理中です...",
     "error": "エラー",
     "success": "成功"
-  }
+  },
+  "kpi_accuracy": "精度",
+  "kpi_f1": "F1",
+  "kpi_pass": "合格率",
+  "kpi_cost": "トークンコスト",
+  "kpi_prog": "進捗 %",
+  "growth_chart": "イテレーションごとの成長",
+  "contrib_chart": "変更の貢献",
+  "pass_pie": "合格 vs 不合格 (%)",
+  "gauge": "進捗メーター (%)"
 }

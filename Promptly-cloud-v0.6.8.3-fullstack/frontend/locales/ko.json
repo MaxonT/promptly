@@ -67,5 +67,14 @@
     "stillWorking": "계속 작업 중...",
     "error": "오류",
     "success": "성공"
-  }
+  },
+  "kpi_accuracy": "정확도",
+  "kpi_f1": "F1",
+  "kpi_pass": "통과율",
+  "kpi_cost": "토큰 비용",
+  "kpi_prog": "진행률 %",
+  "growth_chart": "반복별 성장",
+  "contrib_chart": "변경 기여도",
+  "pass_pie": "통과 vs 실패 (%)",
+  "gauge": "진행률 측정기 (%)"
 }

@@ -67,5 +67,14 @@
     "stillWorking": "Toujours en cours...",
     "error": "Erreur",
     "success": "Succès"
-  }
+  },
+  "kpi_accuracy": "Précision",
+  "kpi_f1": "F1",
+  "kpi_pass": "Taux de réussite",
+  "kpi_cost": "Coût des jetons",
+  "kpi_prog": "Progrès %",
+  "growth_chart": "Croissance sur les itérations",
+  "contrib_chart": "Contribution du changement",
+  "pass_pie": "Réussi vs Échoué (%)",
+  "gauge": "Jauge de progression (%)"
 }

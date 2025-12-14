@@ -508,7 +508,7 @@
     
     document.body.appendChild(globalStatusIndicator);
     return globalStatusIndicator;
-  }
+    }
   
   function updateGlobalStatus(options = {}) {
     const { message, details, autoHide = false, autoHideDelay = 5000, sessionId } = options;
@@ -531,7 +531,7 @@
   function hideGlobalStatus() {
     if (globalStatusIndicator) {
       globalStatusIndicator.classList.add('hidden');
-    }
+  }
   }
   
   // Enhanced wizard session API - includes global status indicator

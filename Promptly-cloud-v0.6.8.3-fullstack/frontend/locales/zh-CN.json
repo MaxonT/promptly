@@ -1,0 +1,71 @@
+{
+  "nav": {
+    "dashboard": "仪表板",
+    "privacy": "隐私",
+    "terms": "条款",
+    "cookies": "Cookie",
+    "account": "账户",
+    "questionWizard": "问题向导",
+    "system": "系统",
+    "tryIt": "开始向导"
+  },
+  "language": {
+    "label": "语言",
+    "english": "英语"
+  },
+  "appearance": {
+    "label": "外观",
+    "auto": "系统",
+    "light": "浅色",
+    "dark": "深色"
+  },
+  "hero": {
+    "title": "Promptly — 提示优化工作室",
+    "subtitle": "以可视化为先的工作流程，看到每一次收益、每一笔成本、每一个版本。"
+  },
+  "mode": {
+    "header": "你想如何开始？",
+    "hint": "选择一个工作流模式，随时切换。",
+    "quickStartLabel": "快速启动",
+    "quickStartDesc": "描述你的目标，即刻生成优化后的提示。",
+    "wizardLabel": "向导",
+    "wizardDesc": "逐步引导，帮助你细化项目想法。"
+  },
+  "wizard": {
+    "title": "问题向导",
+    "describe": "描述你的目标",
+    "start": "开始向导",
+    "finalize": "完成规格",
+    "save": "保存并继续",
+    "cancel": "取消",
+    "runPrompt": "生成优化后的提示",
+    "loadingMain": "正在生成问题...",
+    "loadingDetail": "正在分析你的项目以生成个性化问题",
+    "warning": "⚠️ 请勿离开此页面",
+    "statusLong": "处理时间稍长，可取消后再试一次。"
+  },
+  "result": {
+    "title": "结果页面",
+    "description": "在一个专属页面中打开该结果，可分享或收藏。",
+    "cta": "打开结果页面"
+    ,
+    "specTitle": "高级规范",
+    "promptTitle": "编译提示块",
+    "explanationTitle": "说明",
+    "download": "下载",
+    "share": "分享"
+  },
+  "pipeline": {
+    "status": "管道工作状态"
+  },
+  "footer": {
+    "rights": "无追踪；仅在同意后保存偏好。",
+    "contact": "支持"
+  },
+  "common": {
+    "copied": "已复制！",
+    "stillWorking": "仍然努力中...",
+    "error": "错误",
+    "success": "成功"
+  }
+}

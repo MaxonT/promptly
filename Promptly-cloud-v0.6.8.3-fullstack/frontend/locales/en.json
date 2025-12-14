@@ -1,0 +1,71 @@
+{
+  "nav": {
+    "dashboard": "Dashboard",
+    "privacy": "Privacy",
+    "terms": "Terms",
+    "cookies": "Cookies",
+    "account": "Account",
+    "questionWizard": "Question Wizard",
+    "system": "System",
+    "tryIt": "Try the Wizard"
+  },
+  "language": {
+    "label": "Language",
+    "english": "English"
+  },
+  "appearance": {
+    "label": "Appearance",
+    "auto": "System",
+    "light": "Light",
+    "dark": "Dark"
+  },
+  "hero": {
+    "title": "Promptly — Prompt Optimizer Studio",
+    "subtitle": "Visualization-first workflow. See every gain, every cost, every version."
+  },
+  "mode": {
+    "header": "How would you like to start?",
+    "hint": "Pick a workflow mode. Switch anytime.",
+    "quickStartLabel": "Quick Start",
+    "quickStartDesc": "Describe your goal and generate an optimized prompt instantly.",
+    "wizardLabel": "Wizard",
+    "wizardDesc": "Guided step-by-step flow to refine your project idea."
+  },
+  "wizard": {
+    "title": "Question Wizard",
+    "describe": "Describe your goal",
+    "start": "Start wizard",
+    "finalize": "Finalize Spec",
+    "save": "Save & Continue",
+    "cancel": "Cancel",
+    "runPrompt": "Generate optimized prompt",
+    "loadingMain": "Generating questions...",
+    "loadingDetail": "Analyzing your project to create personalized questions",
+    "warning": "⚠️ Do not exit this page",
+    "statusLong": "This is taking longer than usual. You can cancel and retry."
+  },
+  "result": {
+    "title": "Result page",
+    "description": "Open this result in a dedicated view you can share or bookmark.",
+    "cta": "Open Result Page"
+    ,
+    "specTitle": "High-Level Specification",
+    "promptTitle": "Compiled Prompt Blocks",
+    "explanationTitle": "Explanation",
+    "download": "Download",
+    "share": "Share"
+  },
+  "pipeline": {
+    "status": "Pipeline Working Status"
+  },
+  "footer": {
+    "rights": "No trackers. Preferences saved only after consent.",
+    "contact": "Support"
+  },
+  "common": {
+    "copied": "Copied!",
+    "stillWorking": "Still working on it...",
+    "error": "Error",
+    "success": "Success"
+  }
+}

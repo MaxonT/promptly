@@ -354,6 +354,8 @@ html[data-theme="light"] .grey-gradient-text{
   }
 }
 </style>
+<script src="https://unpkg.com/i18next@23.4.6/dist/umd/i18next.min.js"></script>
+<script src="i18n.init.js" defer></script>
 </head>
 <body>
   <!-- FIX 3.2: Toast notification container -->
@@ -363,12 +365,12 @@ html[data-theme="light"] .grey-gradient-text{
     <div class="brand brand-logo"><img src="assets/promptly-logo.svg" alt="Promptly" class="logo-glow"/></div>
     <nav class="controls">
       <div class="navlinks">
-        <a href="index.html" data-i18n="nav_home">Dashboard</a>
-        <a href="privacy.html" data-i18n="nav_privacy">Privacy</a>
-        <a href="terms.html" data-i18n="nav_terms">Terms</a>
-        <a href="cookies.html" data-i18n="nav_cookies">Cookies</a>
-        <a href="settings.html#accountPanel" data-i18n="nav_account">Account</a>
-        <a href="wizard.html" class="nav-wizard-link">Question Wizard</a>
+        <a href="index.html" data-i18n="nav.dashboard">Dashboard</a>
+        <a href="privacy.html" data-i18n="nav.privacy">Privacy</a>
+        <a href="terms.html" data-i18n="nav.terms">Terms</a>
+        <a href="cookies.html" data-i18n="nav.cookies">Cookies</a>
+        <a href="settings.html#accountPanel" data-i18n="nav.account">Account</a>
+        <a href="wizard.html" class="nav-wizard-link" data-i18n="nav.questionWizard">Question Wizard</a>
       </div>
       <label class="control"><span data-i18n="appearance">Appearance</span>
         <select id="themeSelect"><option value="auto" data-i18n="auto">System</option><option value="light" data-i18n="light">Light</option><option value="dark" data-i18n="dark">Dark</option></select>
@@ -383,8 +385,8 @@ html[data-theme="light"] .grey-gradient-text{
     <div class="hero">
       <div class="hero-eyebrow">Promptly · Workflow Modes</div>
       <div>
-        <div class="title gradient-text hero-title" data-i18n="hero_title">Promptly — Prompt Optimizer <span class="title-pill">Studio</span></div>
-        <div class="subtitle hero-subtitle" data-i18n="hero_subtitle">Visualization-first workflow. See every gain, every cost, every version.</div>
+        <div class="title gradient-text hero-title" data-i18n="hero.title">Promptly — Prompt Optimizer <span class="title-pill">Studio</span></div>
+        <div class="subtitle hero-subtitle" data-i18n="hero.subtitle">Visualization-first workflow. See every gain, every cost, every version.</div>
       </div>
     </div>
 
@@ -393,15 +395,15 @@ html[data-theme="light"] .grey-gradient-text{
 
     <section class="mode-selector" aria-labelledby="modeSelectorTitle">
       <div class="mode-selector__header">
-        <h2 id="modeSelectorTitle">How would you like to start?</h2>
-        <p id="modeSelectorHint" class="mode-selector__hint">Pick a workflow mode. Switch anytime.</p>
+        <h2 id="modeSelectorTitle" data-i18n="mode.header">How would you like to start?</h2>
+        <p id="modeSelectorHint" class="mode-selector__hint" data-i18n="mode.hint">Pick a workflow mode. Switch anytime.</p>
       </div>
       <div class="mode-selector__options" role="radiogroup" aria-describedby="modeSelectorHint">
         <div class="mode-card is-selected" role="radio" aria-checked="true" aria-describedby="modeQuickDesc" tabindex="0" data-mode="quick">
           <div class="mode-card__icon">⚡</div>
           <div class="mode-card__body">
-            <h3 class="mode-card__title">Quick Start</h3>
-            <p id="modeQuickDesc" class="mode-card__desc">Describe your goal and generate an optimized prompt instantly</p>
+            <h3 class="mode-card__title" data-i18n="mode.quickStartLabel">Quick Start</h3>
+            <p id="modeQuickDesc" class="mode-card__desc" data-i18n="mode.quickStartDesc">Describe your goal and generate an optimized prompt instantly</p>
           </div>
           <div class="mode-card__check" aria-hidden="true">✔</div>
         </div>
@@ -409,8 +411,8 @@ html[data-theme="light"] .grey-gradient-text{
         <div class="mode-card" role="radio" aria-checked="false" aria-describedby="modeWizardDesc" tabindex="-1" data-mode="wizard">
           <div class="mode-card__icon">🧙‍♂️</div>
           <div class="mode-card__body">
-            <h3 class="mode-card__title">Wizard</h3>
-            <p id="modeWizardDesc" class="mode-card__desc">Guided step-by-step flow to refine your project idea</p>
+            <h3 class="mode-card__title" data-i18n="mode.wizardLabel">Wizard</h3>
+            <p id="modeWizardDesc" class="mode-card__desc" data-i18n="mode.wizardDesc">Guided step-by-step flow to refine your project idea</p>
           </div>
           <div class="mode-card__check" aria-hidden="true">✔</div>
         </div>
@@ -456,12 +458,12 @@ html[data-theme="light"] .grey-gradient-text{
           <textarea id="examples" rows="4" placeholder="Paste key paragraphs, bullet points, or constraints you already have."></textarea>
           <small class="help">This helps Promptly understand existing material without forcing you to share it.</small>
         </details>
-        <button id="runBtn" class="btn layer-primary-action" data-i18n="run_btn">Generate optimized prompt</button>
+        <button id="runBtn" class="btn layer-primary-action" data-i18n="wizard.runPrompt">Generate optimized prompt</button>
       </div>
       <div class="best-prompt-card">
         <div class="layer-output-header">
           <div>
-            <h3 class="gradient-text" data-i18n="best_prompt">Pipeline Working Status</h3>
+            <h3 class="gradient-text" data-i18n="pipeline.status">Pipeline Working Status</h3>
             <small>Selected via Outcome Runner (best-of-N evaluation)</small>
           </div>
         </div>
@@ -831,7 +833,7 @@ temperature: 0.5</textarea>
   </main>
 
   <footer class="footer">
-    <p>© Promptly v0.5.3-fusion PRO · <span data-i18n="footer_rights">No trackers. Preferences saved only after consent.</span> · <span data-i18n="footer_contact">Support</span>:
+    <p>© Promptly v0.5.3-fusion PRO · <span data-i18n="footer.rights">No trackers. Preferences saved only after consent.</span> · <span data-i18n="footer.contact">Support</span>:
       <a href="mailto:ming.t.yang@vanderbilt.edu">ming.t.yang@vanderbilt.edu</a></p>
   </footer>
 

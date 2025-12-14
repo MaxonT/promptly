@@ -1,0 +1,71 @@
+{
+  "nav": {
+    "dashboard": "Panel",
+    "privacy": "Privacidad",
+    "terms": "Términos",
+    "cookies": "Cookies",
+    "account": "Cuenta",
+    "questionWizard": "Asistente de preguntas",
+    "system": "Sistema",
+    "tryIt": "Probar asistente"
+  },
+  "language": {
+    "label": "Idioma",
+    "english": "Inglés"
+  },
+  "appearance": {
+    "label": "Apariencia",
+    "auto": "Sistema",
+    "light": "Claro",
+    "dark": "Oscuro"
+  },
+  "hero": {
+    "title": "Promptly — Estudio de Optimización de Prompts",
+    "subtitle": "Flujo de trabajo centrado en visualización. Ve cada ganancia, cada costo, cada versión."
+  },
+  "mode": {
+    "header": "¿Cómo te gustaría empezar?",
+    "hint": "Elige un modo de flujo de trabajo. Puedes cambiar en cualquier momento.",
+    "quickStartLabel": "Inicio rápido",
+    "quickStartDesc": "Describe tu objetivo y genera un prompt optimizado al instante.",
+    "wizardLabel": "Asistente",
+    "wizardDesc": "Flujo guiado paso a paso para refinar la idea de tu proyecto."
+  },
+  "wizard": {
+    "title": "Asistente de preguntas",
+    "describe": "Describe tu objetivo",
+    "start": "Iniciar asistente",
+    "finalize": "Finalizar especificación",
+    "save": "Guardar y continuar",
+    "cancel": "Cancelar",
+    "runPrompt": "Generar prompt optimizado",
+    "loadingMain": "Generando preguntas...",
+    "loadingDetail": "Analizando tu proyecto para crear preguntas personalizadas",
+    "warning": "⚠️ No abandones esta página",
+    "statusLong": "Esto está tardando más de lo habitual. Puedes cancelar e intentarlo de nuevo."
+  },
+  "result": {
+    "title": "Página de resultados",
+    "description": "Abre este resultado en una vista dedicada que puedes compartir o marcar.",
+    "cta": "Abrir página de resultados"
+    ,
+    "specTitle": "Especificación de alto nivel",
+    "promptTitle": "Bloques de prompt compilados",
+    "explanationTitle": "Explicación",
+    "download": "Descargar",
+    "share": "Compartir"
+  },
+  "pipeline": {
+    "status": "Estado de trabajo de la canalización"
+  },
+  "footer": {
+    "rights": "Sin rastreadores. Preferencias guardadas solo tras consentimiento.",
+    "contact": "Soporte"
+  },
+  "common": {
+    "copied": "¡Copiado!",
+    "stillWorking": "Todavía trabajando...",
+    "error": "Error",
+    "success": "Éxito"
+  }
+}

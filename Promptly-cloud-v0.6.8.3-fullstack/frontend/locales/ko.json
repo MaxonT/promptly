@@ -1,0 +1,71 @@
+{
+  "nav": {
+    "dashboard": "대시보드",
+    "privacy": "개인정보",
+    "terms": "약관",
+    "cookies": "쿠키",
+    "account": "계정",
+    "questionWizard": "질문 위자드",
+    "system": "시스템",
+    "tryIt": "위자드 시도"
+  },
+  "language": {
+    "label": "언어",
+    "english": "영어"
+  },
+  "appearance": {
+    "label": "모양",
+    "auto": "시스템",
+    "light": "라이트",
+    "dark": "다크"
+  },
+  "hero": {
+    "title": "Promptly — 프롬프트 최적화 스튜디오",
+    "subtitle": "시각화 중심 워크플로우. 모든 이득, 모든 비용, 모든 버전을 확인하세요."
+  },
+  "mode": {
+    "header": "어떻게 시작하시겠어요?",
+    "hint": "워크플로우 모드를 선택하세요. 언제든 전환할 수 있습니다.",
+    "quickStartLabel": "빠른 시작",
+    "quickStartDesc": "목표를 설명하고 즉시 최적화된 프롬프트를 생성합니다.",
+    "wizardLabel": "위자드",
+    "wizardDesc": "프로젝트 아이디어를 다듬는 단계별 안내 흐름입니다."
+  },
+  "wizard": {
+    "title": "질문 위자드",
+    "describe": "목표를 설명하세요",
+    "start": "위자드 시작",
+    "finalize": "사양 확정",
+    "save": "저장하고 계속",
+    "cancel": "취소",
+    "runPrompt": "최적화된 프롬프트 생성",
+    "loadingMain": "질문을 생성 중...",
+    "loadingDetail": "개인화된 질문을 만들기 위해 프로젝트를 분석 중입니다",
+    "warning": "⚠️ 이 페이지를 떠나지 마세요",
+    "statusLong": "예상보다 오래 걸립니다. 취소하고 다시 시도해 보세요."
+  },
+  "result": {
+    "title": "결과 페이지",
+    "description": "이 결과를 공유하거나 북마크할 수 있는 전용 보기에서 여세요.",
+    "cta": "결과 페이지 열기"
+    ,
+    "specTitle": "상위 레벨 사양",
+    "promptTitle": "컴파일된 프롬프트 블록",
+    "explanationTitle": "설명",
+    "download": "다운로드",
+    "share": "공유"
+  },
+  "pipeline": {
+    "status": "파이프라인 작업 상태"
+  },
+  "footer": {
+    "rights": "추적기 없음. 동의 후에만 환경 설정 저장.",
+    "contact": "지원"
+  },
+  "common": {
+    "copied": "복사됨!",
+    "stillWorking": "계속 작업 중...",
+    "error": "오류",
+    "success": "성공"
+  }
+}

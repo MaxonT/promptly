@@ -9,6 +9,8 @@
   <link rel="stylesheet" href="wizard.css" />
   <script src="config.js"></script>
   <script src="core.js"></script>
+  <script src="https://unpkg.com/i18next@23.4.6/dist/umd/i18next.min.js"></script>
+  <script src="i18n.init.js" defer></script>
   <style>
     /* Global navigation header styles (consistent with index.html) */
     .global-topbar {
@@ -107,10 +109,16 @@
       <span>Promptly</span>
     </a>
     <nav class="navlinks">
-      <a href="index.html">← Dashboard</a>
-      <a href="privacy.html">Privacy</a>
-      <a href="cookies.html">Cookies</a>
-      <a href="terms.html">Terms</a>
+      <a href="index.html" data-i18n="nav.dashboard">← Dashboard</a>
+      <a href="privacy.html" data-i18n="nav.privacy">Privacy</a>
+      <a href="cookies.html" data-i18n="nav.cookies">Cookies</a>
+      <a href="terms.html" data-i18n="nav.terms">Terms</a>
+      <label class="control"><span data-i18n="appearance">Appearance</span>
+        <select id="themeSelect"><option value="auto" data-i18n="appearance.auto">System</option><option value="light" data-i18n="appearance.light">Light</option><option value="dark" data-i18n="appearance.dark">Dark</option></select>
+      </label>
+      <label class="control"><span data-i18n="language">Language</span>
+        <select id="langSelect"></select>
+      </label>
     </nav>
   </header>
 
@@ -131,7 +139,7 @@
     <div class="wizard-header-main">
       <img src="assets/promptly-icon.svg" alt="Promptly" class="wizard-logo" />
       <div>
-        <h1 class="wizard-title">Promptly Question Wizard</h1>
+        <h1 class="wizard-title" data-i18n="wizard.title">Promptly Question Wizard</h1>
         <p class="wizard-subtitle">From fuzzy idea → structured spec → compiled prompt blocks.</p>
       </div>
     </div>

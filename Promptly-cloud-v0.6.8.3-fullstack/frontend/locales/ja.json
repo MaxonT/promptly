@@ -1,0 +1,71 @@
+{
+  "nav": {
+    "dashboard": "ダッシュボード",
+    "privacy": "プライバシー",
+    "terms": "利用規約",
+    "cookies": "クッキー",
+    "account": "アカウント",
+    "questionWizard": "質問ウィザード",
+    "system": "システム",
+    "tryIt": "ウィザードを試す"
+  },
+  "language": {
+    "label": "言語",
+    "english": "英語"
+  },
+  "appearance": {
+    "label": "外観",
+    "auto": "システム",
+    "light": "ライト",
+    "dark": "ダーク"
+  },
+  "hero": {
+    "title": "Promptly — プロンプト最適化スタジオ",
+    "subtitle": "ビジュアライゼーション中心のワークフロー。すべての成果、コスト、バージョンを見える化。"
+  },
+  "mode": {
+    "header": "どのように始めますか？",
+    "hint": "ワークフローモードを選択。いつでも切り替え可能です。",
+    "quickStartLabel": "クイックスタート",
+    "quickStartDesc": "目標を説明して、最適化されたプロンプトをすぐに生成。",
+    "wizardLabel": "ウィザード",
+    "wizardDesc": "プロジェクトアイデアを洗練するためのステップバイステップガイド。"
+  },
+  "wizard": {
+    "title": "質問ウィザード",
+    "describe": "目標を説明してください",
+    "start": "ウィザードを開始",
+    "finalize": "仕様を確定",
+    "save": "保存して続行",
+    "cancel": "キャンセル",
+    "runPrompt": "最適化されたプロンプトを生成",
+    "loadingMain": "質問を生成中...",
+    "loadingDetail": "パーソナライズされた質問を生成するためにプロジェクトを分析中です",
+    "warning": "⚠️ このページを離れないでください",
+    "statusLong": "通常より時間がかかっています。キャンセルして再試行できます。"
+  },
+  "result": {
+    "title": "結果ページ",
+    "description": "この結果を共有またはブックマークできる専用ビューで開きます。",
+    "cta": "結果ページを開く"
+    ,
+    "specTitle": "ハイレベル仕様",
+    "promptTitle": "コンパイル済みプロンプトブロック",
+    "explanationTitle": "説明",
+    "download": "ダウンロード",
+    "share": "共有"
+  },
+  "pipeline": {
+    "status": "パイプライン稼働状況"
+  },
+  "footer": {
+    "rights": "トラッカーはありません。設定は同意後のみ保存されます。",
+    "contact": "サポート"
+  },
+  "common": {
+    "copied": "コピーしました！",
+    "stillWorking": "まだ処理中です...",
+    "error": "エラー",
+    "success": "成功"
+  }
+}

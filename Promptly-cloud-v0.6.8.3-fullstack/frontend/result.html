@@ -8,6 +8,8 @@
   <link rel="stylesheet" href="style.css" />
   <link rel="stylesheet" href="result.css" />
   <script src="config.js"></script>
+  <script src="https://unpkg.com/i18next@23.4.6/dist/umd/i18next.min.js"></script>
+  <script src="i18n.init.js" defer></script>
 </head>
 <body class="app-shell result-page">
   <!-- Animated background -->
@@ -20,18 +22,24 @@
     <div class="result-header-main">
       <img src="assets/promptly-icon.svg" alt="Promptly" class="result-logo" />
       <div>
-        <h1 class="result-title">Your Project Specification</h1>
-        <p class="result-subtitle">Generated, structured, and ready to use with any LLM</p>
+        <h1 class="result-title" data-i18n="result.title">Your Project Specification</h1>
+        <p class="result-subtitle" data-i18n="result.description">Generated, structured, and ready to use with any LLM</p>
       </div>
     </div>
     <div class="result-header-actions">
+      <label class="control" style="margin-right:0.5rem;"><span data-i18n="appearance">Appearance</span>
+        <select id="themeSelect"><option value="auto" data-i18n="appearance.auto">System</option><option value="light" data-i18n="appearance.light">Light</option><option value="dark" data-i18n="appearance.dark">Dark</option></select>
+      </label>
+      <label class="control" style="margin-right:0.5rem;"><span data-i18n="language">Language</span>
+        <select id="langSelect"></select>
+      </label>
       <button id="downloadBtn" class="result-btn result-btn--secondary" title="Download specification">
         <span class="result-btn-icon">⬇</span>
-        <span>Download</span>
+        <span data-i18n="result.download">Download</span>
       </button>
       <button id="shareBtn" class="result-btn result-btn--secondary" title="Share or bookmark">
         <span class="result-btn-icon">🔗</span>
-        <span>Share</span>
+        <span data-i18n="result.share">Share</span>
       </button>
     </div>
   </header>
@@ -59,7 +67,7 @@
         <div class="result-card" data-card-index="0">
           <div class="result-card-header" data-collapsible="specCard">
             <div class="result-card-title-group">
-              <h2 class="result-card-title">High-Level Specification</h2>
+              <h2 class="result-card-title" data-i18n="result.specTitle">High-Level Specification</h2>
               <span class="result-badge result-badge--primary">JSON</span>
               <span class="result-badge result-badge--success" id="specGeneratedBadge">Generated</span>
             </div>
@@ -97,7 +105,7 @@
         <div class="result-card" data-card-index="1">
           <div class="result-card-header" data-collapsible="promptCard">
             <div class="result-card-title-group">
-              <h2 class="result-card-title">Compiled Prompt Blocks</h2>
+              <h2 class="result-card-title" data-i18n="result.promptTitle">Compiled Prompt Blocks</h2>
               <span class="result-badge result-badge--info">LLM-Ready</span>
               <span class="result-badge" id="promptBlockCount">0 blocks</span>
             </div>
@@ -121,7 +129,7 @@
         <div class="result-card" data-card-index="2">
           <div class="result-card-header" data-collapsible="explanationCard">
             <div class="result-card-title-group">
-              <h2 class="result-card-title">Explanation</h2>
+              <h2 class="result-card-title" data-i18n="result.explanationTitle">Explanation</h2>
               <span class="result-badge">AI-Generated</span>
             </div>
             <div class="result-card-actions">

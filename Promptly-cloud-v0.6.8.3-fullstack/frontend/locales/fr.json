@@ -1,0 +1,71 @@
+{
+  "nav": {
+    "dashboard": "Tableau",
+    "privacy": "Confidentialité",
+    "terms": "Conditions",
+    "cookies": "Cookies",
+    "account": "Compte",
+    "questionWizard": "Assistant de questions",
+    "system": "Système",
+    "tryIt": "Essayer l'assistant"
+  },
+  "language": {
+    "label": "Langue",
+    "english": "Anglais"
+  },
+  "appearance": {
+    "label": "Apparence",
+    "auto": "Système",
+    "light": "Clair",
+    "dark": "Sombre"
+  },
+  "hero": {
+    "title": "Promptly — Studio d'optimisation de prompts",
+    "subtitle": "Flux de travail axé sur la visualisation. Voyez chaque gain, chaque coût, chaque version."
+  },
+  "mode": {
+    "header": "Comment souhaitez-vous commencer ?",
+    "hint": "Choisissez un mode de flux. Vous pouvez changer à tout moment.",
+    "quickStartLabel": "Démarrage rapide",
+    "quickStartDesc": "Décrivez votre objectif et générez instantanément un prompt optimisé.",
+    "wizardLabel": "Assistant",
+    "wizardDesc": "Flux guidé étape par étape pour affiner votre idée de projet."
+  },
+  "wizard": {
+    "title": "Assistant de questions",
+    "describe": "Décrivez votre objectif",
+    "start": "Lancer l'assistant",
+    "finalize": "Finaliser le cahier des charges",
+    "save": "Enregistrer et continuer",
+    "cancel": "Annuler",
+    "runPrompt": "Générer un prompt optimisé",
+    "loadingMain": "Génération des questions...",
+    "loadingDetail": "Analyse de votre projet pour créer des questions personnalisées",
+    "warning": "⚠️ Ne quittez pas cette page",
+    "statusLong": "Cela prend plus de temps que d'habitude. Vous pouvez annuler et réessayer."
+  },
+  "result": {
+    "title": "Page de résultats",
+    "description": "Ouvrez ce résultat dans une vue dédiée que vous pouvez partager ou enregistrer.",
+    "cta": "Ouvrir la page de résultats"
+    ,
+    "specTitle": "Spécification de haut niveau",
+    "promptTitle": "Blocs de prompt compilés",
+    "explanationTitle": "Explication",
+    "download": "Télécharger",
+    "share": "Partager"
+  },
+  "pipeline": {
+    "status": "Statut de fonctionnement du pipeline"
+  },
+  "footer": {
+    "rights": "Pas de traqueurs. Préférences enregistrées uniquement après consentement.",
+    "contact": "Assistance"
+  },
+  "common": {
+    "copied": "Copié !",
+    "stillWorking": "Toujours en cours...",
+    "error": "Erreur",
+    "success": "Succès"
+  }
+}

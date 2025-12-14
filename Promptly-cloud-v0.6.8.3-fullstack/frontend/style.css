@@ -963,6 +963,22 @@ main, header, footer, .container, .card, .grid{ position: relative; z-index: 1; 
   border-bottom: 1.5px solid transparent;
   border-image: linear-gradient(90deg,var(--brand-a, #6366F1), var(--brand-b, #06B6D4), var(--brand-c, #22D3EE)) 1;
 }
+.nav-utility{
+  display:flex;
+  align-items:center;
+  gap:0.75rem;
+}
+.nav-utility span{
+  font-size:0.85rem;
+  color:var(--text-med);
+}
+.nav-utility select{
+  background:linear-gradient(#0e1117,#0b0f17);
+  border:1px solid rgba(255,255,255,.12);
+  border-radius:12px;
+  color:var(--text-high);
+  padding:.36rem .6rem;
+}
 .brand-logo img{ height: 42px; }
 @media (min-width: 1280px){ .brand-logo img{ height: 46px; } }
 

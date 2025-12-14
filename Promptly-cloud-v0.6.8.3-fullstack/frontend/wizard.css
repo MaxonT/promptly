@@ -1728,19 +1728,24 @@ html[data-theme="light"] .wizard-mode-option.is-selected{
   right: 20px;
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 16px;
-  background: linear-gradient(135deg, 
+  gap: 10px;
+  padding: 10px 20px;
+  background: linear-gradient(145deg, 
     rgba(34, 197, 94, 0.25),
-    rgba(34, 211, 238, 0.25)
+    rgba(16, 185, 129, 0.3),
+    rgba(34, 211, 238, 0.2)
   );
-  border: 2px solid rgba(34, 197, 94, 0.7);
-  border-radius: 20px;
+  border: 2px solid rgba(34, 197, 94, 0.8);
+  border-radius: 24px;
   box-shadow: 
-    0 0 24px rgba(34, 197, 94, 0.4),
-    inset 0 1px 0 rgba(255, 255, 255, 0.15);
+    0 0 30px rgba(34, 197, 94, 0.5),
+    0 4px 12px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.2);
   z-index: 30;
   transform-origin: top right;
+  position: relative;
+  overflow: hidden;
 }
 
 .forge-badge.visible {
@@ -2104,18 +2109,18 @@ html[data-theme="light"] .wizard-mode-option.is-selected{
   width: 100%;
 }
 
-/* Hero title - even MORE prominent */
+/* Hero title - even MORE prominent with GREEN */
 .forge-section-title--hero {
   font-size: 22px;
   background: linear-gradient(135deg, 
-    rgba(251, 191, 36, 1),
-    rgba(34, 211, 238, 1),
-    rgba(124, 58, 237, 1)
+    rgba(34, 197, 94, 1),
+    rgba(74, 222, 128, 1),
+    rgba(34, 211, 238, 1)
   );
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
-  filter: drop-shadow(0 0 20px rgba(251, 191, 36, 0.5));
+  filter: drop-shadow(0 0 20px rgba(34, 197, 94, 0.6));
   animation: forgeHeroTitleGlow 3s ease-in-out infinite;
 }
 
@@ -2238,14 +2243,14 @@ html[data-theme="light"] .wizard-mode-option.is-selected{
   margin-top: 16px;
 }
 
-/* Animated gradient background */
+/* Animated gradient background - GREEN */
 .forge-hero-cta-bg {
   position: absolute;
   inset: 0;
   background: linear-gradient(135deg, 
-    rgba(251, 191, 36, 0.9),
-    rgba(245, 158, 11, 1),
-    rgba(234, 88, 12, 0.9)
+    rgba(34, 197, 94, 0.9),
+    rgba(16, 185, 129, 1),
+    rgba(5, 150, 105, 0.9)
   );
   border-radius: 12px;
   transition: all 0.3s ease;
@@ -2257,9 +2262,9 @@ html[data-theme="light"] .wizard-mode-option.is-selected{
   position: absolute;
   inset: -2px;
   background: linear-gradient(135deg, 
-    rgba(251, 191, 36, 0.6),
-    rgba(245, 158, 11, 0.8),
-    rgba(234, 88, 12, 0.6)
+    rgba(34, 197, 94, 0.6),
+    rgba(16, 185, 129, 0.8),
+    rgba(5, 150, 105, 0.6)
   );
   border-radius: 14px;
   filter: blur(12px);
@@ -2285,19 +2290,19 @@ html[data-theme="light"] .wizard-mode-option.is-selected{
   transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-/* Hover state - DRAMATIC */
+/* Hover state - DRAMATIC GREEN */
 .forge-hero-cta:hover {
   transform: translateY(-4px) scale(1.05);
   box-shadow: 
-    0 20px 40px rgba(251, 191, 36, 0.4),
-    0 10px 20px rgba(234, 88, 12, 0.3);
+    0 20px 40px rgba(34, 197, 94, 0.5),
+    0 10px 20px rgba(16, 185, 129, 0.4);
 }
 
 .forge-hero-cta:hover .forge-hero-cta-bg {
   background: linear-gradient(135deg, 
-    rgba(252, 211, 77, 1),
-    rgba(251, 191, 36, 1),
-    rgba(245, 158, 11, 1)
+    rgba(74, 222, 128, 1),
+    rgba(34, 197, 94, 1),
+    rgba(16, 185, 129, 1)
   );
 }
 
@@ -2317,18 +2322,23 @@ html[data-theme="light"] .wizard-mode-option.is-selected{
 
 /* Focus state for accessibility */
 .forge-hero-cta:focus-visible {
-  outline: 3px solid rgba(251, 191, 36, 0.5);
+  outline: 3px solid rgba(34, 197, 94, 0.5);
   outline-offset: 4px;
 }
 
-/* Hero section - special styling */
+/* Hide the external link icon */
+.forge-hero-cta-icon {
+  display: none;
+}
+
+/* Hero section - special styling with GREEN theme */
 .wizard-result-section--hero {
   background: linear-gradient(135deg, 
-    rgba(124, 58, 237, 0.03),
-    rgba(251, 191, 36, 0.05),
+    rgba(34, 197, 94, 0.03),
+    rgba(16, 185, 129, 0.05),
     rgba(34, 211, 238, 0.03)
   );
-  border: 2px solid rgba(251, 191, 36, 0.2);
+  border: 2px solid rgba(34, 197, 94, 0.2);
   border-radius: 12px;
   padding: 32px;
   position: relative;
@@ -2340,7 +2350,7 @@ html[data-theme="light"] .wizard-mode-option.is-selected{
   position: absolute;
   inset: 0;
   background: radial-gradient(circle at top right, 
-    rgba(251, 191, 36, 0.1),
+    rgba(34, 197, 94, 0.1),
     transparent 60%
   );
   pointer-events: none;
@@ -2372,10 +2382,10 @@ html[data-theme="light"] .wizard-mode-option.is-selected{
 
 @keyframes forgeHeroTitleGlow {
   0%, 100% {
-    filter: drop-shadow(0 0 20px rgba(251, 191, 36, 0.5));
+    filter: drop-shadow(0 0 20px rgba(34, 197, 94, 0.6));
   }
   50% {
-    filter: drop-shadow(0 0 30px rgba(251, 191, 36, 0.8));
+    filter: drop-shadow(0 0 30px rgba(34, 197, 94, 0.9));
   }
 }
 

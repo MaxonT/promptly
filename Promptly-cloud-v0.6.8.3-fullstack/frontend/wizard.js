@@ -1012,7 +1012,7 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
             mainText.textContent = "Still working on it...";
           }
         }
-      }, estimate.max * 1000 / 2); // Half of max estimate
+      }, estimate.max * 1000); // Show warning only after exceeding mode's max time
 
       const res = await fetch(`${API_BASE}/api/question-sessions`, {
         method: "POST",

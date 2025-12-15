@@ -31,12 +31,8 @@
     // Trigger chart redraw when theme changes
     requestAnimationFrame(() => renderCharts());
   }
-  // i18nApply removed - now handled by i18n.init.js
-  function initHeader(){const langSel=$("#langSelect"); if(langSel && !langSel.dataset.bound){
-    // Language selector is now handled by i18n.init.js, but we keep this for backward compatibility
-    langSel.dataset.bound="1";}
-    const themeSel=$("#themeSelect"); if(themeSel && !themeSel.dataset.bound){const saved=localStorage.getItem(THEME_KEY)||"auto"; themeSel.value=saved; applyTheme(saved);
-      themeSel.addEventListener("change",()=>{const v=themeSel.value;localStorage.setItem(THEME_KEY,v);applyTheme(v)}); prefersDark.addEventListener("change",()=>{if((localStorage.getItem(THEME_KEY)||"auto")==="auto")applyTheme("auto")}); themeSel.dataset.bound="1";}}
+  // initHeader removed - logic handled by i18n.init.js
+  
   function consentBanner(){if(localStorage.getItem("promptly.consent"))return; const b=document.createElement("div"); b.className="banner";
     // Use i18n if available, otherwise fallback to English
     const getText = (key) => {

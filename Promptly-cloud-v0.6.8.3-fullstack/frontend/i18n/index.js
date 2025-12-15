@@ -60,6 +60,10 @@ class I18nManager {
 
     } catch (e) {
       console.error('[i18n] Initialization failed', e);
+    } finally {
+      // Initialize UI regardless of translation loading status
+      // This ensures the language dropdown is populated even if network fails
+      this.initUI();
     }
   }
 
@@ -79,7 +83,7 @@ class I18nManager {
       .join('');
     
     // Handle locale matching (e.g. en-US -> en)
-    const currentLang = this.instance.language;
+    const currentLang = (this.instance && this.instance.language) ? this.instance.language : i18nConfig.defaultLocale;
     if (i18nConfig.supportedLocales.includes(currentLang)) {
       select.value = currentLang;
     } else {

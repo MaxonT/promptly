@@ -248,6 +248,9 @@ class I18nManager {
 // Start
 const i18nManager = new I18nManager();
 
+// Expose to window IMMEDIATELY (before init) so it's always available
+window.i18nManager = i18nManager;
+
 // Ensure DOM is ready before init to find UI elements
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', () => i18nManager.init());

@@ -1,5 +1,6 @@
 # Auto-generated config (will be generated during build)
-config.js
+# Only ignore root config.js, not i18n/config.js
+/config.js
 
 # Node modules
 node_modules/

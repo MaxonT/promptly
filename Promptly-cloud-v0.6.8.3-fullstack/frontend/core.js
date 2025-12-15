@@ -63,7 +63,13 @@
   
   // 1. Growth Over Iterations - Line Chart with Growth %
   function drawLine(c, series, col = "--accent") {
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/7c40fba6-d0aa-49b9-abec-b2908ff69e71',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'core.js:65',message:'drawLine ENTRY',data:{canvasId:c.id,seriesLength:series.length,seriesData:series,clientWidth:c.clientWidth,clientHeight:c.clientHeight},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H4'})}).catch(()=>{});
+    // #endregion
     const ctx = c.getContext("2d");
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/7c40fba6-d0aa-49b9-abec-b2908ff69e71',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'core.js:66',message:'Canvas context obtained',data:{contextExists:!!ctx,contextType:ctx?ctx.constructor.name:'null'},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H4'})}).catch(()=>{});
+    // #endregion
     const w = c.width = c.clientWidth;
     const h = c.height = c.clientHeight;
     ctx.clearRect(0, 0, w, h);
@@ -467,6 +473,10 @@
     renderCharts(metrics);
   }
   function renderCharts(metrics = {}) {
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/7c40fba6-d0aa-49b9-abec-b2908ff69e71',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'core.js:469',message:'renderCharts ENTRY',data:{metricsProvided:Object.keys(metrics).length,lastMetricsCached:Object.keys(lastMetrics).length},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H2'})}).catch(()=>{});
+    // #endregion
+    
     // Update lastMetrics if new data provided, otherwise use cached
     if (Object.keys(metrics).length > 0) {
       lastMetrics = metrics;
@@ -479,11 +489,22 @@
     const pie = document.getElementById("piePass");
     const gauge = document.getElementById("gaugeProg");
     
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/7c40fba6-d0aa-49b9-abec-b2908ff69e71',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'core.js:477',message:'Canvas elements check',data:{lineExists:!!line,barExists:!!bar,pieExists:!!pie,gaugeExists:!!gauge},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H1'})}).catch(()=>{});
+    // #endregion
+    
     // Check if canvas elements exist
     if (!line || !bar || !pie || !gauge) {
       console.log('[renderCharts] Canvas elements not found yet');
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/7c40fba6-d0aa-49b9-abec-b2908ff69e71',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'core.js:484',message:'EARLY RETURN: Canvas elements not found',data:{},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H3'})}).catch(()=>{});
+      // #endregion
       return; // Canvas elements not ready yet
     }
+    
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/7c40fba6-d0aa-49b9-abec-b2908ff69e71',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'core.js:488',message:'Canvas dimensions check',data:{lineWidth:line.clientWidth,lineHeight:line.clientHeight,barWidth:bar.clientWidth,barHeight:bar.clientHeight,pieWidth:pie.clientWidth,pieHeight:pie.clientHeight,gaugeWidth:gauge.clientWidth,gaugeHeight:gauge.clientHeight},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H1'})}).catch(()=>{});
+    // #endregion
     
     // Check if canvas has dimensions (not rendered yet)
     if (line.clientWidth === 0 || line.clientHeight === 0) {
@@ -492,11 +513,17 @@
         width: line.clientWidth,
         height: line.clientHeight
       });
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/7c40fba6-d0aa-49b9-abec-b2908ff69e71',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'core.js:495',message:'EARLY RETURN: Canvas not sized, will retry',data:{width:line.clientWidth,height:line.clientHeight},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H3'})}).catch(()=>{});
+      // #endregion
       setTimeout(() => renderCharts(metrics), 100);
       return;
     }
 
     console.log('[renderCharts] Rendering charts with metrics:', metrics);
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/7c40fba6-d0aa-49b9-abec-b2908ff69e71',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'core.js:499',message:'PAST ALL CHECKS - proceeding to render',data:{metricsKeys:Object.keys(metrics),metricsValues:metrics},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H3'})}).catch(()=>{});
+    // #endregion
 
     // Provide default demo data if no metrics available
     const hasData = Object.keys(metrics).length > 0 || Object.keys(lastMetrics).length > 0;
@@ -527,10 +554,16 @@
     const failPercent = Math.round((1 - passRate) * 100);
     
     // Only render if canvas has dimensions
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/7c40fba6-d0aa-49b9-abec-b2908ff69e71',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'core.js:530',message:'About to call draw functions',data:{lineReady:line.clientWidth>0&&line.clientHeight>0,barReady:bar.clientWidth>0&&bar.clientHeight>0,pieReady:pie.clientWidth>0&&pie.clientHeight>0,gaugeReady:gauge.clientWidth>0&&gauge.clientHeight>0,historyData:historyData,contributionData:contributionData,passPercent:passPercent,failPercent:failPercent,progress:progress},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H4'})}).catch(()=>{});
+    // #endregion
     if (line.clientWidth > 0 && line.clientHeight > 0) drawLine(line, historyData);
     if (bar.clientWidth > 0 && bar.clientHeight > 0) drawBars(bar, contributionData);
     if (pie.clientWidth > 0 && pie.clientHeight > 0) drawPie(pie, [passPercent, failPercent]);
     if (gauge.clientWidth > 0 && gauge.clientHeight > 0) drawGauge(gauge, progress);
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/7c40fba6-d0aa-49b9-abec-b2908ff69e71',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'core.js:534',message:'renderCharts EXIT - all draw calls completed',data:{},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H4'})}).catch(()=>{});
+    // #endregion
   }
   
   // Expose renderCharts to global scope for use in index.html
@@ -680,14 +713,28 @@
     consentBanner();
     // Note: runBtn click handler is now in index.html to coordinate with animation
     // refreshMetrics() - REMOVED: pipeline now uses SSE for all updates
-    const ro = new ResizeObserver(() => renderCharts());
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/7c40fba6-d0aa-49b9-abec-b2908ff69e71',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'core.js:683',message:'DOMContentLoaded - setting up ResizeObserver',data:{},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H2,H5'})}).catch(()=>{});
+    // #endregion
+    const ro = new ResizeObserver(() => {
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/7c40fba6-d0aa-49b9-abec-b2908ff69e71',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'core.js:683',message:'ResizeObserver triggered - calling renderCharts',data:{},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H5'})}).catch(()=>{});
+      // #endregion
+      renderCharts();
+    });
     ["lineGrowth", "barContrib", "piePass", "gaugeProg"].forEach(id => {
       const c = document.getElementById(id);
       if (c) ro.observe(c);
     });
     
     // Initial render after a short delay to ensure canvas elements are sized
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/7c40fba6-d0aa-49b9-abec-b2908ff69e71',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'core.js:690',message:'DOMContentLoaded - scheduling initial renderCharts in 200ms',data:{},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H2'})}).catch(()=>{});
+    // #endregion
     setTimeout(() => {
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/7c40fba6-d0aa-49b9-abec-b2908ff69e71',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'core.js:691',message:'setTimeout fired - calling initial renderCharts',data:{},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H2'})}).catch(()=>{});
+      // #endregion
       renderCharts();
     }, 200);
   });

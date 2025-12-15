@@ -81,10 +81,10 @@ class I18nManager {
     select.value = this.instance.language;
     
     // Remove old listeners if any (clone node trick)
-    const newSelect = select.cloneNode(true);
-    select.parentNode.replaceChild(newSelect, select);
-    
-    newSelect.addEventListener('change', (e) => this.changeLanguage(e.target.value));
+    // Removed cloneNode as it causes issues with event binding order and focus
+    select.removeEventListener('change', this._handleLangChange);
+    this._handleLangChange = (e) => this.changeLanguage(e.target.value);
+    select.addEventListener('change', this._handleLangChange);
   }
 
   async changeLanguage(locale) {

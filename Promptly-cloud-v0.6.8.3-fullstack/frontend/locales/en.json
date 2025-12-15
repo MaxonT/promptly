@@ -58,6 +58,7 @@
   "pipeline": {
     "status": "Pipeline Working Status"
   },
+  "run_btn": "Generate optimized prompt",
   "footer": {
     "rights": "No trackers. Preferences saved only after consent.",
     "contact": "Support"

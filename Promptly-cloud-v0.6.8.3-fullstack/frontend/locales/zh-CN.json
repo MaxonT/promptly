@@ -58,6 +58,7 @@
   "pipeline": {
     "status": "管道工作状态"
   },
+  "run_btn": "生成优化后的提示",
   "footer": {
     "rights": "无追踪；仅在同意后保存偏好。",
     "contact": "支持"

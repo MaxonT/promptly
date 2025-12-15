@@ -21,7 +21,8 @@
   },
   "hero": {
     "title": "Promptly — Prompt Optimizer Studio",
-    "subtitle": "Visualization-first workflow. See every gain, every cost, every version."
+    "subtitle": "Visualization-first workflow. See every gain, every cost, every version.",
+    "eyebrow": "Promptly · Workflow Modes"
   },
   "mode": {
     "header": "How would you like to start?",
@@ -67,7 +68,12 @@
     "copied": "Copied!",
     "stillWorking": "Still working on it...",
     "error": "Error",
-    "success": "Success"
+    "success": "Success",
+    "connectionFailed": "Connection failed.",
+    "connectionFailedDesc": "Please check your network connection and try again. If the problem persists, verify your API key in settings.",
+    "consent_btn": "Accept",
+    "consent_text": "We use cookies to improve your experience and remember preferences.",
+    "retry": "Retry"
   },
   "kpi_accuracy": "Accuracy",
   "kpi_f1": "F1",
@@ -78,6 +84,86 @@
   "contrib_chart": "Change Contribution",
   "pass_pie": "Pass vs Fail (%)",
   "gauge": "Progress Meter (%)",
+  "alerts": {
+    "demoRestored": "Demo data restored ✓",
+    "imported": "Imported ✓",
+    "invalidJson": "Invalid JSON",
+    "shortcuts": "Shortcuts:\nR: Run demo\nG: User guide\n/: Search (if available)"
+  },
+  "dynamic": {
+    "lastUpdated": "Last updated",
+    "topPickFormat": "Top pick: #{index}"
+  },
+  "glossary": {
+    "title": "Glossary",
+    "accuracy": "Accuracy",
+    "accuracyDesc": "Correct outputs / total cases.",
+    "f1": "F1",
+    "f1Desc": "2 × precision × recall ÷ (precision + recall).",
+    "passRate": "Pass Rate",
+    "passRateDesc": "Passed constraints / total constraints.",
+    "tokenCost": "Token Cost",
+    "tokenCostDesc": "prompt_tokens + completion_tokens.",
+    "progress": "Progress %",
+    "progressDesc": "average(accuracy/target_accuracy, f1/target_f1, pass_rate/target_pass_rate, ideal_token_cost/token_cost) × 100."
+  },
+  "testCases": {
+    "title": "Test Cases",
+    "description": "Start with ready-made demo tests or bring your own set. Advanced JSON import/export stays available but tucked behind the buttons below.",
+    "emptyState": "Empty state: no test cases yet.",
+    "import": "Import",
+    "downloadJson": "Download JSON",
+    "uploadBtn": "Upload",
+    "uploadHint": "Upload test cases JSON",
+    "uploadSuccess": "Upload successful"
+  },
+  "userGuide": {
+    "title": "User Guide",
+    "step1": "Write your task: define Instruction + Constraints + Expected style.",
+    "step2": "Add test cases: for each input, provide ideal output.",
+    "step3": "Run: the system auto-searches, tests, and tunes prompts.",
+    "step4": "Review KPIs: Accuracy / F1 / Pass Rate / Token Cost / Progress% update after each run.",
+    "accuracyTrend": "Accuracy Trend",
+    "errorBreakdown": "Error Breakdown",
+    "progressGauge": "Progress Gauge"
+  },
+  "layer1": {
+    "badge": "Layer 1 · Magic Mode",
+    "title": "Describe your goal",
+    "description": "Promptly transforms a single sentence into a multi-step optimized prompt. Tell us what you want, and we'll handle the rest.",
+    "taskLabel": "What should the AI do?",
+    "taskPlaceholder": "Summarize customer interviews into 5 product requirements.",
+    "modelLabel": "Select LLM Model",
+    "contextLabel": "Context or source text (optional)",
+    "contextPlaceholder": "Paste any key passages, bullet points, or constraints you already have.",
+    "contextHelp": "This helps Promptly understand existing materials without forcing you to share everything."
+  },
+  "layer2": {
+    "badge": "Layer 2 · Blueprint Sync (Advanced)",
+    "description": "Fine-tune the structural instructions and constraints that guide the agents behind the scenes.",
+    "instructionsLabel": "Instructions blueprint (optional)",
+    "instructionsPlaceholder": "Architect → Planner → Editor. Mention checks like 'clarity' and 'determinism'.",
+    "instructionsHelp": "Describe how agents should approach the prompt (tone, flow, guardrails).",
+    "examplesLabel": "Demo examples (optional)",
+    "examplesPlaceholder": "POS || I love this! → Summary: Enthusiastic praise.",
+    "examplesHelp": "Share an input/output pair so agents understand the desired output style.",
+    "constraintsLabel": "Constraints & style (optional)",
+    "constraintsPlaceholder": "'Max 150 words', 'Use bullet lists', 'Avoid slang'.",
+    "constraintsHelp": "List any format rules, length, safety limits, or tone you care about."
+  },
+  "layer3": {
+    "badge": "Layer 3 · Expert Lab (Advanced)",
+    "description": "Only open this when you want dataset-style control over samples, schema, and optimization knobs.",
+    "datasetLabel": "POS / NEG dataset snippets (optional)",
+    "datasetPlaceholder": "POS || This highlights the main benefit. NEG || This goes off-topic.",
+    "datasetHelp": "List a few positive/negative examples to bias scoring.",
+    "schemaLabel": "Schema or output template (optional)",
+    "schemaPlaceholder": "{ \"sections\": [\"summary\", \"action items\"], \"style\": \"polite, structured\" }",
+    "schemaHelp": "Define a structure we should follow in the final prompt.",
+    "knobsLabel": "Optimization knobs (optional)",
+    "knobsPlaceholder": "candidates: 4 tests: [\"clarity\",\"risk\"] temperature: 0.5",
+    "knobsHelp": "Control candidate count, evaluation tests, or sampling behavior."
+  },
   "enhancer": {
     "title": "Promptly Prompt Enhancer",
     "subtitle": "Turn raw prompts into clear, structured, high-quality instructions for LLMs.",

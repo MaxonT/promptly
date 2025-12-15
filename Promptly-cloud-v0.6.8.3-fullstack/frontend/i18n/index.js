@@ -78,13 +78,22 @@ class I18nManager {
       .map(code => `<option value="${code}">${i18nConfig.localeLabels[code] || code}</option>`)
       .join('');
     
-    select.value = this.instance.language;
+    // Handle locale matching (e.g. en-US -> en)
+    const currentLang = this.instance.language;
+    if (i18nConfig.supportedLocales.includes(currentLang)) {
+      select.value = currentLang;
+    } else {
+      const shortLang = currentLang.split('-')[0];
+      if (i18nConfig.supportedLocales.includes(shortLang)) {
+        select.value = shortLang;
+      }
+    }
     
-    // Remove old listeners if any (clone node trick)
-    // Removed cloneNode as it causes issues with event binding order and focus
-    select.removeEventListener('change', this._handleLangChange);
-    this._handleLangChange = (e) => this.changeLanguage(e.target.value);
-    select.addEventListener('change', this._handleLangChange);
+    // Use onchange for direct binding and to avoid listener accumulation
+    select.onchange = (e) => {
+        console.log('[i18n] Language change requested:', e.target.value);
+        this.changeLanguage(e.target.value);
+    };
   }
 
   async changeLanguage(locale) {
@@ -166,7 +175,13 @@ class I18nManager {
 
 // Start
 const i18nManager = new I18nManager();
-i18nManager.init();
+
+// Ensure DOM is ready before init to find UI elements
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', () => i18nManager.init());
+} else {
+  i18nManager.init();
+}
 
 // Export for debugging if needed
 export default i18nManager;

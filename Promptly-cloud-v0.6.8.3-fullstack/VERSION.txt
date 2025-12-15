@@ -1,15 +1,29 @@
-v0.6.8.4
+v0.6.8.5
 
 Release Date: 2025-12-15
-Type: Minor Update - i18n English Translation Enhancement
+Type: Major Update - i18n English Translation Complete
+
+🎉 MILESTONE: English translations now 100% complete!
 
 Changes:
-- Enhanced English translations from 56% to 83.3% coverage
-- Added 70 new translation keys
-- Core UI, navigation, and user guide fully translated
-- Layer 1, 2, 3 configuration interfaces translated
-- Glossary, test cases, and alerts translated
+- Completed ALL English translations (257/257 keys)
+- Added pipeline module translations (17 keys)
+- Added whyPromptly module translations (26 keys)
+- Progress: 56% → 83.3% → 100% ✅
 
-Remaining: 43 keys (pipeline, whyPromptly modules)
-Next Release: v0.6.8.5 (complete remaining translations)
+All modules now fully translated:
+✅ Navigation & Hero
+✅ Common & Alerts  
+✅ Glossary & Terminology
+✅ Test Cases & User Guide
+✅ Layer 1/2/3 Configuration
+✅ Pipeline Workflow
+✅ WhyPromptly (Product Info)
+✅ Enhancer, Outcome, Specs modules
+
+Previous Releases:
+- v0.6.8.4: Enhanced to 83.3% (+70 keys)
+- v0.6.8.3: i18n infrastructure fixes
+
+Next Release: v0.6.9.0 (multi-language expansion)
 

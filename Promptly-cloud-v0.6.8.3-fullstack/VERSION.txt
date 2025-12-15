@@ -1,9 +1,13 @@
-v0.6.8.5
+v0.6.9.0
 
 Release Date: 2025-12-15
-Type: Major Update - i18n English Translation Complete
+Type: Major Update - Spanish (Español) Translation Complete
 
-🎉 MILESTONE: English translations now 100% complete!
+🎉 MILESTONE: Spanish translations now 100% complete!
+🎊 Second language fully supported!
+
+Previous Milestones:
+- v0.6.8.5: English 100% complete
 
 Changes:
 - Completed ALL English translations (257/257 keys)

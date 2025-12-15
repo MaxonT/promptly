@@ -2,47 +2,38 @@
 (function(){
   const THEME_KEY="promptly.theme", LANG_KEY="promptly.lang", CONSENT_KEY="promptly.consent";
   const prefersDark=window.matchMedia("(prefers-color-scheme: dark)");
-  const translations={
-    en:{nav_home:"Dashboard",nav_privacy:"Privacy",nav_terms:"Terms",nav_cookies:"Cookies",nav_account:"Account",appearance:"System",auto:"System",light:"Light",dark:"Dark",language:"English",
-        hero_title:"Promptly — Prompt Optimizer Studio",hero_subtitle:"Visualization-first workflow. See every gain, every cost, every version.",
-        task_label:"Task",examples_label:"Examples (optional)",best_prompt:"Pipeline Working Status",run_btn:"Run Optimization",processing:"Processing...",success_message:"Best Prompt has been updated!",
-        kpi_accuracy:"Accuracy",kpi_f1:"F1",kpi_pass:"Pass Rate",kpi_cost:"Token Cost",kpi_prog:"Progress %",
-        growth_chart:"Growth Over Iterations",contrib_chart:"Change Contribution",pass_pie:"Pass vs Fail (%)",gauge:"Progress Meter (%)",
-        versions:"Prompt Versions",footer_rights:"No trackers. Preferences saved only after consent.",footer_contact:"Support",
-        consent_text:"We use cookies to improve your experience and remember preferences.",consent_btn:"Accept",
-        placeholder_task:"e.g., Classify sentiment of a sentence; output POS or NEG only.",
-        placeholder_examples:"POS || I love this!\nNEG || This is terrible."},
-    zh:{nav_home:"仪表盘",nav_privacy:"隐私政策",nav_terms:"服务条款",nav_cookies:"Cookie 政策",nav_account:"账号",appearance:"系统",auto:"系统",light:"浅色",dark:"深色",language:"中文",
-        hero_title:"Promptly — 提示优化工作室",hero_subtitle:"可视化优先：每次提升、每分成本、每个版本都一目了然。",
-        task_label:"任务",examples_label:"示例（可选）",best_prompt:"流程运行状态",run_btn:"运行优化",processing:"处理中...",success_message:"最佳 Prompt 已更新！",
-        kpi_accuracy:"准确率",kpi_f1:"F1",kpi_pass:"通过率",kpi_cost:"Token 成本",kpi_prog:"进度 %",
-        growth_chart:"迭代增长曲线",contrib_chart:"改动贡献",pass_pie:"通过 vs 失败（%）",gauge:"进度仪表（%）",
-        versions:"Prompt 版本",footer_rights:"无追踪；仅在同意后保存偏好。",footer_contact:"支持",
-        consent_text:"我们使用 Cookie 改善体验并记住偏好。",consent_btn:"同意",
-        placeholder_task:"例如：判断句子情感，仅输出 POS 或 NEG。",
-        placeholder_examples:"POS || I love this!\nNEG || This is terrible."},
-    es:{language:"Español",processing:"Procesando...",success_message:"¡El mejor Prompt ha sido actualizado!"},
-    fr:{language:"Français",processing:"Traitement...",success_message:"Le meilleur Prompt a été mis à jour !"},
-    ja:{language:"日本語",processing:"処理中...",success_message:"ベストプロンプトが更新されました！"},
-    ko:{language:"한국어",processing:"처리 중...",success_message:"최적의 프롬프트가 업데이트되었습니다!"},
-    ar:{language:"العربية",processing:"جاري المعالجة...",success_message:"تم تحديث أفضل Prompt!"},
-    pt:{language:"Português",processing:"Processando...",success_message:"O melhor Prompt foi atualizado!"},
-    hi:{language:"हिन्दी",processing:"प्रोसेसिंग...",success_message:"सर्वोत्तम प्रॉम्प्ट अपडेट हो गया!"}
-  };
-  const LANG_OPTIONS=[["en","English"],["zh","中文"],["es","Español"],["fr","Français"],["ja","日本語"],["ko","한국어"],["ar","العربية"],["pt","Português"],["hi","हिन्दी"]];
+  // Translations removed - now using locales/*.json via i18n.init.js
+  const LANG_OPTIONS=[["en","English"],["zh-CN","中文"],["es","Español"],["fr","Français"],["ja","日本語"],["ko","한국어"],["ar","العربية"],["pt","Português"],["hi","हिन्दी"]];
   const API_BASE=(window.PROMPTLY_API_BASE&&window.PROMPTLY_API_BASE.trim())||(window.location&&window.location.origin&&window.location.origin!="null"?window.location.origin:"http://localhost:8080");
   const WIZARD_SESSION_KEY="promptly.wizard.session";
   function $(s){return document.querySelector(s)} function $all(s){return Array.from(document.querySelectorAll(s))}
   function applyTheme(theme){document.documentElement.setAttribute("data-theme", theme==="auto"?(prefersDark.matches?"dark":"light"):theme)}
-  function i18nApply(lang){const d=translations[lang]||translations.en;$all("[data-i18n]").forEach(el=>{const k=el.getAttribute("data-i18n");if(d[k])el.textContent=d[k];});
-    const task=$("#task"), ex=$("#examples"); if(task) task.placeholder=d.placeholder_task||task.placeholder; if(ex && d.placeholder_examples) ex.value=d.placeholder_examples;}
-  function initHeader(){const langSel=$("#langSelect"); if(langSel && !langSel.dataset.bound){langSel.innerHTML=LANG_OPTIONS.map(([v,t])=>`<option value="${v}">${t}</option>`).join("");
-    const saved=localStorage.getItem(LANG_KEY)||"en"; langSel.value=saved; i18nApply(saved); langSel.addEventListener("change",()=>{const v=langSel.value;localStorage.setItem(LANG_KEY,v);i18nApply(v)}); langSel.dataset.bound="1";}
+  // i18nApply removed - now handled by i18n.init.js
+  function initHeader(){const langSel=$("#langSelect"); if(langSel && !langSel.dataset.bound){
+    // Language selector is now handled by i18n.init.js, but we keep this for backward compatibility
+    langSel.dataset.bound="1";}
     const themeSel=$("#themeSelect"); if(themeSel && !themeSel.dataset.bound){const saved=localStorage.getItem(THEME_KEY)||"auto"; themeSel.value=saved; applyTheme(saved);
       themeSel.addEventListener("change",()=>{const v=themeSel.value;localStorage.setItem(THEME_KEY,v);applyTheme(v)}); prefersDark.addEventListener("change",()=>{if((localStorage.getItem(THEME_KEY)||"auto")==="auto")applyTheme("auto")}); themeSel.dataset.bound="1";}}
   function consentBanner(){if(localStorage.getItem("promptly.consent"))return; const b=document.createElement("div"); b.className="banner";
-    const d=translations[localStorage.getItem(LANG_KEY)||"en"]||translations.en; b.innerHTML=`<span data-i18n="consent_text">${d.consent_text}</span><button class="btn" id="consentBtn" data-i18n="consent_btn">${d.consent_btn}</button>`;
-    document.body.appendChild(b); document.getElementById("consentBtn").addEventListener("click",()=>{localStorage.setItem("promptly.consent","1"); b.remove();});}
+    // Use i18n if available, otherwise fallback to English
+    const getText = (key) => {
+      if (window.i18n) return window.i18n.t(key);
+      // Fallback translations for consent banner
+      const fallback = { consent_text: "We use cookies to improve your experience and remember preferences.", consent_btn: "Accept" };
+      return fallback[key] || key;
+    };
+    b.innerHTML=`<span data-i18n="common.consent_text">${getText("common.consent_text")}</span><button class="btn" id="consentBtn" data-i18n="common.consent_btn">${getText("common.consent_btn")}</button>`;
+    document.body.appendChild(b); 
+    // Re-translate after i18n is ready
+    if (window.i18n) {
+      setTimeout(() => {
+        document.querySelectorAll('[data-i18n]').forEach(el => {
+          const key = el.getAttribute('data-i18n');
+          if (key) el.textContent = window.i18n.t(key);
+        });
+      }, 100);
+    }
+    document.getElementById("consentBtn").addEventListener("click",()=>{localStorage.setItem("promptly.consent","1"); b.remove();});}
   // ============================================
   // Enhanced Professional Data Visualization
   // ============================================
@@ -585,23 +576,16 @@
   window.promptlyRefreshMetrics = refreshMetrics;
   // Expose function to get localized text for cross-script access
   window.promptlyGetText = function(key) {
-    const lang = localStorage.getItem(LANG_KEY) || "en";
-    const dict = translations[lang] || translations.en;
-    return dict[key] || translations.en[key] || key;
+    if (window.i18n) {
+      return window.i18n.t(key);
+    }
+    return key; // Fallback if i18n not ready
   };
 
   document.addEventListener("DOMContentLoaded", () => {
     const themeSel = document.getElementById("themeSelect");
-    const langSel = document.getElementById("langSelect");
-    if (langSel) {
-      langSel.innerHTML = LANG_OPTIONS.map(([v, t]) => `<option value="${v}">${t}</option>`).join("");
-      const saved = localStorage.getItem(LANG_KEY) || "en";
-      langSel.value = saved;
-      i18nApply(saved);
-      langSel.addEventListener("change", () => {
-        const v = langSel.value;
-        localStorage.setItem(LANG_KEY, v);
-        i18nApply(v);
+    // Language selector is now handled by i18n.init.js
+    // Keep theme selector logic
       });
     }
     if (themeSel) {

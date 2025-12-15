@@ -8,73 +8,75 @@
   <link rel="stylesheet" href="style.css" />
   <link rel="stylesheet" href="specs.css" />
   <script src="config.js"></script>
+  <script src="https://unpkg.com/i18next@23.4.6/dist/umd/i18next.min.js"></script>
+  <script src="i18n.init.js" defer></script>
 </head>
 <body class="app-shell">
   <header class="specs-header">
     <div class="specs-header-main">
       <img src="assets/promptly-icon.svg" alt="Promptly" class="specs-logo" />
       <div>
-        <h1 class="specs-title">Specs Manager</h1>
-        <p class="specs-subtitle">
+        <h1 class="specs-title" data-i18n="specs.title">Specs Manager</h1>
+        <p class="specs-subtitle" data-i18n="specs.subtitle">
           Browse, inspect, and compile your Promptly specs into deterministic prompts.
         </p>
       </div>
     </div>
     <div class="specs-header-meta">
-      <span class="specs-tag">v0.6.8 · Specs beta</span>
+      <span class="specs-tag" data-i18n="specs.tag">v0.6.8 · Specs beta</span>
     </div>
   </header>
 
   <main class="specs-main">
     <section class="specs-panel specs-panel--list">
       <div class="specs-panel-header">
-        <h2>Specs</h2>
-        <button id="refreshSpecsBtn" class="specs-button">Refresh</button>
+        <h2 data-i18n="specs.section1Title">Specs</h2>
+        <button id="refreshSpecsBtn" class="specs-button" data-i18n="specs.refreshBtn">Refresh</button>
       </div>
-      <p class="specs-panel-desc">
+      <p class="specs-panel-desc" data-i18n="specs.section1Desc">
         These specs are stored in the backend database. Select one to see details and compile it.
       </p>
       <div id="specsList" class="specs-list"></div>
-      <p id="specsEmpty" class="specs-empty hidden">No specs found yet.</p>
+      <p id="specsEmpty" class="specs-empty hidden" data-i18n="specs.emptyState">No specs found yet.</p>
     </section>
 
     <section class="specs-panel specs-panel--detail">
-      <h2>Spec details</h2>
-      <p class="specs-panel-desc">
+      <h2 data-i18n="specs.section2Title">Spec details</h2>
+      <p class="specs-panel-desc" data-i18n="specs.section2Desc">
         Inspect the raw spec JSON and compile it into prompt blocks for your LLM pipeline.
       </p>
       <div id="specMeta" class="specs-meta"></div>
       <pre id="specJson" class="specs-code-block"></pre>
 
       <div class="specs-actions">
-        <button id="compileSpecBtn" class="specs-button-primary" disabled>
+        <button id="compileSpecBtn" class="specs-button-primary" data-i18n="specs.compileBtn" disabled>
           Compile to prompt
         </button>
       </div>
 
-      <h3>Last compiled prompt</h3>
+      <h3 data-i18n="specs.lastCompiledTitle">Last compiled prompt</h3>
       <pre id="compiledPrompt" class="specs-code-block"></pre>
     </section>
 
     <section class="specs-panel specs-panel--create">
-      <h2>Create new spec</h2>
-      <p class="specs-panel-desc">
+      <h2 data-i18n="specs.section3Title">Create new spec</h2>
+      <p class="specs-panel-desc" data-i18n="specs.section3Desc">
         Paste or type a JSON spec. At minimum, provide a title and a small spec object.
       </p>
       <label class="specs-label">
-        Title
-        <input id="newSpecTitle" type="text" placeholder="My new Promptly spec" />
+        <span data-i18n="specs.titleLabel">Title</span>
+        <input id="newSpecTitle" type="text" data-i18n="specs.titlePlaceholder" placeholder="My new Promptly spec" />
       </label>
       <label class="specs-label">
-        Spec JSON
-        <textarea id="newSpecJson" rows="6" placeholder='{"project_goal": "..."}'></textarea>
+        <span data-i18n="specs.jsonLabel">Spec JSON</span>
+        <textarea id="newSpecJson" rows="6" data-i18n="specs.jsonPlaceholder" placeholder='{"project_goal": "..."}'></textarea>
       </label>
-      <button id="createSpecBtn" class="specs-button">Create spec</button>
+      <button id="createSpecBtn" class="specs-button" data-i18n="specs.createBtn">Create spec</button>
       <p id="createSpecError" class="specs-error hidden"></p>
     </section>
 
     <section class="specs-panel specs-panel--log">
-      <h2>Specs log</h2>
+      <h2 data-i18n="specs.section4Title">Specs log</h2>
       <pre id="specsLog" class="specs-log"></pre>
     </section>
   </main>

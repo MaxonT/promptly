@@ -35,6 +35,11 @@
     llmStatusEl.classList.add(`enhancer-status--${level}`);
   }
 
+  function t(key, options = {}) {
+    if (!window.i18n) return key;
+    return window.i18n.t(key, options);
+  }
+
   function disableLlmActions() {
     [runEnhanceBtn, runScoreBtn, runValidateBtn, attachBtn].forEach((btn) => {
       if (btn) btn.disabled = true;
@@ -53,14 +58,14 @@
       const enabled = !!data.settings?.llmEnabled;
       const model = data.settings?.defaultModel || "gpt-4o-mini";
       if (!enabled) {
-        setLlmStatus("LLM features are disabled. Set OPENAI_API_KEY on the backend to enable prompt rewriting.", "error");
+        setLlmStatus(t("enhancer.statusLlmDisabled"), "error");
         disableLlmActions();
         log("LLM disabled: set OPENAI_API_KEY on backend");
       } else {
-        setLlmStatus(`LLM online. Using model ${model} for enhancement.`, "ok");
+        setLlmStatus(t("enhancer.statusLlmOnline", { model }), "ok");
       }
     } catch (err) {
-      setLlmStatus("Unable to verify LLM status. Enhancement may not work until the backend is reachable.", "warning");
+      setLlmStatus(t("enhancer.statusLlmUnavailable"), "warning");
       log(`Failed to load settings: ${err.message}`);
     }
   }
@@ -88,7 +93,7 @@
   async function callEnhancer(path) {
     const prompt = getPrompt();
     if (!prompt) {
-      showError("Please paste a prompt first.");
+      showError(t("enhancer.errorNoPrompt"));
       return null;
     }
     clearError();
@@ -154,7 +159,7 @@
   async function onRunScore() {
     const prompt = enhancedPromptEl.textContent.trim() || getPrompt();
     if (!prompt) {
-      showError("No prompt to score. Enhance first or paste a prompt.");
+      showError(t("enhancer.errorNoPromptToScore"));
       return;
     }
     rawPromptEl.value = prompt;
@@ -192,7 +197,7 @@
   async function onRunValidate() {
     const prompt = enhancedPromptEl.textContent.trim() || getPrompt();
     if (!prompt) {
-      showError("No prompt to validate. Enhance first or paste a prompt.");
+      showError(t("enhancer.errorNoPromptToValidate"));
       return;
     }
     rawPromptEl.value = prompt;
@@ -212,7 +217,7 @@
       const result = data.result;
       const issues = result.issues || [];
       if (!issues.length) {
-        validationResultEl.innerText = "No issues found. Prompt looks good.";
+        validationResultEl.innerText = t("enhancer.validationNoIssues");
       } else {
         const items = issues.map((iss) => {
           const prefix = iss.level === "error" ? "[!]" :
@@ -270,6 +275,7 @@
       return;
     }
 
+    const removeTitle = t("enhancer.removeAttachment");
     attachmentList.innerHTML = attachments.map((att, index) => `
       <div class="attachment-item" data-index="${index}">
         <span class="attachment-icon">${getFileIcon(att.type)}</span>
@@ -277,7 +283,7 @@
           <div class="attachment-name" title="${att.name}">${att.name}</div>
           <div class="attachment-size">${formatSize(att.size)}</div>
         </div>
-        <button class="attachment-remove" data-index="${index}" title="Remove attachment">×</button>
+        <button class="attachment-remove" data-index="${index}" title="${removeTitle}">×</button>
       </div>
     `).join('');
 
@@ -297,7 +303,7 @@
     // Warn for large files (>10MB)
     if (file.size > 10 * 1024 * 1024) {
       const confirmLarge = confirm(
-        `"${file.name}" is ${formatSize(file.size)}. Large files may take time to upload. Continue?`
+        t("enhancer.confirmLargeFile", { fileName: file.name, fileSize: formatSize(file.size) })
       );
       if (!confirmLarge) return;
     }
@@ -362,5 +368,15 @@
   copyEnhancedBtn?.addEventListener("click", onCopyEnhanced);
 
   checkLlmStatus();
-  log("Prompt Enhancer loaded. Paste a prompt to get started.");
+  
+  // Wait for i18n to be ready before logging
+  if (window.i18n) {
+    log(t("enhancer.logLoaded"));
+  } else {
+    // Fallback if i18n not ready yet
+    window.addEventListener('i18nReady', () => {
+      log(t("enhancer.logLoaded"));
+    });
+    log("Prompt Enhancer loaded. Paste a prompt to get started.");
+  }
 })();

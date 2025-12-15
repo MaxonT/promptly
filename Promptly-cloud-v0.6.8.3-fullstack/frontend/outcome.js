@@ -20,6 +20,11 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
   const candidatesListEl = document.getElementById("candidatesList");
   const logEl = document.getElementById("outcomeLog");
 
+  function t(key, options = {}) {
+    if (!window.i18n) return key;
+    return window.i18n.t(key, options);
+  }
+
   function log(line) {
     const ts = new Date().toISOString().slice(11, 19);
     logEl.textContent += `[${ts}] ${line}\n`;
@@ -72,17 +77,19 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
     const { best, candidates, request } = result;
 
     if (!best) {
-      bestMetaEl.textContent = "No best candidate selected.";
+      bestMetaEl.textContent = t("outcome.noBestCandidate");
       bestContentEl.textContent = "";
       candidatesListEl.innerHTML = "";
       return;
     }
 
-    bestMetaEl.textContent = `Best candidate: ${best.id} · finalScore ${best.finalScore.toFixed(
-      2
-    )} / 10 (LLM score ${best.llmScore.toFixed(2)}), tests: ${
-      best.tests?.passed ? "passed" : "issues"
-    }`;
+    const testStatusText = best.tests?.passed ? t("outcome.testsPassed").replace("Tests: ", "") : "issues";
+    bestMetaEl.textContent = t("outcome.bestCandidateMeta", {
+      id: best.id,
+      score: best.finalScore.toFixed(2),
+      llmScore: best.llmScore.toFixed(2),
+      testStatus: testStatusText
+    });
     bestContentEl.textContent = best.content || "";
 
     candidatesListEl.innerHTML = "";
@@ -109,9 +116,9 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
       const testsDiv = document.createElement("div");
       testsDiv.className = "outcome-candidate-tests";
       if (cand.tests?.issues?.length) {
-        testsDiv.textContent = "Tests: " + cand.tests.issues.join(" | ");
+        testsDiv.textContent = t("outcome.testsIssues", { issues: cand.tests.issues.join(" | ") });
       } else {
-        testsDiv.textContent = "Tests: passed";
+        testsDiv.textContent = t("outcome.testsPassed");
       }
 
       div.appendChild(header);
@@ -156,5 +163,13 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
 
   runBtn?.addEventListener("click", onRunOutcome);
 
-  log("Outcome-first Runner loaded. Define your task and click run.");
+  // Wait for i18n to be ready before logging
+  if (window.i18n) {
+    log(t("outcome.logLoaded") || "Outcome-first Runner loaded. Define your task and click run.");
+  } else {
+    window.addEventListener('i18nReady', () => {
+      log(t("outcome.logLoaded") || "Outcome-first Runner loaded. Define your task and click run.");
+    });
+    log("Outcome-first Runner loaded. Define your task and click run.");
+  }
 })();

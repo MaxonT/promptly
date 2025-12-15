@@ -20,6 +20,11 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
 
   let currentId = null;
 
+  function t(key, options = {}) {
+    if (!window.i18n) return key;
+    return window.i18n.t(key, options);
+  }
+
   function log(line) {
     const ts = new Date().toISOString().slice(11, 19);
     logEl.textContent += `[${ts}] ${line}\n`;
@@ -62,7 +67,7 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
         item.className = "specs-item";
         const id = row.id || row.spec_id || row.uuid;
         item.dataset.id = id;
-        const title = row.title || "(untitled spec)";
+        const title = row.title || t("specs.untitledSpec");
         const created =
           row.created_at || row.createdAt || row.timestamp || "unknown time";
         item.innerHTML = `
@@ -86,11 +91,11 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
       const data = await res.json().catch(() => ({}));
       if (!res.ok || !data) {
         log(`Spec detail error: HTTP ${res.status}`);
-        specMetaEl.textContent = "Failed to load spec.";
+        specMetaEl.textContent = t("specs.errorLoadFailed");
         return;
       }
       const row = data.spec || data.item || data.row || data;
-      const title = row.title || "(untitled spec)";
+      const title = row.title || t("specs.untitledSpec");
       const created =
         row.created_at || row.createdAt || row.timestamp || "unknown time";
       specMetaEl.textContent = `${title} · ${id} · created ${created}`;
@@ -121,7 +126,7 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
       const data = await res.json().catch(() => ({}));
       if (!res.ok || !data) {
         log(`Compile error: HTTP ${res.status}`);
-        compiledPromptEl.textContent = "Compile failed.";
+        compiledPromptEl.textContent = t("specs.errorCompileFailed");
         return;
       }
       const compiled = data.compiled_prompt || data.prompt || data.result || data;
@@ -133,7 +138,7 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
     } catch (err) {
       console.error(err);
       log("Compile error: " + err.message);
-      compiledPromptEl.textContent = "Compile error: " + err.message;
+      compiledPromptEl.textContent = t("specs.errorCompileError", { error: err.message });
     }
   }
 
@@ -142,7 +147,7 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
     createErrorEl.classList.add("hidden");
     const title = (newTitleEl.value || "").trim();
     if (!title) {
-      createErrorEl.textContent = "Title is required.";
+      createErrorEl.textContent = t("specs.errorTitleRequired");
       createErrorEl.classList.remove("hidden");
       return;
     }
@@ -152,7 +157,7 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
       try {
         specObj = JSON.parse(raw);
       } catch (err) {
-        createErrorEl.textContent = "Spec JSON is invalid.";
+        createErrorEl.textContent = t("specs.errorJsonInvalid");
         createErrorEl.classList.remove("hidden");
         return;
       }
@@ -172,7 +177,7 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
             " " +
             JSON.stringify(data)
         );
-        createErrorEl.textContent = "Create spec failed. See log.";
+        createErrorEl.textContent = t("specs.errorCreateFailed");
         createErrorEl.classList.remove("hidden");
         return;
       }
@@ -183,7 +188,7 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
     } catch (err) {
       console.error(err);
       log("Create spec error: " + err.message);
-      createErrorEl.textContent = "Create spec error. See log.";
+      createErrorEl.textContent = t("specs.errorCreateError");
       createErrorEl.classList.remove("hidden");
     }
   }
@@ -192,6 +197,14 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
   compileBtn?.addEventListener("click", compileCurrentSpec);
   createBtn?.addEventListener("click", createSpec);
 
-  log("Specs Manager loaded. Fetching specs ...");
+  // Wait for i18n to be ready before logging
+  if (window.i18n) {
+    log(t("specs.logLoaded") || "Specs Manager loaded. Fetching specs ...");
+  } else {
+    window.addEventListener('i18nReady', () => {
+      log(t("specs.logLoaded") || "Specs Manager loaded. Fetching specs ...");
+    });
+    log("Specs Manager loaded. Fetching specs ...");
+  }
   loadSpecs();
 })();

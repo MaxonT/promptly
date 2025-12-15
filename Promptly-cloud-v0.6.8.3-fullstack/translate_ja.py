@@ -1,0 +1,426 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+日语翻译脚本 - 补充缺失的 200 个键
+基于 en.json 进行专业翻译
+"""
+
+import json
+
+# 读取英文和现有日语翻译
+with open('frontend/locales/en.json', 'r', encoding='utf-8') as f:
+    en = json.load(f)
+
+with open('frontend/locales/ja.json', 'r', encoding='utf-8') as f:
+    ja = json.load(f)
+
+# 日语翻译映射
+ja_translations = {
+    # Common module
+    "common": {
+        "appName": "Promptly",
+        "welcome": "ようこそ",
+        "loading": "読み込み中...",
+        "error": "エラー",
+        "success": "成功",
+        "cancel": "キャンセル",
+        "confirm": "確認",
+        "save": "保存",
+        "delete": "削除",
+        "edit": "編集",
+        "close": "閉じる",
+        "back": "戻る",
+        "next": "次へ",
+        "submit": "送信",
+        "reset": "リセット",
+        "search": "検索",
+        "filter": "フィルター",
+        "sort": "並び替え",
+        "export": "エクスポート",
+        "import": "インポート",
+        "download": "ダウンロード",
+        "upload": "アップロード",
+        "view": "表示",
+        "copy": "コピー",
+        "paste": "貼り付け",
+        "cut": "切り取り",
+        "selectAll": "すべて選択",
+        "deselectAll": "すべて選択解除",
+        "refresh": "更新",
+        "reload": "再読み込み",
+        "retry": "再試行",
+        "undo": "元に戻す",
+        "redo": "やり直し",
+        "help": "ヘルプ",
+        "about": "について",
+        "settings": "設定",
+        "logout": "ログアウト",
+        "login": "ログイン"
+    },
+    
+    # Alerts module
+    "alerts": {
+        "success": "操作が成功しました！",
+        "error": "エラーが発生しました",
+        "warning": "警告",
+        "info": "情報",
+        "confirmDelete": "本当に削除しますか？",
+        "confirmAction": "続行してもよろしいですか？",
+        "unsavedChanges": "保存されていない変更があります",
+        "saveSuccess": "保存に成功しました",
+        "saveFailed": "保存に失敗しました",
+        "deleteSuccess": "削除に成功しました",
+        "deleteFailed": "削除に失敗しました",
+        "updateSuccess": "更新に成功しました",
+        "updateFailed": "更新に失敗しました",
+        "loadFailed": "データの読み込みに失敗しました",
+        "networkError": "ネットワークエラーです。接続を確認してください",
+        "invalidInput": "無効な入力です",
+        "requiredField": "この項目は必須です",
+        "invalidFormat": "無効な形式です",
+        "copySuccess": "クリップボードにコピーしました",
+        "copyFailed": "コピーに失敗しました"
+    },
+    
+    # Hero module
+    "hero": {
+        "title": "PromptlyでLLMプロンプトを最適化",
+        "subtitle": "AI駆動のプロフェッショナルなプロンプトテスト・最適化プラットフォーム",
+        "description": "自動化されたワークフローとプロフェッショナルなメトリクスでLLMプロンプトをテスト、比較、最適化",
+        "cta": "無料で始める",
+        "learnMore": "詳細を見る",
+        "watchDemo": "デモを見る",
+        "feature1": "自動A/Bテスト",
+        "feature2": "リアルタイムメトリクス",
+        "feature3": "マルチモデル対応",
+        "feature4": "バージョン管理",
+        "trustedBy": "信頼されています",
+        "companies": "1000社以上の企業"
+    },
+    
+    # Dynamic module
+    "dynamic": {
+        "bestPrompt": "ベストプロンプト",
+        "testCases": "テストケース",
+        "successRate": "成功率",
+        "avgTokens": "平均トークン数",
+        "avgLatency": "平均レイテンシー",
+        "totalRuns": "総実行回数",
+        "lastRun": "最終実行",
+        "status": "ステータス",
+        "running": "実行中",
+        "completed": "完了",
+        "failed": "失敗",
+        "pending": "保留中",
+        "cancelled": "キャンセル",
+        "noData": "データがありません",
+        "loadingData": "データを読み込み中...",
+        "refreshData": "データを更新",
+        "autoRefresh": "自動更新",
+        "realtime": "リアルタイム"
+    },
+    
+    # Glossary module
+    "glossary": {
+        "title": "用語集",
+        "prompt": "プロンプト",
+        "promptDesc": "言語モデルに与える入力指示",
+        "llm": "LLM（大規模言語モデル）",
+        "llmDesc": "GPT、Claudeなどの大規模言語モデル",
+        "token": "トークン",
+        "tokenDesc": "LLMが処理するテキストの単位",
+        "latency": "レイテンシー",
+        "latencyDesc": "モデルの応答時間",
+        "temperature": "Temperature",
+        "temperatureDesc": "出力のランダム性を制御（0-2）",
+        "maxTokens": "最大トークン数",
+        "maxTokensDesc": "応答の最大長",
+        "topP": "Top P",
+        "topPDesc": "多様性のためのニュークリアスサンプリング",
+        "frequencyPenalty": "Frequency Penalty",
+        "frequencyPenaltyDesc": "単語の繰り返しを減らす（-2〜2）",
+        "presencePenalty": "Presence Penalty",
+        "presencePenaltyDesc": "新しいトピックを促す（-2〜2）",
+        "stopSequence": "停止シーケンス",
+        "stopSequenceDesc": "特定のシーケンスで生成を停止",
+        "systemPrompt": "システムプロンプト",
+        "systemPromptDesc": "モデルのコンテキスト指示",
+        "userPrompt": "ユーザープロンプト",
+        "userPromptDesc": "ユーザーのクエリ",
+        "assistantPrompt": "アシスタントプロンプト",
+        "assistantPromptDesc": "モデルの応答",
+        "fewShot": "Few-Shot学習",
+        "fewShotDesc": "少数の例での学習",
+        "zeroShot": "Zero-Shot学習",
+        "zeroShotDesc": "例なしでの学習",
+        "chainOfThought": "Chain of Thought",
+        "chainOfThoughtDesc": "段階的な推論",
+        "embedding": "埋め込み",
+        "embeddingDesc": "テキストのベクトル表現",
+        "vectorDB": "ベクトルデータベース",
+        "vectorDBDesc": "セマンティック検索用ストレージ",
+        "rag": "RAG（検索拡張生成）",
+        "ragDesc": "検索で拡張された生成",
+        "fineTuning": "ファインチューニング",
+        "fineTuningDesc": "特定のデータでモデルを訓練",
+        "inference": "推論",
+        "inferenceDesc": "モデルによる応答生成"
+    },
+    
+    # Test Cases module
+    "testCases": {
+        "title": "テストケース",
+        "create": "テストケースを作成",
+        "edit": "テストケースを編集",
+        "delete": "テストケースを削除",
+        "run": "テストを実行",
+        "runAll": "すべて実行",
+        "stopAll": "すべて停止",
+        "name": "名前",
+        "description": "説明",
+        "input": "入力",
+        "expectedOutput": "期待される出力",
+        "actualOutput": "実際の出力",
+        "result": "結果",
+        "passed": "成功",
+        "failed": "失敗",
+        "skipped": "スキップ",
+        "duration": "実行時間",
+        "createdAt": "作成日時",
+        "updatedAt": "更新日時",
+        "lastRun": "最終実行",
+        "runCount": "実行回数",
+        "successRate": "成功率",
+        "avgDuration": "平均実行時間",
+        "tags": "タグ",
+        "priority": "優先度",
+        "high": "高",
+        "medium": "中",
+        "low": "低",
+        "category": "カテゴリ",
+        "functional": "機能",
+        "performance": "パフォーマンス",
+        "security": "セキュリティ",
+        "usability": "ユーザビリティ",
+        "compatibility": "互換性",
+        "regression": "リグレッション",
+        "smoke": "スモーク",
+        "integration": "統合",
+        "unit": "ユニット",
+        "e2e": "エンドツーエンド"
+    },
+    
+    # User Guide module
+    "userGuide": {
+        "title": "ユーザーガイド",
+        "welcome": "Promptlyへようこそ",
+        "gettingStarted": "はじめに",
+        "quickStart": "クイックスタート",
+        "tutorial": "チュートリアル",
+        "documentation": "ドキュメント",
+        "faq": "よくある質問",
+        "support": "サポート",
+        "contact": "お問い合わせ",
+        "feedback": "フィードバック",
+        "reportBug": "バグ報告",
+        "featureRequest": "機能リクエスト",
+        "step1": "ステップ1：プロジェクトを作成",
+        "step1Desc": "プロンプトを整理するための新しいプロジェクトを作成します",
+        "step2": "ステップ2：プロンプトを追加",
+        "step2Desc": "プロンプトを追加してパラメータを設定します",
+        "step3": "ステップ3：テストを実行",
+        "step3Desc": "テストを実行して結果を分析します",
+        "step4": "ステップ4：最適化",
+        "step4Desc": "インサイトを使用してプロンプトを最適化します",
+        "tips": "ヒント",
+        "tip1": "明確で簡潔なシステムプロンプトを使用",
+        "tip2": "複数のバリエーションをテストして最適なものを見つける",
+        "tip3": "パフォーマンスメトリクスを監視",
+        "tip4": "結果に基づいて反復",
+        "bestPractices": "ベストプラクティス",
+        "practice1": "明確な成功基準を定義",
+        "practice2": "多様なテストケースを使用",
+        "practice3": "プロンプトをバージョン管理",
+        "practice4": "決定を文書化",
+        "troubleshooting": "トラブルシューティング",
+        "issue1": "モデルが応答しない",
+        "solution1": "API接続とレート制限を確認してください",
+        "issue2": "一貫性のない結果",
+        "solution2": "Temperatureを調整し、より多くのコンテキストを追加してください",
+        "issue3": "応答が遅い",
+        "solution3": "プロンプトの長さと最大トークンを最適化してください"
+    },
+    
+    # Layer 1 module
+    "layer1": {
+        "title": "レイヤー1：基本設定",
+        "model": "モデル",
+        "selectModel": "モデルを選択",
+        "modelVersion": "モデルバージョン",
+        "apiKey": "APIキー",
+        "apiEndpoint": "APIエンドポイント",
+        "temperature": "Temperature",
+        "maxTokens": "最大トークン数",
+        "topP": "Top P",
+        "frequencyPenalty": "Frequency Penalty",
+        "presencePenalty": "Presence Penalty",
+        "stopSequence": "停止シーケンス",
+        "timeout": "タイムアウト",
+        "retries": "リトライ回数",
+        "systemPrompt": "システムプロンプト",
+        "systemPromptPlaceholder": "システムプロンプトを入力...",
+        "advanced": "詳細設定",
+        "basic": "基本設定",
+        "custom": "カスタム設定",
+        "preset": "プリセット",
+        "creative": "クリエイティブ",
+        "balanced": "バランス",
+        "precise": "精密",
+        "save": "設定を保存",
+        "load": "設定を読み込む",
+        "reset": "デフォルトにリセット",
+        "validate": "設定を検証",
+        "test": "設定をテスト"
+    },
+    
+    # Layer 2 module
+    "layer2": {
+        "title": "レイヤー2：テストと評価",
+        "testSuite": "テストスイート",
+        "createTest": "テストを作成",
+        "editTest": "テストを編集",
+        "deleteTest": "テストを削除",
+        "runTest": "テストを実行",
+        "runBatch": "バッチ実行",
+        "schedule": "スケジュール",
+        "results": "結果",
+        "metrics": "メトリクス",
+        "comparison": "比較",
+        "baseline": "ベースライン",
+        "variant": "バリアント",
+        "winner": "勝者",
+        "confidence": "信頼度",
+        "significance": "有意性",
+        "sampleSize": "サンプルサイズ",
+        "iterations": "反復回数",
+        "concurrency": "並行数",
+        "rateLimit": "レート制限",
+        "costEstimate": "コスト見積もり",
+        "timeEstimate": "時間見積もり",
+        "progress": "進行状況",
+        "queue": "キュー",
+        "logs": "ログ",
+        "errors": "エラー",
+        "warnings": "警告",
+        "export": "結果をエクスポート",
+        "share": "結果を共有",
+        "report": "レポートを生成"
+    },
+    
+    # Layer 3 module
+    "layer3": {
+        "title": "レイヤー3：最適化とデプロイ",
+        "optimize": "最適化",
+        "autoTune": "自動チューニング",
+        "suggestions": "提案",
+        "improvements": "改善",
+        "performance": "パフォーマンス",
+        "cost": "コスト",
+        "quality": "品質",
+        "speed": "速度",
+        "accuracy": "精度",
+        "tradeoffs": "トレードオフ",
+        "deploy": "デプロイ",
+        "version": "バージョン",
+        "changelog": "変更履歴",
+        "rollback": "ロールバック",
+        "monitor": "監視",
+        "alerts": "アラート",
+        "threshold": "しきい値",
+        "notification": "通知",
+        "email": "メール",
+        "webhook": "Webhook",
+        "slack": "Slack",
+        "dashboard": "ダッシュボード",
+        "analytics": "分析",
+        "insights": "インサイト",
+        "trends": "トレンド",
+        "forecasts": "予測",
+        "recommendations": "推奨事項"
+    },
+    
+    # Pipeline module
+    "pipeline": {
+        "title": "パイプラインワークフロー",
+        "create": "パイプラインを作成",
+        "edit": "パイプラインを編集",
+        "delete": "パイプラインを削除",
+        "run": "パイプラインを実行",
+        "stop": "パイプラインを停止",
+        "pause": "一時停止",
+        "resume": "再開",
+        "status": "ステータス",
+        "stages": "ステージ",
+        "addStage": "ステージを追加",
+        "removeStage": "ステージを削除",
+        "configure": "設定",
+        "dependencies": "依存関係",
+        "parallel": "並列",
+        "sequential": "順次",
+        "conditional": "条件付き",
+        "trigger": "トリガー",
+        "manual": "手動",
+        "scheduled": "スケジュール済み",
+        "automatic": "自動",
+        "webhook": "Webhook"
+    },
+    
+    # WhyPromptly module
+    "whyPromptly": {
+        "title": "Promptlyを選ぶ理由",
+        "subtitle": "LLMプロンプト最適化のための究極のプラットフォーム",
+        "reason1Title": "時間の節約",
+        "reason1Desc": "プロンプトのテストと最適化を自動化",
+        "reason2Title": "コスト削減",
+        "reason2Desc": "トークン使用を最適化してAPIコストを削減",
+        "reason3Title": "品質向上",
+        "reason3Desc": "一貫性のある高品質な結果を実現",
+        "reason4Title": "データドリブンなインサイト",
+        "reason4Desc": "詳細なメトリクスで情報に基づいた意思決定",
+        "reason5Title": "使いやすい",
+        "reason5Desc": "すべてのスキルレベルに対応した直感的なインターフェース",
+        "reason6Title": "エンタープライズサポート",
+        "reason6Desc": "専用サポートとエンタープライズ機能",
+        "cta": "今すぐ始める",
+        "testimonial1": "PromptlyはLLMワークフローを変革しました",
+        "testimonial2": "驚くべきコスト削減とより良い品質",
+        "testimonial3": "プロンプト開発に最適なツール",
+        "stats1": "10倍高速",
+        "stats2": "50%のコスト削減",
+        "stats3": "99.9%の稼働率",
+        "stats4": "1000人以上の満足したユーザー"
+    }
+}
+
+# 函数：合并翻译
+def merge_translations(base, updates):
+    result = base.copy() if isinstance(base, dict) else {}
+    for key, value in updates.items():
+        if key in result and isinstance(result[key], dict) and isinstance(value, dict):
+            result[key] = merge_translations(result[key], value)
+        else:
+            result[key] = value
+    return result
+
+# 合并新翻译
+ja_complete = merge_translations(ja, ja_translations)
+
+# 写入更新后的文件
+with open('frontend/locales/ja.json', 'w', encoding='utf-8') as f:
+    json.dump(ja_complete, f, ensure_ascii=False, indent=2)
+
+print("✅ 日本語翻訳完了！")
+print(f"📊 以下のモジュールに新しいキーが追加されました:")
+for module in ja_translations.keys():
+    print(f"   - {module}")
+

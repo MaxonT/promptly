@@ -1,67 +1,65 @@
-# Promptly Cloud v0.6.0
+# Promptly Cloud v0.6.8.3
 
-Production‑ready skeleton built on your existing frontend (kept intact). This repo ships with:
-- **frontend/**: your uploaded UI, unchanged
-- **backend/**: Node/Express + SQLite (better‑sqlite3), JWT auth, sharing, merge/conflict handling, validation (zod)
-- **others/**: OpenAPI spec, CI stub, health & QA checklists
+Promptly 提供一整套 Prompt 优化流水线：前端负责收集目标并展示多阶段可视化，后端负责 Spec → Question → Agents → Metrics → Outcome 的完整运行。
 
-## Quick Start
+## 目录概览
 
-### Backend
-```bash
-cd backend
-cp .env.example .env
-npm install
-npm run migrate
-npm start
-```
-Check: `curl http://localhost:8080/api/health`
+- `frontend/`: 静态 UI（已经集成 `config.js` 构建）
+- `backend/`: Node/Express + SQLite，包含 Spec、Question、Candidate、Outcome 模块
+- `docs/`: 架构与部署文档集合（包括本次部署流程）
+- `test-deployment.sh` / `verify-integration.sh`: 自动化测试脚本
+- `INTEGRATION_CHECKLIST.md`: 集成校验清单
 
-### Frontend
-Deploy `frontend/` to Vercel/Netlify. Edit `frontend/config.js` with your backend URL.
-See [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md) or [UPDATE_CONFIG.md](UPDATE_CONFIG.md) for details.
+## 快速验证
 
-## API
-- `POST /api/auth/login` → `{ token }`
-- `GET /api/docs` (Bearer token)
-- `POST /api/docs`
-- `PUT /api/docs/:id` with `baseVersion`
-- `DELETE /api/docs/:id`
-- `POST /api/share/:docId`
-- `GET /api/share/resolve/:token`
+1. **调用脚本**：`./test-deployment.sh https://promptly-v0-6-cloudtest-cursor-dev.onrender.com`
+2. **集成确认**：`./verify-integration.sh`（需要 `jq`，用于校验版本、引用、环境变量）
+3. **文档参考**：`QUICK_START_DEPLOYMENT.md` 说明 5 分钟部署流程
 
-See `others/openapi.yaml`.
+## 部署架构
 
-## Ten Health Checks
-1. `npm run health`
-2. `/api/health` returns ok
-3. JWT secret set
-4. CORS origin set
-5. SQLite file created
-6. Login returns token
-7. Docs list works
-8. Conflict path (409) works
-9. Share/resolve works
-10. Frontend→Backend requests succeed
+1. **Render (Backend)**  
+   - 将 `backend/` 部署为 Web Service  
+   - 环境变量：`OPENAI_API_KEY`, `JWT_SECRET`, `CORS_ORIGIN` (指向 Vercel 域), `NODE_ENV=production`  
+   - 入口：`npm start`，暴露 `/api/health`, `/api/pipeline/*`, `/`（返回可用端点）
 
-## Deployment
+2. **Vercel (Frontend)**  
+   - `frontend/` 添加 `package.json` + `build.js`  
+   - 构建流程：`npm run build` → `build.js` 使用 `VITE_API_BASE` 生成 `config.js`  
+   - 页面通过 `config.js` 注入 `window.PROMPTLY_API_BASE`，其他脚本直接从该变量读 API 基地址
 
-### Quick Deploy (3 minutes)
-1. **Backend to Render**: Set env vars: `OPENAI_API_KEY`, `CORS_ORIGIN=*`, `NODE_ENV=production`
-2. **Update Frontend Config**: Edit `frontend/config.js` with your Render backend URL
-3. **Frontend to Vercel**: Deploy `frontend/` folder
-4. **Update CORS**: Change `CORS_ORIGIN` in Render to your Vercel URL
+3. **环境变量**  
+   - Render: `OPENAI_API_KEY`, `JWT_SECRET`, `CORS_ORIGIN=https://your-frontend.vercel.app`  
+   - Vercel: `VITE_API_BASE=https://promptly-v0-6-cloudtest-cursor-dev.onrender.com`
 
-📖 **详细指南**:
-- [完整部署指南](DEPLOYMENT_GUIDE.md) - 包含 Render + Vercel 详细步骤
-- [快速修复 404 错误](UPDATE_CONFIG.md) - 如果遇到连接问题
-- [连接测试页面](frontend/test-connection.html) - 自动验证配置
+## 前端集成点
 
-### Environment Variables
-- **Render (Backend)**: `OPENAI_API_KEY`, `CORS_ORIGIN`, `NODE_ENV`, `PORT` (optional)
-- **Vercel (Frontend)**: 直接编辑 `frontend/config.js`（无需环境变量）
+- 所有 HTML = `<script src="config.js"></script>`，看：[index.html](frontend/index.html)、[wizard.html](frontend/wizard.html)、[enhancer.html](frontend/enhancer.html)、[specs.html](frontend/specs.html)、[outcome.html](frontend/outcome.html)
+- `index.html` 中 `fetch(`${window.PROMPTLY_API_BASE}/api/pipeline/run`)`（确保实时与后台同步）
+- `vercel.json` 控制缓存（`config.js` 设置 `Cache-Control: max-age=0`），防止旧配置残留
+- `.gitignore` 新增 `/frontend/config.js` 防止提交生成文件
 
-## Prompt Optimization Process
-- 了解 Promptly 如何分层处理输入、模板化编译，并通过可用性提示与错误捕获保持输出稳定，参见 [docs/OPTIMIZATION_PROCESS.md](docs/OPTIMIZATION_PROCESS.md).
+## 后端集成点
 
-License: MIT
+- `backend/src/server.js` 引入所有路由：`auth`, `doc`, `share`, `specs`, `questionSessions`, `runs`, `outcomeRuns`, `enhance`, `prompts`, `pipeline`
+- Pipeline 路由提供 `/api/pipeline/run`, `/api/pipeline/health`, `/api/pipeline/stream/:runId`
+- 根路径 `/` 返回 JSON，列出所有关键端点
+- 请求日志中间件记录每次进出
+
+## 文档与指南
+
+- [docs/DEPLOYMENT_COMPLETE_GUIDE.md](docs/DEPLOYMENT_COMPLETE_GUIDE.md) - 详细部署及调试流程  
+- [QUICK_START_DEPLOYMENT.md](QUICK_START_DEPLOYMENT.md) - 5 分钟快速部署指南  
+- [DEPLOYMENT_FIXES_SUMMARY.md](DEPLOYMENT_FIXES_SUMMARY.md) - 本次关键修复记录  
+- [INTEGRATION_CHECKLIST.md](INTEGRATION_CHECKLIST.md) - 集成验证清单  
+- [verify-integration.sh](verify-integration.sh) & [test-deployment.sh](test-deployment.sh) - 自动化验证脚本
+
+## 运行和测试
+
+1. `npm run health`（Backend）  
+2. `curl https://your-backend.onrender.com/api/health`  
+3. 打开前端，查看 Console & Network，确保请求命中 Render 路径  
+4. 触发 Run Optimization，确保 pipeline event log 显示五个阶段  
+
+## 许可证
+MIT

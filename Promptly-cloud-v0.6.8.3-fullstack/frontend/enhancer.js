@@ -377,6 +377,6 @@
     window.addEventListener('i18nReady', () => {
       log(t("enhancer.logLoaded"));
     });
-    log("Prompt Enhancer loaded. Paste a prompt to get started.");
+  log("Prompt Enhancer loaded. Paste a prompt to get started.");
   }
 })();

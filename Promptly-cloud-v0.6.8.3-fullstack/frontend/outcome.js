@@ -170,6 +170,6 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
     window.addEventListener('i18nReady', () => {
       log(t("outcome.logLoaded") || "Outcome-first Runner loaded. Define your task and click run.");
     });
-    log("Outcome-first Runner loaded. Define your task and click run.");
+  log("Outcome-first Runner loaded. Define your task and click run.");
   }
 })();

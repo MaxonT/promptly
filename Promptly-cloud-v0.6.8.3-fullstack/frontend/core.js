@@ -481,15 +481,22 @@
     
     // Check if canvas elements exist
     if (!line || !bar || !pie || !gauge) {
+      console.log('[renderCharts] Canvas elements not found yet');
       return; // Canvas elements not ready yet
     }
     
     // Check if canvas has dimensions (not rendered yet)
     if (line.clientWidth === 0 || line.clientHeight === 0) {
       // Canvas not sized yet, retry after a short delay
+      console.log('[renderCharts] Canvas not sized yet, retrying...', {
+        width: line.clientWidth,
+        height: line.clientHeight
+      });
       setTimeout(() => renderCharts(metrics), 100);
       return;
     }
+
+    console.log('[renderCharts] Rendering charts with metrics:', metrics);
 
     // Provide default demo data if no metrics available
     const hasData = Object.keys(metrics).length > 0 || Object.keys(lastMetrics).length > 0;

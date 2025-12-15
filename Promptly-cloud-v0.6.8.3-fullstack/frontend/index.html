@@ -1030,48 +1030,9 @@ temperature: 0.5</textarea>
     ko:{ 'accuracy':'정확도','f1':'F1','pass_rate':'통과율','token_cost':'토큰 비용','progress':'진행률 %','user_guide':'사용자 가이드','language':'언어'}
   };
 
-  function applyLang(lang){
-    const dict = i18n[lang] || i18n.en;
-    document.querySelectorAll('[data-i18n-key]').forEach(el=>{
-      const key = el.getAttribute('data-i18n-key');
-      if(dict[key]){
-        el.textContent = dict[key];
-      }
-    });
-    document.documentElement.setAttribute('lang', lang);
-  }
 
-  function hookLanguageSelector(){
-    const selects = Array.from(document.querySelectorAll('#language, #lang, select[name="language"], select#langSelect, select[data-role="language"]'));
-    if(!selects.length){
-      // build a simple selector if not present
-      const header = document.querySelector('header') || document.body;
-      const wrapper = document.createElement('div');
-      wrapper.style.position='fixed'; wrapper.style.top='12px'; wrapper.style.right='12px'; wrapper.style.zIndex=1000;
-      wrapper.innerHTML = '<select id="langSelectPatched" style="padding:.4rem .6rem;border-radius:8px;outline:none;">'
-        +'<option value="en">English</option>'
-        +'<option value="zh">中文</option>'
-        +'<option value="es">Español</option>'
-        +'<option value="fr">Français</option>'
-        +'<option value="hi">हिन्दी</option>'
-        +'<option value="ar">العربية</option>'
-        +'<option value="pt">Português</option>'
-        +'<option value="ja">日本語</option>'
-        +'<option value="ko">한국어</option>'
-        +'</select>';
-      header.appendChild(wrapper);
-      const sel = wrapper.querySelector('select');
-      sel.addEventListener('change', e=>applyLang(e.target.value));
-      applyLang('en');
-    }else{
-      selects.forEach(sel=>{
-        sel.addEventListener('change', e=>applyLang(e.target.value));
-      });
-      // initialize to current value or 'en'
-      const cur = selects[0].value || 'en';
-      applyLang(cur);
-    }
-  }
+
+  // Modern i18next system is used instead - see i18n/index.js
 
   function ensureUserGuide(){
     if(document.querySelector('#user-guide')) return;
@@ -1108,7 +1069,7 @@ temperature: 0.5</textarea>
     try{ wrapMetricTitlesAndValues(); }catch(e){}
     try{ patchFooter(); }catch(e){}
     try{ ensureUserGuide(); }catch(e){}
-    try{ hookLanguageSelector(); }catch(e){}
+
   }
 
   if(document.readyState === 'loading'){

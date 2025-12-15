@@ -79,6 +79,17 @@
   color:transparent;
   font-weight:800;
 }
+html[data-theme="light"] .kpi-card h1, 
+html[data-theme="light"] .kpi-card h2, 
+html[data-theme="light"] .kpi-card .value, 
+html[data-theme="light"] .card .value, 
+html[data-theme="light"] .stat h2, 
+html[data-theme="light"] .stat .value {
+  background: none;
+  -webkit-background-clip: border-box;
+  background-clip: border-box;
+  color: #111827; /* gray-900 */
+}
 
 /* === TigerFix1: UI Hotfixes === */
 /* Prevent 'Last updated' badge from covering text; make it lighter and non-interactive */

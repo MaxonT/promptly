@@ -76,20 +76,30 @@ class I18nManager {
 
   initLangSelect() {
     const select = document.getElementById('langSelect');
-    if (!select) return;
+    if (!select) {
+      console.warn('[i18n] #langSelect not found in DOM');
+      return;
+    }
 
-    select.innerHTML = i18nConfig.supportedLocales
+    // Force clear and rebuild to ensure no stale state
+    select.innerHTML = '';
+    const options = i18nConfig.supportedLocales
       .map(code => `<option value="${code}">${i18nConfig.localeLabels[code] || code}</option>`)
       .join('');
+    select.innerHTML = options;
     
     // Handle locale matching (e.g. en-US -> en)
     const currentLang = (this.instance && this.instance.language) ? this.instance.language : i18nConfig.defaultLocale;
+    
+    // Set value explicitly
     if (i18nConfig.supportedLocales.includes(currentLang)) {
       select.value = currentLang;
     } else {
       const shortLang = currentLang.split('-')[0];
       if (i18nConfig.supportedLocales.includes(shortLang)) {
         select.value = shortLang;
+      } else {
+        select.value = i18nConfig.defaultLocale;
       }
     }
     
@@ -98,10 +108,24 @@ class I18nManager {
         console.log('[i18n] Language change requested:', e.target.value);
         this.changeLanguage(e.target.value);
     };
+    
+    console.log('[i18n] Language selector initialized with:', select.value);
   }
 
   async changeLanguage(locale) {
-    if (!i18nConfig.supportedLocales.includes(locale)) return;
+    if (!i18nConfig.supportedLocales.includes(locale)) {
+      console.warn(`[i18n] Unsupported locale: ${locale}`);
+      return;
+    }
+
+    // Safety check: if initialization failed, we can't change language
+    if (!this.instance) {
+      console.error('[i18n] Cannot change language: i18next instance not initialized');
+      // Attempt to re-initialize? Or just reload page?
+      // For now, just alert user so they know it's broken
+      alert("Language system not initialized. Please refresh the page.");
+      return;
+    }
 
     // Load if missing
     if (!this.loadedLocales.has(locale)) {

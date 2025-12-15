@@ -70,7 +70,7 @@
     "outcomeRunner": "结果运行器",
     "outcomeRunnerDesc": "选择",
     "description": "我们在展示此提示词之前运行规格 → 问题 → LLM 代理 → 指标 → 结果运行器。",
-    "instruction": "点击"生成优化后的提示词"查看最适合您目标的最强提示词。",
+    "instruction": "点击“生成优化后的提示词”查看最适合您目标的最强提示词。",
     "bestPromptTitle": "最佳提示词输出",
     "topPick": "最佳选择",
     "statusText": "Promptly 的管道将向您展示如何选择最佳提示词。",
@@ -81,12 +81,7 @@
     "rights": "无追踪；仅在同意后保存偏好。",
     "contact": "支持"
   },
-  "common": {
-    "copied": "已复制！",
-    "stillWorking": "仍然努力中...",
-    "error": "错误",
-    "success": "成功"
-  },
+
   "kpi_accuracy": "准确率",
   "kpi_f1": "F1",
   "kpi_pass": "通过率",
@@ -210,23 +205,7 @@
     "contextPlaceholder": "粘贴您已有的关键段落、要点或约束。",
     "contextHelp": "这有助于 Promptly 理解现有材料，而无需强制您分享。"
   },
-  "pipeline": {
-    "status": "管道工作状态",
-    "selectedVia": "通过 Outcome Runner 选择（最佳 N 评估）",
-    "specBuilder": "规格构建器",
-    "specBuilderDesc": "结构",
-    "questionEngine": "问题引擎",
-    "questionEngineDesc": "清晰度",
-    "llmAgents": "LLM 代理",
-    "llmAgentsDesc": "草稿",
-    "metricsScoring": "指标与评分",
-    "metricsScoringDesc": "评分",
-    "outcomeRunner": "结果运行器",
-    "outcomeRunnerDesc": "选择",
-    "description": "我们在展示此提示词之前运行规格 → 问题 → LLM 代理 → 指标 → 结果运行器。",
-    "instruction": "点击"生成优化后的提示词"查看最适合您目标的最强提示词。",
-    "bestPromptTitle": "最佳提示词输出"
-  },
+
   "whyPromptly": {
     "title": "✨ 为什么 Promptly 胜过普通 AI 模型",
     "subtitle": "我们运行结构化管道——规格构建、问题细化、多代理编排、评分和结果运行器选择——因此您永远不会只是向 LLM 发送单个提示词。",
@@ -292,13 +271,13 @@
     "badge": "第 2 层 · 蓝图同步（高级）",
     "description": "微调指导幕后代理的结构指令和约束。",
     "instructionsLabel": "指令蓝图（可选）",
-    "instructionsPlaceholder": "架构师 → 规划师 → 编辑。提及诸如"清晰度"和"确定性"的检查。",
+    "instructionsPlaceholder": "架构师 → 规划师 → 编辑。提及诸如“清晰度”和“确定性”的检查。",
     "instructionsHelp": "描述代理应如何处理提示词（语气、流程、护栏）。",
     "examplesLabel": "演示示例（可选）",
     "examplesPlaceholder": "POS || 我喜欢这个！ → 摘要：热烈赞扬。",
     "examplesHelp": "分享一个输入/输出对，以便代理了解所需的输出风格。",
     "constraintsLabel": "约束与风格（可选）",
-    "constraintsPlaceholder": ""限制 150 字"，"使用项目符号列表"，"避免俚语。"",
+    "constraintsPlaceholder": "“限制 150 字”，“使用项目符号列表”，“避免俚语。”",
     "constraintsHelp": "列出您关心的格式规则、长度、安全限制或语气。"
   },
   "layer3": {

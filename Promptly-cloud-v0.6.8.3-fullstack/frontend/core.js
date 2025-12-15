@@ -417,9 +417,11 @@
     return null;
   }
   function formatPercent(value) {
+    if (window.i18nManager) return window.i18nManager.formatPercent(value);
     return value == null ? "—" : `${(value * 100).toFixed(1)}%`;
   }
   function formatNumber(value) {
+    if (window.i18nManager) return window.i18nManager.formatNumber(value);
     return value == null ? "—" : new Intl.NumberFormat().format(value);
   }
   function renderMetrics(metrics = {}) {

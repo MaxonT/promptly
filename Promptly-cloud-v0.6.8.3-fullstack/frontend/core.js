@@ -2,12 +2,35 @@
 (function(){
   const THEME_KEY="promptly.theme", LANG_KEY="promptly.lang", CONSENT_KEY="promptly.consent";
   const prefersDark=window.matchMedia("(prefers-color-scheme: dark)");
+  let lastMetrics = {}; // Store metrics for redraws
+  
+  // Helper for theme-aware colors
+  function getThemeColors() {
+    const theme = document.documentElement.getAttribute("data-theme");
+    const isDark = theme === "dark" || (theme !== "light" && prefersDark.matches);
+    
+    return {
+      grid: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.08)',
+      text: isDark ? 'rgba(255, 255, 255, 0.5)' : 'rgba(71, 85, 105, 0.7)',
+      textStrong: isDark ? 'rgba(255, 255, 255, 0.9)' : 'rgba(15, 23, 42, 0.9)',
+      bg: isDark ? '#0B0F1A' : '#FFFFFF',
+      shadow: isDark ? 'rgba(0, 0, 0, 0.3)' : 'rgba(0, 0, 0, 0.1)',
+      needle: isDark ? '#FFFFFF' : '#1E293B',
+      tick: isDark ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.2)'
+    };
+  }
+
   // Translations removed - now using locales/*.json via i18n.init.js
   const LANG_OPTIONS=[["en","English"],["zh-CN","中文"],["es","Español"],["fr","Français"],["ja","日本語"],["ko","한국어"],["ar","العربية"],["pt","Português"],["hi","हिन्दी"]];
   const API_BASE=(window.PROMPTLY_API_BASE&&window.PROMPTLY_API_BASE.trim())||(window.location&&window.location.origin&&window.location.origin!="null"?window.location.origin:"http://localhost:8080");
   const WIZARD_SESSION_KEY="promptly.wizard.session";
   function $(s){return document.querySelector(s)} function $all(s){return Array.from(document.querySelectorAll(s))}
-  function applyTheme(theme){document.documentElement.setAttribute("data-theme", theme==="auto"?(prefersDark.matches?"dark":"light"):theme)}
+  
+  function applyTheme(theme){
+    document.documentElement.setAttribute("data-theme", theme==="auto"?(prefersDark.matches?"dark":"light"):theme);
+    // Trigger chart redraw when theme changes
+    requestAnimationFrame(() => renderCharts());
+  }
   // i18nApply removed - now handled by i18n.init.js
   function initHeader(){const langSel=$("#langSelect"); if(langSel && !langSel.dataset.bound){
     // Language selector is now handled by i18n.init.js, but we keep this for backward compatibility
@@ -45,6 +68,7 @@
     const h = c.height = c.clientHeight;
     ctx.clearRect(0, 0, w, h);
     
+    const theme = getThemeColors();
     const pad = 40; // Increased padding for labels
     const padBottom = 50;
     const padLeft = 50;
@@ -55,7 +79,7 @@
     const range = max - min || 1;
     
     // Draw grid lines (horizontal)
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
+    ctx.strokeStyle = theme.grid;
     ctx.lineWidth = 1;
     for (let i = 0; i <= 5; i++) {
       const y = h - padBottom - (i / 5) * (h - pad - padBottom);
@@ -66,7 +90,7 @@
       
       // Y-axis labels
       const value = min + (range * i / 5);
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+      ctx.fillStyle = theme.text;
       ctx.font = '10px Inter, system-ui';
       ctx.textAlign = 'right';
       ctx.fillText(value.toFixed(1), padLeft - 10, y + 4);
@@ -104,7 +128,7 @@
       ctx.beginPath();
       ctx.arc(x, ys[i], 4, 0, Math.PI * 2);
       ctx.fill();
-      ctx.strokeStyle = '#0B0F1A';
+      ctx.strokeStyle = theme.bg === '#FFFFFF' ? '#FFFFFF' : '#0B0F1A';
       ctx.lineWidth = 2;
       ctx.stroke();
     });
@@ -122,13 +146,13 @@
       ctx.fillText(growthText, w - 25, 30);
       
       // Growth label
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+      ctx.fillStyle = theme.text;
       ctx.font = '10px Inter, system-ui';
       ctx.fillText('Growth', w - 25, 45);
     }
     
     // X-axis labels
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+    ctx.fillStyle = theme.text;
     ctx.font = '10px Inter, system-ui';
     ctx.textAlign = 'center';
     xs.forEach((x, i) => {
@@ -142,6 +166,7 @@
     const h = c.height = c.clientHeight;
     ctx.clearRect(0, 0, w, h);
     
+    const theme = getThemeColors();
     const pad = 40;
     const padBottom = 50;
     const padLeft = 50;
@@ -149,7 +174,7 @@
     const bw = (w - padLeft - 20) / series.length * 0.6;
     
     // Draw grid lines (horizontal)
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
+    ctx.strokeStyle = theme.grid;
     ctx.lineWidth = 1;
     for (let i = 0; i <= 5; i++) {
       const y = h - padBottom - (i / 5) * (h - pad - padBottom);
@@ -160,7 +185,7 @@
       
       // Y-axis labels
       const value = (max * i / 5).toFixed(0);
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+      ctx.fillStyle = theme.text;
       ctx.font = '10px Inter, system-ui';
       ctx.textAlign = 'right';
       ctx.fillText(value, padLeft - 10, y + 4);
@@ -193,7 +218,7 @@
       ctx.fillText(v.toFixed(1), x + bw / 2, h - padBottom - bh - 8);
       
       // X-axis labels
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+      ctx.fillStyle = theme.text;
       ctx.font = '10px Inter, system-ui';
       ctx.fillText(`Change ${i + 1}`, x + bw / 2, h - padBottom + 20);
     });
@@ -202,7 +227,7 @@
     ctx.save();
     ctx.translate(15, h / 2);
     ctx.rotate(-Math.PI / 2);
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+    ctx.fillStyle = theme.text;
     ctx.font = '11px Inter, system-ui';
     ctx.textAlign = 'center';
     ctx.fillText('Impact Score', 0, 0);
@@ -215,6 +240,7 @@
     const h = c.height = c.clientHeight;
     ctx.clearRect(0, 0, w, h);
     
+    const theme = getThemeColors();
     const r = Math.min(w, h) / 2 - 40;
     const innerR = r * 0.6; // Donut hole
     const cx = w / 2;
@@ -241,7 +267,7 @@
       ctx.fill();
       
       // Add subtle shadow
-      ctx.strokeStyle = 'rgba(0, 0, 0, 0.3)';
+      ctx.strokeStyle = theme.shadow;
       ctx.lineWidth = 1;
       ctx.stroke();
       
@@ -264,18 +290,18 @@
     // Draw center circle (donut hole)
     ctx.beginPath();
     ctx.arc(cx, cy, innerR, 0, Math.PI * 2);
-    ctx.fillStyle = '#0B0F1A';
+    ctx.fillStyle = theme.bg;
     ctx.fill();
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+    ctx.strokeStyle = theme.grid;
     ctx.lineWidth = 2;
     ctx.stroke();
     
     // Center text - total
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+    ctx.fillStyle = theme.textStrong;
     ctx.font = 'bold 20px Inter, system-ui';
     ctx.textAlign = 'center';
     ctx.fillText(`${sum}`, cx, cy - 8);
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+    ctx.fillStyle = theme.text;
     ctx.font = '11px Inter, system-ui';
     ctx.fillText('Total', cx, cy + 10);
     
@@ -290,11 +316,11 @@
       // Color box
       ctx.fillStyle = colorValues[i];
       ctx.fillRect(x, legendY - 8, 12, 12);
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+      ctx.strokeStyle = theme.tick;
       ctx.strokeRect(x, legendY - 8, 12, 12);
       
       // Label text
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+      ctx.fillStyle = theme.text;
       ctx.font = '11px Inter, system-ui';
       ctx.textAlign = 'left';
       ctx.fillText(`${label}: ${vals[i]}`, x + 18, legendY);
@@ -307,6 +333,7 @@
     const h = c.height = c.clientHeight;
     ctx.clearRect(0, 0, w, h);
     
+    const theme = getThemeColors();
     const cx = w / 2;
     const cy = h * 0.75;
     const r = Math.min(w, h) * 0.35;
@@ -317,7 +344,7 @@
     
     // Draw background arc
     ctx.lineWidth = lineWidth;
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
+    ctx.strokeStyle = theme.grid;
     ctx.lineCap = 'round';
     ctx.beginPath();
     ctx.arc(cx, cy, r, start, end);
@@ -354,7 +381,7 @@
     ctx.shadowBlur = 0;
     
     // Draw tick marks
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+    ctx.strokeStyle = theme.tick;
     ctx.lineWidth = 2;
     for (let i = 0; i <= 10; i++) {
       const angle = start + (end - start) * (i / 10);
@@ -372,7 +399,7 @@
       if (i === 0 || i === 5 || i === 10) {
         const labelX = cx + Math.cos(angle) * (r - lineWidth / 2 - 25);
         const labelY = cy + Math.sin(angle) * (r - lineWidth / 2 - 25);
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+        ctx.fillStyle = theme.text;
         ctx.font = '10px Inter, system-ui';
         ctx.textAlign = 'center';
         ctx.fillText(`${i * 10}%`, labelX, labelY);
@@ -382,7 +409,7 @@
     // Draw needle
     const needleAngle = start + (end - start) * progress;
     const needleLength = r - lineWidth / 2 - 15;
-    ctx.strokeStyle = '#FFFFFF';
+    ctx.strokeStyle = theme.needle;
     ctx.lineWidth = 3;
     ctx.beginPath();
     ctx.moveTo(cx, cy);
@@ -395,9 +422,9 @@
     // Center dot
     ctx.beginPath();
     ctx.arc(cx, cy, 6, 0, Math.PI * 2);
-    ctx.fillStyle = '#FFFFFF';
+    ctx.fillStyle = theme.needle;
     ctx.fill();
-    ctx.strokeStyle = '#0B0F1A';
+    ctx.strokeStyle = theme.bg === '#FFFFFF' ? '#FFFFFF' : '#0B0F1A';
     ctx.lineWidth = 2;
     ctx.stroke();
     
@@ -409,7 +436,7 @@
     
     // Status label
     const status = progress >= 0.75 ? 'Excellent' : progress >= 0.5 ? 'Good' : progress >= 0.25 ? 'Fair' : 'Poor';
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+    ctx.fillStyle = theme.text;
     ctx.font = '12px Inter, system-ui';
     ctx.fillText(status, cx, cy + r + 55);
   }
@@ -440,6 +467,13 @@
     renderCharts(metrics);
   }
   function renderCharts(metrics = {}) {
+    // Update lastMetrics if new data provided, otherwise use cached
+    if (Object.keys(metrics).length > 0) {
+      lastMetrics = metrics;
+    } else {
+      metrics = lastMetrics;
+    }
+
     const progress = Math.max(0, Math.min(1, (metrics.progress_pct ?? metrics.progressPct ?? 0) / 100));
     const line = document.getElementById("lineGrowth");
     const bar = document.getElementById("barContrib");

@@ -49,17 +49,31 @@ class I18nManager {
       window.i18n = this.instance;
       window.i18nManager = this;
       
-      // Initialize UI
-      this.initUI();
-      
       // Global event listeners
       this.instance.on('languageChanged', () => {
         this.translatePage();
         this.updateRTL();
       });
 
+      console.log('[i18n] Initialization successful, language:', this.instance.language);
+
     } catch (e) {
       console.error('[i18n] Initialization failed', e);
+      // Initialize with minimal config to allow UI to work
+      try {
+        await this.instance.init({
+          lng: detectedLang,
+          fallbackLng: i18nConfig.fallbackLocale,
+          resources: {},
+          debug: false,
+          interpolation: { escapeValue: false }
+        });
+        window.i18n = this.instance;
+        window.i18nManager = this;
+        console.log('[i18n] Fallback initialization successful');
+      } catch (fallbackError) {
+        console.error('[i18n] Fallback initialization also failed', fallbackError);
+      }
     } finally {
       // Initialize UI regardless of translation loading status
       // This ensures the language dropdown is populated even if network fails
@@ -80,6 +94,8 @@ class I18nManager {
       console.warn('[i18n] #langSelect not found in DOM');
       return;
     }
+
+    console.log('[i18n] Initializing language selector...');
 
     // Force clear and rebuild to ensure no stale state
     select.innerHTML = '';
@@ -103,16 +119,27 @@ class I18nManager {
       }
     }
     
+    console.log('[i18n] Language selector current value:', select.value);
+    console.log('[i18n] Language selector has', select.options.length, 'options');
+    console.log('[i18n] i18next instance exists:', !!this.instance);
+    
     // Use onchange for direct binding and to avoid listener accumulation
     select.onchange = (e) => {
-        console.log('[i18n] Language change requested:', e.target.value);
+        console.log('[i18n] Language dropdown changed! New value:', e.target.value);
         this.changeLanguage(e.target.value);
     };
     
-    console.log('[i18n] Language selector initialized with:', select.value);
+    // Also add a click listener to verify the element is clickable
+    select.onclick = () => {
+      console.log('[i18n] Language dropdown clicked!');
+    };
+    
+    console.log('[i18n] Language selector initialized successfully');
   }
 
   async changeLanguage(locale) {
+    console.log(`[i18n] changeLanguage called with locale: ${locale}`);
+    
     if (!i18nConfig.supportedLocales.includes(locale)) {
       console.warn(`[i18n] Unsupported locale: ${locale}`);
       return;
@@ -121,26 +148,43 @@ class I18nManager {
     // Safety check: if initialization failed, we can't change language
     if (!this.instance) {
       console.error('[i18n] Cannot change language: i18next instance not initialized');
-      // Attempt to re-initialize? Or just reload page?
-      // For now, just alert user so they know it's broken
-      alert("Language system not initialized. Please refresh the page.");
-      return;
+      console.error('[i18n] Attempting to re-initialize...');
+      
+      // Attempt to re-initialize
+      try {
+        await this.init();
+        if (!this.instance) {
+          alert("语言系统未初始化。请刷新页面。\nLanguage system not initialized. Please refresh the page.");
+          return;
+        }
+      } catch (e) {
+        console.error('[i18n] Re-initialization failed', e);
+        alert("语言系统初始化失败。请刷新页面。\nLanguage system failed to initialize. Please refresh the page.");
+        return;
+      }
     }
+
+    console.log(`[i18n] Changing language to: ${locale}`);
 
     // Load if missing
     if (!this.loadedLocales.has(locale)) {
+      console.log(`[i18n] Loading translations for ${locale}...`);
       try {
         const data = await this.loader.load(locale);
         this.instance.addResourceBundle(locale, 'translation', data, true, true);
         this.loadedLocales.add(locale);
+        console.log(`[i18n] Successfully loaded translations for ${locale}`);
       } catch (e) {
-        console.error(`[i18n] Failed to switch to ${locale}`, e);
-        return;
+        console.error(`[i18n] Failed to load translations for ${locale}`, e);
+        // Continue anyway - will use fallback language
+        console.warn(`[i18n] Continuing with fallback language`);
       }
     }
 
     await this.instance.changeLanguage(locale);
     localStorage.setItem('locale', locale);
+    
+    console.log(`[i18n] Language changed successfully to: ${locale}`);
     
     // Update select if changed programmatically
     const select = document.getElementById('langSelect');

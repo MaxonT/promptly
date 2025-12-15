@@ -660,8 +660,7 @@
     const themeSel = document.getElementById("themeSelect");
     // Language selector is now handled by i18n.init.js
     // Keep theme selector logic
-      });
-    }
+
     if (themeSel) {
       const saved = localStorage.getItem(THEME_KEY) || "auto";
       themeSel.value = saved;

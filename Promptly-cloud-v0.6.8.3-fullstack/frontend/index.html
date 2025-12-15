@@ -383,7 +383,7 @@ html[data-theme="light"] .grey-gradient-text{
 
   <main class="container launch-shell">
     <div class="hero">
-      <div class="hero-eyebrow">Promptly · Workflow Modes</div>
+      <div class="hero-eyebrow" data-i18n="hero.eyebrow">Promptly · Workflow Modes</div>
       <div>
         <div class="title gradient-text hero-title" data-i18n="hero.title">Promptly — Prompt Optimizer <span class="title-pill">Studio</span></div>
         <div class="subtitle hero-subtitle" data-i18n="hero.subtitle">Visualization-first workflow. See every gain, every cost, every version.</div>
@@ -395,15 +395,15 @@ html[data-theme="light"] .grey-gradient-text{
 
     <section class="mode-selector" aria-labelledby="modeSelectorTitle">
       <div class="mode-selector__header">
-        <h2 id="modeSelectorTitle">How would you like to start?</h2>
-        <p id="modeSelectorHint" class="mode-selector__hint">Pick a workflow mode. Switch anytime.</p>
+        <h2 id="modeSelectorTitle" data-i18n="mode.header">How would you like to start?</h2>
+        <p id="modeSelectorHint" class="mode-selector__hint" data-i18n="mode.hint">Pick a workflow mode. Switch anytime.</p>
       </div>
       <div class="mode-selector__options" role="radiogroup" aria-describedby="modeSelectorHint">
         <div class="mode-card is-selected" role="radio" aria-checked="true" aria-describedby="modeQuickDesc" tabindex="0" data-mode="quick">
           <div class="mode-card__icon">⚡</div>
           <div class="mode-card__body">
-            <h3 class="mode-card__title">Quick Start</h3>
-            <p id="modeQuickDesc" class="mode-card__desc">Describe your goal and generate an optimized prompt instantly</p>
+            <h3 class="mode-card__title" data-i18n="mode.quickStartLabel">Quick Start</h3>
+            <p id="modeQuickDesc" class="mode-card__desc" data-i18n="mode.quickStartDesc">Describe your goal and generate an optimized prompt instantly</p>
           </div>
           <div class="mode-card__check" aria-hidden="true">✔</div>
         </div>
@@ -411,8 +411,8 @@ html[data-theme="light"] .grey-gradient-text{
         <div class="mode-card" role="radio" aria-checked="false" aria-describedby="modeWizardDesc" tabindex="-1" data-mode="wizard">
           <div class="mode-card__icon">🧙‍♂️</div>
           <div class="mode-card__body">
-            <h3 class="mode-card__title">Wizard</h3>
-            <p id="modeWizardDesc" class="mode-card__desc">Guided step-by-step flow to refine your project idea</p>
+            <h3 class="mode-card__title" data-i18n="mode.wizardLabel">Wizard</h3>
+            <p id="modeWizardDesc" class="mode-card__desc" data-i18n="mode.wizardDesc">Guided step-by-step flow to refine your project idea</p>
           </div>
           <div class="mode-card__check" aria-hidden="true">✔</div>
         </div>
@@ -454,9 +454,9 @@ html[data-theme="light"] .grey-gradient-text{
           </div>
         </div>
         <details class="layer-field">
-          <summary>Context or Source Text (Optional)</summary>
-          <textarea id="examples" rows="4" placeholder="Paste key paragraphs, bullet points, or constraints you already have."></textarea>
-          <small class="help">This helps Promptly understand existing material without forcing you to share it.</small>
+          <summary data-i18n="layer1.contextLabel">Context or Source Text (Optional)</summary>
+          <textarea id="examples" rows="4" data-i18n="layer1.contextPlaceholder" placeholder="Paste key paragraphs, bullet points, or constraints you already have."></textarea>
+          <small class="help" data-i18n="layer1.contextHelp">This helps Promptly understand existing material without forcing you to share it.</small>
         </details>
         <button id="runBtn" class="btn layer-primary-action" data-i18n="run_btn">Generate optimized prompt</button>
       </div>
@@ -464,7 +464,7 @@ html[data-theme="light"] .grey-gradient-text{
         <div class="layer-output-header">
           <div>
             <h3 class="gradient-text" data-i18n="pipeline.status">Pipeline Working Status</h3>
-            <small>Selected via Outcome Runner (best-of-N evaluation)</small>
+            <small data-i18n="pipeline.selectedVia">Selected via Outcome Runner (best-of-N evaluation)</small>
           </div>
         </div>
         <div class="best-prompt-pipeline" id="bestPromptPipeline">
@@ -473,8 +473,8 @@ html[data-theme="light"] .grey-gradient-text{
             <div class="pipeline-node" data-step="spec">
               <span class="node-icon">1</span>
               <div class="node-label">
-                <span class="node-title">Spec Builder</span>
-                <small>Structure</small>
+                <span class="node-title" data-i18n="pipeline.specBuilder">Spec Builder</span>
+                <small data-i18n="pipeline.specBuilderDesc">Structure</small>
               </div>
               <span class="node-check">✓</span>
               <button class="node-expand-btn" aria-label="Expand details">▾</button>
@@ -485,8 +485,8 @@ html[data-theme="light"] .grey-gradient-text{
             <div class="pipeline-node" data-step="question">
               <span class="node-icon">2</span>
               <div class="node-label">
-                <span class="node-title">Question Engine</span>
-                <small>Clarify</small>
+                <span class="node-title" data-i18n="pipeline.questionEngine">Question Engine</span>
+                <small data-i18n="pipeline.questionEngineDesc">Clarify</small>
               </div>
               <span class="node-check">✓</span>
               <button class="node-expand-btn" aria-label="Expand details">▾</button>
@@ -497,8 +497,8 @@ html[data-theme="light"] .grey-gradient-text{
             <div class="pipeline-node" data-step="agents">
               <span class="node-icon">3</span>
               <div class="node-label">
-                <span class="node-title">LLM Agents</span>
-                <small>Draft</small>
+                <span class="node-title" data-i18n="pipeline.llmAgents">LLM Agents</span>
+                <small data-i18n="pipeline.llmAgentsDesc">Draft</small>
               </div>
               <span class="node-check">✓</span>
               <button class="node-expand-btn" aria-label="Expand details">▾</button>
@@ -509,8 +509,8 @@ html[data-theme="light"] .grey-gradient-text{
             <div class="pipeline-node" data-step="metrics">
               <span class="node-icon">4</span>
               <div class="node-label">
-                <span class="node-title">Metrics &amp; Scoring</span>
-                <small>Score</small>
+                <span class="node-title" data-i18n="pipeline.metricsScoring">Metrics &amp; Scoring</span>
+                <small data-i18n="pipeline.metricsScoringDesc">Score</small>
               </div>
               <span class="node-check">✓</span>
               <button class="node-expand-btn" aria-label="Expand details">▾</button>
@@ -521,8 +521,8 @@ html[data-theme="light"] .grey-gradient-text{
             <div class="pipeline-node" data-step="outcome">
               <span class="node-icon">5</span>
               <div class="node-label">
-                <span class="node-title">Outcome Runner</span>
-                <small>Select</small>
+                <span class="node-title" data-i18n="pipeline.outcomeRunner">Outcome Runner</span>
+                <small data-i18n="pipeline.outcomeRunnerDesc">Select</small>
               </div>
               <span class="node-check">✓</span>
               <button class="node-expand-btn" aria-label="Expand details">▾</button>
@@ -597,12 +597,12 @@ html[data-theme="light"] .grey-gradient-text{
                 <span class="race-card" id="outcome-candidate-1">Candidate 1</span>
                 <span class="race-card" id="outcome-candidate-2">Candidate 2</span>
                 <span class="race-card" id="outcome-candidate-3">Candidate 3</span>
-                <span class="race-card best" id="outcome-top-pick">Top Pick</span>
+                <span class="race-card best" id="outcome-top-pick" data-i18n="pipeline.topPick">Top Pick</span>
               </div>
             </div>
           </div>
           <div class="pipeline-status-text" id="pipelineStatusText">Promptly’s pipeline will show you how your best prompt is chosen.</div>
-          <p class="pipeline-hint" id="pipelineHint" style="margin-top:0.5rem;font-size:0.8rem;color:rgba(229,231,235,0.85);text-align:center;opacity:0.9;">If the output looks the same as the input, the backend will automatically try a more aggressive rewrite.</p>
+          <p class="pipeline-hint" id="pipelineHint" style="margin-top:0.5rem;font-size:0.8rem;color:rgba(229,231,235,0.85);text-align:center;opacity:0.9;" data-i18n="pipeline.hint">If the output looks the same as the input, the backend will automatically try a more aggressive rewrite.</p>
         </div>
       </div>
       <div class="layer-default__output best-prompt-output">
@@ -620,7 +620,7 @@ html[data-theme="light"] .grey-gradient-text{
 
     <section class="layer-card">
       <button class="layer-toggle" type="button" data-layer-toggle="advancedPanel" aria-expanded="false">
-        <span class="layer-toggle__label">Layer 2 · <span class="layer-chip">Blueprint sync</span> (Advance)</span>
+        <span class="layer-toggle__label" data-i18n="layer2.badge">Layer 2 · <span class="layer-chip">Blueprint sync</span> (Advance)</span>
         <span class="layer-toggle__chevron">▾</span>
       </button>
       <div id="advancedPanel" class="layer-panel">
@@ -647,26 +647,26 @@ html[data-theme="light"] .grey-gradient-text{
 
     <section class="layer-card layer-expert">
       <button class="layer-toggle" type="button" data-layer-toggle="expertPanel" aria-expanded="false">
-        <span class="layer-toggle__label">Layer 3 · <span class="layer-chip layer-chip--glow">Expert lab</span> (Advance)</span>
+        <span class="layer-toggle__label" data-i18n="layer3.badge">Layer 3 · <span class="layer-chip layer-chip--glow">Expert lab</span> (Advance)</span>
         <span class="layer-toggle__chevron">▾</span>
       </button>
       <div id="expertPanel" class="layer-panel">
-        <p class="layer-note layer-note--accent">Only open this when you want dataset-style control over samples, schema, and optimization knobs.</p>
+        <p class="layer-note layer-note--accent" data-i18n="layer3.description">Only open this when you want dataset-style control over samples, schema, and optimization knobs.</p>
         <div class="layer-panel__grid">
           <details class="layer-field">
-            <summary>POS / NEG dataset snippets (Optional)</summary>
-            <textarea id="posNegDataset" rows="4" placeholder="POS || This highlights the main benefit.&#10;NEG || This is off track.">POS || This highlights the main benefit.
+            <summary data-i18n="layer3.datasetLabel">POS / NEG dataset snippets (Optional)</summary>
+            <textarea id="posNegDataset" rows="4" data-i18n="layer3.datasetPlaceholder" placeholder="POS || This highlights the main benefit.&#10;NEG || This is off track.">POS || This highlights the main benefit.
 NEG || This is off track.</textarea>
             <small class="help">List a few positive/negative examples to bias scoring.</small>
           </details>
           <details class="layer-field">
-            <summary>Schema or output template (Optional)</summary>
-            <textarea id="schemaTemplate" rows="4" placeholder='{ "sections": ["Summary","Action items"], "style": "Polite, structured" }'>{ "sections": ["Summary","Action items"], "style": "Polite, structured" }</textarea>
+            <summary data-i18n="layer3.schemaLabel">Schema or output template (Optional)</summary>
+            <textarea id="schemaTemplate" rows="4" data-i18n="layer3.schemaPlaceholder" placeholder='{ "sections": ["Summary","Action items"], "style": "Polite, structured" }'>{ "sections": ["Summary","Action items"], "style": "Polite, structured" }</textarea>
             <small class="help">Define the structure we should respect in the final prompt.</small>
           </details>
           <details class="layer-field">
-            <summary>Optimization knobs (Optional)</summary>
-            <textarea id="optimizationKnobs" rows="4" placeholder="candidates: 4&#10;tests: [&quot;clarity&quot;,&quot;risk&quot;]&#10;temperature: 0.5">candidates: 4
+            <summary data-i18n="layer3.knobsLabel">Optimization knobs (Optional)</summary>
+            <textarea id="optimizationKnobs" rows="4" data-i18n="layer3.knobsPlaceholder" placeholder="candidates: 4&#10;tests: [&quot;clarity&quot;,&quot;risk&quot;]&#10;temperature: 0.5">candidates: 4
 tests: ["clarity","risk"]
 temperature: 0.5</textarea>
             <small class="help">Control candidate count, evaluation tests, or sampling behavior.</small>
@@ -771,61 +771,61 @@ temperature: 0.5</textarea>
     <!-- Enhanced Algorithm Section - Moved below main features for better UX -->
     <section class="card algorithm-section-enhanced" aria-labelledby="algorithm-title">
       <div class="algorithm-header">
-        <h3 id="algorithm-title" class="algorithm-title gradient-text">✨ Why Promptly beats a plain AI model</h3>
-        <p class="algorithm-subtitle">We run a <span class="highlight-text">structured pipeline</span>—spec building, question refining, <span class="highlight-accent">multi-agent orchestration</span>, scoring, and Outcome Runner selection—so you're never just sending a single prompt to an LLM.</p>
+        <h3 id="algorithm-title" class="algorithm-title gradient-text" data-i18n="whyPromptly.title">✨ Why Promptly beats a plain AI model</h3>
+        <p class="algorithm-subtitle" data-i18n="whyPromptly.subtitle">We run a <span class="highlight-text">structured pipeline</span>—spec building, question refining, <span class="highlight-accent">multi-agent orchestration</span>, scoring, and Outcome Runner selection—so you're never just sending a single prompt to an LLM.</p>
       </div>
       <div class="algorithm-grid-enhanced">
         <div class="algorithm-steps-enhanced">
           <article class="algorithm-step-enhanced" data-pipeline-stage="spec">
             <div class="step-header">
               <span class="step-number-enhanced">1</span>
-              <h4 class="step-title">Spec Builder</h4>
+              <h4 class="step-title" data-i18n="whyPromptly.specBuilderTitle">Spec Builder</h4>
             </div>
-            <p>Turn your <span class="keyword">raw idea</span> into a <span class="highlight-text">structured spec</span> so every requirement is explicit before we touch an LLM.</p>
+            <p data-i18n="whyPromptly.specBuilderDesc">Turn your <span class="keyword">raw idea</span> into a <span class="highlight-text">structured spec</span> so every requirement is explicit before we touch an LLM.</p>
           </article>
           <article class="algorithm-step-enhanced pipeline-stage" data-pipeline-stage="spec">
             <div class="pipeline-indicator"></div>
             <div class="step-header">
               <span class="step-number-enhanced">2</span>
-              <h4 class="step-title">Question Engine</h4>
+              <h4 class="step-title" data-i18n="whyPromptly.questionEngineTitle">Question Engine</h4>
             </div>
-            <p>We ask <span class="highlight-accent">targeted follow-up questions</span> (Q1–Q3 flow) to remove ambiguity and surface context you might forget.</p>
+            <p data-i18n="whyPromptly.questionEngineDesc">We ask <span class="highlight-accent">targeted follow-up questions</span> (Q1–Q3 flow) to remove ambiguity and surface context you might forget.</p>
           </article>
           <article class="algorithm-step-enhanced">
             <div class="step-header">
               <span class="step-number-enhanced">3</span>
-              <h4 class="step-title">LLM Agents</h4>
+              <h4 class="step-title" data-i18n="whyPromptly.llmAgentsTitle">LLM Agents</h4>
             </div>
-            <p><span class="keyword">Specialized agents</span> (Architect, Editor, Judge, etc.) craft <span class="highlight-text">multiple candidate prompts</span> instead of relying on a single response.</p>
+            <p data-i18n="whyPromptly.llmAgentsDesc"><span class="keyword">Specialized agents</span> (Architect, Editor, Judge, etc.) craft <span class="highlight-text">multiple candidate prompts</span> instead of relying on a single response.</p>
           </article>
           <article class="algorithm-step-enhanced">
             <div class="step-header">
               <span class="step-number-enhanced">4</span>
-              <h4 class="step-title">Metrics & Scoring</h4>
+              <h4 class="step-title" data-i18n="whyPromptly.metricsTitle">Metrics & Scoring</h4>
             </div>
-            <p>Every candidate is scored on <span class="highlight-accent">clarity, coherence, style match</span>, safety, token cost, and risk to <span class="keyword">quantify quality</span>.</p>
+            <p data-i18n="whyPromptly.metricsDesc">Every candidate is scored on <span class="highlight-accent">clarity, coherence, style match</span>, safety, token cost, and risk to <span class="keyword">quantify quality</span>.</p>
           </article>
           <article class="algorithm-step-enhanced">
             <div class="step-header">
               <span class="step-number-enhanced">5</span>
-              <h4 class="step-title">Outcome Runner</h4>
+              <h4 class="step-title" data-i18n="whyPromptly.outcomeTitle">Outcome Runner</h4>
             </div>
-            <p>The <span class="highlight-text">Outcome-First runner</span> applies your success criteria, compares <span class="keyword">best-of-N candidates</span>, and returns the most reliable result.</p>
+            <p data-i18n="whyPromptly.outcomeDesc">The <span class="highlight-text">Outcome-First runner</span> applies your success criteria, compares <span class="keyword">best-of-N candidates</span>, and returns the most reliable result.</p>
           </article>
         </div>
         <div class="algorithm-spec-enhanced">
-          <h4 class="spec-title">🔧 Algorithm Specs</h4>
+          <h4 class="spec-title" data-i18n="whyPromptly.algorithmSpecsTitle">🔧 Algorithm Specs</h4>
           <ul class="spec-list">
-            <li><span class="spec-key">Structured spec</span> – <span class="spec-desc">JSON-ready blueprint guides every subsequent stage.</span></li>
-            <li><span class="spec-key">Clarifying questions</span> – <span class="spec-desc">Removes guesswork before generating prompts.</span></li>
-            <li><span class="spec-key">Multi-agent orchestration</span> – <span class="spec-desc">Different agents collaborate on architecture, editing, and judgment.</span></li>
-            <li><span class="spec-key">Best-of-N selection</span> – <span class="spec-desc">We compare candidates rather than returning the first hit.</span></li>
-            <li><span class="spec-key">Metric panel</span> – <span class="spec-desc">Coherence, style, pass rate, token efficiency, and risk scores feed into the payoff.</span></li>
-            <li><span class="spec-key">Outcome Runner</span> – <span class="spec-desc">Picks the winner according to your defined tests/criteria.</span></li>
+            <li><span class="spec-key" data-i18n="whyPromptly.specStructured">Structured spec</span> – <span class="spec-desc" data-i18n="whyPromptly.specStructuredDesc">JSON-ready blueprint guides every subsequent stage.</span></li>
+            <li><span class="spec-key" data-i18n="whyPromptly.specQuestions">Clarifying questions</span> – <span class="spec-desc" data-i18n="whyPromptly.specQuestionsDesc">Removes guesswork before generating prompts.</span></li>
+            <li><span class="spec-key" data-i18n="whyPromptly.specOrchestration">Multi-agent orchestration</span> – <span class="spec-desc" data-i18n="whyPromptly.specOrchestrationDesc">Different agents collaborate on architecture, editing, and judgment.</span></li>
+            <li><span class="spec-key" data-i18n="whyPromptly.specSelection">Best-of-N selection</span> – <span class="spec-desc" data-i18n="whyPromptly.specSelectionDesc">We compare candidates rather than returning the first hit.</span></li>
+            <li><span class="spec-key" data-i18n="whyPromptly.specMetrics">Metric panel</span> – <span class="spec-desc" data-i18n="whyPromptly.specMetricsDesc">Coherence, style, pass rate, token efficiency, and risk scores feed into the payoff.</span></li>
+            <li><span class="spec-key" data-i18n="whyPromptly.specOutcome">Outcome Runner</span> – <span class="spec-desc" data-i18n="whyPromptly.specOutcomeDesc">Picks the winner according to your defined tests/criteria.</span></li>
           </ul>
         </div>
       </div>
-      <p class="algorithm-callout-enhanced">
+      <p class="algorithm-callout-enhanced" data-i18n="whyPromptly.callout">
         🚀 Every enhancement passes through the <span class="pipeline-step">Spec</span> → <span class="pipeline-step">Question</span> → <span class="pipeline-step">Agent</span> → <span class="pipeline-step">Outcome</span> pipeline so the result you copy is the <span class="highlight-text">top-ranked candidate</span> after multi-metric scoring.
       </p>
     </section>
@@ -944,7 +944,17 @@ temperature: 0.5</textarea>
         t.labels.forEach(label => {
           if(txt === label){
             node.classList.add('metric-title','gradient-animated-subtle');
-            node.setAttribute('data-i18n-key', t.key);
+            // Use new i18n system - map to nested keys
+            const keyMap = {
+              'accuracy': 'kpi_accuracy',
+              'f1': 'kpi_f1',
+              'pass_rate': 'kpi_pass',
+              'token_cost': 'kpi_cost',
+              'progress': 'kpi_prog'
+            };
+            const newKey = keyMap[t.key] || t.key;
+            node.setAttribute('data-i18n', newKey);
+            node.setAttribute('data-i18n-key', t.key); // Keep for backward compatibility
             // find a sibling/child numeric value to style
             let valueEl = null;
             // Search next siblings first
@@ -1052,25 +1062,25 @@ temperature: 0.5</textarea>
     section.style.margin='48px auto';
     section.style.maxWidth='960px';
     section.innerHTML = `
-      <h2 class="gradient-animated" data-i18n-key="user_guide" style="font-size:1.6rem;margin-bottom:12px;">User Guide</h2>
+      <h2 class="gradient-animated" data-i18n="userGuide.title" style="font-size:1.6rem;margin-bottom:12px;">User Guide</h2>
       <ol style="line-height:1.7;margin-left:18px;margin-bottom:16px;">
-        <li><strong>Write your task</strong>: define <em>Instruction</em> + <em>Constraints</em> + <em>Expected style</em>.</li>
-        <li><strong>Add test cases</strong>: for each input, provide <em>ideal output</em>.</li>
-        <li><strong>Run</strong>: the system auto-searches, tests, and tunes prompts.</li>
-        <li><strong>Review KPIs</strong>: Accuracy / F1 / Pass Rate / Token Cost / Progress% update after each run.</li>
+        <li data-i18n="userGuide.step1"><strong>Write your task</strong>: define <em>Instruction</em> + <em>Constraints</em> + <em>Expected style</em>.</li>
+        <li data-i18n="userGuide.step2"><strong>Add test cases</strong>: for each input, provide <em>ideal output</em>.</li>
+        <li data-i18n="userGuide.step3"><strong>Run</strong>: the system auto-searches, tests, and tunes prompts.</li>
+        <li data-i18n="userGuide.step4"><strong>Review KPIs</strong>: Accuracy / F1 / Pass Rate / Token Cost / Progress% update after each run.</li>
       </ol>
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px;">
-        <div><img src="assets/placeholder_line.png" alt="Accuracy trend" style="width:100%;border-radius:12px;box-shadow:0 4px 24px rgba(0,0,0,.25)"><p style="opacity:.7;margin-top:6px">Accuracy Trend</p></div>
-        <div><img src="assets/placeholder_pie.png" alt="Error breakdown" style="width:100%;border-radius:12px;box-shadow:0 4px 24px rgba(0,0,0,.25)"><p style="opacity:.7;margin-top:6px">Error Breakdown</p></div>
-        <div><img src="assets/placeholder_gauge.png" alt="Progress gauge" style="width:100%;border-radius:12px;box-shadow:0 4px 24px rgba(0,0,0,.25)"><p style="opacity:.7;margin-top:6px">Progress Gauge</p></div>
+        <div><img src="assets/placeholder_line.png" alt="Accuracy trend" style="width:100%;border-radius:12px;box-shadow:0 4px 24px rgba(0,0,0,.25)"><p style="opacity:.7;margin-top:6px" data-i18n="userGuide.accuracyTrend">Accuracy Trend</p></div>
+        <div><img src="assets/placeholder_pie.png" alt="Error breakdown" style="width:100%;border-radius:12px;box-shadow:0 4px 24px rgba(0,0,0,.25)"><p style="opacity:.7;margin-top:6px" data-i18n="userGuide.errorBreakdown">Error Breakdown</p></div>
+        <div><img src="assets/placeholder_gauge.png" alt="Progress gauge" style="width:100%;border-radius:12px;box-shadow:0 4px 24px rgba(0,0,0,.25)"><p style="opacity:.7;margin-top:6px" data-i18n="userGuide.progressGauge">Progress Gauge</p></div>
       </div>
-      <h3 style="margin-top:16px" class="gradient-animated">Glossary</h3>
+      <h3 style="margin-top:16px" class="gradient-animated" data-i18n="glossary.title">Glossary</h3>
 <ul class="glossary-list glossy">
-        <li><span class="glossary-term" data-i18n-key="accuracy">Accuracy</span><span class="glossary-def">Correct outputs / total cases.</span></li>
-        <li><span class="glossary-term" data-i18n-key="f1">F1</span><span class="glossary-def">2 × precision × recall ÷ (precision + recall).</span></li>
-        <li><span class="glossary-term" data-i18n-key="pass_rate">Pass Rate</span><span class="glossary-def">Passed constraints / total constraints.</span></li>
-        <li><span class="glossary-term" data-i18n-key="token_cost">Token Cost</span><span class="glossary-def">prompt_tokens + completion_tokens.</span></li>
-        <li><span class="glossary-term" data-i18n-key="progress">Progress %</span><span class="glossary-def">average(accuracy/target_accuracy, f1/target_f1, pass_rate/target_pass_rate, ideal_token_cost/token_cost) × 100.</span></li>
+        <li><span class="glossary-term" data-i18n="glossary.accuracy">Accuracy</span><span class="glossary-def" data-i18n="glossary.accuracyDesc">Correct outputs / total cases.</span></li>
+        <li><span class="glossary-term" data-i18n="glossary.f1">F1</span><span class="glossary-def" data-i18n="glossary.f1Desc">2 × precision × recall ÷ (precision + recall).</span></li>
+        <li><span class="glossary-term" data-i18n="glossary.passRate">Pass Rate</span><span class="glossary-def" data-i18n="glossary.passRateDesc">Passed constraints / total constraints.</span></li>
+        <li><span class="glossary-term" data-i18n="glossary.tokenCost">Token Cost</span><span class="glossary-def" data-i18n="glossary.tokenCostDesc">prompt_tokens + completion_tokens.</span></li>
+        <li><span class="glossary-term" data-i18n="glossary.progress">Progress %</span><span class="glossary-def" data-i18n="glossary.progressDesc">average(accuracy/target_accuracy, f1/target_f1, pass_rate/target_pass_rate, ideal_token_cost/token_cost) × 100.</span></li>
 </ul>
     `;
     document.body.appendChild(section);
@@ -1100,7 +1110,8 @@ temperature: 0.5</textarea>
 
   // 1) Mark KPI containers & add sparkline + gradient border already via CSS
   function enhanceKpiCards(){
-    const titleEls = $$('[data-i18n-key="accuracy"],[data-i18n-key="f1"],[data-i18n-key="pass_rate"],[data-i18n-key="token_cost"],[data-i18n-key="progress"]');
+    // Support both old data-i18n-key and new data-i18n
+    const titleEls = $$('[data-i18n-key="accuracy"],[data-i18n-key="f1"],[data-i18n-key="pass_rate"],[data-i18n-key="token_cost"],[data-i18n-key="progress"],[data-i18n="kpi_accuracy"],[data-i18n="kpi_f1"],[data-i18n="kpi_pass"],[data-i18n="kpi_cost"],[data-i18n="kpi_prog"]');
     titleEls.forEach(t => {
       const card = t.closest('.card, .kpi-card, .metric, .stat, .tile, .panel') || t.parentElement;
       if(!card) return;
@@ -1109,7 +1120,8 @@ temperature: 0.5</textarea>
       if(!card.querySelector('.badge-updated')){
         const b = document.createElement('div');
         b.className = 'badge-updated';
-        b.textContent = 'Last updated ' + nowStr();
+        const lastUpdatedText = window.i18n ? window.i18n.t('dynamic.lastUpdated') : 'Last updated';
+        b.textContent = lastUpdatedText + ' ' + nowStr();
         card.appendChild(b);
       }
       // Sparkline area
@@ -1193,7 +1205,8 @@ temperature: 0.5</textarea>
       if(!img.parentElement.querySelector('.badge-updated')){
         const b = document.createElement('div');
         b.className='badge-updated';
-        b.textContent='Last updated ' + nowStr();
+        const lastUpdatedText = window.i18n ? window.i18n.t('dynamic.lastUpdated') : 'Last updated';
+        b.textContent = lastUpdatedText + ' ' + nowStr();
         img.parentElement.appendChild(b);
       }
     });
@@ -1205,12 +1218,12 @@ temperature: 0.5</textarea>
     const wrap = document.createElement('section');
     wrap.id='util-panel'; wrap.className='util-panel';
     wrap.innerHTML = `
-      <h3 class="gradient-animated" style="margin:0 0 8px">Test cases</h3>
-      <div class="help">Start with ready-made demo tests or bring your own set. Advanced JSON import/export stays available but tucked behind the buttons below.</div>
+      <h3 class="gradient-animated" style="margin:0 0 8px" data-i18n="testCases.title">Test cases</h3>
+      <div class="help" data-i18n="testCases.description">Start with ready-made demo tests or bring your own set. Advanced JSON import/export stays available but tucked behind the buttons below.</div>
       <div class="util-buttons">
-        <button class="btn" id="btn-reset">Use demo test cases</button>
-        <button class="btn" id="btn-import">Upload JSON</button>
-        <button class="btn" id="btn-export">Download JSON</button>
+        <button class="btn" id="btn-reset" data-i18n="testCases.useDemo">Use demo test cases</button>
+        <button class="btn" id="btn-import" data-i18n="testCases.uploadJson">Upload JSON</button>
+        <button class="btn" id="btn-export" data-i18n="testCases.downloadJson">Download JSON</button>
         <input type="file" id="file-import" accept="application/json" style="display:none" />
       </div>`;
     document.body.appendChild(wrap);
@@ -1225,13 +1238,20 @@ temperature: 0.5</textarea>
     $('#file-import').addEventListener('change', e=>{
       const f = e.target.files[0]; if(!f) return;
       const reader = new FileReader(); reader.onload = ev=>{
-        try{ JSON.parse(ev.target.result); localStorage.setItem('lbpo_test_cases', ev.target.result); alert('Imported ✓'); }
-        catch{ alert('Invalid JSON'); }
+        try{ JSON.parse(ev.target.result); localStorage.setItem('lbpo_test_cases', ev.target.result); 
+          const msg = window.i18n ? window.i18n.t('alerts.imported') : 'Imported ✓';
+          alert(msg); 
+        }
+        catch{ 
+          const msg = window.i18n ? window.i18n.t('alerts.invalidJson') : 'Invalid JSON';
+          alert(msg); 
+        }
       }; reader.readAsText(f);
     });
     $('#btn-reset').addEventListener('click', ()=>{
       localStorage.setItem('lbpo_test_cases', JSON.stringify(demoCases()));
-      alert('Demo data restored ✓');
+      const msg = window.i18n ? window.i18n.t('alerts.demoRestored') : 'Demo data restored ✓';
+      alert(msg);
     });
   }
 
@@ -1260,7 +1280,10 @@ temperature: 0.5</textarea>
     // Keyboard shortcuts
     document.addEventListener('keydown', (e)=>{
       if(e.key.toLowerCase()==='r'){ simulateRun(); }
-      if(e.key==='?'){ alert('Shortcuts:\\nR: Run Demo\\nG: User Guide\\n/: Search (if available)'); }
+      if(e.key==='?'){ 
+        const msg = window.i18n ? window.i18n.t('alerts.shortcuts') : 'Shortcuts:\nR: Run Demo\nG: User Guide\n/: Search (if available)';
+        alert(msg); 
+      }
       if(e.key.toLowerCase()==='g'){ const u=$('#user-guide'); if(u) u.scrollIntoView({behavior:'smooth'}); }
     });
   }
@@ -1293,8 +1316,8 @@ temperature: 0.5</textarea>
   function buildStatePanel(){
     const container = document.createElement('div'); container.className='state-banner';
     container.innerHTML = `
-       <div class="state-empty"><strong>Empty state:</strong> No test cases yet. <button class="btn" id="cta-import">Import</button> or <button class="btn" id="cta-reset">Use Demo</button></div>
-       <div class="state-error"><strong>Connection failed.</strong> Check your network connection and try again. If the problem persists, verify your API key in Settings. <button class="btn" id="cta-retry">Retry</button></div>
+       <div class="state-empty"><strong data-i18n="testCases.emptyState">Empty state:</strong> No test cases yet. <button class="btn" id="cta-import" data-i18n="testCases.import">Import</button> or <button class="btn" id="cta-reset" data-i18n="testCases.useDemoBtn">Use Demo</button></div>
+       <div class="state-error"><strong data-i18n="common.connectionFailed">Connection failed.</strong> <span data-i18n="common.connectionFailedDesc">Check your network connection and try again. If the problem persists, verify your API key in Settings.</span> <button class="btn" id="cta-retry" data-i18n="common.retry">Retry</button></div>
        <div class="state-skeleton"><div class="row"></div><div class="row"></div><div class="row"></div></div>
        <div class="util-buttons"><button class="btn" id="toggle-empty">Show Empty</button><button class="btn" id="toggle-error">Show Error</button><button class="btn" id="toggle-skeleton">Show Skeleton</button><span class="help">Click toggles again to hide.</span></div>
     `;
@@ -2292,7 +2315,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // Update Top Pick card
     const topPickCard = document.getElementById('outcome-top-pick');
     if (topPickCard && topPickIndex !== null) {
-      topPickCard.textContent = `Top Pick: #${topPickIndex + 1}`;
+      const topPickText = window.i18n ? window.i18n.t('dynamic.topPickFormat', { index: topPickIndex + 1 }) : `Top Pick: #${topPickIndex + 1}`;
+      topPickCard.textContent = topPickText;
       topPickCard.style.display = 'inline-block';
     }
   }

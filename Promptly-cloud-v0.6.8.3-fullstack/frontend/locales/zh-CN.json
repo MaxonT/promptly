@@ -21,7 +21,8 @@
   },
   "hero": {
     "title": "Promptly — 提示优化工作室",
-    "subtitle": "以可视化为先的工作流程，看到每一次收益、每一笔成本、每一个版本。"
+    "subtitle": "以可视化为先的工作流程，看到每一次收益、每一笔成本、每一个版本。",
+    "eyebrow": "Promptly · 工作流模式"
   },
   "mode": {
     "header": "你想如何开始？",
@@ -56,7 +57,24 @@
     "share": "分享"
   },
   "pipeline": {
-    "status": "管道工作状态"
+    "status": "管道工作状态",
+    "selectedVia": "通过 Outcome Runner 选择（最佳 N 评估）",
+    "specBuilder": "规格构建器",
+    "specBuilderDesc": "结构",
+    "questionEngine": "问题引擎",
+    "questionEngineDesc": "清晰度",
+    "llmAgents": "LLM 代理",
+    "llmAgentsDesc": "草稿",
+    "metricsScoring": "指标与评分",
+    "metricsScoringDesc": "评分",
+    "outcomeRunner": "结果运行器",
+    "outcomeRunnerDesc": "选择",
+    "description": "我们在展示此提示词之前运行规格 → 问题 → LLM 代理 → 指标 → 结果运行器。",
+    "instruction": "点击"生成优化后的提示词"查看最适合您目标的最强提示词。",
+    "bestPromptTitle": "最佳提示词输出",
+    "topPick": "最佳选择",
+    "statusText": "Promptly 的管道将向您展示如何选择最佳提示词。",
+    "hint": "如果输出看起来与输入相同，后端将自动尝试更激进的重写。"
   },
   "run_btn": "生成优化后的提示",
   "footer": {
@@ -172,6 +190,138 @@
   },
   "common": {
     "consent_text": "我们使用 Cookie 改善体验并记住偏好。",
-    "consent_btn": "同意"
+    "consent_btn": "同意",
+    "copied": "已复制！",
+    "stillWorking": "仍然努力中...",
+    "error": "错误",
+    "success": "成功",
+    "connectionFailed": "连接失败。",
+    "connectionFailedDesc": "请检查您的网络连接并重试。如果问题仍然存在，请在设置中验证您的 API 密钥。",
+    "retry": "重试"
+  },
+  "layer1": {
+    "badge": "第 1 层 · 魔法模式",
+    "title": "描述你的目标",
+    "description": "Promptly 将单个句子转换为多步骤优化的提示词。告诉我们你想要什么，剩下的交给我们。",
+    "taskLabel": "AI 应该做什么？",
+    "taskPlaceholder": "将客户访谈总结为 5 个产品需求。",
+    "modelLabel": "选择 LLM 模型",
+    "contextLabel": "上下文或源文本（可选）",
+    "contextPlaceholder": "粘贴您已有的关键段落、要点或约束。",
+    "contextHelp": "这有助于 Promptly 理解现有材料，而无需强制您分享。"
+  },
+  "pipeline": {
+    "status": "管道工作状态",
+    "selectedVia": "通过 Outcome Runner 选择（最佳 N 评估）",
+    "specBuilder": "规格构建器",
+    "specBuilderDesc": "结构",
+    "questionEngine": "问题引擎",
+    "questionEngineDesc": "清晰度",
+    "llmAgents": "LLM 代理",
+    "llmAgentsDesc": "草稿",
+    "metricsScoring": "指标与评分",
+    "metricsScoringDesc": "评分",
+    "outcomeRunner": "结果运行器",
+    "outcomeRunnerDesc": "选择",
+    "description": "我们在展示此提示词之前运行规格 → 问题 → LLM 代理 → 指标 → 结果运行器。",
+    "instruction": "点击"生成优化后的提示词"查看最适合您目标的最强提示词。",
+    "bestPromptTitle": "最佳提示词输出"
+  },
+  "whyPromptly": {
+    "title": "✨ 为什么 Promptly 胜过普通 AI 模型",
+    "subtitle": "我们运行结构化管道——规格构建、问题细化、多代理编排、评分和结果运行器选择——因此您永远不会只是向 LLM 发送单个提示词。",
+    "specBuilderTitle": "规格构建器",
+    "specBuilderDesc": "将您的原始想法转换为结构化规格，以便在我们接触 LLM 之前每个需求都是明确的。",
+    "questionEngineTitle": "问题引擎",
+    "questionEngineDesc": "我们提出有针对性的后续问题（Q1-Q3 流程）以消除歧义并揭示您可能忘记的上下文。",
+    "llmAgentsTitle": "LLM 代理",
+    "llmAgentsDesc": "专业代理（架构师、编辑、评判等）制作多个候选提示词，而不是依赖单个响应。",
+    "metricsTitle": "指标与评分",
+    "metricsDesc": "每个候选都在清晰度、连贯性、风格匹配、安全性、token 成本和风险方面进行评分，以量化质量。",
+    "outcomeTitle": "结果运行器",
+    "outcomeDesc": "结果优先运行器应用您的成功标准，比较最佳 N 候选，并返回最可靠的结果。",
+    "algorithmSpecsTitle": "🔧 算法规格",
+    "specStructured": "结构化规格",
+    "specStructuredDesc": "JSON 就绪的蓝图指导每个后续阶段。",
+    "specQuestions": "澄清问题",
+    "specQuestionsDesc": "在生成提示词之前消除猜测。",
+    "specOrchestration": "多代理编排",
+    "specOrchestrationDesc": "不同的代理在架构、编辑和判断方面协作。",
+    "specSelection": "最佳 N 选择",
+    "specSelectionDesc": "我们比较候选而不是返回第一个命中。",
+    "specMetrics": "指标面板",
+    "specMetricsDesc": "连贯性、风格、通过率、token 效率和风险分数影响收益。",
+    "specOutcome": "结果运行器",
+    "specOutcomeDesc": "根据您定义的测试/标准选择获胜者。",
+    "callout": "🚀 每次增强都通过规格 → 问题 → 代理 → 结果管道，因此您复制的结果是多指标评分后的顶级候选。"
+  },
+  "userGuide": {
+    "title": "用户指南",
+    "step1": "编写您的任务：定义指令 + 约束 + 预期风格。",
+    "step2": "添加测试用例：为每个输入提供理想输出。",
+    "step3": "运行：系统自动搜索、测试和调整提示词。",
+    "step4": "查看 KPI：每次运行后更新准确率 / F1 / 通过率 / Token 成本 / 进度%。",
+    "accuracyTrend": "准确率趋势",
+    "errorBreakdown": "错误分解",
+    "progressGauge": "进度仪表"
+  },
+  "glossary": {
+    "title": "术语表",
+    "accuracy": "准确率",
+    "accuracyDesc": "正确输出 / 总案例数。",
+    "f1": "F1",
+    "f1Desc": "2 × 精确率 × 召回率 ÷ (精确率 + 召回率)。",
+    "passRate": "通过率",
+    "passRateDesc": "通过的约束 / 总约束数。",
+    "tokenCost": "Token 成本",
+    "tokenCostDesc": "prompt_tokens + completion_tokens。",
+    "progress": "进度 %",
+    "progressDesc": "平均值(准确率/目标准确率, f1/目标f1, 通过率/目标通过率, 理想token成本/token成本) × 100。"
+  },
+  "testCases": {
+    "title": "测试用例",
+    "description": "从现成的演示测试开始，或自带测试集。高级 JSON 导入/导出仍然可用，但隐藏在下面的按钮后面。",
+    "useDemo": "使用演示测试用例",
+    "uploadJson": "上传 JSON",
+    "downloadJson": "下载 JSON",
+    "emptyState": "空状态：还没有测试用例。",
+    "import": "导入",
+    "useDemoBtn": "使用演示"
+  },
+  "layer2": {
+    "badge": "第 2 层 · 蓝图同步（高级）",
+    "description": "微调指导幕后代理的结构指令和约束。",
+    "instructionsLabel": "指令蓝图（可选）",
+    "instructionsPlaceholder": "架构师 → 规划师 → 编辑。提及诸如"清晰度"和"确定性"的检查。",
+    "instructionsHelp": "描述代理应如何处理提示词（语气、流程、护栏）。",
+    "examplesLabel": "演示示例（可选）",
+    "examplesPlaceholder": "POS || 我喜欢这个！ → 摘要：热烈赞扬。",
+    "examplesHelp": "分享一个输入/输出对，以便代理了解所需的输出风格。",
+    "constraintsLabel": "约束与风格（可选）",
+    "constraintsPlaceholder": ""限制 150 字"，"使用项目符号列表"，"避免俚语。"",
+    "constraintsHelp": "列出您关心的格式规则、长度、安全限制或语气。"
+  },
+  "layer3": {
+    "badge": "第 3 层 · 专家实验室（高级）",
+    "description": "仅在您想要对样本、模式和优化旋钮进行数据集式控制时打开。",
+    "datasetLabel": "POS / NEG 数据集片段（可选）",
+    "datasetPlaceholder": "POS || 这突出了主要好处。NEG || 这偏离了主题。",
+    "datasetHelp": "列出一些正面/负面示例以偏向评分。",
+    "schemaLabel": "模式或输出模板（可选）",
+    "schemaPlaceholder": "{ \"sections\": [\"摘要\", \"行动项\"], \"style\": \"礼貌、结构化\" }",
+    "schemaHelp": "定义我们应在最终提示词中遵循的结构。",
+    "knobsLabel": "优化旋钮（可选）",
+    "knobsPlaceholder": "candidates: 4 tests: [\"clarity\",\"risk\"] temperature: 0.5",
+    "knobsHelp": "控制候选数量、评估测试或采样行为。"
+  },
+  "alerts": {
+    "imported": "已导入 ✓",
+    "invalidJson": "无效的 JSON",
+    "demoRestored": "演示数据已恢复 ✓",
+    "shortcuts": "快捷键：\nR: 运行演示\nG: 用户指南\n/: 搜索（如果可用）"
+  },
+  "dynamic": {
+    "lastUpdated": "最后更新",
+    "topPickFormat": "最佳选择：#{index}"
   }
 }

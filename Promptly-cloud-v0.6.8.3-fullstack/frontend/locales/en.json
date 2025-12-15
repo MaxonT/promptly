@@ -21,7 +21,8 @@
   },
   "hero": {
     "title": "Promptly — Prompt Optimizer Studio",
-    "subtitle": "Visualization-first workflow. See every gain, every cost, every version."
+    "subtitle": "Visualization-first workflow. See every gain, every cost, every version.",
+    "eyebrow": "Promptly · Workflow Modes"
   },
   "mode": {
     "header": "How would you like to start?",
@@ -67,7 +68,10 @@
     "copied": "Copied!",
     "stillWorking": "Still working on it...",
     "error": "Error",
-    "success": "Success"
+    "success": "Success",
+    "connectionFailed": "Connection failed.",
+    "connectionFailedDesc": "Check your network connection and try again. If the problem persists, verify your API key in Settings.",
+    "retry": "Retry"
   },
   "kpi_accuracy": "Accuracy",
   "kpi_f1": "F1",
@@ -169,5 +173,133 @@
     "errorCreateError": "Create spec error. See log.",
     "untitledSpec": "(untitled spec)",
     "logLoaded": "Specs Manager loaded. Fetching specs ..."
+  },
+  "layer1": {
+    "badge": "Layer 1 · Magic Mode",
+    "title": "Describe your goal",
+    "description": "Promptly turns a single sentence into a multi-step optimized prompt. Tell us what you want and we'll handle the rest.",
+    "taskLabel": "What should the AI do?",
+    "taskPlaceholder": "Summarize customer interviews into 5 product requirements.",
+    "modelLabel": "Choose LLM Model",
+    "contextLabel": "Context or Source Text (Optional)",
+    "contextPlaceholder": "Paste key paragraphs, bullet points, or constraints you already have.",
+    "contextHelp": "This helps Promptly understand existing material without forcing you to share it."
+  },
+  "pipeline": {
+    "status": "Pipeline Working Status",
+    "selectedVia": "Selected via Outcome Runner (best-of-N evaluation)",
+    "specBuilder": "Spec Builder",
+    "specBuilderDesc": "Structure",
+    "questionEngine": "Question Engine",
+    "questionEngineDesc": "Clarity",
+    "llmAgents": "LLM Agents",
+    "llmAgentsDesc": "Draft",
+    "metricsScoring": "Metrics & Scoring",
+    "metricsScoringDesc": "Score",
+    "outcomeRunner": "Outcome Runner",
+    "outcomeRunnerDesc": "Select",
+    "description": "We run Spec → Questions → LLM agents → Metrics → Outcome Runner before surfacing this prompt.",
+    "instruction": "Click 'Generate optimized prompt' to see the strongest prompt for your goal.",
+    "bestPromptTitle": "Best Prompt Output",
+    "topPick": "Top Pick",
+    "statusText": "Promptly's pipeline will show you how your best prompt is chosen.",
+    "hint": "If the output looks the same as the input, the backend will automatically try a more aggressive rewrite."
+  },
+  "whyPromptly": {
+    "title": "✨ Why Promptly beats a plain AI model",
+    "subtitle": "We run a structured pipeline—spec building, question refining, multi-agent orchestration, scoring, and Outcome Runner selection—so you're never just sending a single prompt to an LLM.",
+    "specBuilderTitle": "Spec Builder",
+    "specBuilderDesc": "Turn your raw idea into a structured spec so every requirement is explicit before we touch an LLM.",
+    "questionEngineTitle": "Question Engine",
+    "questionEngineDesc": "We ask targeted follow-up questions (Q1–Q3 flow) to remove ambiguity and surface context you might forget.",
+    "llmAgentsTitle": "LLM Agents",
+    "llmAgentsDesc": "Specialized agents (Architect, Editor, Judge, etc.) craft multiple candidate prompts instead of relying on a single response.",
+    "metricsTitle": "Metrics & Scoring",
+    "metricsDesc": "Every candidate is scored on clarity, coherence, style match, safety, token cost, and risk to quantify quality.",
+    "outcomeTitle": "Outcome Runner",
+    "outcomeDesc": "The Outcome-First runner applies your success criteria, compares best-of-N candidates, and returns the most reliable result.",
+    "algorithmSpecsTitle": "🔧 Algorithm Specs",
+    "specStructured": "Structured spec",
+    "specStructuredDesc": "JSON-ready blueprint guides every subsequent stage.",
+    "specQuestions": "Clarifying questions",
+    "specQuestionsDesc": "Removes guesswork before generating prompts.",
+    "specOrchestration": "Multi-agent orchestration",
+    "specOrchestrationDesc": "Different agents collaborate on architecture, editing, and judgment.",
+    "specSelection": "Best-of-N selection",
+    "specSelectionDesc": "We compare candidates rather than returning the first hit.",
+    "specMetrics": "Metric panel",
+    "specMetricsDesc": "Coherence, style, pass rate, token efficiency, and risk scores feed into the payoff.",
+    "specOutcome": "Outcome Runner",
+    "specOutcomeDesc": "Picks the winner according to your defined tests/criteria.",
+    "callout": "🚀 Every enhancement passes through the Spec → Question → Agent → Outcome pipeline so the result you copy is the top-ranked candidate after multi-metric scoring."
+  },
+  "userGuide": {
+    "title": "User Guide",
+    "step1": "Write your task: define Instruction + Constraints + Expected style.",
+    "step2": "Add test cases: for each input, provide ideal output.",
+    "step3": "Run: the system auto-searches, tests, and tunes prompts.",
+    "step4": "Review KPIs: Accuracy / F1 / Pass Rate / Token Cost / Progress% update after each run.",
+    "accuracyTrend": "Accuracy Trend",
+    "errorBreakdown": "Error Breakdown",
+    "progressGauge": "Progress Gauge"
+  },
+  "glossary": {
+    "title": "Glossary",
+    "accuracy": "Accuracy",
+    "accuracyDesc": "Correct outputs / total cases.",
+    "f1": "F1",
+    "f1Desc": "2 × precision × recall ÷ (precision + recall).",
+    "passRate": "Pass Rate",
+    "passRateDesc": "Passed constraints / total constraints.",
+    "tokenCost": "Token Cost",
+    "tokenCostDesc": "prompt_tokens + completion_tokens.",
+    "progress": "Progress %",
+    "progressDesc": "average(accuracy/target_accuracy, f1/target_f1, pass_rate/target_pass_rate, ideal_token_cost/token_cost) × 100."
+  },
+  "testCases": {
+    "title": "Test cases",
+    "description": "Start with ready-made demo tests or bring your own set. Advanced JSON import/export stays available but tucked behind the buttons below.",
+    "useDemo": "Use demo test cases",
+    "uploadJson": "Upload JSON",
+    "downloadJson": "Download JSON",
+    "emptyState": "Empty state: No test cases yet.",
+    "import": "Import",
+    "useDemoBtn": "Use Demo"
+  },
+  "layer2": {
+    "badge": "Layer 2 · Blueprint sync (Advance)",
+    "description": "Fine-tune the structural instructions and constraints that guide the agents behind the magic.",
+    "instructionsLabel": "Instruction blueprint (Optional)",
+    "instructionsPlaceholder": "Architect → Planner → Editor. Mention checks like \"clarity\" and \"determinism.\"",
+    "instructionsHelp": "Describe how the agents should approach the prompt (tone, flow, guardrails).",
+    "examplesLabel": "Demonstration examples (Optional)",
+    "examplesPlaceholder": "POS || I love this! → Summary: Glowing praise.",
+    "examplesHelp": "Share one input/output pair so agents know desired output style.",
+    "constraintsLabel": "Constraints & style (Optional)",
+    "constraintsPlaceholder": "\"Limit to 150 words\", \"Use bullet list\", \"Avoid slang.\"",
+    "constraintsHelp": "List formatting rules, length, safety limits, or tone you care about."
+  },
+  "layer3": {
+    "badge": "Layer 3 · Expert lab (Advance)",
+    "description": "Only open this when you want dataset-style control over samples, schema, and optimization knobs.",
+    "datasetLabel": "POS / NEG dataset snippets (Optional)",
+    "datasetPlaceholder": "POS || This highlights the main benefit. NEG || This is off track.",
+    "datasetHelp": "List a few positive/negative examples to bias scoring.",
+    "schemaLabel": "Schema or output template (Optional)",
+    "schemaPlaceholder": "{ \"sections\": [\"Summary\", \"Action items\"], \"style\": \"Polite, structured\" }",
+    "schemaHelp": "Define the structure we should respect in the final prompt.",
+    "knobsLabel": "Optimization knobs (Optional)",
+    "knobsPlaceholder": "candidates: 4 tests: [\"clarity\",\"risk\"] temperature: 0.5",
+    "knobsHelp": "Control candidate count, evaluation tests, or sampling behavior."
+  },
+  "alerts": {
+    "imported": "Imported ✓",
+    "invalidJson": "Invalid JSON",
+    "demoRestored": "Demo data restored ✓",
+    "shortcuts": "Shortcuts:\nR: Run Demo\nG: User Guide\n/: Search (if available)"
+  },
+  "dynamic": {
+    "lastUpdated": "Last updated",
+    "topPickFormat": "Top Pick: #{index}"
   }
 }

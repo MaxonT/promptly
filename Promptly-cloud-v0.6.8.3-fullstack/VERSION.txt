@@ -1,9 +1,75 @@
-v0.6.10.3
+v0.6.10.4
 
 Release Date: 2025-12-17
+Type: FEATURE - Backend Multilingual Prompt Generation Support 🌍✨
+
+🎯 核心功能：多语言 Prompt 生成
+- ✅ 后端现在支持接收用户语言偏好参数
+- ✅ 根据用户界面语言自动生成对应语言的 prompt
+- ✅ 支持全部 9 种语言：中文、英文、西班牙语、法语、日语、阿拉伯语、韩语、葡萄牙语、印地语
+- ✅ 完全向后兼容（language 参数为可选，默认英文）
+
+Changes in v0.6.10.4:
+
+🔧 后端 Schema 更新：
+- ✅ CreateSessionSchema 添加 language 参数（可选）
+- ✅ AnswerPayloadSchema 添加 language 参数（可选）
+- ✅ ModelOnlySchema 添加 language 参数（可选）
+- ✅ 支持的语言代码：en, zh-CN, es, fr, ja, ar, ko, pt, hi
+
+🌍 LLM Agent 多语言支持：
+- ✅ 新增 LANGUAGE_MAP 常量映射语言代码到语言名称
+- ✅ 新增 getLanguageInstruction() 函数生成语言指令
+- ✅ generateRawSpec() 函数新增 language 参数
+- ✅ 在 system prompt 中添加语言要求指令
+- ✅ 保持技术术语为英文，自然语言使用目标语言
+
+🔄 API Endpoint 更新：
+- ✅ POST /api/question-sessions/:sessionId/finalize 接收 language 参数
+- ✅ 从 request body 或 session 读取语言偏好
+- ✅ 将语言参数传递给 generateRawSpec()
+- ✅ 添加日志输出当前使用的语言
+
+📊 实际效果：
+用户界面选择中文 → 后端生成中文 prompt
+用户界面选择日语 → 后端生成日语 prompt
+用户界面选择西班牙语 → 后端生成西班牙语 prompt
+
+Technical Changes:
+
+Backend Files Modified:
+• backend/src/lib/llmAgents.js (+35 lines)
+  - 添加 LANGUAGE_MAP 和 getLanguageInstruction()
+  - 更新 generateRawSpec() 函数签名
+  - 在 system prompt 中集成语言指令
+
+• backend/src/routes/questionSessions.js (+8 lines)
+  - 3 个 Schema 添加 language 字段
+  - finalize endpoint 提取和传递语言参数
+  - 添加日志记录语言选择
+
+Version Control:
+- VERSION.txt (版本更新 + 详细变更日志)
+- BACKEND_LANGUAGE_IMPLEMENTATION_v0.6.10.4.md (新建，实现总结)
+
+向后兼容性：
+✅ 所有 language 参数都是可选的
+✅ 默认值为 'en'（英文）
+✅ 不影响现有功能和数据
+✅ 前端已在 v0.6.10.3 中准备就绪
+
+测试验证：
+⚠️ 需要在真实环境中测试多语言 prompt 生成
+⚠️ 确认 LLM 是否正确遵循语言指令
+⚠️ 验证各语言的 prompt 质量
+
+Total Lines Changed: ~43 lines (35 in llmAgents.js + 8 in questionSessions.js)
+
+Previous Version: v0.6.10.3 (2025-12-17)
 Type: FEATURE - Wizard UI & i18n Enhancements + Model Selector Update ✨
 
-🔄 Update: Added 2 missing i18n sections (7 more keys × 9 languages = 63 translations)
+🔄 Update 1: Added 2 missing i18n sections (7 more keys × 9 languages = 63 translations)
+🔄 Update 2: Added language parameter to backend API calls for multilingual prompt generation
 
 Changes in v0.6.10.3:
 🎨 Question Wizard UI Fixes:
@@ -73,14 +139,26 @@ Technical Impact:
 - Enhanced user experience in Light mode
 - Complete multilingual support for wizard flow
 
+🌐 Language Parameter for API Calls:
+- ✅ Added automatic language detection in wizard.js
+- ✅ Pass user's language to backend in 3 key API calls:
+  • POST /api/question-sessions (session creation)
+  • POST /api/question-sessions/{id}/answer (answer submission)
+  • POST /api/question-sessions/{id}/finalize (prompt generation) ← Most important!
+- ✅ Language determined from: window.i18nManager.currentLang or localStorage
+- ✅ Fallback to 'en' if not detected
+- ⚠️  Backend needs to implement language support (see LANGUAGE_PARAM_GUIDE.md)
+
 Files Modified:
 - frontend/wizard.css (+25 lines Light mode styles)
-- frontend/wizard.html (+31 data-i18n attributes)
-- frontend/index.html (+3 data-i18n attributes, -7 model options)
+- frontend/wizard.html (+36 data-i18n attributes)
+- frontend/index.html (+5 data-i18n attributes, -7 model options)
 - frontend/style.css (+12 lines Light mode model selector)
 - frontend/lib/dataAggregator.js (updated modelMap)
-- frontend/locales/*.json (×9 files, +31 keys each)
+- frontend/wizard.js (+18 lines, 3 API calls with language param)
+- frontend/locales/*.json (×9 files, +38 keys each)
 - VERSION.txt (version bump + changelog)
+- LANGUAGE_PARAM_GUIDE.md (new, backend implementation guide)
 
 Previous Version: v0.6.10.2 (2025-12-17)
 

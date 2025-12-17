@@ -96,7 +96,8 @@ const CreateSessionSchema = z.object({
     .min(1, { message: PROJECT_DESCRIPTION_REQUIRED_MESSAGE }),
   kind: z.string().min(1).max(64).optional(),
   mode: z.enum(["fast", "deep", "ultra"]).optional(),
-  model: z.enum(MODEL_IDS).optional()
+  model: z.enum(MODEL_IDS).optional(),
+  language: z.enum(["en", "zh-CN", "es", "fr", "ja", "ar", "ko", "pt", "hi"]).optional()
 });
 
 const AnswerPayloadSchema = z.object({
@@ -109,11 +110,13 @@ const AnswerPayloadSchema = z.object({
     )
     .min(1),
   control: z.enum(["back", "skip"]).optional(),
-  model: z.enum(MODEL_IDS).optional()
+  model: z.enum(MODEL_IDS).optional(),
+  language: z.enum(["en", "zh-CN", "es", "fr", "ja", "ar", "ko", "pt", "hi"]).optional()
 });
 
 const ModelOnlySchema = z.object({
-  model: z.enum(MODEL_IDS).optional()
+  model: z.enum(MODEL_IDS).optional(),
+  language: z.enum(["en", "zh-CN", "es", "fr", "ja", "ar", "ko", "pt", "hi"]).optional()
 });
 
 const RUNNING_STATUSES = ["active", "ready_to_finalize"];
@@ -605,6 +608,9 @@ questionSessionRouter.post("/:sessionId/finalize", async (req, res) => {
   }
 
   const modelChoice = resolveAndPersistModel(sessionId, session.model, parsedModel.data.model);
+  const userLanguage = parsedModel.data.language || session.language || 'en';
+  
+  console.log(`[promptly] Finalizing session ${sessionId} with language: ${userLanguage}`);
 
   const questions = db
     .prepare(
@@ -644,7 +650,8 @@ questionSessionRouter.post("/:sessionId/finalize", async (req, res) => {
       kind: session.kind,
       qaPairs,
       modeProfile,
-      model: modelChoice.targetModel
+      model: modelChoice.targetModel,
+      language: userLanguage
     });
 
     const compiled = compileSpecToPrompt(result.spec);

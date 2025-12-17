@@ -3,6 +3,39 @@ import { chatJson } from "./openaiClient.js";
 import { createRun, completeRunSuccess, completeRunFailure } from "./runLogger.js";
 import { buildRunMetrics } from "./metricsEngine.js";
 
+/**
+ * Language mapping for LLM instructions
+ */
+const LANGUAGE_MAP = {
+  'en': 'English',
+  'zh-CN': 'Simplified Chinese (简体中文)',
+  'es': 'Spanish (Español)',
+  'fr': 'French (Français)',
+  'ja': 'Japanese (日本語)',
+  'ar': 'Arabic (العربية)',
+  'ko': 'Korean (한국어)',
+  'pt': 'Portuguese (Português)',
+  'hi': 'Hindi (हिन्दी)'
+};
+
+/**
+ * Generate language instruction for LLM system prompt
+ * @param {string} language - Language code (e.g., 'zh-CN', 'es')
+ * @returns {string} - Language instruction for system prompt
+ */
+function getLanguageInstruction(language) {
+  if (!language || language === 'en') {
+    return ""; // No special instruction for English (default)
+  }
+  
+  const languageName = LANGUAGE_MAP[language] || 'English';
+  return `LANGUAGE REQUIREMENT: Generate ALL output content in ${languageName}. This includes:
+- All text fields in the spec (project_goal, objectives, requirements, etc.)
+- The explanation field
+- Any descriptions, labels, or user-facing text
+Keep technical terms (like "React", "API", "database") in English, but all natural language should be in ${languageName}.`;
+}
+
 const BroadQuestionSchema = z.object({
   id: z.string().optional(),
   axis: z.string(),
@@ -573,13 +606,15 @@ export async function generateChoiceQuestions({ initialDescription, kind, broadQ
   }
 }
 
-export async function generateRawSpec({ initialDescription, kind, qaPairs, modeProfile = null, model = null }) {
+export async function generateRawSpec({ initialDescription, kind, qaPairs, modeProfile = null, model = null, language = 'en' }) {
   const system = [
     "You are Agent C in Promptly's Question Engine.",
     "You receive all questions and answers from a wizard.",
     "Your job: synthesize them into a structured specification.",
     "IMPORTANT: Return ONLY valid JSON, no other text.",
     "",
+    getLanguageInstruction(language),
+    language && language !== 'en' ? "" : "",  // Add blank line if language instruction exists
     "CRITICAL: The spec you generate must include:",
     "- All information from the initial description",
     "- All answers provided by the user in the wizard",

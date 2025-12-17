@@ -1014,6 +1014,11 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
         }
       }, estimate.max * 1000); // Show warning only after exceeding mode's max time
 
+      // Get current language from i18n or localStorage
+      const currentLanguage = (window.i18nManager && window.i18nManager.currentLang) 
+        || localStorage.getItem('promptly-language') 
+        || 'en';
+      
       const res = await fetch(`${API_BASE}/api/question-sessions`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -1021,7 +1026,8 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
           initial_description: idea,
           kind,
           mode: currentMode,
-          model: currentModel
+          model: currentModel,
+          language: currentLanguage  // Pass user's language preference to backend
         }),
         signal: startController.signal
       });
@@ -1201,10 +1207,19 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
 
     try {
       log("Submitting all answers...");
+      // Get current language
+      const currentLanguage = (window.i18nManager && window.i18nManager.currentLang) 
+        || localStorage.getItem('promptly-language') 
+        || 'en';
+      
       const res = await fetch(`${API_BASE}/api/question-sessions/${encodeURIComponent(currentSessionId)}/answer`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ answers: answersPayload, model: currentModel })
+        body: JSON.stringify({ 
+          answers: answersPayload, 
+          model: currentModel,
+          language: currentLanguage  // Pass user's language preference
+        })
       });
       if (!res.ok) {
         const txt = await res.text();
@@ -1323,10 +1338,18 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
       log("Finalizing session and generating spec + compiled prompt...");
       setWizardStatus("Finalizing and generating your spec... This may take a moment.", "info", { showTicks: true });
       
+      // Get current language
+      const currentLanguage = (window.i18nManager && window.i18nManager.currentLang) 
+        || localStorage.getItem('promptly-language') 
+        || 'en';
+      
       const res = await fetch(`${API_BASE}/api/question-sessions/${encodeURIComponent(currentSessionId)}/finalize`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ model: currentModel })
+        body: JSON.stringify({ 
+          model: currentModel,
+          language: currentLanguage  // Pass user's language for prompt generation
+        })
       });
       if (!res.ok) {
         const txt = await res.text();

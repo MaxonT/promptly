@@ -439,9 +439,9 @@ html[data-theme="light"] .grey-gradient-text{
 
     <section class="layer-card layer-default" id="layerDefault">
       <div class="layer-default__column">
-        <span class="layer-badge">Layer 1 · Magic Mode</span>
-        <h2>Describe your goal</h2>
-        <p>Promptly turns a single sentence into a multi-step optimized prompt. Tell us what you want and we’ll handle the rest.</p>
+        <span class="layer-badge" data-i18n="layer1.badge">Layer 1 · Magic Mode</span>
+        <h2 data-i18n="layer1.title">Describe your goal</h2>
+        <p data-i18n="layer1.description">Promptly turns a single sentence into a multi-step optimized prompt. Tell us what you want and we'll handle the rest.</p>
         <label class="layer-field">
           <span>What should the AI do?</span>
           <textarea id="task" rows="6" placeholder="Summarize customer interviews into 5 product requirements."></textarea>
@@ -452,23 +452,16 @@ html[data-theme="light"] .grey-gradient-text{
               <span class="model-select__title">Choose LLM Model</span>
               <span class="model-select__name-wrap">
                 <span aria-hidden="true" class="model-select__arrow">👉</span>
-                <span class="model-select__name">Promptly Mini</span>
+                <span class="model-select__name">Promptly v0 mini</span>
                 <span aria-hidden="true" class="model-select__arrow">👈</span>
               </span>
             </span>
             <span class="model-select__chevron">▾</span>
           </button>
           <div class="model-select__menu" id="modelDropdownMenu" role="menu" aria-hidden="true">
-            <button type="button" class="model-select__option" data-model="promptly-mini">Promptly Mini</button>
-            <button type="button" class="model-select__option" data-model="promptly">Promptly</button>
-            <button type="button" class="model-select__option" data-model="promptly-plus">Promptly Plus</button>
-            <button type="button" class="model-select__option" data-model="promptly-pro">Promptly Pro</button>
-            <button type="button" class="model-select__option" data-model="promptly-pro-max">Promptly Pro Max</button>
-            <button type="button" class="model-select__option" data-model="promptly-code-mini">Promptly Code Mini</button>
-            <button type="button" class="model-select__option" data-model="promptly-code">Promptly Code</button>
-            <button type="button" class="model-select__option" data-model="promptly-code-plus">Promptly Code Plus</button>
-            <button type="button" class="model-select__option" data-model="promptly-code-pro">Promptly Code Pro</button>
-            <button type="button" class="model-select__option" data-model="promptly-code-pro-max">Promptly Code Pro Max</button>
+            <button type="button" class="model-select__option" data-model="promptly-v0-mini">Promptly v0 mini</button>
+            <button type="button" class="model-select__option" data-model="promptly-v0">Promptly v0</button>
+            <button type="button" class="model-select__option" data-model="promptly-v0-max">Promptly v0 Max</button>
           </div>
         </div>
         <details class="layer-field">
@@ -2003,16 +1996,9 @@ document.addEventListener('DOMContentLoaded', () => {
   
   const MODEL_STORAGE_KEY = 'promptly:model-selection';
   const MODEL_OPTIONS = [
-    { slug: 'promptly-mini', label: 'Promptly Mini' },
-    { slug: 'promptly', label: 'Promptly' },
-    { slug: 'promptly-plus', label: 'Promptly Plus' },
-    { slug: 'promptly-pro', label: 'Promptly Pro' },
-    { slug: 'promptly-pro-max', label: 'Promptly Pro Max' },
-    { slug: 'promptly-code-mini', label: 'Promptly Code Mini' },
-    { slug: 'promptly-code', label: 'Promptly Code' },
-    { slug: 'promptly-code-plus', label: 'Promptly Code Plus' },
-    { slug: 'promptly-code-pro', label: 'Promptly Code Pro' },
-    { slug: 'promptly-code-pro-max', label: 'Promptly Code Pro Max' }
+    { slug: 'promptly-v0-mini', label: 'Promptly v0 mini' },
+    { slug: 'promptly-v0', label: 'Promptly v0' },
+    { slug: 'promptly-v0-max', label: 'Promptly v0 Max' }
   ];
 
   function getModelLabel(slug) {

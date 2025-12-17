@@ -57,16 +57,9 @@ class PromptlyDataAggregator {
       const modelLabel = modelNameEl.textContent?.trim() || '';
       // Map label to model slug
       const modelMap = {
-        'Promptly Mini': 'promptly-mini',
-        'Promptly': 'promptly',
-        'Promptly Plus': 'promptly-plus',
-        'Promptly Pro': 'promptly-pro',
-        'Promptly Pro Max': 'promptly-pro-max',
-        'Promptly Code Mini': 'promptly-code-mini',
-        'Promptly Code': 'promptly-code',
-        'Promptly Code Plus': 'promptly-code-plus',
-        'Promptly Code Pro': 'promptly-code-pro',
-        'Promptly Code Pro Max': 'promptly-code-pro-max'
+        'Promptly v0 mini': 'promptly-v0-mini',
+        'Promptly v0': 'promptly-v0',
+        'Promptly v0 Max': 'promptly-v0-max'
       };
       model = modelMap[modelLabel] || 'promptly-mini';
     }

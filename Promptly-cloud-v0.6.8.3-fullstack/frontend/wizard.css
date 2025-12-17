@@ -89,6 +89,9 @@
   background-size:400% 400%;
   animation:gradientShift 20s ease infinite;
 }
+html[data-theme="light"] .wizard-background{
+  background:linear-gradient(135deg,#f8fafc 0%,#e2e8f0 25%,#cbd5e1 50%,#e2e8f0 75%,#f8fafc 100%);
+}
 .wizard-gradient-orb{
   position:absolute;
   border-radius:50%;
@@ -390,6 +393,10 @@ html[data-theme="light"] .wizard-mode-option.is-selected{
   backdrop-filter:blur(12px);
   transition:all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
+html[data-theme="light"] .wizard-panel{
+  background:rgba(255,255,255,0.9);
+  border-color:rgba(148,163,184,0.3);
+}
 .wizard-panel::before{
   content:"";
   position:absolute;
@@ -471,6 +478,12 @@ html[data-theme="light"] .wizard-mode-option.is-selected{
   color:inherit;
   resize:vertical;
   transition:all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+html[data-theme="light"] .wizard-label textarea,
+html[data-theme="light"] .wizard-label select{
+  background:rgba(255,255,255,0.95);
+  color:rgba(15,23,42,0.95);
+  border-color:rgba(148,163,184,0.4);
 }
 .wizard-label textarea{
   caret-color:#7C3AED;
@@ -612,6 +625,11 @@ html[data-theme="light"] .wizard-mode-option.is-selected{
   transition:all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   animation:slideInUp 0.4s cubic-bezier(0.4, 0, 0.2, 1) both;
   position:relative;
+}
+html[data-theme="light"] .wizard-question-card{
+  background:rgba(248,250,252,0.95);
+  border-color:rgba(148,163,184,0.3);
+  box-shadow:0 2px 12px rgba(0,0,0,0.05);
 }
 .wizard-question-card:hover{
   transform:translateY(-2px);

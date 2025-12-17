@@ -140,7 +140,7 @@
       <img src="assets/promptly-icon.svg" alt="Promptly" class="wizard-logo" />
       <div>
         <h1 class="wizard-title" data-i18n="wizard.title">Promptly Question Wizard</h1>
-        <p class="wizard-subtitle">From fuzzy idea → structured spec → compiled prompt blocks.</p>
+        <p class="wizard-subtitle" data-i18n="wizard.subtitle">From fuzzy idea → structured spec → compiled prompt blocks.</p>
       </div>
     </div>
     <div class="wizard-header-meta">
@@ -152,17 +152,17 @@
   <div class="wizard-stepper">
     <div class="wizard-stepper-step wizard-stepper-step--active" id="step-describe">
       <div class="wizard-stepper-circle">1</div>
-      <div class="wizard-stepper-label">Describe</div>
+      <div class="wizard-stepper-label" data-i18n="wizard.stepDescribe">Describe</div>
     </div>
     <div class="wizard-stepper-connector"></div>
     <div class="wizard-stepper-step" id="step-questions">
       <div class="wizard-stepper-circle">2</div>
-      <div class="wizard-stepper-label">Questions</div>
+      <div class="wizard-stepper-label" data-i18n="wizard.stepQuestions">Questions</div>
     </div>
     <div class="wizard-stepper-connector"></div>
     <div class="wizard-stepper-step" id="step-finalize">
       <div class="wizard-stepper-circle">3</div>
-      <div class="wizard-stepper-label">Finalize</div>
+      <div class="wizard-stepper-label" data-i18n="wizard.stepFinalize">Finalize</div>
     </div>
   </div>
 
@@ -170,26 +170,26 @@
     <section class="wizard-mode-toggle" id="modeSelector" aria-label="Response depth mode">
       <div class="wizard-mode-option" data-mode="fast" tabindex="0">
         <div class="wizard-mode-option-header">
-          <span class="wizard-mode-label">Fast</span>
+          <span class="wizard-mode-label" data-i18n="wizard.modeFast">Fast</span>
           <span class="wizard-mode-tier">A+</span>
         </div>
-        <p class="wizard-mode-desc">Quick response, minimal reasoning</p>
+        <p class="wizard-mode-desc" data-i18n="wizard.modeFastDesc">Quick response, minimal reasoning</p>
         <span class="wizard-mode-time" data-time="fast">🕐 10–60s</span>
       </div>
       <div class="wizard-mode-option" data-mode="deep" tabindex="0">
         <div class="wizard-mode-option-header">
-          <span class="wizard-mode-label">Deep Thinking</span>
+          <span class="wizard-mode-label" data-i18n="wizard.modeDeep">Deep Thinking</span>
           <span class="wizard-mode-tier">S</span>
         </div>
-        <p class="wizard-mode-desc">Balanced depth and speed</p>
+        <p class="wizard-mode-desc" data-i18n="wizard.modeDeepDesc">Balanced depth and speed</p>
         <span class="wizard-mode-time" data-time="deep">🕐 30–120s</span>
       </div>
       <div class="wizard-mode-option" data-mode="ultra" tabindex="0">
         <div class="wizard-mode-option-header">
-          <span class="wizard-mode-label">Ultra Thinking</span>
+          <span class="wizard-mode-label" data-i18n="wizard.modeUltra">Ultra Thinking</span>
           <span class="wizard-mode-tier">S+</span>
         </div>
-        <p class="wizard-mode-desc">Maximum depth, slowest response</p>
+        <p class="wizard-mode-desc" data-i18n="wizard.modeUltraDesc">Maximum depth, slowest response</p>
         <span class="wizard-mode-time" data-time="ultra">🕐 90–180s</span>
       </div>
     </section>
@@ -206,36 +206,36 @@
 
   <main class="wizard-main">
     <section class="wizard-panel wizard-panel--idea">
-      <h2>1. Describe your project</h2>
-      <p class="wizard-panel-desc">
+      <h2 data-i18n="wizard.describeProject">1. Describe your project</h2>
+      <p class="wizard-panel-desc" data-i18n="wizard.describeProjectDesc">
         Write a short description of what you want the model to build or help you with.
         The Question Engine will turn this into a guided Q&amp;A wizard.
       </p>
       <label class="wizard-label">
-        Project idea
-        <textarea id="ideaInput" rows="4" aria-describedby="ideaHint" placeholder="Example: Help me design a full-stack web app that lets users save and refine prompts with tags, version history, and collaboration."></textarea>
+        <span data-i18n="wizard.projectIdea">Project idea</span>
+        <textarea id="ideaInput" rows="4" aria-describedby="ideaHint" data-i18n="[placeholder]wizard.projectIdeaPlaceholder"></textarea>
       </label>
-      <p id="ideaHint" class="wizard-inline-hint">Minimum 10 characters. The Start button will enable automatically once this requirement is met.</p>
+      <p id="ideaHint" class="wizard-inline-hint" data-i18n="wizard.projectIdeaHint">Minimum 10 characters. The Start button will enable automatically once this requirement is met.</p>
       <label class="wizard-label">
-        Project type
+        <span data-i18n="wizard.projectType">Project type</span>
         <select id="kindSelect">
-          <option value="">Auto-detect</option>
-          <option value="coding">Coding / engineering</option>
-          <option value="writing">Writing / content</option>
-          <option value="analysis">Analysis / research</option>
-          <option value="product">Product / UX design</option>
-          <option value="custom">Custom / other</option>
+          <option value="" data-i18n="wizard.typeAutoDetect">Auto-detect</option>
+          <option value="coding" data-i18n="wizard.typeCoding">Coding / engineering</option>
+          <option value="writing" data-i18n="wizard.typeWriting">Writing / content</option>
+          <option value="analysis" data-i18n="wizard.typeAnalysis">Analysis / research</option>
+          <option value="product" data-i18n="wizard.typeProduct">Product / UX design</option>
+          <option value="custom" data-i18n="wizard.typeCustom">Custom / other</option>
         </select>
       </label>
-      <button id="startWizardBtn" class="wizard-button-primary">Start wizard</button>
-      <button id="restoreSnapshotBtn" class="wizard-button-secondary hidden">Restore last session</button>
+      <button id="startWizardBtn" class="wizard-button-primary" data-i18n="wizard.start">Start wizard</button>
+      <button id="restoreSnapshotBtn" class="wizard-button-secondary hidden" data-i18n="wizard.restoreSession">Restore last session</button>
       <p id="ideaError" class="wizard-error hidden"></p>
     </section>
 
     <section class="wizard-panel wizard-panel--qa">
       <div class="wizard-panel-header">
-        <h2>2. Answer guided questions</h2>
-        <p class="wizard-panel-desc">
+        <h2 data-i18n="wizard.answerQuestions">2. Answer guided questions</h2>
+        <p class="wizard-panel-desc" data-i18n="wizard.answerQuestionsDesc">
           The engine will ask 3–5 questions at a time. Your answers will be stored in the backend and
           used to assemble a high-level spec.
         </p>
@@ -313,8 +313,8 @@
 
     <section class="wizard-panel wizard-panel--result">
       <div class="wizard-panel-header">
-        <h2>3. Spec &amp; compiled prompt</h2>
-        <p class="wizard-panel-desc">
+        <h2 data-i18n="wizard.specAndPrompt">3. Spec &amp; compiled prompt</h2>
+        <p class="wizard-panel-desc" data-i18n="wizard.specAndPromptDesc">
           Once finalized, you&apos;ll see both the structured spec JSON and the compiled prompt blocks you can use with LLMs.
         </p>
       </div>

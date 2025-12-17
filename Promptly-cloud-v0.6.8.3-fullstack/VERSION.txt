@@ -1,7 +1,83 @@
-v0.6.10.2
+v0.6.10.3
 
 Release Date: 2025-12-17
-Type: HOTFIX - Additional i18n Helper Functions Fixed 🔧
+Type: FEATURE - Wizard UI & i18n Enhancements + Model Selector Update ✨
+
+Changes in v0.6.10.3:
+🎨 Question Wizard UI Fixes:
+- ✅ Fixed Light mode background appearing too dark in wizard pages
+- ✅ Added Light mode support for wizard panels, cards, and input fields
+- ✅ Optimized background gradients for Light mode
+- ✅ Enhanced contrast and readability in Light theme
+
+🌍 Complete i18n Support for Wizard:
+- ✅ Added 31 translation keys for wizard functionality across all 9 languages
+- ✅ Full i18n coverage for: project description, questions, steps, modes
+- ✅ Languages: 中文, English, Español, Français, 日本語, العربية, 한국어, Português, हिन्दी
+- ✅ All wizard UI elements now support language switching
+
+🎯 Home Page i18n Fixes:
+- ✅ Fixed "Describe your goal" section missing i18n attributes
+- ✅ Added data-i18n to layer1.badge, layer1.title, layer1.description
+
+🔧 Model Selector Overhaul:
+- ✅ Reduced model options from 10 to 3 (as requested)
+- ✅ Renamed models to: Promptly v0 mini, Promptly v0, Promptly v0 Max
+- ✅ Updated model slugs: promptly-v0-mini, promptly-v0, promptly-v0-max
+- ✅ Fixed Light mode dropdown styles (better contrast and readability)
+- ✅ Updated dataAggregator.js model mapping
+
+Detailed Changes by File:
+
+Frontend UI (wizard.css):
+• Added html[data-theme="light"] .wizard-background - light gradient
+• Added html[data-theme="light"] .wizard-panel - white background
+• Added html[data-theme="light"] .wizard-question-card - light card style
+• Added html[data-theme="light"] .wizard-label textarea/select - light inputs
+
+Frontend HTML (wizard.html):
+• Added data-i18n to wizard title, subtitle, steps (31 attributes)
+• wizard.describeProject, wizard.answerQuestions, wizard.specAndPrompt
+• wizard.projectIdea, wizard.projectType, wizard.modeFast/Deep/Ultra
+• Complete i18n coverage for all user-facing text
+
+Frontend HTML (index.html):
+• Added data-i18n to layer1.badge, layer1.title, layer1.description
+• Reduced model dropdown options from 10 to 3
+• Updated model names and slugs to v0 naming scheme
+• Fixed default selected model display
+
+Frontend CSS (style.css):
+• Added html[data-theme="light"] .model-select__menu - light dropdown bg
+• Added html[data-theme="light"] .model-select__option - light option style
+• Improved hover and active states for Light mode
+
+Frontend JS (dataAggregator.js):
+• Updated modelMap with new v0 model names and slugs
+• Removed 7 old model options, kept only 3 core options
+
+Translation Files (all 9 languages):
+• Added 31 new "wizard" translation keys to each language
+• Keys include: title, subtitle, steps, modes, project fields
+• Total: 279 new translation entries across all languages
+
+Technical Impact:
+- Zero backend changes (purely frontend updates)
+- Fully backward compatible with existing data
+- All features remain functional
+- Enhanced user experience in Light mode
+- Complete multilingual support for wizard flow
+
+Files Modified:
+- frontend/wizard.css (+25 lines Light mode styles)
+- frontend/wizard.html (+31 data-i18n attributes)
+- frontend/index.html (+3 data-i18n attributes, -7 model options)
+- frontend/style.css (+12 lines Light mode model selector)
+- frontend/lib/dataAggregator.js (updated modelMap)
+- frontend/locales/*.json (×9 files, +31 keys each)
+- VERSION.txt (version bump + changelog)
+
+Previous Version: v0.6.10.2 (2025-12-17)
 
 Changes in v0.6.10.2:
 🐛 Fixed Additional i18n Issues in 3 Frontend Files:

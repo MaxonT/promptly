@@ -35,7 +35,7 @@
   "wizard": {
     "title": "问题向导",
     "describe": "描述你的目标",
-    "start": "开始向导",
+    "start": "启动向导",
     "finalize": "完成规格",
     "save": "保存并继续",
     "cancel": "取消",
@@ -43,13 +43,39 @@
     "loadingMain": "正在生成问题...",
     "loadingDetail": "正在分析你的项目以生成个性化问题",
     "warning": "⚠️ 请勿离开此页面",
-    "statusLong": "处理时间稍长，可取消后再试一次。"
+    "statusLong": "处理时间稍长，可取消后再试一次。",
+    "subtitle": "从模糊想法 → 结构化规格 → 编译的提示词块",
+    "describeProject": "1. 描述你的项目",
+    "describeProjectDesc": "简要描述您希望模型构建或帮助您完成的内容。问题引擎会将其转化为引导式问答向导。",
+    "projectIdea": "项目创意",
+    "projectIdeaPlaceholder": "示例：帮我设计一个全栈 Web 应用，让用户能够保存和优化提示词，支持标签、版本历史和协作功能。",
+    "projectIdeaHint": "最少 10 个字符。满足此要求后，启动按钮将自动启用。",
+    "projectType": "项目类型",
+    "typeAutoDetect": "自动检测",
+    "typeCoding": "编程 / 工程",
+    "typeWriting": "写作 / 内容",
+    "typeAnalysis": "分析 / 研究",
+    "typeProduct": "产品 / UX 设计",
+    "typeCustom": "自定义 / 其他",
+    "restoreSession": "恢复上次会话",
+    "answerQuestions": "2. 回答引导问题",
+    "answerQuestionsDesc": "引擎每次会提出 3-5 个问题。您的回答将存储在后端，用于组装高级规格。",
+    "specAndPrompt": "3. 规格与编译提示词",
+    "specAndPromptDesc": "完成后，您将看到结构化的规格 JSON 和可用于 LLM 的编译提示词块。",
+    "stepDescribe": "描述",
+    "stepQuestions": "问题",
+    "stepFinalize": "完成",
+    "modeFast": "快速",
+    "modeFastDesc": "快速响应，最少推理",
+    "modeDeep": "深度思考",
+    "modeDeepDesc": "深度与速度平衡",
+    "modeUltra": "超级思考",
+    "modeUltraDesc": "最大深度，最慢响应"
   },
   "result": {
     "title": "结果页面",
     "description": "在一个专属页面中打开该结果，可分享或收藏。",
-    "cta": "打开结果页面"
-    ,
+    "cta": "打开结果页面",
     "specTitle": "高级规范",
     "promptTitle": "编译提示块",
     "explanationTitle": "说明",
@@ -81,7 +107,6 @@
     "rights": "无追踪；仅在同意后保存偏好。",
     "contact": "支持"
   },
-
   "kpi_accuracy": "准确率",
   "kpi_f1": "F1",
   "kpi_pass": "通过率",
@@ -205,7 +230,6 @@
     "contextPlaceholder": "粘贴您已有的关键段落、要点或约束。",
     "contextHelp": "这有助于 Promptly 理解现有材料，而无需强制您分享。"
   },
-
   "whyPromptly": {
     "title": "✨ 为什么 Promptly 胜过普通 AI 模型",
     "subtitle": "我们运行结构化管道——规格构建、问题细化、多代理编排、评分和结果运行器选择——因此您永远不会只是向 LLM 发送单个提示词。",

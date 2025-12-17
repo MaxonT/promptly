@@ -3,6 +3,8 @@ v0.6.10.3
 Release Date: 2025-12-17
 Type: FEATURE - Wizard UI & i18n Enhancements + Model Selector Update ✨
 
+🔄 Update: Added 2 missing i18n sections (7 more keys × 9 languages = 63 translations)
+
 Changes in v0.6.10.3:
 🎨 Question Wizard UI Fixes:
 - ✅ Fixed Light mode background appearing too dark in wizard pages
@@ -11,10 +13,12 @@ Changes in v0.6.10.3:
 - ✅ Enhanced contrast and readability in Light theme
 
 🌍 Complete i18n Support for Wizard:
-- ✅ Added 31 translation keys for wizard functionality across all 9 languages
-- ✅ Full i18n coverage for: project description, questions, steps, modes
+- ✅ Added 38 translation keys for wizard functionality across all 9 languages
+- ✅ Full i18n coverage for: project description, questions, steps, modes, answering tips
 - ✅ Languages: 中文, English, Español, Français, 日本語, العربية, 한국어, Português, हिन्दी
 - ✅ All wizard UI elements now support language switching
+- ✅ Answering Tips section (5 keys): answerTipsTitle, answerTip1-4
+- ✅ Examples gallery section (2 keys): title, subtitle
 
 🎯 Home Page i18n Fixes:
 - ✅ Fixed "Describe your goal" section missing i18n attributes
@@ -57,9 +61,10 @@ Frontend JS (dataAggregator.js):
 • Removed 7 old model options, kept only 3 core options
 
 Translation Files (all 9 languages):
-• Added 31 new "wizard" translation keys to each language
-• Keys include: title, subtitle, steps, modes, project fields
-• Total: 279 new translation entries across all languages
+• Added 38 new translation keys to each language (31 wizard + 5 wizard tips + 2 examples)
+• Wizard keys: title, subtitle, steps, modes, project fields, answering tips
+• Examples keys: gallery title, subtitle
+• Total: 342 new translation entries across all languages (38 keys × 9 languages)
 
 Technical Impact:
 - Zero backend changes (purely frontend updates)

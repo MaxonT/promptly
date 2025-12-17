@@ -79,7 +79,12 @@
     "modeDeep": "Pensamento Profundo",
     "modeDeepDesc": "Equilíbrio entre profundidade e velocidade",
     "modeUltra": "Pensamento Ultra",
-    "modeUltraDesc": "Profundidade máxima, resposta mais lenta"
+    "modeUltraDesc": "Profundidade máxima, resposta mais lenta",
+    "answerTipsTitle": "💡 Dicas de Resposta:",
+    "answerTip1": "Você <strong>NÃO precisa responder todas as perguntas</strong> — responder pelo menos uma está ok",
+    "answerTip2": "Quanto mais perguntas você responder, mais preciso e personalizado será seu prompt final",
+    "answerTip3": "Suas respostas são <strong>salvas automaticamente</strong> enquanto você digita — não precisa clicar em Salvar",
+    "answerTip4": "Você pode pular perguntas ou voltar para páginas anteriores a qualquer momento"
   },
   "result": {
     "title": "Página de resultados",
@@ -452,5 +457,9 @@
     "stats2": "50% de redução de custos",
     "stats3": "99.9% de tempo de atividade",
     "stats4": "Mais de 1000 usuários satisfeitos"
+  },
+  "examples": {
+    "title": "Veja Promptly em fluxos de trabalho reais",
+    "subtitle": "Transforme solicitações de negócios confusas em especificações de prompts executáveis, testes e relatórios."
   }
 }

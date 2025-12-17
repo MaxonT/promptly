@@ -70,7 +70,12 @@
     "modeDeep": "Pensamiento Profundo",
     "modeDeepDesc": "Equilibrio entre profundidad y velocidad",
     "modeUltra": "Pensamiento Ultra",
-    "modeUltraDesc": "Máxima profundidad, respuesta más lenta"
+    "modeUltraDesc": "Máxima profundidad, respuesta más lenta",
+    "answerTipsTitle": "💡 Consejos para Responder:",
+    "answerTip1": "<strong>NO necesitas responder todas las preguntas</strong> — responder al menos una está bien",
+    "answerTip2": "Cuantas más preguntas respondas, más preciso y personalizado será tu prompt final",
+    "answerTip3": "Tus respuestas se <strong>guardan automáticamente</strong> mientras escribes — no necesitas hacer clic en Guardar",
+    "answerTip4": "Puedes omitir preguntas o volver a páginas anteriores en cualquier momento"
   },
   "result": {
     "title": "Página de resultados",
@@ -326,5 +331,9 @@
     "titleLabel": "Título",
     "titlePlaceholder": "Mi nueva especificación Promptly",
     "untitledSpec": "(especificación sin título)"
+  },
+  "examples": {
+    "title": "Ve Promptly en flujos de trabajo reales",
+    "subtitle": "Convierte solicitudes comerciales desordenadas en especificaciones de prompts ejecutables, pruebas e informes."
   }
 }

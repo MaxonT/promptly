@@ -70,7 +70,12 @@
     "modeDeep": "深度思考",
     "modeDeepDesc": "深度与速度平衡",
     "modeUltra": "超级思考",
-    "modeUltraDesc": "最大深度，最慢响应"
+    "modeUltraDesc": "最大深度，最慢响应",
+    "answerTipsTitle": "💡 回答提示：",
+    "answerTip1": "您<strong>无需回答所有问题</strong>——至少回答一个即可",
+    "answerTip2": "您回答的问题越多，最终提示词就越准确和定制化",
+    "answerTip3": "您的回答会<strong>自动保存</strong>——无需点击保存",
+    "answerTip4": "您可以随时跳过问题或返回之前的页面"
   },
   "result": {
     "title": "结果页面",
@@ -326,5 +331,9 @@
   "dynamic": {
     "lastUpdated": "最后更新",
     "topPickFormat": "最佳选择：#{index}"
+  },
+  "examples": {
+    "title": "在实际工作流中看 Promptly",
+    "subtitle": "将混乱的业务需求转化为可执行的提示词规格、测试和报告。"
   }
 }

@@ -79,7 +79,12 @@
     "modeDeep": "깊은 사고",
     "modeDeepDesc": "깊이와 속도의 균형",
     "modeUltra": "초고도 사고",
-    "modeUltraDesc": "최대 깊이, 가장 느린 응답"
+    "modeUltraDesc": "최대 깊이, 가장 느린 응답",
+    "answerTipsTitle": "💡 답변 팁:",
+    "answerTip1": "<strong>모든 질문에 답할 필요가 없습니다</strong> — 최소한 하나에 답하면 됩니다",
+    "answerTip2": "더 많은 질문에 답할수록 최종 프롬프트가 더 정확하고 맞춤화됩니다",
+    "answerTip3": "답변은 입력하는 동안 <strong>자동으로 저장</strong>됩니다 — 저장을 클릭할 필요가 없습니다",
+    "answerTip4": "언제든지 질문을 건너뛰거나 이전 페이지로 돌아갈 수 있습니다"
   },
   "result": {
     "title": "결과 페이지",
@@ -452,5 +457,9 @@
     "stats2": "50% 비용 절감",
     "stats3": "99.9% 가동 시간",
     "stats4": "1000명 이상의 만족한 사용자"
+  },
+  "examples": {
+    "title": "실제 워크플로에서 Promptly 보기",
+    "subtitle": "복잡한 비즈니스 요청을 실행 가능한 프롬프트 사양, 테스트 및 보고서로 전환하세요."
   }
 }

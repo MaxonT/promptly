@@ -70,7 +70,12 @@
     "modeDeep": "Deep Thinking",
     "modeDeepDesc": "Balanced depth and speed",
     "modeUltra": "Ultra Thinking",
-    "modeUltraDesc": "Maximum depth, slowest response"
+    "modeUltraDesc": "Maximum depth, slowest response",
+    "answerTipsTitle": "💡 Answering Tips:",
+    "answerTip1": "You <strong>do NOT need to answer all questions</strong> — answering at least one is okay",
+    "answerTip2": "The more questions you answer, the more accurate and tailored your final prompt will be",
+    "answerTip3": "Your answers are <strong>automatically saved</strong> as you type — no need to click Save",
+    "answerTip4": "You can skip questions or go back to previous pages anytime"
   },
   "result": {
     "title": "Result page",
@@ -326,5 +331,9 @@
     "errorCreateError": "Create spec error. See log.",
     "untitledSpec": "(untitled spec)",
     "logLoaded": "Specs Manager loaded. Fetching specs ..."
+  },
+  "examples": {
+    "title": "See Promptly in real workflows",
+    "subtitle": "Turn messy business requests into executable prompt specs, tests, and reports."
   }
 }

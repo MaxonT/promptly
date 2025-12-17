@@ -1,6 +1,41 @@
-v0.6.10.1
+v0.6.10.2
 
 Release Date: 2025-12-17
+Type: HOTFIX - Additional i18n Helper Functions Fixed 🔧
+
+Changes in v0.6.10.2:
+🐛 Fixed Additional i18n Issues in 3 Frontend Files:
+- Fixed specs.js t() helper function to properly validate translations
+- Fixed outcome.js t() helper function to properly validate translations
+- Fixed enhancer.js t() helper function to properly validate translations
+- All helper functions now use centralized i18nManager instead of window.i18n
+- Improved fallback behavior: returns friendly text instead of full key names
+- Added detailed console warnings for missing translations
+
+Technical Changes:
+✅ Updated t() function in 3 files:
+  • specs.js (lines 23-39): Enhanced validation and fallback
+  • outcome.js (lines 23-39): Enhanced validation and fallback
+  • enhancer.js (lines 38-54): Enhanced validation and fallback
+
+✅ Improvements:
+  • Uses window.i18nManager.instance for consistency
+  • Validates translation result !== key (detects i18next fallback)
+  • Returns key.split('.').pop() as friendly fallback
+  • Adds file-specific console warnings for debugging
+
+Impact:
+- Fixes potential i18n key display on Specs, Outcome, and Enhancer pages
+- Consistent with v0.6.10.1 fixes to i18n/index.js
+- No backend changes (frontend only)
+
+Files Modified:
+- frontend/specs.js (t() function, +11 lines)
+- frontend/outcome.js (t() function, +11 lines)
+- frontend/enhancer.js (t() function, +11 lines)
+- VERSION.txt (version bump + changelog)
+
+Previous Version: v0.6.10.1 (2025-12-17)
 Type: HOTFIX - i18n Translation Display Issue Fixed 🔧
 
 Changes in v0.6.10.1:

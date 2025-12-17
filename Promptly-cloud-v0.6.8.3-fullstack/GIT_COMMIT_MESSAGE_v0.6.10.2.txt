@@ -1,0 +1,88 @@
+fix(i18n): Fix helper functions in specs.js, outcome.js, enhancer.js (v0.6.10.2)
+
+🐛 Fixed Additional i18n Issues in 3 Frontend Files
+
+After v0.6.10.1 fix, comprehensive check revealed 3 more files with 
+similar i18n helper function issues.
+
+Problem:
+- All 3 files had t() helper functions that returned key names when:
+  1. i18n wasn't initialized yet
+  2. Translation was missing (i18next fallback behavior)
+- Would display technical key names like "specs.untitledSpec" instead 
+  of user-friendly text
+
+Root Cause:
+```javascript
+// Old problematic code in all 3 files
+function t(key, options = {}) {
+  if (!window.i18n) return key;  // ❌ Returns full key name
+  return window.i18n.t(key, options);  // ❌ No validation
+}
+```
+
+Solution:
+1. Use centralized window.i18nManager instead of window.i18n
+2. Validate translation result (check if result !== key)
+3. Return friendly fallback (key.split('.').pop())
+4. Add file-specific console warnings for debugging
+
+Files Fixed:
+~ frontend/specs.js
+  - Updated t() function (lines 23-39)
+  - +13 lines of enhanced validation
+  - Used by: spec titles, error messages
+  
+~ frontend/outcome.js
+  - Updated t() function (lines 23-39)
+  - +13 lines of enhanced validation
+  - Used by: candidate display, test status
+  
+~ frontend/enhancer.js
+  - Updated t() function (lines 38-54)
+  - +13 lines of enhanced validation
+  - Used by: LLM status messages
+
+~ VERSION.txt
+  - Version: v0.6.10.1 → v0.6.10.2
+  - Added changelog for this fix
+
++ I18N_FIX_v0.6.10.2.md
+  - Comprehensive fix documentation
+  - Testing guide
+  - Impact analysis
+
+New Behavior:
+- Uses window.i18nManager.instance consistently
+- Returns "untitledSpec" instead of "specs.untitledSpec"
+- Logs warnings: "[specs.js] Translation not found for key: ..."
+- Maintains all existing functionality when translations exist
+
+Impact:
+✅ Fixes potential key name display on 3 pages (Specs, Outcome, Enhancer)
+✅ Consistent with v0.6.10.1 fixes to i18n/index.js
+✅ No backend changes (frontend only)
+✅ Fully backward compatible
+✅ No performance impact
+
+Testing:
+- Verified function logic and fallback behavior
+- Console warnings provide clear debugging info
+- Friendly fallback text instead of technical keys
+
+Statistics:
+- 3 files modified
+- +39 lines of code
+- 3 t() functions enhanced
+- 6 translation call sites protected
+
+Breaking Changes: None
+Migration Required: None
+Backward Compatible: ✅ Yes
+
+Version: v0.6.10.1 → v0.6.10.2
+Type: Hotfix (continues i18n improvements)
+Date: 2025-12-17
+Scope: Frontend only (no backend changes)
+
+

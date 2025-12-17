@@ -21,8 +21,23 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
   const logEl = document.getElementById("outcomeLog");
 
   function t(key, options = {}) {
-    if (!window.i18n) return key;
-    return window.i18n.t(key, options);
+    // Use centralized i18nManager for consistency
+    if (!window.i18nManager || !window.i18nManager.instance) {
+      console.warn(`[outcome.js] i18nManager not ready for key: ${key}`);
+      // Return a friendly fallback instead of the full key
+      return key.split('.').pop();
+    }
+    
+    const result = window.i18nManager.instance.t(key, options);
+    
+    // Validate translation succeeded (check if i18next returned the key itself)
+    if (!result || result === key) {
+      console.warn(`[outcome.js] Translation not found for key: ${key}`);
+      // Return the last part of the key as a friendly fallback
+      return key.split('.').pop();
+    }
+    
+    return result;
   }
 
   function log(line) {

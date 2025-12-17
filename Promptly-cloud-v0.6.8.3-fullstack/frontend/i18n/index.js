@@ -38,7 +38,12 @@ class I18nManager {
           [detectedLang]: { translation: userLangData },
           ...(fallbackData ? { [i18nConfig.fallbackLocale]: { translation: fallbackData } } : {})
         },
-        debug: false,
+        debug: true, // Enable debug to see issues
+        keySeparator: '.', // Explicitly set key separator for nested keys
+        nsSeparator: false, // Disable namespace separator to avoid conflicts
+        returnEmptyString: false, // Don't return empty strings
+        returnNull: false, // Don't return null
+        returnObjects: false, // Don't return objects, only strings
         interpolation: { escapeValue: false }
       });
 
@@ -55,7 +60,16 @@ class I18nManager {
         this.updateRTL();
       });
 
-      console.log('[i18n] Initialization successful, language:', this.instance.language);
+      console.log('[i18n] ✅ Initialization successful!');
+      console.log('[i18n] Current language:', this.instance.language);
+      console.log('[i18n] Loaded locales:', Array.from(this.loadedLocales));
+      console.log('[i18n] Available resources:', Object.keys(this.instance.store.data));
+      
+      // Test translation access
+      const testKey = 'whyPromptly.title';
+      const testResult = this.instance.t(testKey);
+      console.log(`[i18n] Test translation (${testKey}):`, testResult);
+      console.log('[i18n] Translation successful:', testResult !== testKey);
 
     } catch (e) {
       console.error('[i18n] Initialization failed', e);
@@ -65,7 +79,12 @@ class I18nManager {
           lng: detectedLang,
           fallbackLng: i18nConfig.fallbackLocale,
           resources: {},
-          debug: false,
+          debug: true,
+          keySeparator: '.',
+          nsSeparator: false,
+          returnEmptyString: false,
+          returnNull: false,
+          returnObjects: false,
           interpolation: { escapeValue: false }
         });
         window.i18n = this.instance;
@@ -192,11 +211,26 @@ class I18nManager {
   }
 
   translatePage() {
+    if (!this.instance) {
+      console.error('[i18n] Cannot translate page: i18next instance not initialized');
+      return;
+    }
+
+    let translated = 0;
+    let failed = 0;
+
     document.querySelectorAll('[data-i18n]').forEach(el => {
       const key = el.dataset.i18n;
+      if (!key) return;
+
       const translation = this.instance.t(key);
       
-      if (!translation) return;
+      // Check if translation actually worked (i18next returns key if translation not found)
+      if (!translation || translation === key) {
+        console.warn(`[i18n] Translation not found or failed for key: ${key}`);
+        failed++;
+        return;
+      }
 
       if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') {
         el.placeholder = translation;
@@ -205,7 +239,10 @@ class I18nManager {
       } else {
         el.textContent = translation;
       }
+      translated++;
     });
+
+    console.log(`[i18n] Translation complete: ${translated} successful, ${failed} failed`);
   }
 
   updateRTL() {

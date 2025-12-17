@@ -1,5 +1,6 @@
 {
     "git.ignoreLimitWarning": true,
     "workbench.preferredLightColorTheme": "Default Light+",
-    "workbench.colorTheme": "Cursor Dark"
+    "workbench.colorTheme": "Visual Studio Dark",
+    "workbench.preferredDarkColorTheme": "Visual Studio Dark"
 }

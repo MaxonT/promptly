@@ -1,6 +1,48 @@
-v0.6.10.0
+v0.6.10.1
 
-Release Date: 2025-12-15
+Release Date: 2025-12-17
+Type: HOTFIX - i18n Translation Display Issue Fixed 🔧
+
+Changes in v0.6.10.1:
+🐛 Fixed Critical i18n Issue:
+- Fixed translations not being applied to DOM elements
+- Page was displaying i18n key names (e.g., "whyPromptly.title") instead of actual translations
+- Enhanced i18next configuration with explicit keySeparator and namespace settings
+- Improved translatePage() method with validation and error detection
+- Added comprehensive debug logging for troubleshooting
+
+Technical Changes:
+✅ i18next configuration improvements:
+  • Enabled debug mode for better error visibility
+  • Explicit keySeparator: '.' for nested keys (whyPromptly.title)
+  • Disabled nsSeparator to avoid key conflicts
+  • Added returnEmptyString: false
+  • Added returnNull: false
+  • Added returnObjects: false
+
+✅ translatePage() enhancements:
+  • Validates translation success (checks if result !== key)
+  • Counts successful and failed translations
+  • Preserves original text if translation fails
+  • Detailed console logging
+
+✅ Initialization logging:
+  • Shows loaded locales
+  • Shows available resources
+  • Tests translation functionality
+  • Reports success/failure status
+
+Impact:
+- Affects all 196 data-i18n elements across all pages
+- All 9 languages benefit from the fix
+- No changes to translation files or data
+
+Files Modified:
+- frontend/i18n/index.js (3 functions updated)
+- VERSION.txt (version bump + changelog)
+- CHECK_I18N_FIX.md (new diagnostic document)
+
+Previous Version: v0.6.10.0 (2025-12-15)
 Type: MAJOR MILESTONE - All 9 Languages 100%+ Complete! 🌍
 
 🎊🎊🎊 HISTORIC MILESTONE ACHIEVED 🎊🎊🎊

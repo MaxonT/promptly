@@ -1,6 +1,54 @@
-v0.6.10.4
+v0.6.10.5
 
 Release Date: 2025-12-17
+Type: HOTFIX - Fix Hardcoded English Examples in LLM Prompt 🔧
+
+🐛 修复的问题：
+- ✅ 移除了 system prompt 中硬编码的英文示例
+- ✅ 将示例改为占位符格式（结构示例，不影响语言）
+- ✅ 强化语言指令，增加优先级标识
+- ✅ 明确告知 LLM 不要模仿示例的语言
+
+Changes in v0.6.10.5:
+
+🔧 关键修复（llmAgents.js）：
+- ❌ 之前：JSON 示例包含硬编码的英文内容
+  ```javascript
+  "project_goal": "Build a task management app for small teams"
+  ```
+- ✅ 现在：使用占位符，不影响语言选择
+  ```javascript
+  "project_goal": "<describe the main goal>"
+  ```
+
+🎯 语言指令强化：
+- 添加 🌍 视觉标识提高注意力
+- 标记为 "CRITICAL" 和 "HIGHEST PRIORITY"
+- 明确说明 "OVERRIDES any examples shown below"
+- 添加警告：示例仅用于结构，不要复制语言
+- 新增规则 #7：强调必须使用指定语言
+
+📊 实际效果：
+之前：即使选择中文，LLM 倾向于生成英文（因为示例是英文）
+现在：LLM 会正确遵循语言要求，生成对应语言的内容 ✨
+
+Technical Changes:
+• backend/src/lib/llmAgents.js (+14 lines, modified)
+  - getLanguageInstruction() 函数：增强语言指令
+  - system prompt：移除硬编码英文，使用占位符
+  - 新增规则 #7：提醒语言要求
+
+Files Modified:
+- backend/src/lib/llmAgents.js (强化语言指令 + 修复示例)
+- VERSION.txt (版本更新 + 变更日志)
+
+⚠️ 重要：修改后必须重启后端服务才能生效！
+```bash
+cd backend
+npm start
+```
+
+Previous Version: v0.6.10.4 (2025-12-17)
 Type: FEATURE - Backend Multilingual Prompt Generation Support 🌍✨
 
 🎯 核心功能：多语言 Prompt 生成

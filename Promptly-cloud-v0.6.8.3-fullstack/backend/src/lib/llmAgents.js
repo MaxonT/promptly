@@ -29,11 +29,23 @@ function getLanguageInstruction(language) {
   }
   
   const languageName = LANGUAGE_MAP[language] || 'English';
-  return `LANGUAGE REQUIREMENT: Generate ALL output content in ${languageName}. This includes:
-- All text fields in the spec (project_goal, objectives, requirements, etc.)
+  return `🌍 CRITICAL LANGUAGE REQUIREMENT - HIGHEST PRIORITY 🌍
+YOU MUST GENERATE ALL OUTPUT CONTENT IN ${languageName}.
+This is MANDATORY and OVERRIDES any examples shown below.
+
+REQUIRED LANGUAGE FOR:
+- All text fields in the spec (project_goal, objectives, requirements, target_users, etc.)
 - The explanation field
 - Any descriptions, labels, or user-facing text
-Keep technical terms (like "React", "API", "database") in English, but all natural language should be in ${languageName}.`;
+- ALL natural language content
+
+EXCEPTIONS (keep in English):
+- Technical terms: React, API, database, Node.js, PostgreSQL, JWT, etc.
+- Code syntax and technical stack names
+- Technical abbreviations: CRUD, HTTP, REST, etc.
+
+⚠️ IMPORTANT: The JSON format examples below are for STRUCTURE ONLY.
+DO NOT copy the language from the examples - use ${languageName} instead!`;
 }
 
 const BroadQuestionSchema = z.object({
@@ -624,21 +636,21 @@ export async function generateRawSpec({ initialDescription, kind, qaPairs, modeP
     modeProfile
       ? `Runtime mode: ${modeProfile.label} (${modeProfile.hierarchy}). Use about ${modeProfile.chainLength} reasoning chains but cap at ${modeProfile.maxSteps} steps to match the desired depth: ${modeProfile.description}.`
       : "",
-    "Required JSON format example:",
+    "Required JSON format (structure only - content language MUST match the language requirement above):",
     "{",
     '  "spec": {',
-    '    "project_goal": "Build a task management app for small teams",',
-    '    "objectives": ["Enable task creation and assignment", "Track progress", "Send notifications"],',
-    '    "target_users": "Small teams (5-20 people) in tech companies",',
-    '    "platform": "Web application (responsive)",',
-    '    "key_features": ["Task CRUD", "User authentication", "Real-time updates", "Email notifications"],',
-    '    "technical_stack": "React frontend, Node.js backend, PostgreSQL database",',
-    '    "constraints": ["Must work on mobile browsers", "Max 500ms response time"],',
-    '    "data_model": "Users, Teams, Tasks, Comments",',
-    '    "security": "JWT authentication, role-based access control",',
-    '    "ui_ux": "Clean, minimal interface with drag-and-drop"',
+    '    "project_goal": "<describe the main goal>",',
+    '    "objectives": ["<objective 1>", "<objective 2>"],',
+    '    "target_users": "<describe target users>",',
+    '    "platform": "<platform description>",',
+    '    "key_features": ["<feature 1>", "<feature 2>"],',
+    '    "technical_stack": "<tech stack description>",',
+    '    "constraints": ["<constraint 1>", "<constraint 2>"],',
+    '    "data_model": "<data model description>",',
+    '    "security": "<security description>",',
+    '    "ui_ux": "<ui/ux description>"',
     '  },',
-    '  "explanation": "This spec synthesizes the user\'s requirements into a cohesive plan. The focus is on simplicity and team collaboration."',
+    '  "explanation": "<explanation in the required language>"',
     "}",
     "",
     "RULES:",
@@ -647,7 +659,8 @@ export async function generateRawSpec({ initialDescription, kind, qaPairs, modeP
     "3. 'intent' field is OPTIONAL - omit it or set to null if not needed.",
     "4. Include keys like: project_goal, objectives, target_users, platform, key_features, technical_stack, constraints, etc.",
     "5. Be specific and actionable based on the Q&A responses.",
-    "6. Structure the spec logically for a developer to implement."
+    "6. Structure the spec logically for a developer to implement.",
+    "7. REMEMBER: All natural language content MUST be in the language specified at the top of this prompt!"
   ].join("\n");
   // Build comprehensive input for spec generation
   const userInput = {

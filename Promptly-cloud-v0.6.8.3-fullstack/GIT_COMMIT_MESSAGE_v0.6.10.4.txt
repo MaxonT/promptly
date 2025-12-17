@@ -1,0 +1,52 @@
+feat: Add backend multilingual prompt generation support (v0.6.10.4)
+
+🌍 核心功能：根据用户界面语言自动生成对应语言的 prompt
+
+主要改动：
+✅ 后端现在支持接收和处理用户语言偏好参数
+✅ 支持全部 9 种语言的 prompt 生成
+✅ 完全向后兼容（language 参数为可选）
+
+后端 Schema 更新 (questionSessions.js):
+- CreateSessionSchema 添加 language 参数（可选）
+- AnswerPayloadSchema 添加 language 参数（可选）
+- ModelOnlySchema 添加 language 参数（可选）
+- 支持的语言：en, zh-CN, es, fr, ja, ar, ko, pt, hi
+
+LLM Agent 多语言支持 (llmAgents.js):
+- 新增 LANGUAGE_MAP 常量映射语言代码到语言名称
+- 新增 getLanguageInstruction() 函数生成语言指令
+- generateRawSpec() 函数新增 language 参数（默认 'en'）
+- 在 system prompt 中添加语言要求指令
+- 保持技术术语为英文，自然语言使用目标语言
+
+API Endpoint 更新 (questionSessions.js):
+- POST /api/question-sessions/:sessionId/finalize 接收 language 参数
+- 从 request body 或 session 读取语言偏好
+- 将语言参数传递给 generateRawSpec()
+- 添加日志输出当前使用的语言
+
+实际效果：
+- 用户界面选择中文 → 后端生成中文 prompt ✨
+- 用户界面选择日语 → 后端生成日语 prompt ✨
+- 用户界面选择西班牙语 → 后端生成西班牙语 prompt ✨
+
+Technical Details:
+- backend/src/lib/llmAgents.js: +35 lines (language mapping & instruction)
+- backend/src/routes/questionSessions.js: +8 lines (schema & endpoint updates)
+- VERSION.txt: Updated to v0.6.10.4
+- BACKEND_LANGUAGE_IMPLEMENTATION_v0.6.10.4.md: New (implementation summary)
+
+向后兼容性：
+✅ 所有 language 参数都是可选的
+✅ 默认值为 'en'（英文）
+✅ 不影响现有功能和数据
+✅ 前端已在 v0.6.10.3 中准备就绪
+
+测试：
+⚠️ 需要在真实环境中验证多语言 prompt 生成效果
+⚠️ 确认 LLM 是否正确遵循语言指令
+⚠️ 验证各语言的 prompt 质量
+
+Co-authored-by: AI Assistant <ai@promptly.dev>
+

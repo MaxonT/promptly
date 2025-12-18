@@ -1,6 +1,20 @@
-v0.6.10.7
+v0.6.10.8
 
 Release Date: 2025-12-17
+Type: FEATURE - Add o1-mini Model Support
+
+新增o1-mini模型支持：
+- Promptly v0 mini → gpt-4o-mini
+- Promptly v0 → gpt-4o
+- Promptly v0 Max → o1-mini (新！高级推理)
+
+Modified:
+- modelRegistry.js: 添加promptly-v0-mini, promptly-v0, promptly-v0-max
+- dataAggregator.js: 更新模型映射
+
+Previous Version: v0.6.10.7
+
+Changes in v0.6.10.7:
 Type: FIX - Compiled Spec Field Mapping
 
 修复compiled spec出现null的问题：

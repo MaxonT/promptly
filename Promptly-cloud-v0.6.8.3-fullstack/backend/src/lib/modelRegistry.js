@@ -49,10 +49,26 @@ export const MODEL_REGISTRY = {
     id: 'promptly-mini',
     provider: MODEL_PROVIDERS.OPENAI,
     model: 'gpt-4o-mini',
-    _futureModel: 'gpt-4o-mini', // Current is already optimal for tier
+    _futureModel: 'gpt-4o-mini',
     tier: MODEL_TIERS.MINI,
     category: MODEL_CATEGORIES.GENERAL,
     label: 'Promptly Mini',
+    description: 'Fast and efficient for simple tasks',
+    costMultiplier: 1,
+    speedMultiplier: 1.5,
+    maxTokens: 4096,
+    supportsJson: true,
+    systemPromptSuffix: null
+  },
+
+  'promptly-v0-mini': {
+    id: 'promptly-v0-mini',
+    provider: MODEL_PROVIDERS.OPENAI,
+    model: 'gpt-4o-mini',
+    _futureModel: 'gpt-4o-mini',
+    tier: MODEL_TIERS.MINI,
+    category: MODEL_CATEGORIES.GENERAL,
+    label: 'Promptly v0 mini',
     description: 'Fast and efficient for simple tasks',
     costMultiplier: 1,
     speedMultiplier: 1.5,
@@ -74,6 +90,38 @@ export const MODEL_REGISTRY = {
     speedMultiplier: 1,
     maxTokens: 8192,
     supportsJson: true,
+    systemPromptSuffix: null
+  },
+
+  'promptly-v0': {
+    id: 'promptly-v0',
+    provider: MODEL_PROVIDERS.OPENAI,
+    model: 'gpt-4o',
+    _futureModel: 'gpt-4o',
+    tier: MODEL_TIERS.STANDARD,
+    category: MODEL_CATEGORIES.GENERAL,
+    label: 'Promptly v0',
+    description: 'Balanced performance for most tasks',
+    costMultiplier: 3,
+    speedMultiplier: 1,
+    maxTokens: 8192,
+    supportsJson: true,
+    systemPromptSuffix: null
+  },
+
+  'promptly-v0-max': {
+    id: 'promptly-v0-max',
+    provider: MODEL_PROVIDERS.OPENAI,
+    model: 'o1-mini',
+    _futureModel: 'o1-mini',
+    tier: MODEL_TIERS.PRO_MAX,
+    category: MODEL_CATEGORIES.GENERAL,
+    label: 'Promptly v0 Max',
+    description: 'Advanced reasoning for complex tasks',
+    costMultiplier: 5,
+    speedMultiplier: 0.7,
+    maxTokens: 65536,
+    supportsJson: false,
     systemPromptSuffix: null
   },
 

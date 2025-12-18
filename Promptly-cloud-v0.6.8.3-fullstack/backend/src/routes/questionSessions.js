@@ -199,10 +199,13 @@ questionSessionRouter.post("/", async (req, res) => {
     }
     return res.status(400).json({ ok: false, error: parsed.error.flatten() });
   }
-  const { initial_description, kind, mode, model } = parsed.data;
+  const { initial_description, kind, mode, model, language } = parsed.data;
   const modeProfile = resolveModeProfile(mode);
   const modelChoice = resolveModelChoice(model);
+  const userLanguage = language || 'en';
   const userId = getUserId(req);
+  
+  console.log(`[promptly] Creating session with language: ${userLanguage}`);
   
   // Ensure the user exists before creating a session
   ensureUser(userId);
@@ -222,7 +225,8 @@ questionSessionRouter.post("/", async (req, res) => {
         initialDescription: initial_description,
         kind: kind || null,
         modeProfile,
-        model: modelChoice.targetModel
+        model: modelChoice.targetModel,
+        language: userLanguage
       }),
       modeProfile.timeoutMs,
       "generate broad questions"
@@ -233,7 +237,8 @@ questionSessionRouter.post("/", async (req, res) => {
         kind: kind || null,
         broadQuestions,
         modeProfile,
-        model: modelChoice.targetModel
+        model: modelChoice.targetModel,
+        language: userLanguage
       }),
       modeProfile.timeoutMs,
       "generate choice questions"

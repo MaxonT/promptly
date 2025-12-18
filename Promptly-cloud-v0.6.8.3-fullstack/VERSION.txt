@@ -1,6 +1,71 @@
-v0.6.10.5
+v0.6.10.6
 
 Release Date: 2025-12-17
+Type: CRITICAL HOTFIX - Light Mode Visibility + Question Generation Language 🚨
+
+🚨 紧急修复两个关键问题：
+- ✅ 修复Light模式下选项按钮完全不可见的问题
+- ✅ 修复中文模式下生成的questions仍然是英文的问题
+
+Changes in v0.6.10.6:
+
+🔧 关键修复1：Light模式选项不可见（wizard.css）
+问题：在Light模式下，.wizard-pill选项按钮的文字几乎透明，完全无法看见
+原因：缺少Light模式的特定样式覆盖
+修复：
+- 添加 [data-theme="light"] .wizard-pill 样式
+- 背景：rgba(255, 255, 255, 0.9) - 白色背景
+- 文字：rgba(15, 23, 42, 0.9) - 深色文字（高对比度）
+- 边框：rgba(148, 163, 184, 0.5) - 清晰可见边框
+- hover状态：淡紫色背景 + 深色文字
+- selected状态：保持紫色渐变 + 白色文字
+
+🔧 关键修复2：Questions生成语言问题（llmAgents.js + questionSessions.js）
+问题：用户选择中文界面，但生成的questions全是英文
+原因：generateBroadQuestions 和 generateChoiceQuestions 函数缺少language参数
+修复：
+- generateBroadQuestions 添加 language = 'en' 参数
+- generateChoiceQuestions 添加 language = 'en' 参数
+- 两个函数的system prompt都添加 getLanguageInstruction(language)
+- questionSessions.js POST "/" endpoint 提取并传递language参数
+- 添加日志：'Creating session with language: zh-CN'
+
+📊 实际效果：
+之前：
+- Light模式：选项按钮完全看不见 ❌
+- 中文界面：Questions是英文 ❌
+
+现在：
+- Light模式：选项按钮清晰可见，对比度高 ✅
+- 中文界面：Questions是中文 ✅
+
+Technical Changes:
+• frontend/wizard.css (+40 lines)
+  - 新增完整的Light模式 .wizard-pill 样式覆盖
+  - 包括normal, hover, selected, ::before, ::after状态
+
+• backend/src/lib/llmAgents.js (+4 lines)
+  - generateBroadQuestions: 添加language参数 + 语言指令
+  - generateChoiceQuestions: 添加language参数 + 语言指令
+
+• backend/src/routes/questionSessions.js (+5 lines)
+  - POST "/" 提取language参数
+  - 传递language到两个生成函数
+  - 添加语言日志
+
+Files Modified:
+- frontend/wizard.css (Light模式选项样式)
+- backend/src/lib/llmAgents.js (Questions语言支持)
+- backend/src/routes/questionSessions.js (传递language参数)
+- VERSION.txt (版本更新)
+
+⚠️ 重要：必须重启后端服务！
+```bash
+cd backend
+npm start
+```
+
+Previous Version: v0.6.10.5 (2025-12-17)
 Type: HOTFIX - Fix Hardcoded English Examples in LLM Prompt 🔧
 
 🐛 修复的问题：

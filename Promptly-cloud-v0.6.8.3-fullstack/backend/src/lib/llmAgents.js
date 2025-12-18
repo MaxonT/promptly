@@ -97,12 +97,14 @@ const AgentCOutputSchema = z.object({
   explanation: z.string()
 });
 
-export async function generateBroadQuestions({ initialDescription, kind, modeProfile = null, model = null }) {
+export async function generateBroadQuestions({ initialDescription, kind, modeProfile = null, model = null, language = 'en' }) {
   const system = [
     "You are Agent A in Promptly's Question Engine.",
     "Goal: from a fuzzy project idea, propose 8-12 broad clarification axes.",
     "IMPORTANT: Return ONLY valid JSON, no other text.",
     "",
+    getLanguageInstruction(language),
+    language && language !== 'en' ? "" : "",
     modeProfile
       ? `Runtime mode: ${modeProfile.label} (${modeProfile.hierarchy}). Use about ${modeProfile.chainLength} chained thoughts, and cap at ${modeProfile.maxSteps} reasoning steps to honor this profile. Prioritize ${modeProfile.description.toLowerCase()}.`
       : "",
@@ -246,12 +248,14 @@ function cleanOptionsArray(options) {
   return cleaned;
 }
 
-export async function generateChoiceQuestions({ initialDescription, kind, broadQuestions, modeProfile = null, model = null }) {
+export async function generateChoiceQuestions({ initialDescription, kind, broadQuestions, modeProfile = null, model = null, language = 'en' }) {
   const system = [
     "You are Agent B in Promptly's Question Engine.",
     "Goal: convert broad axes into concrete, user-friendly questions with depth levels.",
     "IMPORTANT: Return ONLY valid JSON, no other text.",
     "",
+    getLanguageInstruction(language),
+    language && language !== 'en' ? "" : "",
     modeProfile
       ? `Runtime mode: ${modeProfile.label} (${modeProfile.hierarchy}). Use about ${modeProfile.chainLength} chained thoughts and no more than ${modeProfile.maxSteps} planning hops to balance speed/quality as described: ${modeProfile.description}.`
       : "",

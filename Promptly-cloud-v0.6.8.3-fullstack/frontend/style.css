@@ -48,6 +48,11 @@ header.topbar{position:sticky;top:0;display:flex;align-items:center;justify-cont
   position:relative;
 }
 .card h2,.card h3{margin:6px 0 12px 0}
+.canvas{
+  width:100%;
+  height:240px;
+  display:block;
+}
 
 .layer-card{
   background:var(--card);
@@ -348,6 +353,11 @@ details.layer-field > small.help{
   display:none;
   z-index:10;
 }
+html[data-theme="light"] .model-select__menu{
+  background:rgba(255,255,255,0.98);
+  border-color:rgba(148,163,184,0.3);
+  box-shadow:0 8px 24px rgba(0,0,0,0.12);
+}
 .model-select__menu[aria-hidden="false"]{
   display:flex;
   flex-direction:column;
@@ -367,6 +377,14 @@ details.layer-field > small.help{
 .model-select__option.is-active{
   background:linear-gradient(90deg,rgba(124,58,237,0.12),rgba(6,182,212,0.12));
   border-color:rgba(124,58,237,0.35);
+}
+html[data-theme="light"] .model-select__option{
+  color:rgba(15,23,42,0.95);
+}
+html[data-theme="light"] .model-select__option:hover,
+html[data-theme="light"] .model-select__option.is-active{
+  background:rgba(124,58,237,0.08);
+  border-color:rgba(124,58,237,0.25);
 }
 .layer-output-header{
   display:flex;
@@ -2173,6 +2191,127 @@ html[data-theme="light"] .error-state {
   opacity: 1;
 }
 
+/* Expand button */
+.pipeline-node {
+  position: relative;
+}
+
+.node-expand-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: rgba(124, 58, 237, 0.2);
+  border: 1px solid rgba(124, 58, 237, 0.4);
+  color: #A78BFA;
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  opacity: 0.6;
+}
+
+.node-expand-btn:hover {
+  opacity: 1;
+  background: rgba(124, 58, 237, 0.3);
+  border-color: rgba(124, 58, 237, 0.6);
+  transform: scale(1.1);
+}
+
+.pipeline-node.active .node-expand-btn,
+.pipeline-node.expanded .node-expand-btn {
+  opacity: 1;
+  border-color: rgba(34, 211, 238, 0.6);
+  background: rgba(34, 211, 238, 0.15);
+}
+
+/* Node details/log area */
+.node-details {
+  grid-column: 1 / -1;
+  margin-top: 12px;
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.3s ease-out;
+  border-top: 1px solid rgba(124, 58, 237, 0.2);
+  padding-top: 0;
+}
+
+.pipeline-node.expanded .node-details {
+  padding-top: 12px;
+}
+
+.node-log {
+  max-height: 400px;
+  overflow-y: auto;
+  font-family: 'SF Mono', 'Monaco', 'Cascadia Code', 'Roboto Mono', monospace;
+  font-size: 11px;
+  line-height: 1.6;
+  color: rgba(255, 255, 255, 0.7);
+  background: rgba(10, 14, 25, 0.5);
+  border-radius: 8px;
+  padding: 12px;
+  border: 1px solid rgba(124, 58, 237, 0.15);
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.log-entry {
+  margin-bottom: 8px;
+  padding: 6px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  animation: logEntryFadeIn 0.3s ease;
+  width: 100%;
+  min-width: 0;
+}
+
+.log-entry:last-child {
+  border-bottom: none;
+}
+
+@keyframes logEntryFadeIn {
+  from {
+    opacity: 0;
+    transform: translateX(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.log-time {
+  color: rgba(124, 58, 237, 0.6);
+  margin-right: 8px;
+  font-size: 10px;
+}
+
+.log-message {
+  color: rgba(255, 255, 255, 0.8);
+  word-break: break-word;
+  overflow-wrap: break-word;
+  min-width: 0;
+}
+
+.log-details {
+  margin-top: 6px;
+  margin-left: 60px;
+  padding: 8px;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 4px;
+  border-left: 2px solid rgba(34, 211, 238, 0.4);
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.6);
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
 .pipeline-visuals {
   position: relative;
   display: grid;
@@ -2806,139 +2945,654 @@ html[data-theme="light"] .text-keyword {
    Question Wizard Status Indicator
    ============================================ */
 
-.wizard-status-indicator {
-  display: none;
-  position: fixed;
-  bottom: 20px;
-  right: 20px;
-  padding: 16px 20px;
-  background: linear-gradient(135deg, rgba(124, 58, 237, 0.98), rgba(6, 182, 212, 0.98));
-  border-radius: 18px;
-  color: #fff;
-  font-size: 0.95rem;
-  font-weight: 700;
-  box-shadow: 0 16px 30px rgba(0, 0, 0, 0.38), 0 0 0 2px rgba(255, 255, 255, 0.08);
-  z-index: 1200;
-  animation: pulse-glow 2s ease-in-out infinite, floaty 6s ease-in-out infinite;
-  cursor: pointer;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  backdrop-filter: blur(8px);
-}
-
-.wizard-status-indicator.active {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  transform-origin: center;
-  animation-name: pulse-glow, floaty, pop-in;
-}
-
-.wizard-status-indicator .spinner {
-  width: 16px;
-  height: 16px;
-  border: 2px solid rgba(255, 255, 255, 0.3);
-  border-top-color: #fff;
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-}
-
-.wizard-status-indicator__content {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  min-width: 240px;
-}
-
-.wizard-status-indicator__label {
-  letter-spacing: 0.01em;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.wizard-status-indicator__label::before {
-  content: "";
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background: #fff;
-  box-shadow: 0 0 0 6px rgba(255, 255, 255, 0.15), 0 0 12px rgba(255, 255, 255, 0.9);
-  animation: ping 1.2s ease-in-out infinite;
-}
-
-.wizard-status-indicator__detail {
-  font-size: 0.82rem;
-  font-weight: 500;
-  opacity: 0.92;
-}
-
-.wizard-status-indicator__progress {
-  position: relative;
-  width: 100%;
-  height: 6px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.15);
-  overflow: hidden;
-  margin-top: 4px;
-}
-
-.wizard-status-indicator__progress-fill {
-  position: absolute;
-  inset: 0;
-  width: 0;
-  background: linear-gradient(90deg, #fff, #e0f2fe);
-  border-radius: inherit;
-  box-shadow: 0 0 12px rgba(255, 255, 255, 0.7);
-  transition: width 0.5s ease;
-}
-
-.wizard-status-indicator__progress-fill.is-indeterminate {
-  animation: wizard-stripes 1.2s linear infinite;
-  background: repeating-linear-gradient(90deg, rgba(255,255,255,0.85) 0, rgba(255,255,255,0.85) 8px, rgba(255,255,255,0.5) 12px, rgba(255,255,255,0.5) 20px);
-}
-
-.wizard-status-indicator__progress-glow {
-  position: absolute;
-  inset: -6px -10px;
-  background: radial-gradient(circle at 20% 50%, rgba(255,255,255,0.25), transparent 45%),
-    radial-gradient(circle at 80% 50%, rgba(255,255,255,0.25), transparent 45%);
-  pointer-events: none;
-  mix-blend-mode: screen;
-  animation: shimmer 2.4s ease-in-out infinite;
-}
-
-@keyframes pulse-glow {
-  0%, 100% { box-shadow: 0 8px 24px rgba(124, 58, 237, 0.4); }
-  50% { box-shadow: 0 8px 32px rgba(6, 182, 212, 0.6); }
-}
-
-@keyframes floaty {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-4px); }
-}
-
-@keyframes spin {
-  to { transform: rotate(360deg); }
-}
-
-@keyframes wizard-stripes {
-  0% { background-position: 0 0; }
-  100% { background-position: 40px 0; }
-}
-
-@keyframes shimmer {
-  0%, 100% { opacity: 0.6; transform: translateX(0); }
-  50% { opacity: 1; transform: translateX(4px); }
-}
-
-@keyframes pop-in {
-  0% { transform: scale(0.9); opacity: 0; }
-  80% { transform: scale(1.03); opacity: 1; }
-  100% { transform: scale(1); }
-}
+/* Wizard status indicator styles removed */
 
 @keyframes ping {
   0% { transform: scale(0.95); opacity: 0.9; }
   60% { transform: scale(1.25); opacity: 0.35; }
   100% { transform: scale(1); opacity: 1; }
 }
+
+/* ============================================
+   P1: Global Wizard Status Indicator
+   - Shows when Question Wizard is running
+   - Fixed position at top of page
+   - Visible across all pages
+   ============================================ */
+
+.promptly-global-status {
+  position: fixed;
+  top: 60px;
+  left: 0;
+  right: 0;
+  z-index: 9999;
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.95), rgba(251, 191, 36, 0.95));
+  border-bottom: 3px solid #F59E0B;
+  box-shadow: 0 4px 24px rgba(245, 158, 11, 0.6), 0 0 50px rgba(245, 158, 11, 0.3);
+  animation: globalStatus-slideDown 0.3s ease-out, globalStatus-glow 2s ease-in-out infinite;
+  backdrop-filter: blur(8px);
+  transition: transform 0.3s ease, opacity 0.3s ease;
+}
+
+.promptly-global-status.hidden {
+  display: none !important;
+  transform: translateY(-100%);
+  opacity: 0;
+}
+
+.global-status-content {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  padding: 0.875rem 2rem;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.global-status-icon {
+  font-size: 1.5rem;
+  animation: globalStatus-bounce 1s ease-in-out infinite;
+}
+
+.global-status-message {
+  color: #fff;
+  font-size: 1rem;
+  font-weight: 800;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.25);
+  letter-spacing: 0.05em;
+}
+
+.global-status-cta {
+  background: rgba(255, 255, 255, 0.25);
+  color: #fff;
+  text-decoration: none;
+  padding: 0.5rem 1rem;
+  border-radius: 999px;
+  font-size: 0.875rem;
+  font-weight: 700;
+  transition: all 0.2s ease;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.global-status-cta:hover {
+  background: rgba(255, 255, 255, 0.4);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.global-status-dismiss {
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 1.5rem;
+  cursor: pointer;
+  padding: 0.25rem 0.5rem;
+  line-height: 1;
+  transition: opacity 0.2s ease;
+}
+
+.global-status-dismiss:hover {
+  opacity: 0.7;
+}
+
+@keyframes globalStatus-slideDown {
+  from {
+    transform: translateY(-100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes globalStatus-glow {
+  0%, 100% {
+    box-shadow: 0 4px 24px rgba(245, 158, 11, 0.6), 0 0 50px rgba(245, 158, 11, 0.3);
+  }
+  50% {
+    box-shadow: 0 4px 32px rgba(245, 158, 11, 0.8), 0 0 70px rgba(245, 158, 11, 0.5);
+  }
+}
+
+@keyframes globalStatus-bounce {
+  0%, 100% {
+    transform: translateY(0) scale(1);
+  }
+  50% {
+    transform: translateY(-3px) scale(1.1);
+  }
+}
+
+/* Ensure warning banner on wizard page is always visible */
+.wizard-running-warning {
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  z-index: 2000 !important;
+}
+
+.wizard-running-warning.hidden {
+  display: none !important;
+}
+
+/* ============================================
+   P3 & P4: Enhanced Pipeline Visualization
+   - Real-time data flow animations
+   - AI reasoning chain (Chain-of-Thought style)
+   - Stage-specific data visualization
+   ============================================ */
+
+/* P4.1: Data flow lines between nodes */
+.pipeline-data-flow {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: rgba(124, 58, 237, 0.2);
+  border-radius: 999px;
+  overflow: hidden;
+  z-index: 0;
+}
+
+.pipeline-data-flow::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 50%;
+  height: 100%;
+  background: linear-gradient(90deg, 
+    transparent, 
+    rgba(34, 211, 238, 0.8), 
+    rgba(124, 58, 237, 0.9), 
+    transparent
+  );
+  animation: dataFlowPulse 2s ease-in-out infinite;
+}
+
+@keyframes dataFlowPulse {
+  0% {
+    left: -50%;
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  90% {
+    opacity: 1;
+  }
+  100% {
+    left: 100%;
+    opacity: 0;
+  }
+}
+
+/* P4.3: AI Reasoning Chain Animation (Chain-of-Thought style) */
+.ai-reasoning-chain {
+  background: rgba(10, 14, 25, 0.85);
+  border: 1px solid rgba(124, 58, 237, 0.3);
+  border-radius: 12px;
+  padding: 16px;
+  margin-top: 12px;
+  font-family: 'SF Mono', 'Monaco', 'Cascadia Code', 'Roboto Mono', monospace;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.85);
+  line-height: 1.7;
+  overflow: hidden;
+  position: relative;
+}
+
+.ai-reasoning-chain::before {
+  content: '🤖 AI Thinking...';
+  position: absolute;
+  top: 8px;
+  right: 12px;
+  font-size: 10px;
+  color: rgba(124, 58, 237, 0.7);
+  font-weight: 600;
+  letter-spacing: 0.05em;
+}
+
+.ai-reasoning-line {
+  opacity: 0;
+  transform: translateY(10px);
+  margin-bottom: 8px;
+  padding-left: 16px;
+  border-left: 2px solid rgba(34, 211, 238, 0.4);
+  animation: reasoningLineAppear 0.4s ease forwards;
+}
+
+.ai-reasoning-line:nth-child(1) { animation-delay: 0.1s; }
+.ai-reasoning-line:nth-child(2) { animation-delay: 0.4s; }
+.ai-reasoning-line:nth-child(3) { animation-delay: 0.7s; }
+.ai-reasoning-line:nth-child(4) { animation-delay: 1.0s; }
+.ai-reasoning-line:nth-child(5) { animation-delay: 1.3s; }
+
+@keyframes reasoningLineAppear {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Typewriter effect for AI reasoning text */
+.ai-reasoning-typewriter {
+  overflow: hidden;
+  border-right: 2px solid rgba(34, 211, 238, 0.7);
+  white-space: nowrap;
+  animation: typewriter 2s steps(40) forwards, blink-caret 0.75s step-end infinite;
+  display: inline-block;
+}
+
+@keyframes typewriter {
+  from { width: 0; }
+  to { width: 100%; }
+}
+
+@keyframes blink-caret {
+  from, to { border-color: transparent; }
+  50% { border-color: rgba(34, 211, 238, 0.7); }
+}
+
+/* P4.2: Stage-specific data visualization animations */
+
+/* Spec Builder - Document assembling animation */
+.spec-visual.active .spec-fragments .fragment {
+  animation: fragmentAssemble 0.6s ease forwards;
+}
+
+@keyframes fragmentAssemble {
+  0% {
+    opacity: 0;
+    transform: translateX(-20px) scale(0.8);
+  }
+  70% {
+    transform: translateX(5px) scale(1.02);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+
+/* LLM Agents - Candidate drafts animation */
+.candidate-pool .candidate {
+  transition: all 0.4s ease;
+}
+
+.candidate-pool .candidate.generating {
+  animation: candidateGenerate 1.5s ease-in-out infinite;
+  border-color: rgba(34, 211, 238, 0.6);
+}
+
+@keyframes candidateGenerate {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(34, 211, 238, 0.4);
+    transform: scale(1);
+  }
+  50% {
+    box-shadow: 0 0 20px 4px rgba(34, 211, 238, 0.3);
+    transform: scale(1.02);
+  }
+}
+
+/* Metrics - Score bar growing animation */
+.metric-bar .bar {
+  transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.metrics-visual.active .metric-bar .bar {
+  animation: scoreBarGrow 1.2s ease-out forwards;
+}
+
+@keyframes scoreBarGrow {
+  0% {
+    width: 0%;
+    opacity: 0.3;
+  }
+  60% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+/* Outcome - Winner selection animation */
+.outcome-visual .race-card.best {
+  animation: winnerPop 0.6s ease forwards;
+}
+
+@keyframes winnerPop {
+  0% {
+    transform: scale(0.9);
+    opacity: 0.5;
+  }
+  50% {
+    transform: scale(1.08);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+    box-shadow: 0 0 30px rgba(34, 197, 94, 0.5);
+    border-color: rgba(34, 197, 94, 0.8);
+  }
+}
+
+/* P3: Real-time intermediate results display */
+.intermediate-result {
+  background: rgba(15, 23, 42, 0.9);
+  border: 1px solid rgba(124, 58, 237, 0.3);
+  border-radius: 10px;
+  padding: 12px 16px;
+  margin: 8px 0;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.8);
+  animation: resultSlideIn 0.3s ease;
+}
+
+.intermediate-result-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: rgba(124, 58, 237, 0.7);
+  margin-bottom: 6px;
+}
+
+.intermediate-result-content {
+  font-family: 'SF Mono', 'Monaco', 'Cascadia Code', 'Roboto Mono', monospace;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 150px;
+  overflow-y: auto;
+}
+
+@keyframes resultSlideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Token usage and timing stats */
+.pipeline-stats {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+  padding: 12px;
+  background: rgba(10, 14, 25, 0.6);
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.stat-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.stat-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.stat-value {
+  font-size: 14px;
+  font-weight: 700;
+  color: rgba(34, 211, 238, 0.9);
+}
+
+/* Similarity score display (P2 debug) */
+.similarity-debug {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  background: rgba(15, 23, 42, 0.9);
+  border: 1px solid rgba(124, 58, 237, 0.3);
+  border-radius: 8px;
+  margin-top: 8px;
+  font-size: 12px;
+}
+
+.similarity-debug-label {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.similarity-debug-value {
+  font-weight: 700;
+  font-family: 'SF Mono', 'Monaco', monospace;
+}
+
+.similarity-debug-value.good {
+  color: #22C55E;
+}
+
+.similarity-debug-value.warning {
+  color: #F59E0B;
+}
+
+.similarity-debug-value.error {
+  color: #EF4444;
+}
+
+.similarity-bar {
+  flex: 1;
+  height: 8px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.similarity-bar-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.5s ease, background-color 0.3s ease;
+}
+
+/* ============================================ */
+/* Real Data Display in Middle Grid Panels */
+/* ============================================ */
+
+/* Spec Data Lines */
+.spec-data-line {
+  font-size: 10px;
+  line-height: 1.4;
+  color: rgba(255, 255, 255, 0.8);
+  margin-bottom: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+/* Question Data Lines */
+.question-data-line {
+  font-size: 9px;
+  line-height: 1.3;
+  color: rgba(255, 255, 255, 0.75);
+  margin-bottom: 3px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 140px;
+  padding: 2px 4px;
+  background: rgba(124, 58, 237, 0.1);
+  border-radius: 4px;
+}
+
+/* Agent Data Lines */
+.agent-data-line {
+  font-size: 10px;
+  line-height: 1.3;
+  color: rgba(255, 255, 255, 0.8);
+  margin-bottom: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+/* Metrics Value Display */
+.metric-bar .value {
+  font-size: 10px;
+  color: rgba(34, 211, 238, 0.9);
+  margin-left: 6px;
+  font-weight: 600;
+}
+
+.metric-bar .bar {
+  transition: width 0.6s ease;
+}
+
+/* Outcome Race Cards - Dynamic Visibility */
+.race-card {
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.race-card.best {
+  background: linear-gradient(135deg, rgba(34, 197, 94, 0.25), rgba(34, 211, 238, 0.2));
+  border-color: rgba(34, 197, 94, 0.6);
+  box-shadow: 0 0 20px rgba(34, 197, 94, 0.3);
+}
+
+/* ============================================ */
+/* GLOBAL LIGHT MODE FIXES FOR ALL PAGES */
+/* Applied to: Dashboard, Wizard, Results, Specs, Settings, etc. */
+/* ============================================ */
+
+[data-theme="light"] body {
+  background: radial-gradient(120% 140% at 50% -10%, rgba(124, 58, 237, 0.08), transparent 45%),
+              radial-gradient(80% 80% at 80% 20%, rgba(34, 211, 238, 0.12), transparent 60%),
+              #f6f8fb !important;
+}
+
+[data-theme="light"] .panel,
+[data-theme="light"] .card,
+[data-theme="light"] .modal-content,
+[data-theme="light"] .dropdown-content,
+[data-theme="light"] .pipeline-visual {
+  background: rgba(248, 250, 252, 0.8) !important;
+  border-color: rgba(148, 163, 184, 0.3) !important;
+  color: var(--text) !important;
+}
+
+[data-theme="light"] .node-log,
+[data-theme="light"] .log-entry {
+  background: rgba(248, 250, 252, 0.9) !important;
+  border-color: rgba(148, 163, 184, 0.2) !important;
+}
+
+[data-theme="light"] .log-message,
+[data-theme="light"] .metric-value,
+[data-theme="light"] .metric-label {
+  color: var(--text) !important;
+}
+
+[data-theme="light"] .chart-growth-percentage {
+  color: rgba(34, 197, 94, 1) !important;
+}
+
+[data-theme="light"] .best-prompt-display,
+[data-theme="light"] pre,
+[data-theme="light"] code {
+  background: rgba(248, 250, 252, 0.9) !important;
+  border-color: rgba(148, 163, 184, 0.3) !important;
+  color: rgba(15, 23, 42, 0.95) !important;
+}
+
+[data-theme="light"] .modal-overlay {
+  background: rgba(255, 255, 255, 0.95) !important;
+}
+
+[data-theme="light"] .tooltip {
+  background: rgba(30, 41, 59, 0.95) !important;
+  color: rgba(255, 255, 255, 0.95) !important;
+}
+
+[data-theme="light"] .btn-secondary {
+  background: rgba(124, 58, 237, 0.1) !important;
+  color: var(--text) !important;
+  border-color: rgba(124, 58, 237, 0.3) !important;
+}
+
+[data-theme="light"] .btn-secondary:hover {
+  background: rgba(124, 58, 237, 0.2) !important;
+}
+
+[data-theme="light"] tbody tr {
+  background: rgba(248, 250, 252, 0.5) !important;
+}
+
+[data-theme="light"] tbody tr:hover {
+  background: rgba(248, 250, 252, 0.8) !important;
+}
+
+[data-theme="light"] input:focus,
+[data-theme="light"] textarea:focus,
+[data-theme="light"] select:focus {
+  border-color: var(--primary) !important;
+  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.1) !important;
+}
+
+[data-theme="light"] .workflow-step {
+  background: rgba(248, 250, 252, 0.8) !important;
+  border-color: rgba(148, 163, 184, 0.2) !important;
+}
+
+[data-theme="light"] .status-pending {
+  background: rgba(251, 191, 36, 0.15) !important;
+  color: rgba(180, 83, 9, 1) !important;
+}
+
+[data-theme="light"] .status-running {
+  background: rgba(34, 211, 238, 0.15) !important;
+  color: rgba(14, 116, 144, 1) !important;
+}
+
+[data-theme="light"] .status-success {
+  background: rgba(34, 197, 94, 0.15) !important;
+  color: rgba(5, 150, 105, 1) !important;
+}
+
+[data-theme="light"] .status-error {
+  background: rgba(239, 68, 68, 0.15) !important;
+  color: rgba(185, 28, 28, 1) !important;
+}
+
+[data-theme="light"] .spec-data-line,
+[data-theme="light"] .question-data-line,
+[data-theme="light"] .agent-data-line {
+  color: rgba(30, 41, 59, 0.9) !important;
+}
+
+[data-theme="light"] .race-card {
+  background: rgba(248, 250, 252, 0.8) !important;
+  border-color: rgba(148, 163, 184, 0.3) !important;
+}
+
+[data-theme="light"] .race-card.best {
+  background: linear-gradient(135deg, rgba(34, 197, 94, 0.15), rgba(34, 211, 238, 0.1)) !important;
+  border-color: rgba(34, 197, 94, 0.4) !important;
+}
+
+[data-theme="light"] .metric-bar .bar {
+  background: linear-gradient(90deg, rgba(124, 58, 237, 0.7), rgba(34, 211, 238, 0.7)) !important;
+}
+

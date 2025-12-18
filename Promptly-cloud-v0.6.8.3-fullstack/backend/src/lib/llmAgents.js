@@ -3,6 +3,51 @@ import { chatJson } from "./openaiClient.js";
 import { createRun, completeRunSuccess, completeRunFailure } from "./runLogger.js";
 import { buildRunMetrics } from "./metricsEngine.js";
 
+/**
+ * Language mapping for LLM instructions
+ */
+const LANGUAGE_MAP = {
+  'en': 'English',
+  'zh-CN': 'Simplified Chinese (简体中文)',
+  'es': 'Spanish (Español)',
+  'fr': 'French (Français)',
+  'ja': 'Japanese (日本語)',
+  'ar': 'Arabic (العربية)',
+  'ko': 'Korean (한국어)',
+  'pt': 'Portuguese (Português)',
+  'hi': 'Hindi (हिन्दी)'
+};
+
+/**
+ * Generate language instruction for LLM system prompt
+ * @param {string} language - Language code (e.g., 'zh-CN', 'es')
+ * @returns {string} - Language instruction for system prompt
+ */
+function getLanguageInstruction(language) {
+  if (!language || language === 'en') {
+    return ""; // No special instruction for English (default)
+  }
+  
+  const languageName = LANGUAGE_MAP[language] || 'English';
+  return `🌍 CRITICAL LANGUAGE REQUIREMENT - HIGHEST PRIORITY 🌍
+YOU MUST GENERATE ALL OUTPUT CONTENT IN ${languageName}.
+This is MANDATORY and OVERRIDES any examples shown below.
+
+REQUIRED LANGUAGE FOR:
+- All text fields in the spec (project_goal, objectives, requirements, target_users, etc.)
+- The explanation field
+- Any descriptions, labels, or user-facing text
+- ALL natural language content
+
+EXCEPTIONS (keep in English):
+- Technical terms: React, API, database, Node.js, PostgreSQL, JWT, etc.
+- Code syntax and technical stack names
+- Technical abbreviations: CRUD, HTTP, REST, etc.
+
+⚠️ IMPORTANT: The JSON format examples below are for STRUCTURE ONLY.
+DO NOT copy the language from the examples - use ${languageName} instead!`;
+}
+
 const BroadQuestionSchema = z.object({
   id: z.string().optional(),
   axis: z.string(),
@@ -52,16 +97,18 @@ const AgentCOutputSchema = z.object({
   explanation: z.string()
 });
 
-export async function generateBroadQuestions({ initialDescription, kind, modeProfile = null, model = null }) {
+export async function generateBroadQuestions({ initialDescription, kind, modeProfile = null, model = null, language = 'en' }) {
   const system = [
     "You are Agent A in Promptly's Question Engine.",
     "Goal: from a fuzzy project idea, propose 8-12 broad clarification axes.",
     "IMPORTANT: Return ONLY valid JSON, no other text.",
     "",
+    getLanguageInstruction(language),
+    language && language !== 'en' ? "" : "",
     modeProfile
       ? `Runtime mode: ${modeProfile.label} (${modeProfile.hierarchy}). Use about ${modeProfile.chainLength} chained thoughts, and cap at ${modeProfile.maxSteps} reasoning steps to honor this profile. Prioritize ${modeProfile.description.toLowerCase()}.`
       : "",
-    "Required JSON format example:",
+    "Required JSON format (structure only - content MUST be in the required language):",
     "{",
     '  "broad_questions": [',
     '    {',
@@ -79,12 +126,17 @@ export async function generateBroadQuestions({ initialDescription, kind, modePro
     '  ]',
     "}",
     "",
+    "⚠️ CRITICAL LANGUAGE REQUIREMENT:",
+    "The JSON structure above is for FORMAT ONLY. You MUST generate ALL text content (axis names, questions, rationale) in the language specified at the top of this prompt.",
+    "Do NOT use English for the actual content - use the required language for all natural language fields.",
+    "",
     "RULES:",
     "1. Every question MUST have 'axis', 'question' fields (required).",
     "2. 'id' and 'rationale' are optional but recommended.",
     "3. Cover diverse dimensions: users, platform, data, features, constraints, security, performance, etc.",
     "4. Generate 8-12 questions.",
-    "5. Keep questions broad and exploratory."
+    "5. Keep questions broad and exploratory.",
+    "6. ⚠️ MOST IMPORTANT: All text content MUST be in the required language, NOT English!"
   ].join("\n");
   const user = JSON.stringify({
     initial_description: initialDescription,
@@ -201,12 +253,14 @@ function cleanOptionsArray(options) {
   return cleaned;
 }
 
-export async function generateChoiceQuestions({ initialDescription, kind, broadQuestions, modeProfile = null, model = null }) {
+export async function generateChoiceQuestions({ initialDescription, kind, broadQuestions, modeProfile = null, model = null, language = 'en' }) {
   const system = [
     "You are Agent B in Promptly's Question Engine.",
     "Goal: convert broad axes into concrete, user-friendly questions with depth levels.",
     "IMPORTANT: Return ONLY valid JSON, no other text.",
     "",
+    getLanguageInstruction(language),
+    language && language !== 'en' ? "" : "",
     modeProfile
       ? `Runtime mode: ${modeProfile.label} (${modeProfile.hierarchy}). Use about ${modeProfile.chainLength} chained thoughts and no more than ${modeProfile.maxSteps} planning hops to balance speed/quality as described: ${modeProfile.description}.`
       : "",
@@ -226,7 +280,7 @@ export async function generateChoiceQuestions({ initialDescription, kind, broadQ
     "- 🔍 Standard (Intermediate): More nuanced options for general users",
     "- 🧠 Deep Thinking (Advanced): Detailed options for experts",
     "",
-    "Required JSON format example:",
+    "Required JSON format (structure only - content MUST be in the required language):",
     "{",
     '  "choice_questions": [',
     '    {',
@@ -263,7 +317,7 @@ export async function generateChoiceQuestions({ initialDescription, kind, broadQ
     '          "label": "🔍 Standard (Balanced)",',
     '          "options": [',
     '            {"label": "Free + Optional paid features", "value": "freemium"},',
-    '            {"label": "One-time purchase + DLC/expansions", "value": "paid_dlc"},',
+'            {"label": "One-time purchase + DLC/expansions", "value": "paid_dlc"},',
     '            {"label": "Monthly/yearly subscription", "value": "subscription"},',
     '            {"label": "Ads + Option to remove ads", "value": "ads_removable"},',
     '            {"label": "Other (please specify)", "value": "other", "is_other": true}',
@@ -298,6 +352,10 @@ export async function generateChoiceQuestions({ initialDescription, kind, broadQ
     '    }',
     '  ]',
     "}",
+    "",
+    "⚠️ CRITICAL LANGUAGE REQUIREMENT:",
+    "The JSON structure and examples above are for FORMAT ONLY. You MUST generate ALL text content (questions, labels, depth level names) in the language specified at the top of this prompt.",
+    "Do NOT use English for the actual content - use the required language for all natural language fields.",
     "",
     "RULES:",
     "1. Every question MUST have: 'id', 'type', 'content', 'depth_enabled' (all required).",
@@ -573,31 +631,39 @@ export async function generateChoiceQuestions({ initialDescription, kind, broadQ
   }
 }
 
-export async function generateRawSpec({ initialDescription, kind, qaPairs, modeProfile = null, model = null }) {
+export async function generateRawSpec({ initialDescription, kind, qaPairs, modeProfile = null, model = null, language = 'en' }) {
   const system = [
     "You are Agent C in Promptly's Question Engine.",
     "You receive all questions and answers from a wizard.",
     "Your job: synthesize them into a structured specification.",
     "IMPORTANT: Return ONLY valid JSON, no other text.",
     "",
+    getLanguageInstruction(language),
+    language && language !== 'en' ? "" : "",  // Add blank line if language instruction exists
+    "CRITICAL: The spec you generate must include:",
+    "- All information from the initial description",
+    "- All answers provided by the user in the wizard",
+    "- The project kind/type if specified",
+    "- Any constraints, requirements, or preferences mentioned",
+    "",
     modeProfile
       ? `Runtime mode: ${modeProfile.label} (${modeProfile.hierarchy}). Use about ${modeProfile.chainLength} reasoning chains but cap at ${modeProfile.maxSteps} steps to match the desired depth: ${modeProfile.description}.`
       : "",
-    "Required JSON format example:",
+    "Required JSON format (structure only - content language MUST match the language requirement above):",
     "{",
     '  "spec": {',
-    '    "project_goal": "Build a task management app for small teams",',
-    '    "objectives": ["Enable task creation and assignment", "Track progress", "Send notifications"],',
-    '    "target_users": "Small teams (5-20 people) in tech companies",',
-    '    "platform": "Web application (responsive)",',
-    '    "key_features": ["Task CRUD", "User authentication", "Real-time updates", "Email notifications"],',
-    '    "technical_stack": "React frontend, Node.js backend, PostgreSQL database",',
-    '    "constraints": ["Must work on mobile browsers", "Max 500ms response time"],',
-    '    "data_model": "Users, Teams, Tasks, Comments",',
-    '    "security": "JWT authentication, role-based access control",',
-    '    "ui_ux": "Clean, minimal interface with drag-and-drop"',
+    '    "project_goal": "<describe the main goal>",',
+    '    "objectives": ["<objective 1>", "<objective 2>"],',
+    '    "target_users": "<describe target users>",',
+    '    "platform": "<platform description>",',
+    '    "key_features": ["<feature 1>", "<feature 2>"],',
+    '    "technical_stack": "<tech stack description>",',
+    '    "constraints": ["<constraint 1>", "<constraint 2>"],',
+    '    "data_model": "<data model description>",',
+    '    "security": "<security description>",',
+    '    "ui_ux": "<ui/ux description>"',
     '  },',
-    '  "explanation": "This spec synthesizes the user\'s requirements into a cohesive plan. The focus is on simplicity and team collaboration."',
+    '  "explanation": "<explanation in the required language>"',
     "}",
     "",
     "RULES:",
@@ -606,14 +672,26 @@ export async function generateRawSpec({ initialDescription, kind, qaPairs, modeP
     "3. 'intent' field is OPTIONAL - omit it or set to null if not needed.",
     "4. Include keys like: project_goal, objectives, target_users, platform, key_features, technical_stack, constraints, etc.",
     "5. Be specific and actionable based on the Q&A responses.",
-    "6. Structure the spec logically for a developer to implement."
+    "6. Structure the spec logically for a developer to implement.",
+    "7. REMEMBER: All natural language content MUST be in the language specified at the top of this prompt!"
   ].join("\n");
-  const user = JSON.stringify({
+  // Build comprehensive input for spec generation
+  const userInput = {
     initial_description: initialDescription,
     kind: kind || null,
     qa_pairs: qaPairs,
-    mode_profile: modeProfile
-  });
+    mode_profile: modeProfile ? {
+      id: modeProfile.id,
+      label: modeProfile.label,
+      hierarchy: modeProfile.hierarchy
+    } : null,
+    model: model || null,
+    // Include summary of answered questions for context
+    answered_questions_count: qaPairs.filter(qa => qa.answer !== null).length,
+    total_questions_count: qaPairs.length
+  };
+  
+  const user = JSON.stringify(userInput);
 
   const usedModel = model || process.env.OPENAI_MODEL || "gpt-4o-mini";
   const runId = createRun({
@@ -655,6 +733,74 @@ export async function generateRawSpec({ initialDescription, kind, qaPairs, modeP
         // Clean intent field (can be null, undefined, or object)
         if (raw.intent === undefined) {
           delete raw.intent;
+        }
+        
+        // CRITICAL FIX: Ensure all spec fields have meaningful defaults
+        const spec = raw.spec;
+        
+        // Project goal - use initial description as fallback
+        if (!spec.project_goal || typeof spec.project_goal !== 'string' || spec.project_goal.trim() === '') {
+          spec.project_goal = initialDescription || "Build a comprehensive project based on user requirements";
+        }
+        
+        // Objectives - ensure it's an array with at least one objective
+        if (!Array.isArray(spec.objectives) || spec.objectives.length === 0) {
+          spec.objectives = ["Define clear project objectives", "Implement core functionality", "Ensure quality and usability"];
+        } else {
+          // Filter out empty objectives
+          spec.objectives = spec.objectives.filter(obj => obj && typeof obj === 'string' && obj.trim() !== '');
+          if (spec.objectives.length === 0) {
+            spec.objectives = ["Define clear project objectives", "Implement core functionality", "Ensure quality and usability"];
+          }
+        }
+        
+        // Target users - provide meaningful default
+        if (!spec.target_users || typeof spec.target_users !== 'string' || spec.target_users.trim() === '') {
+          spec.target_users = "General users seeking a well-designed solution";
+        }
+        
+        // Platform - provide reasonable default
+        if (!spec.platform || typeof spec.platform !== 'string' || spec.platform.trim() === '') {
+          spec.platform = "Web application with responsive design";
+        }
+        
+        // Key features - ensure it's an array with meaningful defaults
+        if (!Array.isArray(spec.key_features) || spec.key_features.length === 0) {
+          spec.key_features = ["User-friendly interface", "Core functionality implementation", "Quality assurance and testing"];
+        } else {
+          // Filter out empty features
+          spec.key_features = spec.key_features.filter(feature => feature && typeof feature === 'string' && feature.trim() !== '');
+          if (spec.key_features.length === 0) {
+            spec.key_features = ["User-friendly interface", "Core functionality implementation", "Quality assurance and testing"];
+          }
+        }
+        
+        // Technical stack - provide sensible default
+        if (!spec.technical_stack || typeof spec.technical_stack !== 'string' || spec.technical_stack.trim() === '') {
+          spec.technical_stack = "Modern web technologies with industry best practices";
+        }
+        
+        // Constraints - ensure it's an array
+        if (!Array.isArray(spec.constraints)) {
+          spec.constraints = [];
+        } else {
+          // Filter out empty constraints
+          spec.constraints = spec.constraints.filter(constraint => constraint && typeof constraint === 'string' && constraint.trim() !== '');
+        }
+        
+        // Data model - provide basic default
+        if (!spec.data_model || typeof spec.data_model !== 'string' || spec.data_model.trim() === '') {
+          spec.data_model = "Standard data structures appropriate for the project scope";
+        }
+        
+        // Security - provide basic default
+        if (!spec.security || typeof spec.security !== 'string' || spec.security.trim() === '') {
+          spec.security = "Industry standard security practices and data protection";
+        }
+        
+        // UI/UX - provide meaningful default
+        if (!spec.ui_ux || typeof spec.ui_ux !== 'string' || spec.ui_ux.trim() === '') {
+          spec.ui_ux = "Clean, intuitive, and user-friendly interface design";
         }
       }
       

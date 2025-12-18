@@ -89,6 +89,9 @@
   background-size:400% 400%;
   animation:gradientShift 20s ease infinite;
 }
+html[data-theme="light"] .wizard-background{
+  background:linear-gradient(135deg,#f8fafc 0%,#e2e8f0 25%,#cbd5e1 50%,#e2e8f0 75%,#f8fafc 100%);
+}
 .wizard-gradient-orb{
   position:absolute;
   border-radius:50%;
@@ -390,6 +393,10 @@ html[data-theme="light"] .wizard-mode-option.is-selected{
   backdrop-filter:blur(12px);
   transition:all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
+html[data-theme="light"] .wizard-panel{
+  background:rgba(255,255,255,0.9);
+  border-color:rgba(148,163,184,0.3);
+}
 .wizard-panel::before{
   content:"";
   position:absolute;
@@ -471,6 +478,12 @@ html[data-theme="light"] .wizard-mode-option.is-selected{
   color:inherit;
   resize:vertical;
   transition:all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+html[data-theme="light"] .wizard-label textarea,
+html[data-theme="light"] .wizard-label select{
+  background:rgba(255,255,255,0.95);
+  color:rgba(15,23,42,0.95);
+  border-color:rgba(148,163,184,0.4);
 }
 .wizard-label textarea{
   caret-color:#7C3AED;
@@ -604,68 +617,160 @@ html[data-theme="light"] .wizard-mode-option.is-selected{
 }
 .wizard-question-card{
   border-radius:12px;
-  border:1px solid rgba(148,163,184,0.4);
+  border:1px solid rgba(148,163,184,0.35);
   padding:1.25rem 1.5rem;
-  background:rgba(15,23,42,0.85);
-  backdrop-filter:blur(8px);
-  box-shadow:0 4px 12px rgba(0,0,0,0.1);
+  background:rgba(10,14,25,0.9);
+  backdrop-filter:blur(10px);
+  box-shadow:0 4px 18px rgba(0,0,0,0.15);
   transition:all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   animation:slideInUp 0.4s cubic-bezier(0.4, 0, 0.2, 1) both;
+  position:relative;
+}
+html[data-theme="light"] .wizard-question-card{
+  background:rgba(248,250,252,0.95);
+  border-color:rgba(148,163,184,0.3);
+  box-shadow:0 2px 12px rgba(0,0,0,0.05);
 }
 .wizard-question-card:hover{
   transform:translateY(-2px);
-  box-shadow:0 8px 24px rgba(124,58,237,0.15), 0 4px 12px rgba(0,0,0,0.15);
-  border-color:rgba(124,58,237,0.4);
+  box-shadow:0 10px 28px rgba(124,58,237,0.2), 0 6px 18px rgba(0,0,0,0.18);
+  border-color:rgba(124,58,237,0.5);
+}
+.wizard-question-card-header{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:0.75rem;
+  margin-bottom:0.6rem;
+}
+.wizard-question-title-group{
+  display:flex;
+  align-items:center;
+  gap:0.75rem;
+  flex-wrap:wrap;
 }
 .wizard-question-number{
   font-weight:700;
   font-size:0.875rem;
   color:#7C3AED;
-  margin-bottom:0.75rem;
-  display:inline-block;
   padding:0.25rem 0.75rem;
-  background:rgba(124,58,237,0.1);
+  background:linear-gradient(135deg, rgba(124,58,237,0.12), rgba(6,182,212,0.12));
   border-radius:999px;
-  border:1px solid rgba(124,58,237,0.3);
+  border:1px solid rgba(124,58,237,0.35);
 }
 .wizard-question-type{
   font-size:0.75rem;
-  text-transform:uppercase;
+  text-transform:none;
+  opacity:0.75;
   letter-spacing:0.08em;
-  opacity:0.65;
-  margin-bottom:0.5rem;
+  color:rgba(255,255,255,0.75);
 }
 .wizard-question-text{
-  margin:0.5rem 0 1rem;
-  font-size:1rem;
-  line-height:1.6;
+  margin:0 0 1.2rem;
+  font-size:1.1rem;
+  line-height:1.7;
   font-weight:500;
   color:rgba(255,255,255,0.95);
+}
+.wizard-answer-area{
+  margin-top:0.5rem;
+  padding:1rem;
+  border-radius:10px;
+  border:1px solid rgba(124,58,237,0.2);
+  background:rgba(124,58,237,0.05);
+}
+.wizard-question-card.is-answered{
+  border-color:#22C55E;
+  box-shadow:0 10px 28px rgba(34,197,94,0.15), 0 5px 16px rgba(0,0,0,0.15);
+}
+.wizard-answer-badge{
+  font-size:0.7rem;
+  letter-spacing:0.1em;
+  text-transform:uppercase;
+  padding:0.15rem 0.7rem;
+  border-radius:999px;
+  border:1px solid rgba(148,163,184,0.4);
+  background:rgba(148,163,184,0.08);
+  color:rgba(255,255,255,0.8);
+}
+.wizard-answer-badge.answered{
+  border-color:#22C55E;
+  background:rgba(34,197,94,0.12);
+  color:#C7F0DA;
+}
+.wizard-answer-badge.pending{
+  border-color:rgba(148,163,184,0.4);
+  background:rgba(148,163,184,0.12);
+  color:rgba(255,255,255,0.85);
+}
+.wizard-regenerate-icon{
+  border:none;
+  background:rgba(255,255,255,0.06);
+  color:rgba(255,255,255,0.7);
+  width:32px;
+  height:32px;
+  border-radius:999px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  cursor:pointer;
+  transition:all 0.2s ease;
+  opacity:0.7;
+  position:relative;
+}
+.wizard-regenerate-icon:hover{
+  opacity:1;
+  background:rgba(124,58,237,0.25);
+  transform:scale(1.05);
+}
+.wizard-regenerate-icon svg{
+  width:18px;
+  height:18px;
 }
 @keyframes pillSelect{
   0%{transform:scale(1);}
   50%{transform:scale(1.03);}
   100%{transform:scale(1);}
 }
+@keyframes checkPop{
+  0%{transform:translateY(-50%) scale(0);opacity:0;}
+  50%{transform:translateY(-50%) scale(1.2);opacity:1;}
+  100%{transform:translateY(-50%) scale(1);opacity:1;}
+}
+.wizard-pill--multi::before{
+  border-radius:4px;
+}
+.wizard-pill--multi.is-selected::before{
+  border-radius:4px;
+}
 .wizard-choice-row{
   display:flex;
   flex-wrap:wrap;
   gap:0.75rem;
   margin-top:0.5rem;
+  align-items:flex-start;
 }
 .wizard-pill{
   position:relative;
-  padding:0.625rem 1.125rem;
+  padding:0.65rem 1.25rem;
   padding-left:2.5rem;
   border-radius:999px;
   border:1.5px solid rgba(148,163,184,0.3);
-  font-size:0.875rem;
+  font-size:0.9rem;
   font-weight:500;
   cursor:pointer;
   background:transparent;
   color:rgba(255,255,255,0.85);
   transition:all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   user-select:none;
+  white-space:normal;
+  text-align:left;
+  max-width:220px;
+}
+.wizard-pill span{
+  display:inline-flex;
+  align-items:center;
+  gap:0.35rem;
 }
 .wizard-pill:hover{
   border-color:rgba(124,58,237,0.5);
@@ -719,16 +824,39 @@ html[data-theme="light"] .wizard-mode-option.is-selected{
   font-weight:700;
   animation:checkPop 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
-@keyframes checkPop{
-  0%{transform:translateY(-50%) scale(0);opacity:0;}
-  50%{transform:translateY(-50%) scale(1.2);opacity:1;}
-  100%{transform:translateY(-50%) scale(1);opacity:1;}
-}
 .wizard-pill--multi::before{
   border-radius:4px;
 }
 .wizard-pill--multi.is-selected::before{
   border-radius:4px;
+}
+.wizard-pill-icon{
+  width:16px;
+  height:16px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  font-size:0.85rem;
+}
+.wizard-pill--yes{
+  border-color:rgba(34,197,94,0.5);
+  background:rgba(34,197,94,0.08);
+  color:#A1F5C4;
+}
+.wizard-pill--no{
+  border-color:rgba(100,116,139,0.6);
+  background:rgba(100,116,139,0.12);
+  color:#E2E8F0;
+}
+.wizard-pill--yes.is-selected,
+.wizard-pill--no.is-selected{
+  background:linear-gradient(135deg,rgba(34,197,94,0.8),rgba(16,185,129,0.9));
+  border-color:rgba(34,197,94,0.9);
+  color:#fff;
+}
+.wizard-pill--no.is-selected{
+  background:linear-gradient(135deg,rgba(71,85,105,0.9),rgba(55,65,81,0.9));
+  border-color:rgba(71,85,105,0.9);
 }
 .wizard-input-short{
   width:100%;
@@ -879,23 +1007,28 @@ html[data-theme="light"] .wizard-mode-option.is-selected{
   transform:translateY(-1px);
   box-shadow:0 2px 8px rgba(124,58,237,0.2);
 }
-/* Loading spinner in question panel */
+/* Loading spinner in question panel - P1: Enhanced visibility */
 .wizard-loading-overlay{
   position:absolute;
   top:0;
   left:0;
   right:0;
   bottom:0;
-  background:rgba(15,23,42,0.95);
-  backdrop-filter:blur(8px);
-  display:flex;
+  background:rgba(15,23,42,0.98);
+  backdrop-filter:blur(12px);
+  display:flex !important;
+  visibility:visible !important;
+  opacity:1 !important;
   flex-direction:column;
   align-items:center;
   justify-content:center;
   gap:1rem;
   border-radius:0.75rem;
-  z-index:100;
-  animation:fadeIn 0.2s ease;
+  z-index:1000;
+  animation:fadeIn 0.3s ease;
+}
+.wizard-loading-overlay.hidden {
+  display:none !important;
 }
 .wizard-loading-spinner{
   width:48px;
@@ -916,6 +1049,109 @@ html[data-theme="light"] .wizard-mode-option.is-selected{
 @keyframes fadeIn{
   from{opacity:0;}
   to{opacity:1;}
+}
+/* Warning box animation - very prominent */
+@keyframes pulse-attention{
+  0%, 100%{
+    transform:scale(1);
+    box-shadow:0 0 0 0 rgba(245,158,11,0.7), 0 0 0 0 rgba(245,158,11,0.4);
+  }
+  50%{
+    transform:scale(1.05);
+    box-shadow:0 0 0 8px rgba(245,158,11,0), 0 0 30px 10px rgba(245,158,11,0.8);
+  }
+}
+
+/* Fixed top warning banner */
+.wizard-running-warning{
+  position:fixed;
+  top:60px;
+  left:0;
+  right:0;
+  z-index:2000;
+  background:linear-gradient(135deg, rgba(245,158,11,0.95), rgba(251,191,36,0.95));
+  border-bottom:3px solid #F59E0B;
+  box-shadow:0 4px 20px rgba(245,158,11,0.6), 0 0 40px rgba(245,158,11,0.4);
+  animation:slideDown 0.3s ease-out, pulse-glow-banner 2s ease-in-out infinite;
+  backdrop-filter:blur(8px);
+}
+.wizard-running-warning.hidden{
+  display:none;
+}
+.wizard-running-warning-content{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:1rem;
+  padding:1rem 2rem;
+  color:#FFF;
+  font-size:1.1rem;
+  font-weight:900;
+  text-transform:uppercase;
+  letter-spacing:0.15em;
+  text-shadow:0 2px 4px rgba(0,0,0,0.3);
+}
+.wizard-running-warning-icon{
+  font-size:1.8rem;
+  animation:bounce-icon 1s ease-in-out infinite;
+}
+.wizard-running-warning-text{
+  flex:1;
+  text-align:center;
+}
+@keyframes slideDown{
+  from{
+    transform:translateY(-100%);
+    opacity:0;
+  }
+  to{
+    transform:translateY(0);
+    opacity:1;
+  }
+}
+@keyframes pulse-glow-banner{
+  0%, 100%{
+    box-shadow:0 4px 20px rgba(245,158,11,0.6), 0 0 40px rgba(245,158,11,0.4);
+  }
+  50%{
+    box-shadow:0 4px 30px rgba(245,158,11,0.9), 0 0 60px rgba(245,158,11,0.7);
+  }
+}
+@keyframes bounce-icon{
+  0%, 100%{
+    transform:translateY(0) scale(1);
+  }
+  50%{
+    transform:translateY(-4px) scale(1.1);
+  }
+}
+.wizard-loading-warning{
+  display:flex !important;
+  align-items:center;
+  justify-content:center;
+  gap:0.75rem;
+  margin-top:2rem !important;
+  padding:1.25rem 2rem !important;
+  background:rgba(245,158,11,0.3) !important;
+  border:4px solid #F59E0B !important;
+  border-radius:16px;
+  font-size:1.3rem !important;
+  font-weight:900 !important;
+  color:#FFF !important;
+  text-shadow:0 2px 4px rgba(0,0,0,0.3);
+  animation:pulse-attention 1.5s ease-in-out infinite !important;
+  text-transform:uppercase;
+  letter-spacing:0.1em;
+  box-shadow:0 0 30px rgba(245,158,11,0.8), 0 4px 20px rgba(0,0,0,0.5) !important;
+  position:relative;
+  z-index:1000;
+  min-width:400px;
+  backdrop-filter:blur(4px);
+}
+.wizard-loading-warning span:first-child,
+.wizard-loading-warning span:last-child{
+  font-size:2rem !important;
+  animation:none;
 }
 
 /* Modern regenerate icon with SVG */
@@ -1128,9 +1364,9 @@ html[data-theme="light"] .wizard-mode-option.is-selected{
 /* Subtle checkmark tooltip */
 .wizard-snapshot-tooltip{
   position:absolute;
-  top:50%;
-  right:calc(100% + 0.75rem);
-  transform:translateY(-50%);
+  left:50%;
+  top:calc(100% + 0.5rem);
+  transform:translateX(-50%);
   padding:0.375rem 0.75rem;
   background:rgba(34,197,94,0.95);
   color:white;
@@ -1142,18 +1378,19 @@ html[data-theme="light"] .wizard-mode-option.is-selected{
   opacity:0;
   animation:tooltipFadeInOut 1.2s cubic-bezier(0.4, 0, 0.2, 1) forwards;
   box-shadow:0 2px 8px rgba(34,197,94,0.3);
+  z-index:10000;
 }
 .wizard-snapshot-tooltip::after{
   content:"";
   position:absolute;
-  top:50%;
-  left:100%;
-  transform:translateY(-50%);
+  top:0;
+  left:50%;
+  transform:translateX(-50%) translateY(-100%);
   border:5px solid transparent;
-  border-left-color:rgba(34,197,94,0.95);
+  border-bottom-color:rgba(34,197,94,0.95);
 }
 @keyframes tooltipFadeInOut{
-  0%{opacity:0;transform:translateY(-50%) translateX(-8px);}
+  0%{opacity:0;transform:translateX(-50%) translateY(-4px);}
   15%{opacity:1;transform:translateY(-50%) translateX(0);}
   85%{opacity:1;transform:translateY(-50%) translateX(0);}
   100%{opacity:0;transform:translateY(-50%) translateX(-8px);}
@@ -1170,33 +1407,71 @@ html[data-theme="light"] .wizard-mode-option.is-selected{
   .wizard-panel--log{
     grid-column:1/2;
   }
-  /* Adjust tooltip position on mobile */
-  .wizard-snapshot-tooltip{
-    right:auto;
-    left:50%;
-    top:calc(100% + 0.5rem);
-    transform:translateX(-50%);
-  }
-  .wizard-snapshot-tooltip::after{
-    top:0;
-    left:50%;
-    transform:translateX(-50%) translateY(-100%);
-    border:5px solid transparent;
-    border-bottom-color:rgba(34,197,94,0.95);
-    border-left-color:transparent;
-  }
+  /* Tooltip already positioned for mobile/desktop consistency */
 }
 
 /* Guided status + inline hints */
 .wizard-inline-hint{margin:6px 0 10px;color:var(--text-low,#94a3b8);font-size:0.9rem;}
-.wizard-status{margin:10px 0;padding:12px 14px;border-radius:12px;border:1px solid rgba(148,163,184,0.4);background:rgba(15,23,42,0.55);color:var(--text-high,#E7EAF0);display:flex;align-items:center;gap:10px;box-shadow:0 6px 24px rgba(0,0,0,0.2);}
-.wizard-status.wizard-status--info{border-color:rgba(6,182,212,0.6);background:rgba(6,182,212,0.08);}
-.wizard-status.wizard-status--warn{border-color:rgba(245,158,11,0.6);background:rgba(245,158,11,0.08);}
-.wizard-status.wizard-status--error{border-color:rgba(239,68,68,0.6);background:rgba(239,68,68,0.08);}
-.wizard-status-icon{width:18px;height:18px;display:inline-flex;align-items:center;justify-content:center;}
-.wizard-loading-ticks{flex:1;height:6px;border-radius:999px;background:linear-gradient(90deg,rgba(124,58,237,0.2),rgba(6,182,212,0.5),rgba(124,58,237,0.2));background-size:200% 100%;animation:wizardLoadingBar 1.4s linear infinite;}
-@keyframes wizardLoadingBar{0%{background-position:0% 50%;}100%{background-position:200% 50%;}}
+.wizard-status{
+  margin:10px 0;
+  padding:14px 16px;
+  border-radius:14px;
+  border:1px solid rgba(148,163,184,0.4);
+  background:rgba(15,23,42,0.78);
+  color:var(--text-high,#E7EAF0);
+  display:flex;
+  flex-wrap:wrap;
+  align-items:flex-start;
+  gap:0.75rem;
+  box-shadow:0 14px 32px rgba(0,0,0,0.35);
+  font-weight:500;
+}
+.wizard-status.wizard-status--info{border-color:rgba(6,182,212,0.6);background:rgba(15,23,42,0.85);}
+.wizard-status.wizard-status--warn{border-color:rgba(245,158,11,0.6);}
+.wizard-status.wizard-status--error{border-color:rgba(239,68,68,0.6);}
+.wizard-status-icon{
+  font-size:1.35rem;
+  line-height:1;
+  width:24px;
+  height:24px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+}
+.wizard-status-text{
+  flex:1;
+  font-weight:600;
+  min-width:0;
+  word-wrap:break-word;
+  overflow-wrap:break-word;
+  white-space:normal;
+}
+.wizard-loading-ticks{
+  width:18px;
+  height:18px;
+  border:2px solid rgba(255,255,255,0.4);
+  border-top-color:var(--brand-b,#06B6D4);
+  border-radius:50%;
+  animation:spin 0.9s linear infinite;
+  margin-top:2px;
+}
+.wizard-status-note{
+  font-size:0.78rem;
+  color:rgba(226,232,240,0.9);
+  margin-top:0.2rem;
+  opacity:0.9;
+  flex-basis:100%;
+  letter-spacing:0.02em;
+  word-wrap:break-word;
+  overflow-wrap:break-word;
+  white-space:normal;
+}
 .wizard-status strong{font-weight:700;}
+@keyframes spin{
+  to{
+    transform:rotate(360deg);
+  }
+}
 
 /* ===== Phase 3 UX Enhancements ===== */
 
@@ -1305,3 +1580,1074 @@ html[data-theme="light"] .wizard-mode-option.is-selected{
   from{opacity:1;transform:translateY(0);}
   to{opacity:0;transform:translateY(10px);}
 }
+
+/* Loading warning animation */
+@keyframes pulse-attention{
+  0%, 100%{
+    transform:scale(1);
+    box-shadow:0 0 0 0 rgba(245,158,11,0.4);
+  }
+  50%{
+    transform:scale(1.02);
+    box-shadow:0 0 20px 4px rgba(245,158,11,0.6);
+  }
+}
+
+/* ============================================ */
+/* FORGE CEREMONY - Ultimate Result Animation */
+/* ============================================ */
+
+/* Only apply forge effects when result container is visible */
+.wizard-result--forge {
+  position: relative;
+}
+
+/* Double-layer energy border (only visible when result shown) */
+.wizard-result--forge:not(.hidden)::before {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border: 2px solid transparent;
+  border-radius: 12px;
+  background: 
+    linear-gradient(var(--surface-2, #1A1D29), var(--surface-2, #1A1D29)) padding-box,
+    linear-gradient(135deg, 
+      rgba(124, 58, 237, 0.4), 
+      rgba(34, 211, 238, 0.4),
+      rgba(251, 191, 36, 0.4)
+    ) border-box;
+  pointer-events: none;
+  opacity: 0;
+  animation: forgeBorderAppear 1.5s ease-out 0.5s forwards;
+  z-index: 0;
+}
+
+/* Outer glow layer */
+.wizard-result--forge:not(.hidden)::after {
+  content: '';
+  position: absolute;
+  inset: -8px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, 
+    rgba(124, 58, 237, 0.15), 
+    rgba(34, 211, 238, 0.15),
+    rgba(251, 191, 36, 0.15)
+  );
+  filter: blur(16px);
+  opacity: 0;
+  pointer-events: none;
+  animation: forgeGlowAppear 1.5s ease-out 0.7s forwards;
+  z-index: -1;
+}
+
+/* Noise texture for premium feel */
+.wizard-result--forge .wizard-result-section {
+  position: relative;
+  z-index: 1;
+}
+
+/* Corner decorations - L-shaped with gradient glow */
+.forge-corner {
+  position: absolute;
+  width: 32px;
+  height: 32px;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 10;
+}
+
+.wizard-result--forge:not(.hidden) .forge-corner {
+  animation: forgeCornerAppear 0.8s ease-out forwards;
+}
+
+.forge-corner::before,
+.forge-corner::after {
+  content: '';
+  position: absolute;
+  background: linear-gradient(135deg, 
+    rgba(124, 58, 237, 0.9), 
+    rgba(34, 211, 238, 0.9)
+  );
+  box-shadow: 0 0 12px rgba(124, 58, 237, 0.6);
+}
+
+.forge-corner::before {
+  width: 2px;
+  height: 100%;
+}
+
+.forge-corner::after {
+  width: 100%;
+  height: 2px;
+}
+
+.forge-corner--tl {
+  top: 12px;
+  left: 12px;
+  animation-delay: 0.8s;
+}
+
+.forge-corner--tl::before { left: 0; top: 0; }
+.forge-corner--tl::after { left: 0; top: 0; }
+
+.forge-corner--tr {
+  top: 12px;
+  right: 12px;
+  animation-delay: 0.9s;
+}
+
+.forge-corner--tr::before { right: 0; top: 0; }
+.forge-corner--tr::after { right: 0; top: 0; }
+
+.forge-corner--bl {
+  bottom: 12px;
+  left: 12px;
+  animation-delay: 1s;
+}
+
+.forge-corner--bl::before { left: 0; bottom: 0; }
+.forge-corner--bl::after { left: 0; bottom: 0; }
+
+.forge-corner--br {
+  bottom: 12px;
+  right: 12px;
+  animation-delay: 1.1s;
+}
+
+.forge-corner--br::before { right: 0; bottom: 0; }
+.forge-corner--br::after { right: 0; bottom: 0; }
+
+/* Scanline effect - sweeps from top to bottom */
+.forge-scanline {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, 
+    transparent,
+    rgba(34, 211, 238, 0.9) 50%,
+    transparent
+  );
+  box-shadow: 0 0 16px rgba(34, 211, 238, 0.7);
+  opacity: 0;
+  pointer-events: none;
+  z-index: 20;
+}
+
+.wizard-result--forge:not(.hidden) .forge-scanline {
+  animation: forgeScanline 2s ease-out 0.3s;
+}
+
+/* SEALED badge - appears in top right */
+.forge-badge {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 20px;
+  background: linear-gradient(145deg, 
+    rgba(34, 197, 94, 0.25),
+    rgba(16, 185, 129, 0.3),
+    rgba(34, 211, 238, 0.2)
+  );
+  border: 2px solid rgba(34, 197, 94, 0.8);
+  border-radius: 24px;
+  box-shadow: 
+    0 0 30px rgba(34, 197, 94, 0.5),
+    0 4px 12px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.2);
+  z-index: 30;
+  transform-origin: top right;
+  position: relative;
+  overflow: hidden;
+}
+
+.forge-badge.visible {
+  animation: forgeBadgeAppear 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) 2.5s forwards,
+              forgeBadgePulse 2s ease-in-out 3.1s infinite;
+}
+
+.forge-badge-icon {
+  font-size: 16px;
+  filter: drop-shadow(0 0 8px rgba(34, 197, 94, 0.8));
+}
+
+.forge-badge-text {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  color: rgba(34, 197, 94, 1);
+  text-shadow: 0 0 12px rgba(34, 197, 94, 0.6);
+}
+
+/* Content blocks - staggered slide in with float */
+.forge-block {
+  opacity: 0;
+  transform: translateX(-20px) translateY(10px);
+}
+
+.forge-block.forge-animate {
+  animation: forgeBlockAppear 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+.forge-block[data-forge-delay="0"].forge-animate { animation-delay: 1.2s; }
+.forge-block[data-forge-delay="1"].forge-animate { animation-delay: 1.5s; }
+.forge-block[data-forge-delay="2"].forge-animate { animation-delay: 1.8s; }
+.forge-block[data-forge-delay="3"].forge-animate { animation-delay: 2.1s; }
+
+/* Content reveal - line by line illuminate */
+.forge-content.forge-reveal {
+  animation: forgeContentReveal 1.2s ease-out 1.8s forwards;
+}
+
+/* Enhanced code blocks with inner glow */
+.forge-block.forge-animate .wizard-code {
+  border: 1px solid rgba(124, 58, 237, 0.3);
+  box-shadow: 
+    0 0 16px rgba(124, 58, 237, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+/* ============================================ */
+/* KEYFRAME ANIMATIONS */
+/* ============================================ */
+
+@keyframes forgeBorderAppear {
+  0% {
+    opacity: 0;
+    transform: scale(0.98);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes forgeGlowAppear {
+  0% { opacity: 0; }
+  100% { opacity: 1; }
+}
+
+@keyframes forgeCornerAppear {
+  0% {
+    opacity: 0;
+    transform: scale(0.4);
+  }
+  60% {
+    opacity: 1;
+    transform: scale(1.15);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes forgeScanline {
+  0% {
+    top: 0;
+    opacity: 0;
+  }
+  10% {
+    opacity: 0.9;
+  }
+  90% {
+    opacity: 0.9;
+  }
+  100% {
+    top: 100%;
+    opacity: 0;
+  }
+}
+
+@keyframes forgeBadgeAppear {
+  0% {
+    opacity: 0;
+    transform: scale(0.5) translateY(-20px) rotate(-12deg);
+  }
+  70% {
+    opacity: 1;
+    transform: scale(1.08) translateY(0) rotate(3deg);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0) rotate(0deg);
+  }
+}
+
+@keyframes forgeBadgePulse {
+  0%, 100% {
+    box-shadow: 
+      0 0 24px rgba(34, 197, 94, 0.4),
+      inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  }
+  50% {
+    box-shadow: 
+      0 0 36px rgba(34, 197, 94, 0.6),
+      0 0 60px rgba(34, 197, 94, 0.3),
+      inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  }
+}
+
+@keyframes forgeBlockAppear {
+  0% {
+    opacity: 0;
+    transform: translateX(-20px) translateY(10px);
+  }
+  60% {
+    opacity: 1;
+    transform: translateX(3px) translateY(-2px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0) translateY(0);
+  }
+}
+
+@keyframes forgeContentReveal {
+  0% {
+    opacity: 0.4;
+    filter: brightness(0.7);
+  }
+  100% {
+    opacity: 1;
+    filter: brightness(1);
+  }
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .forge-corner {
+    width: 24px;
+    height: 24px;
+  }
+  
+  .forge-badge {
+    top: 12px;
+    right: 12px;
+    padding: 6px 12px;
+  }
+  
+  .forge-badge-icon {
+    font-size: 14px;
+  }
+  
+  .forge-badge-text {
+    font-size: 10px;
+    letter-spacing: 1.5px;
+  }
+}
+
+
+/* ============================================ */
+/* PORTFOLIO-GRADE FORGE CEREMONY POLISH */
+/* ============================================ */
+
+/* Forge border wrapper - contains decorations OUTSIDE content */
+.forge-border-wrapper {
+  position: absolute;
+  inset: -3px;
+  pointer-events: none;
+  z-index: 1;
+  border-radius: 14px;
+}
+
+/* Corner decorations - NOW on outer border, not overlapping text */
+.forge-corner {
+  position: absolute;
+  width: 40px;
+  height: 40px;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.wizard-result--forge:not(.hidden) .forge-corner {
+  animation: forgeCornerAppear 0.8s ease-out forwards;
+}
+
+.forge-corner::before,
+.forge-corner::after {
+  content: '';
+  position: absolute;
+  background: linear-gradient(135deg, 
+    rgba(124, 58, 237, 1), 
+    rgba(34, 211, 238, 0.9)
+  );
+  box-shadow: 0 0 16px rgba(124, 58, 237, 0.8);
+}
+
+.forge-corner::before { width: 3px; height: 100%; }
+.forge-corner::after { width: 100%; height: 3px; }
+
+/* Position on OUTER border with perfect radius alignment */
+.forge-corner--tl { top: -3px; left: -3px; }
+.forge-corner--tl::before { left: 0; top: 0; }
+.forge-corner--tl::after { left: 0; top: 0; }
+
+.forge-corner--tr { top: -3px; right: -3px; animation-delay: 0.9s; }
+.forge-corner--tr::before { right: 0; top: 0; }
+.forge-corner--tr::after { right: 0; top: 0; }
+
+.forge-corner--bl { bottom: -3px; left: -3px; animation-delay: 1s; }
+.forge-corner--bl::before { left: 0; bottom: 0; }
+.forge-corner--bl::after { left: 0; bottom: 0; }
+
+.forge-corner--br { bottom: -3px; right: -3px; animation-delay: 1.1s; }
+.forge-corner--br::before { right: 0; bottom: 0; }
+.forge-corner--br::after { right: 0; bottom: 0; }
+
+/* SEALED badge - Premium metal/glass finish */
+.forge-badge {
+  position: absolute;
+  top: 24px;
+  right: 24px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 20px;
+  background: linear-gradient(145deg, 
+    rgba(34, 197, 94, 0.25),
+    rgba(16, 185, 129, 0.3),
+    rgba(34, 211, 238, 0.2)
+  );
+  border: 2px solid rgba(34, 197, 94, 0.8);
+  border-radius: 24px;
+  box-shadow: 
+    0 0 30px rgba(34, 197, 94, 0.5),
+    0 4px 12px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.2);
+  z-index: 30;
+  transform-origin: top right;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Metal shine effect on badge */
+.forge-badge-shine {
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, 
+    transparent,
+    rgba(255, 255, 255, 0.3) 50%,
+    transparent
+  );
+  animation: forgeBadgeShine 3s ease-in-out 3.5s infinite;
+}
+
+.forge-badge.visible {
+  animation: forgeBadgeAppear 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) 2.5s forwards,
+              forgeBadgePulse 3s ease-in-out 3.5s infinite;
+}
+
+.forge-badge-icon {
+  font-size: 18px;
+  filter: drop-shadow(0 0 10px rgba(34, 197, 94, 1));
+  position: relative;
+  z-index: 1;
+}
+
+.forge-badge-text {
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 3px;
+  color: rgba(34, 197, 94, 1);
+  text-shadow: 
+    0 0 15px rgba(34, 197, 94, 0.8),
+    0 1px 0 rgba(255, 255, 255, 0.3);
+  position: relative;
+  z-index: 1;
+}
+
+/* Section headers with visual hierarchy */
+.forge-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(124, 58, 237, 0.2);
+  position: relative;
+}
+
+.forge-section-header::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  width: 60px;
+  height: 2px;
+  background: linear-gradient(90deg, 
+    rgba(124, 58, 237, 0.8), 
+    transparent
+  );
+  box-shadow: 0 0 8px rgba(124, 58, 237, 0.5);
+}
+
+/* Section titles - UPGRADED typography */
+.forge-section-title {
+  font-size: 18px;
+  font-weight: 700;
+  background: linear-gradient(135deg, 
+    rgba(255, 255, 255, 1),
+    rgba(34, 211, 238, 0.9)
+  );
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  text-shadow: 0 0 20px rgba(34, 211, 238, 0.3);
+  letter-spacing: 0.5px;
+  position: relative;
+}
+
+.forge-section-title::before {
+  content: '';
+  position: absolute;
+  bottom: -4px;
+  left: 0;
+  width: 0;
+  height: 2px;
+  background: linear-gradient(90deg, 
+    rgba(124, 58, 237, 0.8),
+    rgba(34, 211, 238, 0.8)
+  );
+  box-shadow: 0 0 10px rgba(124, 58, 237, 0.6);
+  transition: width 0.6s ease-out;
+}
+
+.forge-block.forge-animate .forge-section-title::before {
+  width: 100%;
+}
+
+/* Hero title - even MORE prominent with GREEN */
+.forge-section-title--hero {
+  font-size: 22px;
+  background: linear-gradient(135deg, 
+    rgba(34, 197, 94, 1),
+    rgba(74, 222, 128, 1),
+    rgba(34, 211, 238, 1)
+  );
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  filter: drop-shadow(0 0 20px rgba(34, 197, 94, 0.6));
+  animation: forgeHeroTitleGlow 3s ease-in-out infinite;
+}
+
+/* Copy buttons - subtle but accessible */
+.forge-copy-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: rgba(124, 58, 237, 0.1);
+  border: 1px solid rgba(124, 58, 237, 0.3);
+  border-radius: 6px;
+  color: rgba(200, 200, 220, 0.9);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.forge-copy-btn::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, 
+    rgba(124, 58, 237, 0.2),
+    rgba(34, 211, 238, 0.2)
+  );
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.forge-copy-btn:hover {
+  background: rgba(124, 58, 237, 0.2);
+  border-color: rgba(124, 58, 237, 0.6);
+  color: rgba(255, 255, 255, 1);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(124, 58, 237, 0.3);
+}
+
+.forge-copy-btn:hover::before {
+  opacity: 1;
+}
+
+.forge-copy-btn:active {
+  transform: translateY(0);
+}
+
+.forge-copy-btn.copied {
+  background: rgba(34, 197, 94, 0.2);
+  border-color: rgba(34, 197, 94, 0.6);
+  color: rgba(34, 197, 94, 1);
+}
+
+.forge-copy-icon {
+  width: 16px;
+  height: 16px;
+  stroke-width: 2;
+}
+
+.forge-copy-text {
+  position: relative;
+  z-index: 1;
+}
+
+/* Enhanced code blocks - Editor vibes */
+.forge-code-enhanced {
+  background: rgba(15, 18, 28, 0.6);
+  border: 1px solid rgba(124, 58, 237, 0.25);
+  border-radius: 8px;
+  padding: 20px;
+  line-height: 1.7;
+  font-size: 13px;
+  color: rgba(220, 225, 235, 0.95);
+  box-shadow: 
+    0 0 20px rgba(124, 58, 237, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.03);
+  max-height: 400px;
+  overflow-y: auto;
+  position: relative;
+  z-index: 1;
+}
+
+/* Custom scrollbar */
+.forge-code-enhanced::-webkit-scrollbar {
+  width: 8px;
+}
+
+.forge-code-enhanced::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 4px;
+}
+
+.forge-code-enhanced::-webkit-scrollbar-thumb {
+  background: rgba(124, 58, 237, 0.4);
+  border-radius: 4px;
+  transition: background 0.2s ease;
+}
+
+.forge-code-enhanced::-webkit-scrollbar-thumb:hover {
+  background: rgba(124, 58, 237, 0.6);
+}
+
+/* Hero CTA button - THE MOST IMPORTANT ELEMENT */
+.forge-hero-cta {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 18px 40px;
+  background: transparent;
+  border: none;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  overflow: hidden;
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  margin-top: 16px;
+}
+
+/* Animated gradient background - GREEN */
+.forge-hero-cta-bg {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, 
+    rgba(34, 197, 94, 0.9),
+    rgba(16, 185, 129, 1),
+    rgba(5, 150, 105, 0.9)
+  );
+  border-radius: 12px;
+  transition: all 0.3s ease;
+  z-index: 0;
+}
+
+.forge-hero-cta::before {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  background: linear-gradient(135deg, 
+    rgba(34, 197, 94, 0.6),
+    rgba(16, 185, 129, 0.8),
+    rgba(5, 150, 105, 0.6)
+  );
+  border-radius: 14px;
+  filter: blur(12px);
+  opacity: 0.8;
+  z-index: -1;
+  transition: all 0.3s ease;
+}
+
+.forge-hero-cta-content {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: #fff;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.forge-hero-cta-icon {
+  width: 20px;
+  height: 20px;
+  stroke-width: 2.5;
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* Hover state - DRAMATIC GREEN */
+.forge-hero-cta:hover {
+  transform: translateY(-4px) scale(1.05);
+  box-shadow: 
+    0 20px 40px rgba(34, 197, 94, 0.5),
+    0 10px 20px rgba(16, 185, 129, 0.4);
+}
+
+.forge-hero-cta:hover .forge-hero-cta-bg {
+  background: linear-gradient(135deg, 
+    rgba(74, 222, 128, 1),
+    rgba(34, 197, 94, 1),
+    rgba(16, 185, 129, 1)
+  );
+}
+
+.forge-hero-cta:hover::before {
+  filter: blur(20px);
+  opacity: 1;
+}
+
+.forge-hero-cta:hover .forge-hero-cta-icon {
+  transform: translateX(4px) translateY(-4px);
+}
+
+/* Active state */
+.forge-hero-cta:active {
+  transform: translateY(-2px) scale(1.02);
+}
+
+/* Focus state for accessibility */
+.forge-hero-cta:focus-visible {
+  outline: 3px solid rgba(34, 197, 94, 0.5);
+  outline-offset: 4px;
+}
+
+/* Hide the external link icon */
+.forge-hero-cta-icon {
+  display: none;
+}
+
+/* Hero section - special styling with GREEN theme */
+.wizard-result-section--hero {
+  background: linear-gradient(135deg, 
+    rgba(34, 197, 94, 0.03),
+    rgba(16, 185, 129, 0.05),
+    rgba(34, 211, 238, 0.03)
+  );
+  border: 2px solid rgba(34, 197, 94, 0.2);
+  border-radius: 12px;
+  padding: 32px;
+  position: relative;
+  overflow: hidden;
+}
+
+.wizard-result-section--hero::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at top right, 
+    rgba(34, 197, 94, 0.1),
+    transparent 60%
+  );
+  pointer-events: none;
+}
+
+.forge-hero-desc {
+  color: rgba(200, 210, 230, 0.9);
+  font-size: 15px;
+  margin: 12px 0;
+  position: relative;
+  z-index: 1;
+}
+
+/* Improved spacing and breathing room */
+.wizard-result-section {
+  margin-bottom: 32px;
+  padding: 24px;
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 10px;
+  position: relative;
+  z-index: 1;
+}
+
+/* Refined animations */
+@keyframes forgeBadgeShine {
+  0%, 100% { left: -100%; }
+  50% { left: 200%; }
+}
+
+@keyframes forgeHeroTitleGlow {
+  0%, 100% {
+    filter: drop-shadow(0 0 20px rgba(34, 197, 94, 0.6));
+  }
+  50% {
+    filter: drop-shadow(0 0 30px rgba(34, 197, 94, 0.9));
+  }
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .forge-corner { width: 28px; height: 28px; }
+  .forge-badge { top: 16px; right: 16px; padding: 8px 16px; }
+  .forge-badge-text { font-size: 11px; letter-spacing: 2px; }
+  .forge-section-title { font-size: 16px; }
+  .forge-section-title--hero { font-size: 19px; }
+  .forge-hero-cta { padding: 16px 32px; font-size: 15px; }
+  .forge-copy-btn { padding: 5px 10px; font-size: 12px; }
+  .forge-section-header { flex-direction: column; align-items: flex-start; gap: 12px; }
+}
+
+
+/* ============================================ */
+/* LIGHT MODE FIXES - Theme-aware styles */
+/* ============================================ */
+
+[data-theme="light"] {
+  /* Fix code block backgrounds */
+}
+
+[data-theme="light"] .forge-code-enhanced,
+[data-theme="light"] .wizard-code {
+  background: rgba(248, 250, 252, 0.9) !important;
+  color: rgba(15, 23, 42, 0.95) !important;
+  border-color: rgba(148, 163, 184, 0.3) !important;
+  box-shadow: 
+    0 0 20px rgba(124, 58, 237, 0.05),
+    inset 0 1px 0 rgba(0, 0, 0, 0.03) !important;
+}
+
+/* Fix scrollbar for light mode */
+[data-theme="light"] .forge-code-enhanced::-webkit-scrollbar-track {
+  background: rgba(241, 245, 249, 0.5) !important;
+}
+
+[data-theme="light"] .forge-code-enhanced::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.4) !important;
+}
+
+[data-theme="light"] .forge-code-enhanced::-webkit-scrollbar-thumb:hover {
+  background: rgba(124, 58, 237, 0.5) !important;
+}
+
+/* Fix section backgrounds */
+[data-theme="light"] .wizard-result-section {
+  background: rgba(248, 250, 252, 0.4) !important;
+}
+
+/* Fix wizard panels */
+[data-theme="light"] .wizard-panel {
+  background: var(--card) !important;
+}
+
+/* Fix various dark backgrounds */
+[data-theme="light"] .wizard-question-option,
+[data-theme="light"] .wizard-snapshot-tooltip,
+[data-theme="light"] .wizard-status {
+  background: rgba(248, 250, 252, 0.9) !important;
+  color: var(--text) !important;
+}
+
+/* Fix loading overlay */
+[data-theme="light"] .wizard-loading-overlay {
+  background: rgba(255, 255, 255, 0.95) !important;
+}
+
+[data-theme="light"] .wizard-loading-text {
+  color: rgba(15, 23, 42, 0.9) !important;
+}
+
+/* Fix copy button */
+[data-theme="light"] .forge-copy-btn {
+  background: rgba(124, 58, 237, 0.08) !important;
+  border-color: rgba(124, 58, 237, 0.2) !important;
+  color: rgba(30, 41, 59, 0.9) !important;
+}
+
+[data-theme="light"] .forge-copy-btn:hover {
+  background: rgba(124, 58, 237, 0.15) !important;
+  color: rgba(15, 23, 42, 1) !important;
+}
+
+/* Fix section titles */
+[data-theme="light"] .forge-section-title {
+  background: linear-gradient(135deg, 
+    rgba(30, 41, 59, 1),
+    rgba(124, 58, 237, 0.8)
+  ) !important;
+  -webkit-background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+  background-clip: text !important;
+}
+
+/* Fix hero section */
+[data-theme="light"] .wizard-result-section--hero {
+  background: linear-gradient(135deg, 
+    rgba(34, 197, 94, 0.05),
+    rgba(16, 185, 129, 0.08),
+    rgba(34, 211, 238, 0.05)
+  ) !important;
+  border-color: rgba(34, 197, 94, 0.25) !important;
+}
+
+/* Fix hero description text */
+[data-theme="light"] .forge-hero-desc {
+  color: rgba(51, 65, 85, 0.9) !important;
+}
+
+/* Fix border decorations for visibility in light mode */
+[data-theme="light"] .forge-corner::before,
+[data-theme="light"] .forge-corner::after {
+  background: linear-gradient(135deg, 
+    rgba(124, 58, 237, 0.8), 
+    rgba(34, 211, 238, 0.7)
+  ) !important;
+  box-shadow: 0 0 12px rgba(124, 58, 237, 0.4) !important;
+}
+
+/* Fix section header borders */
+[data-theme="light"] .forge-section-header {
+  border-bottom-color: rgba(148, 163, 184, 0.2) !important;
+}
+
+/* Fix result container border */
+[data-theme="light"] .wizard-result--forge:not(.hidden)::before {
+  background: 
+    linear-gradient(var(--card), var(--card)) padding-box,
+    linear-gradient(135deg, 
+      rgba(124, 58, 237, 0.3), 
+      rgba(34, 211, 238, 0.3),
+      rgba(251, 191, 36, 0.3)
+    ) border-box !important;
+}
+
+/* Fix various text colors */
+[data-theme="light"] .wizard-panel-desc,
+[data-theme="light"] .wizard-label,
+[data-theme="light"] .wizard-inline-hint,
+[data-theme="light"] .wizard-question-type {
+  color: var(--muted, rgba(51, 65, 85, 0.85)) !important;
+}
+
+[data-theme="light"] .wizard-question-text {
+  color: var(--text, rgba(15, 23, 42, 0.95)) !important;
+}
+
+/* Fix question content backgrounds */
+[data-theme="light"] .wizard-question {
+  background: rgba(248, 250, 252, 0.6) !important;
+}
+
+/* Fix input fields */
+[data-theme="light"] .wizard-question textarea,
+[data-theme="light"] .wizard-question input {
+  background: rgba(255, 255, 255, 0.9) !important;
+  color: var(--text) !important;
+  border-color: var(--border) !important;
+}
+
+/* Fix progress indicator */
+[data-theme="light"] .wizard-progress-bar {
+  background: linear-gradient(90deg, 
+    rgba(124, 58, 237, 0.8), 
+    rgba(34, 211, 238, 0.8)
+  ) !important;
+}
+
+/* Fix status messages */
+[data-theme="light"] .wizard-status-text {
+  color: var(--text) !important;
+}
+
+/* Fix empty states */
+[data-theme="light"] .wizard-empty {
+  color: var(--muted) !important;
+}
+
+/* Fix mode cards */
+[data-theme="light"] .wizard-mode-option {
+  background: rgba(248, 250, 252, 0.6) !important;
+  border-color: rgba(148, 163, 184, 0.3) !important;
+}
+
+[data-theme="light"] .wizard-mode-option:hover {
+  background: rgba(124, 58, 237, 0.08) !important;
+}
+
+/* Fix answer badges */
+[data-theme="light"] .wizard-answer-badge {
+  background: rgba(34, 197, 94, 0.15) !important;
+  color: rgba(5, 150, 105, 1) !important;
+}
+
+/* Fix wizard-pill options in light mode - CRITICAL FIX */
+[data-theme="light"] .wizard-pill {
+  background: rgba(255, 255, 255, 0.9) !important;
+  border-color: rgba(148, 163, 184, 0.5) !important;
+  color: rgba(15, 23, 42, 0.9) !important;
+}
+
+[data-theme="light"] .wizard-pill:hover {
+  background: rgba(124, 58, 237, 0.08) !important;
+  border-color: rgba(124, 58, 237, 0.6) !important;
+  color: rgba(15, 23, 42, 1) !important;
+}
+
+[data-theme="light"] .wizard-pill::before {
+  border-color: rgba(100, 116, 139, 0.5) !important;
+  background: rgba(255, 255, 255, 0.8) !important;
+}
+
+[data-theme="light"] .wizard-pill:hover::before {
+  border-color: rgba(124, 58, 237, 0.7) !important;
+  background: rgba(124, 58, 237, 0.15) !important;
+}
+
+[data-theme="light"] .wizard-pill.is-selected {
+  background: linear-gradient(135deg, #7C3AED 0%, #6D28D9 100%) !important;
+  border-color: rgba(124, 58, 237, 0.9) !important;
+  color: #ffffff !important;
+}
+
+[data-theme="light"] .wizard-pill.is-selected::before {
+  border-color: rgba(255, 255, 255, 0.9) !important;
+  background: #ffffff !important;
+}
+
+[data-theme="light"] .wizard-pill.is-selected::after {
+  color: #7C3AED !important;
+}
+
+/* Fix hero title glow in light mode */
+[data-theme="light"] .forge-section-title--hero {
+  background: linear-gradient(135deg, 
+    rgba(34, 197, 94, 0.9),
+    rgba(16, 185, 129, 1),
+    rgba(34, 211, 238, 0.8)
+  ) !important;
+  -webkit-background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+  filter: drop-shadow(0 0 15px rgba(34, 197, 94, 0.3)) !important;
+}
+

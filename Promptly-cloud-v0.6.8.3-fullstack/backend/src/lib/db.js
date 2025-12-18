@@ -196,6 +196,31 @@ CREATE TABLE IF NOT EXISTS outcome_candidates (
   created_at TEXT NOT NULL,
   CONSTRAINT fk_cand_outcome FOREIGN KEY (outcome_run_id) REFERENCES outcome_runs(id)
 );
+
+-- Best Prompt Pipeline: Candidate Prompts (for Multi-Agent generation)
+CREATE TABLE IF NOT EXISTS candidate_prompts (
+  id TEXT PRIMARY KEY,
+  spec_id TEXT NOT NULL,
+  session_id TEXT,
+  agent TEXT NOT NULL,
+  model TEXT NOT NULL,
+  content TEXT NOT NULL,
+  
+  -- Metrics (filled later by Metrics & Scoring)
+  clarity REAL,
+  coherence REAL,
+  style_match REAL,
+  safety REAL,
+  token_cost INTEGER,
+  risk REAL,
+  pass_rate REAL,
+  f1_score REAL,
+  composite_score REAL,
+  
+  created_at TEXT NOT NULL,
+  CONSTRAINT fk_cp_spec FOREIGN KEY (spec_id) REFERENCES specs(id),
+  CONSTRAINT fk_cp_session FOREIGN KEY (session_id) REFERENCES question_sessions(id)
+);
 `);
 
 function ensureColumn(table, column, definition) {
@@ -209,6 +234,12 @@ function ensureColumn(table, column, definition) {
 // Backfill newly added columns when upgrading existing databases
 ensureColumn("question_sessions", "mode", "mode TEXT DEFAULT 'deep'");
 ensureColumn("question_sessions", "model", "model TEXT DEFAULT 'promptly'");
+ensureColumn("question_sessions", "step", "step INTEGER DEFAULT 0");
+ensureColumn("question_sessions", "is_complete", "is_complete INTEGER DEFAULT 0");
+ensureColumn("question_sessions", "spec_id", "spec_id TEXT");
+ensureColumn("specs", "completeness_score", "completeness_score REAL DEFAULT 0.0");
+ensureColumn("specs", "raw_idea", "raw_idea TEXT");
+ensureColumn("candidate_prompts", "metrics_json", "metrics_json TEXT");
 
 // Whitelists for allowed table and column names
 const ALLOWED_TABLES = [

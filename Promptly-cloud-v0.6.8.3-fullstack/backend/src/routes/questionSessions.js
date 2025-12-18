@@ -8,7 +8,7 @@ import {
   generateRawSpec
 } from "../lib/llmAgents.js";
 import { compileSpecToPrompt } from "../lib/specCompiler.js";
-import { LlmDisabledError } from "../lib/openaiClient.js";
+import { chatJson, LlmDisabledError } from "../lib/openaiClient.js";
 import { goBack, skipQuestion } from "../lib/questionNavigator.js";
 import { getModelIds, resolveModelName, isValidModel } from "../lib/modelRegistry.js";
 
@@ -16,6 +16,25 @@ export const questionSessionRouter = Router();
 
 const PROJECT_DESCRIPTION_REQUIRED_MESSAGE = "Project description is required.";
 
+/**
+ * MODE_PROFILES - Question Wizard processing modes
+ * 
+ * These modes control the depth and speed of LLM agent reasoning:
+ * - chainLength: Number of reasoning chains the agent should use (affects prompt instructions)
+ * - maxSteps: Maximum planning/reasoning steps (affects prompt instructions)
+ * - timeoutMs: Request timeout in milliseconds (enforced via runWithTimeout)
+ * 
+ * Current implementation:
+ * - Mode parameters are passed to LLM agents via system prompts
+ * - Agents receive instructions to use chainLength chained thoughts and cap at maxSteps
+ * - Timeouts are enforced using runWithTimeout() wrapper
+ * - Different modes produce different response times and reasoning depth
+ * 
+ * Verified behavior:
+ * - Fast mode: Quick responses (15s timeout), minimal reasoning (2 chains, 3 steps)
+ * - Deep mode: Balanced responses (25s timeout), moderate reasoning (4 chains, 6 steps)
+ * - Ultra mode: Slower responses (40s timeout), maximum reasoning (6 chains, 8 steps)
+ */
 const MODE_PROFILES = {
   fast: {
     id: "fast",
@@ -49,7 +68,22 @@ const MODE_PROFILES = {
 // Get model IDs from the centralized model registry
 const MODEL_IDS = getModelIds();
 
-// Legacy MODEL_TARGETS kept for backward compatibility, but uses registry internally
+/**
+ * MODEL_TARGETS - Mapping from Promptly model identifiers to underlying OpenAI models
+ * 
+ * Uses the centralized model registry for resolution.
+ * This provides backward compatibility while using the new registry system.
+ * 
+ * Current implementation:
+ * - All models are resolved through modelRegistry.js
+ * - Most models currently map to the same underlying models (gpt-4o or gpt-4o-mini)
+ * - This is a placeholder implementation that provides a clear upgrade path
+ * 
+ * Future enhancements:
+ * - Different models can be mapped to different OpenAI models (gpt-4, gpt-4-turbo, etc.)
+ * - Models can have different temperature, max_tokens, or other parameters
+ * - Custom fine-tuned models can be integrated
+ */
 const MODEL_TARGETS = MODEL_IDS.reduce((acc, modelId) => {
   acc[modelId] = resolveModelName(modelId);
   return acc;
@@ -62,7 +96,8 @@ const CreateSessionSchema = z.object({
     .min(1, { message: PROJECT_DESCRIPTION_REQUIRED_MESSAGE }),
   kind: z.string().min(1).max(64).optional(),
   mode: z.enum(["fast", "deep", "ultra"]).optional(),
-  model: z.enum(MODEL_IDS).optional()
+  model: z.enum(MODEL_IDS).optional(),
+  language: z.enum(["en", "zh-CN", "es", "fr", "ja", "ar", "ko", "pt", "hi"]).optional()
 });
 
 const AnswerPayloadSchema = z.object({
@@ -75,11 +110,13 @@ const AnswerPayloadSchema = z.object({
     )
     .min(1),
   control: z.enum(["back", "skip"]).optional(),
-  model: z.enum(MODEL_IDS).optional()
+  model: z.enum(MODEL_IDS).optional(),
+  language: z.enum(["en", "zh-CN", "es", "fr", "ja", "ar", "ko", "pt", "hi"]).optional()
 });
 
 const ModelOnlySchema = z.object({
-  model: z.enum(MODEL_IDS).optional()
+  model: z.enum(MODEL_IDS).optional(),
+  language: z.enum(["en", "zh-CN", "es", "fr", "ja", "ar", "ko", "pt", "hi"]).optional()
 });
 
 const RUNNING_STATUSES = ["active", "ready_to_finalize"];
@@ -89,16 +126,35 @@ function getUserId(req) {
   return "demo-user";
 }
 
+/**
+ * Resolve mode profile from mode identifier
+ * @param {string} mode - Mode identifier ("fast", "deep", "ultra")
+ * @returns {Object} Mode profile with chainLength, maxSteps, timeoutMs, etc.
+ */
 function resolveModeProfile(mode) {
-  return MODE_PROFILES[mode] || MODE_PROFILES.deep;
+  const profile = MODE_PROFILES[mode] || MODE_PROFILES.deep;
+  console.log(`[promptly] Resolved mode: ${mode || 'default'} -> ${profile.id} (${profile.label})`);
+  return profile;
 }
 
+/**
+ * Resolve model choice from user selection
+ * @param {string} modelId - The model identifier from frontend
+ * @returns {{id: string, targetModel: string}} - Resolved model ID and target OpenAI model
+ */
 function resolveModelChoice(modelId) {
   const fallback = process.env.OPENAI_MODEL || "gpt-4o-mini";
   // Use model registry to validate and resolve model
   const selected = isValidModel(modelId) ? modelId : "promptly";
-  const targetModel = resolveModelName(selected);
-  return { id: selected, targetModel: targetModel || fallback };
+  const targetModel = resolveModelName(selected) || fallback;
+  
+  // Log model resolution for debugging
+  if (selected !== modelId) {
+    console.log(`[promptly] Model ${modelId} not found, using default: ${selected}`);
+  }
+  console.log(`[promptly] Resolved model: ${selected} -> ${targetModel}`);
+  
+  return { id: selected, targetModel };
 }
 
 function resolveAndPersistModel(sessionId, sessionModel, incomingModel) {
@@ -143,10 +199,13 @@ questionSessionRouter.post("/", async (req, res) => {
     }
     return res.status(400).json({ ok: false, error: parsed.error.flatten() });
   }
-  const { initial_description, kind, mode, model } = parsed.data;
+  const { initial_description, kind, mode, model, language } = parsed.data;
   const modeProfile = resolveModeProfile(mode);
   const modelChoice = resolveModelChoice(model);
+  const userLanguage = language || 'en';
   const userId = getUserId(req);
+  
+  console.log(`[promptly] Creating session with language: ${userLanguage}`);
   
   // Ensure the user exists before creating a session
   ensureUser(userId);
@@ -166,7 +225,8 @@ questionSessionRouter.post("/", async (req, res) => {
         initialDescription: initial_description,
         kind: kind || null,
         modeProfile,
-        model: modelChoice.targetModel
+        model: modelChoice.targetModel,
+        language: userLanguage
       }),
       modeProfile.timeoutMs,
       "generate broad questions"
@@ -177,7 +237,8 @@ questionSessionRouter.post("/", async (req, res) => {
         kind: kind || null,
         broadQuestions,
         modeProfile,
-        model: modelChoice.targetModel
+        model: modelChoice.targetModel,
+        language: userLanguage
       }),
       modeProfile.timeoutMs,
       "generate choice questions"
@@ -190,7 +251,8 @@ questionSessionRouter.post("/", async (req, res) => {
     );
 
     choiceQuestions.forEach((q, index) => {
-      const qid = q.id || `q_${nanoid(12)}`;
+      // Always generate session-scoped IDs to avoid collisions across sessions
+      const qid = `q_${sessionId}_${q.id || nanoid(12)}`;
       // Store complete question data including depth structure
       const questionData = {
         depth_enabled: q.depth_enabled,
@@ -209,7 +271,9 @@ questionSessionRouter.post("/", async (req, res) => {
       q.id = qid;
     });
 
-    const firstBatch = choiceQuestions.slice(0, 5).map((q) => ({
+    // Return all generated questions (not just first 5)
+    // Frontend will handle client-side pagination
+    const allGeneratedQuestions = choiceQuestions.map((q) => ({
       id: q.id,
       type: q.type,
       content: q.content,
@@ -225,7 +289,7 @@ questionSessionRouter.post("/", async (req, res) => {
       mode: modeProfile.id,
       model: modelChoice.id,
       mode_profile: modeProfile,
-      questions: firstBatch
+      questions: allGeneratedQuestions
     });
   } catch (err) {
     console.error("[promptly] question session init failed", err);
@@ -355,6 +419,78 @@ questionSessionRouter.get("/:sessionId", (req, res) => {
   });
 });
 
+// GET /api/question-sessions/:sessionId/state - hydrate in-progress sessions without creating a new one
+questionSessionRouter.get("/:sessionId/state", (req, res) => {
+  const { sessionId } = req.params;
+
+  const session = db
+    .prepare(
+      `SELECT id, owner_id, kind, status, initial_description, mode, model, created_at, updated_at
+       FROM question_sessions
+       WHERE id = ?`
+    )
+    .get(sessionId);
+
+  if (!session) {
+    return res.status(404).json({ ok: false, error: "Session not found" });
+  }
+
+  const questions = db
+    .prepare("SELECT * FROM question_questions WHERE session_id = ? ORDER BY order_index ASC")
+    .all(sessionId);
+
+  const answers = db
+    .prepare("SELECT * FROM question_answers WHERE session_id = ? ORDER BY created_at ASC")
+    .all(sessionId);
+
+  const answeredIds = new Set(answers.map((a) => a.question_id));
+
+  const mappedQuestions = questions.map((q) => {
+    const questionData = q.options_json ? JSON.parse(q.options_json) : {};
+    return {
+      id: q.id,
+      type: q.type,
+      content: q.content,
+      depth_enabled: questionData.depth_enabled || false,
+      options: questionData.options || null,
+      depth_question: questionData.depth_question || null,
+      depth_levels: questionData.depth_levels || null
+    };
+  });
+
+  return res.json({
+    ok: true,
+    session: {
+      id: session.id,
+      status: session.status,
+      mode: session.mode || "deep",
+      model: session.model || "promptly",
+      kind: session.kind || null,
+      initial_description: session.initial_description || "",
+      created_at: session.created_at,
+      updated_at: session.updated_at
+    },
+    progress: {
+      answered: answers.length,
+      total: questions.length
+    },
+    questions: mappedQuestions,
+    answers: answers.map((a) => ({
+      id: a.id,
+      question_id: a.question_id,
+      value: (() => {
+        try {
+          return JSON.parse(a.answer_json);
+        } catch (e) {
+          return a.answer_json;
+        }
+      })(),
+      created_at: a.created_at
+    })),
+    remaining_question_ids: mappedQuestions.filter((q) => !answeredIds.has(q.id)).map((q) => q.id)
+  });
+});
+
 questionSessionRouter.post("/:sessionId/answer", (req, res) => {
   const parsed = AnswerPayloadSchema.safeParse(req.body);
   if (!parsed.success) {
@@ -477,6 +613,9 @@ questionSessionRouter.post("/:sessionId/finalize", async (req, res) => {
   }
 
   const modelChoice = resolveAndPersistModel(sessionId, session.model, parsedModel.data.model);
+  const userLanguage = parsedModel.data.language || session.language || 'en';
+  
+  console.log(`[promptly] Finalizing session ${sessionId} with language: ${userLanguage}`);
 
   const questions = db
     .prepare(
@@ -516,7 +655,8 @@ questionSessionRouter.post("/:sessionId/finalize", async (req, res) => {
       kind: session.kind,
       qaPairs,
       modeProfile,
-      model: modelChoice.targetModel
+      model: modelChoice.targetModel,
+      language: userLanguage
     });
 
     const compiled = compileSpecToPrompt(result.spec);
@@ -771,5 +911,378 @@ questionSessionRouter.post("/:sessionId/questions/:questionId/regenerate", async
       return res.status(503).json({ ok: false, error: "LLM disabled" });
     }
     return res.status(502).json({ ok: false, error: "Question regeneration failed" });
+  }
+});
+
+/**
+ * Best Prompt Pipeline - Question Engine Q1-Q3 Flow
+ * POST /api/question-sessions/next
+ * 
+ * Implements the Q1-Q3 sequential questioning flow as specified in the Best Prompt Pipeline.
+ * Ask one high-leverage clarifying question at a time, maximum 3 steps.
+ */
+const QuestionNextRequestSchema = z.object({
+  specId: z.string().min(1, "specId is required"),
+  sessionId: z.string().nullable().optional(),
+  lastAnswer: z.string().nullable().optional()
+});
+
+questionSessionRouter.post("/next", async (req, res) => {
+  const userId = getUserId(req);
+  ensureUser(userId);
+
+  const parsed = QuestionNextRequestSchema.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({ ok: false, error: parsed.error.flatten() });
+  }
+
+  const { specId, sessionId = null, lastAnswer = null } = parsed.data;
+
+  try {
+    console.log(`[promptly] 📝 /api/question-sessions/next: Request received`);
+    console.log(`[promptly] SpecId: ${specId}, SessionId: ${sessionId || 'new'}, LastAnswer: ${lastAnswer ? 'provided' : 'none'}`);
+
+    // 1. Load Spec by specId
+    const specRow = db.prepare("SELECT * FROM specs WHERE id = ?").get(specId);
+    if (!specRow) {
+      return res.status(404).json({ ok: false, error: "Spec not found" });
+    }
+
+    const spec = JSON.parse(specRow.spec_json);
+    const now = new Date().toISOString();
+    let session = null;
+    let currentSessionId = sessionId;
+
+    // 2. If sessionId is null, create a new session
+    if (!currentSessionId) {
+      currentSessionId = `sess_${nanoid(16)}`;
+      
+      db.prepare(`
+        INSERT INTO question_sessions
+        (id, owner_id, initial_description, kind, mode, model, status, spec_id, step, is_complete, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `).run(
+        currentSessionId,
+        userId,
+        spec.userGoal || spec.project_goal || 'Best Prompt Pipeline Session',
+        spec.domain || null,
+        'deep',
+        'promptly-mini',
+        'active',
+        specId,
+        0,
+        0,
+        now,
+        now
+      );
+
+      console.log(`[promptly] ✅ Created new question session: ${currentSessionId}`);
+    } else {
+      // Load existing session
+      session = db.prepare("SELECT * FROM question_sessions WHERE id = ?").get(currentSessionId);
+      if (!session) {
+        return res.status(404).json({ ok: false, error: "Session not found" });
+      }
+    }
+
+    // Load session data (or use newly created)
+    if (!session) {
+      session = db.prepare("SELECT * FROM question_sessions WHERE id = ?").get(currentSessionId);
+    }
+
+    // Build Q&A history from existing question_questions and question_answers
+    const existingQuestions = db
+      .prepare("SELECT * FROM question_questions WHERE session_id = ? ORDER BY order_index ASC")
+      .all(currentSessionId);
+    const existingAnswers = db
+      .prepare("SELECT * FROM question_answers WHERE session_id = ? ORDER BY created_at ASC")
+      .all(currentSessionId);
+
+    const answerMap = new Map();
+    existingAnswers.forEach(a => {
+      const qId = a.question_id;
+      if (!answerMap.has(qId)) answerMap.set(qId, []);
+      try {
+        answerMap.get(qId).push(JSON.parse(a.answer_json));
+      } catch {
+        answerMap.get(qId).push(a.answer_json);
+      }
+    });
+
+    const questionsAsked = existingQuestions.map(q => q.content);
+    const answers = existingQuestions.map(q => {
+      const answerForQ = answerMap.get(q.id);
+      return answerForQ && answerForQ.length > 0 ? answerForQ[0] : null;
+    });
+
+    // 3. If lastAnswer is provided, save it before generating next question
+    if (lastAnswer && existingQuestions.length > 0) {
+      const lastQuestion = existingQuestions[existingQuestions.length - 1];
+      
+      // Check if answer already exists (to avoid duplicates)
+      const existingAnswer = db
+        .prepare("SELECT * FROM question_answers WHERE session_id = ? AND question_id = ?")
+        .get(currentSessionId, lastQuestion.id);
+      
+      if (!existingAnswer) {
+        const answerId = `ans_${nanoid(16)}`;
+        
+        db.prepare(`
+          INSERT INTO question_answers (id, session_id, question_id, answer_json, created_at)
+          VALUES (?, ?, ?, ?, ?)
+        `).run(
+          answerId,
+          currentSessionId,
+          lastQuestion.id,
+          JSON.stringify(lastAnswer),
+          now
+        );
+        
+        console.log(`[promptly] ✅ Saved answer to question: ${lastQuestion.id}`);
+      }
+      
+      // Update answers array
+      if (answers.length > 0) {
+        answers[answers.length - 1] = lastAnswer;
+      }
+    }
+
+    // Reload questions and answers after potentially saving lastAnswer
+    const updatedQuestions = db
+      .prepare("SELECT * FROM question_questions WHERE session_id = ? ORDER BY order_index ASC")
+      .all(currentSessionId);
+    const updatedAnswers = db
+      .prepare("SELECT * FROM question_answers WHERE session_id = ? ORDER BY created_at ASC")
+      .all(currentSessionId);
+
+    const updatedAnswerMap = new Map();
+    updatedAnswers.forEach(a => {
+      const qId = a.question_id;
+      if (!updatedAnswerMap.has(qId)) updatedAnswerMap.set(qId, []);
+      try {
+        updatedAnswerMap.get(qId).push(JSON.parse(a.answer_json));
+      } catch {
+        updatedAnswerMap.get(qId).push(a.answer_json);
+      }
+    });
+
+    const currentQuestionsAsked = updatedQuestions.map(q => q.content);
+    const currentAnswers = updatedQuestions.map(q => {
+      const answerForQ = updatedAnswerMap.get(q.id);
+      return answerForQ && answerForQ.length > 0 ? answerForQ[0] : null;
+    });
+
+    // Check if there's a pending question (asked but not answered)
+    const hasPendingQuestion = currentQuestionsAsked.length > 0 && 
+      currentQuestionsAsked.length > currentAnswers.filter(a => a !== null).length;
+
+    // Check if we should stop (already at step 3 or session marked complete)
+    // Step represents number of questions asked (not including the one we're about to ask)
+    const currentStep = currentQuestionsAsked.length;
+    const isComplete = session.is_complete === 1 || currentStep >= 3;
+
+    // If there's a pending question and no lastAnswer provided, return the current question
+    if (hasPendingQuestion && !lastAnswer) {
+      const pendingQuestion = currentQuestionsAsked[currentQuestionsAsked.length - 1];
+      console.log(`[promptly] Returning pending question: ${pendingQuestion.substring(0, 50)}...`);
+      
+      return res.json({
+        ok: true,
+        session: {
+          id: currentSessionId,
+          specId,
+          step: currentStep,
+          isComplete: false,
+          questionsAsked: currentQuestionsAsked,
+          answers: currentAnswers
+        },
+        nextQuestion: pendingQuestion,
+        isComplete: false,
+        spec: {
+          ...spec,
+          completenessScore: specRow.completeness_score || 0.0
+        }
+      });
+    }
+
+    if (isComplete) {
+      console.log(`[promptly] Session already complete at step ${currentStep}`);
+      
+      // Update spec completeness score if needed
+      const finalCompleteness = specRow.completeness_score || 1.0;
+      if (specRow.completeness_score === null || specRow.completeness_score < 1.0) {
+        db.prepare("UPDATE specs SET completeness_score = ?, updated_at = ? WHERE id = ?").run(
+          1.0,
+          now,
+          specId
+        );
+      }
+
+      return res.json({
+        ok: true,
+        session: {
+          id: currentSessionId,
+          specId,
+          step: currentStep,
+          isComplete: true,
+          questionsAsked: currentQuestionsAsked,
+          answers: currentAnswers
+        },
+        nextQuestion: null,
+        isComplete: true,
+        spec: {
+          ...spec,
+          completenessScore: 1.0
+        }
+      });
+    }
+
+    // 4. Build System prompt for Question Engine
+    const systemPrompt = `You are a clarifying question engine in Promptly's Best Prompt Pipeline.
+
+Your role is to ask high-leverage clarifying questions to remove ambiguity and surface context that might be forgotten.
+
+REQUIREMENTS:
+1. Ask ONE high-leverage clarifying question at a time
+2. Maximum of 3 steps (Q1, Q2, Q3)
+3. Stop early if incremental value is low (shouldStop = true)
+4. Focus on questions that will significantly improve the prompt quality
+5. Consider what information is missing from the spec that would help craft a better prompt
+
+Return ONLY valid JSON in this format:
+{
+  "question": "What is the target audience for this prompt?",
+  "shouldStop": false,
+  "estimatedCompleteness": 0.75
+}
+
+- question: The next clarifying question to ask (string)
+- shouldStop: Whether to stop asking questions (boolean)
+- estimatedCompleteness: How complete the spec is now (0-1 scale)
+
+CRITICAL: Return ONLY valid JSON, no other text.`;
+
+    // 5. Build User prompt with Spec and Q&A history
+    let qaHistoryText = "";
+    if (currentQuestionsAsked.length > 0) {
+      qaHistoryText = "\n\nPrevious Questions & Answers:\n";
+      currentQuestionsAsked.forEach((q, idx) => {
+        qaHistoryText += `Q${idx + 1}: ${q}\n`;
+        if (currentAnswers[idx]) {
+          qaHistoryText += `A${idx + 1}: ${typeof currentAnswers[idx] === 'string' ? currentAnswers[idx] : JSON.stringify(currentAnswers[idx])}\n\n`;
+        }
+      });
+    }
+
+    const userPrompt = `Specification:
+- Goal: ${spec.userGoal || spec.project_goal || 'Not specified'}
+- Audience: ${spec.audience || spec.target_users || 'Not specified'}
+- Constraints: ${Array.isArray(spec.constraints) ? spec.constraints.join(', ') : (spec.constraints || 'None')}
+- Domain: ${spec.domain || 'Not specified'}
+- Tone: ${spec.tone || 'Not specified'}
+- Format: ${spec.format || 'Not specified'}
+${qaHistoryText}
+
+Current step: ${currentStep + 1} of 3 (Q${currentStep + 1})
+
+Based on this specification and Q&A history, generate the next clarifying question. If the spec is already comprehensive enough, set shouldStop to true.`;
+
+    console.log(`[promptly] 🔄 About to call LLM for Q${currentStep + 1} question generation...`);
+
+    // 6. Call LLM to generate next question
+    const { data: llmResponse } = await chatJson({
+      system: systemPrompt,
+      user: userPrompt
+    });
+
+    const nextQuestion = llmResponse.question || null;
+    const shouldStop = llmResponse.shouldStop === true || currentStep >= 2;
+    const estimatedCompleteness = Math.max(0, Math.min(1, llmResponse.estimatedCompleteness || (currentStep + 1) / 3));
+
+    console.log(`[promptly] ✅ LLM generated Q${currentStep + 1}: ${nextQuestion ? nextQuestion.substring(0, 50) + '...' : 'null'}`);
+    console.log(`[promptly] Should stop: ${shouldStop}, Estimated completeness: ${estimatedCompleteness}`);
+
+    // Save the new question to question_questions table
+    let newQuestionId = null;
+    if (nextQuestion) {
+      newQuestionId = `q_${currentSessionId}_${nanoid(12)}`;
+      db.prepare(`
+        INSERT INTO question_questions (id, session_id, type, content, options_json, order_index)
+        VALUES (?, ?, ?, ?, ?, ?)
+      `).run(
+        newQuestionId,
+        currentSessionId,
+        'single_choice',
+        nextQuestion,
+        null,
+        currentStep
+      );
+    }
+
+    // 7. Update QuestionSession
+    const newStep = currentStep + (nextQuestion ? 1 : 0);
+    const sessionComplete = shouldStop || newStep >= 3;
+
+    db.prepare(`
+      UPDATE question_sessions
+      SET step = ?, is_complete = ?, updated_at = ?
+      WHERE id = ?
+    `).run(
+      newStep,
+      sessionComplete ? 1 : 0,
+      now,
+      currentSessionId
+    );
+
+    // Update Spec.completenessScore
+    db.prepare(`
+      UPDATE specs
+      SET completeness_score = ?, updated_at = ?
+      WHERE id = ?
+    `).run(
+      estimatedCompleteness,
+      now,
+      specId
+    );
+
+    // Build updated questions and answers arrays for response
+    const finalQuestionsAsked = nextQuestion 
+      ? [...currentQuestionsAsked, nextQuestion]
+      : currentQuestionsAsked;
+    const finalAnswers = [...currentAnswers, null]; // Add placeholder for the new question (not yet answered)
+
+    console.log(`[promptly] ✅ Updated session: step=${newStep}, complete=${sessionComplete}, completeness=${estimatedCompleteness.toFixed(2)}`);
+
+    // 8. Return response
+    res.json({
+      ok: true,
+      session: {
+        id: currentSessionId,
+        specId,
+        step: newStep,
+        isComplete: sessionComplete,
+        questionsAsked: finalQuestionsAsked,
+        answers: finalAnswers.slice(0, finalQuestionsAsked.length)
+      },
+      nextQuestion: sessionComplete ? null : nextQuestion,
+      isComplete: sessionComplete,
+      spec: {
+        ...spec,
+        completenessScore: estimatedCompleteness
+      }
+    });
+
+  } catch (err) {
+    console.error(`[promptly] ❌ /api/question-sessions/next error:`, err.message || err);
+    if (err instanceof LlmDisabledError) {
+      return res.status(503).json({
+        ok: false,
+        error: "LLM disabled: OPENAI_API_KEY not set"
+      });
+    }
+    return res.status(500).json({
+      ok: false,
+      error: "Failed to generate next question"
+    });
   }
 });

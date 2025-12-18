@@ -18,6 +18,16 @@
     logEl.scrollTop = logEl.scrollHeight;
   }
 
+  function formatEnhancerError(path, res, data = {}) {
+    if (data.error === "LLM_DISABLED") {
+      return "AI backend is disabled. Ask your admin to set OPENAI_API_KEY.";
+    }
+    if (res.status === 400 || data.error === "BAD_REQUEST") {
+      return "Prompt is missing or invalid.";
+    }
+    return `Enhancer request failed (HTTP ${res.status}). Please try again.`;
+  }
+
   function getPrompt() {
     return (rawPromptEl.value || "").trim();
   }
@@ -48,9 +58,12 @@
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok || !data.ok) {
-        log(`Enhancer error on ${path}: HTTP ${res.status} ${JSON.stringify(data)}`);
+        const msg = formatEnhancerError(path, res, data);
+        showError(msg);
+        log(`${msg} ${JSON.stringify(data)}`);
         return null;
       }
+      clearError();
       log(`Enhancer OK on ${path}`);
       return data.result;
     } catch (err) {
@@ -90,9 +103,12 @@
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok || !data.ok) {
-        log(`Score error: HTTP ${res.status} ${JSON.stringify(data)}`);
+        const msg = formatEnhancerError("/score", res, data);
+        showError(msg);
+        log(`${msg} ${JSON.stringify(data)}`);
         return;
       }
+      clearError();
       const result = data.result;
       const dims = result.dimensions || {};
       const dimLines = Object.keys(dims)
@@ -128,9 +144,12 @@
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok || !data.ok) {
-        log(`Validate error: HTTP ${res.status} ${JSON.stringify(data)}`);
+        const msg = formatEnhancerError("/validate", res, data);
+        showError(msg);
+        log(`${msg} ${JSON.stringify(data)}`);
         return;
       }
+      clearError();
       const result = data.result;
       const issues = result.issues || [];
       if (!issues.length) {

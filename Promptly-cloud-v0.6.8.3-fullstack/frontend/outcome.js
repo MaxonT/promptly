@@ -20,6 +20,26 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
   const candidatesListEl = document.getElementById("candidatesList");
   const logEl = document.getElementById("outcomeLog");
 
+  function t(key, options = {}) {
+    // Use centralized i18nManager for consistency
+    if (!window.i18nManager || !window.i18nManager.instance) {
+      console.warn(`[outcome.js] i18nManager not ready for key: ${key}`);
+      // Return a friendly fallback instead of the full key
+      return key.split('.').pop();
+    }
+    
+    const result = window.i18nManager.instance.t(key, options);
+    
+    // Validate translation succeeded (check if i18next returned the key itself)
+    if (!result || result === key) {
+      console.warn(`[outcome.js] Translation not found for key: ${key}`);
+      // Return the last part of the key as a friendly fallback
+      return key.split('.').pop();
+    }
+    
+    return result;
+  }
+
   function log(line) {
     const ts = new Date().toISOString().slice(11, 19);
     logEl.textContent += `[${ts}] ${line}\n`;
@@ -72,17 +92,19 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
     const { best, candidates, request } = result;
 
     if (!best) {
-      bestMetaEl.textContent = "No best candidate selected.";
+      bestMetaEl.textContent = t("outcome.noBestCandidate");
       bestContentEl.textContent = "";
       candidatesListEl.innerHTML = "";
       return;
     }
 
-    bestMetaEl.textContent = `Best candidate: ${best.id} · finalScore ${best.finalScore.toFixed(
-      2
-    )} / 10 (LLM score ${best.llmScore.toFixed(2)}), tests: ${
-      best.tests?.passed ? "passed" : "issues"
-    }`;
+    const testStatusText = best.tests?.passed ? t("outcome.testsPassed").replace("Tests: ", "") : "issues";
+    bestMetaEl.textContent = t("outcome.bestCandidateMeta", {
+      id: best.id,
+      score: best.finalScore.toFixed(2),
+      llmScore: best.llmScore.toFixed(2),
+      testStatus: testStatusText
+    });
     bestContentEl.textContent = best.content || "";
 
     candidatesListEl.innerHTML = "";
@@ -109,9 +131,9 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
       const testsDiv = document.createElement("div");
       testsDiv.className = "outcome-candidate-tests";
       if (cand.tests?.issues?.length) {
-        testsDiv.textContent = "Tests: " + cand.tests.issues.join(" | ");
+        testsDiv.textContent = t("outcome.testsIssues", { issues: cand.tests.issues.join(" | ") });
       } else {
-        testsDiv.textContent = "Tests: passed";
+        testsDiv.textContent = t("outcome.testsPassed");
       }
 
       div.appendChild(header);
@@ -156,5 +178,32 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
 
   runBtn?.addEventListener("click", onRunOutcome);
 
+  copyBtn?.addEventListener("click", () => {
+    const text = bestContentEl.textContent;
+    if (!text) return;
+
+    navigator.clipboard.writeText(text).then(() => {
+      copyBtn.classList.add("copied");
+      const originalText = copyTextEl.textContent;
+      copyTextEl.textContent = t("outcome.copied", { defaultValue: "Copied!" });
+      
+      setTimeout(() => {
+        copyBtn.classList.remove("copied");
+        copyTextEl.textContent = originalText;
+      }, 2000);
+    }).catch(err => {
+      console.error("Failed to copy:", err);
+      log("Copy failed: " + err.message);
+    });
+  });
+
+  // Wait for i18n to be ready before logging
+  if (window.i18n) {
+    log(t("outcome.logLoaded") || "Outcome-first Runner loaded. Define your task and click run.");
+  } else {
+    window.addEventListener('i18nReady', () => {
+      log(t("outcome.logLoaded") || "Outcome-first Runner loaded. Define your task and click run.");
+    });
   log("Outcome-first Runner loaded. Define your task and click run.");
+  }
 })();

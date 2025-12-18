@@ -28,38 +28,66 @@ export function compileSpecToPrompt(spec) {
     content: projectGoal
   });
 
-  if (spec.actors) {
+  // Target users / audience
+  const targetUsers = spec.target_users || spec.actors;
+  if (targetUsers) {
     blocks.push({
       role: "user",
-      label: "Actors / Users",
-      content: asJson(spec.actors)
+      label: "Target Users",
+      content: asJson(targetUsers)
     });
   }
 
-  if (spec.flows) {
+  // Platform
+  if (spec.platform) {
     blocks.push({
       role: "user",
-      label: "Key User Flows",
-      content: asJson(spec.flows)
+      label: "Platform",
+      content: asJson(spec.platform)
     });
   }
 
-  if (spec.requirements) {
+  // Objectives or key user flows
+  const objectives = spec.objectives || spec.flows;
+  if (objectives) {
     blocks.push({
       role: "user",
-      label: "Functional Requirements",
-      content: asJson(spec.requirements)
+      label: "Objectives",
+      content: asJson(objectives)
     });
   }
 
-  if (spec.data) {
+  // Key features or requirements
+  const features = spec.key_features || spec.requirements;
+  if (features) {
     blocks.push({
       role: "user",
-      label: "Data & Models",
-      content: asJson(spec.data)
+      label: "Key Features",
+      content: asJson(features)
     });
   }
 
+  // Technical stack / architecture
+  const techStack = spec.technical_stack || spec.tech_stack || spec.architecture;
+  if (techStack) {
+    blocks.push({
+      role: "user",
+      label: "Technical Stack",
+      content: asJson(techStack)
+    });
+  }
+
+  // Data model
+  const dataModel = spec.data_model || spec.data;
+  if (dataModel) {
+    blocks.push({
+      role: "user",
+      label: "Data Model",
+      content: asJson(dataModel)
+    });
+  }
+
+  // Constraints
   if (spec.constraints) {
     blocks.push({
       role: "user",
@@ -68,14 +96,16 @@ export function compileSpecToPrompt(spec) {
     });
   }
 
-  if (spec.evaluation_criteria) {
+  // Security
+  if (spec.security) {
     blocks.push({
       role: "user",
-      label: "What 'Good' Looks Like",
-      content: asJson(spec.evaluation_criteria)
+      label: "Security Requirements",
+      content: asJson(spec.security)
     });
   }
 
+  // UI/UX
   if (spec.ui_ux) {
     blocks.push({
       role: "user",
@@ -84,11 +114,12 @@ export function compileSpecToPrompt(spec) {
     });
   }
 
-  if (spec.architecture) {
+  // Evaluation criteria
+  if (spec.evaluation_criteria) {
     blocks.push({
       role: "user",
-      label: "Architecture",
-      content: asJson(spec.architecture)
+      label: "What 'Good' Looks Like",
+      content: asJson(spec.evaluation_criteria)
     });
   }
 
@@ -113,7 +144,8 @@ export function compileSpecToPrompt(spec) {
 
   const explanation =
     "Prompt blocks were compiled from the spec with a fixed ordering: " +
-    "system role, project goal, actors, flows, requirements, data, constraints, evaluation, ui_ux, architecture, output rules, validation hints.";
+    "system role, project goal, target users, platform, objectives, key features, technical stack, " +
+    "data model, constraints, security, ui/ux, evaluation criteria, output rules, validation hints.";
 
   return {
     id: `prompt_${Date.now()}`,

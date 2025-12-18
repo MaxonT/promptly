@@ -9,6 +9,7 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
   const startBtn = document.getElementById("startWizardBtn");
   const restoreSnapshotBtn = document.getElementById("restoreSnapshotBtn");
   const ideaError = document.getElementById("ideaError");
+  const WIZARD_SESSION_KEY = "promptly.wizard.session";
 
   const ideaPanel = document.querySelector(".wizard-panel--idea");
   const qaPanel = document.querySelector(".wizard-panel--qa");
@@ -28,7 +29,6 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
   const nextBatchBtn = document.getElementById("nextBatchBtn");
   const finalizeBtn = document.getElementById("finalizeBtn");
   const backBtn = document.getElementById("backBtn");
-  const skipBtn = document.getElementById("skipBtn");
   const saveSnapshotBtn = document.getElementById("saveSnapshotBtn");
   const cancelWizardBtn = document.getElementById("cancelWizardBtn");
   const wizardStatus = document.getElementById("wizardStatus");
@@ -54,8 +54,33 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
   const urlParams = new URLSearchParams(window.location.search || "");
   const prefillIdea = urlParams.get("idea");
   const prefillKind = urlParams.get("kind");
+  const resumeSessionId = urlParams.get("sessionId") || (() => {
+    try {
+      const raw = localStorage.getItem(WIZARD_SESSION_KEY);
+      return raw ? JSON.parse(raw).sessionId : null;
+    } catch (e) {
+      return null;
+    }
+  })();
 
   const currentAnswers = new Map();
+
+  function hasAnswerForQuestion(questionId) {
+    const answer = currentAnswers.get(questionId);
+    if (answer === undefined || answer === null) return false;
+    if (Array.isArray(answer)) {
+      return answer.some((value) => {
+        if (typeof value === "string") {
+          return value.trim().length > 0;
+        }
+        return Boolean(value);
+      });
+    }
+    if (typeof answer === "string") {
+      return answer.trim().length > 0;
+    }
+    return true;
+  }
   let startController = null;
   let loadingTimeoutRef = null;
   let slowWarningTimerRef = null;
@@ -117,10 +142,12 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
     wizardStatus.classList.add(`wizard-status--${tone}`);
     const icon = tone === "error" ? "✕" : tone === "warn" ? "⚠️" : "ℹ️";
     const ticks = showTicks ? '<div class="wizard-loading-ticks" aria-hidden="true"></div>' : "";
+    const note = '<div class="wizard-status-note">⚠️ Do not exit this page – exiting will stop the wizard.</div>';
     wizardStatus.innerHTML = `
       <span class="wizard-status-icon">${icon}</span>
       <div class="wizard-status-text">${message}</div>
       ${ticks}
+      ${note}
     `;
   }
 
@@ -152,6 +179,26 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
     if (!silentLog && MODE_OPTIONS[resolvedMode]) {
       log(`Mode set to ${MODE_OPTIONS[resolvedMode].label} (${MODE_OPTIONS[resolvedMode].hierarchy})`);
     }
+    
+    // Update timing info when mode changes
+    updateTimingInfo();
+  }
+  
+  // Update timing information based on current mode
+  function updateTimingInfo() {
+    const timingInfo = document.getElementById("wizardTimingInfo");
+    const timingText = document.getElementById("wizardTimingText");
+    if (!timingInfo || !timingText) return;
+    
+    const timingMap = {
+      fast: "Fast mode: typically 10–40 seconds",
+      deep: "Deep Thinking mode: typically 30–90 seconds",
+      ultra: "Ultra Thinking mode: typically 90–180 seconds"
+    };
+    
+    const timing = timingMap[currentMode] || timingMap.deep;
+    timingText.textContent = timing;
+    timingInfo.style.display = "block";
   }
 
   function initModeSelector() {
@@ -259,7 +306,6 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
     nextBatchBtn.classList.add("hidden");
     finalizeBtn.classList.add("hidden");
     backBtn.classList.add("hidden");
-    skipBtn.classList.add("hidden");
     saveSnapshotBtn.classList.add("hidden");
     progressIndicator?.classList.add("hidden");
     // Clear auto-save timer when questions are cleared
@@ -304,9 +350,9 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
   // Update the answer guidance banner
   function updateAnswerGuidance() {
     if (!answerGuidance || allQuestions.length === 0) {
-      if (answerGuidance) answerGuidance.classList.add("hidden");
-      return;
-    }
+    if (answerGuidance) answerGuidance.classList.add("hidden");
+    return;
+  }
     
     const answeredCount = currentAnswers.size;
     const totalCount = allQuestions.length;
@@ -336,6 +382,79 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
     triggerAutoSave();
     updateAnswerGuidance();
   }
+
+  async function hydrateExistingSession(sessionId) {
+    try {
+      const res = await fetch(`${API_BASE}/api/question-sessions/${encodeURIComponent(sessionId)}/state`);
+      if (!res.ok) {
+        // Silently ignore 404 (no previous session) - this is expected behavior
+        if (res.status !== 404) {
+          log(`Could not restore session ${sessionId}: HTTP ${res.status}`);
+        }
+        return;
+      }
+      const data = await res.json();
+      if (!data.ok || !data.session) {
+        log(data.error || `Could not restore session ${sessionId}`);
+        return;
+      }
+
+      currentSessionId = data.session.id;
+      window.promptlyWizardSession?.markRunning?.(currentSessionId);
+
+      if (ideaInput && data.session.initial_description) {
+        ideaInput.value = data.session.initial_description;
+      }
+      if (kindSelect && data.session.kind) {
+        kindSelect.value = data.session.kind;
+      }
+
+      const remainingIds = new Set(data.remaining_question_ids || []);
+      const mappedQuestions = (data.questions || []).map((q) => ({
+        id: q.id,
+        type: q.type,
+        content: q.content,
+        options: q.options,
+        depth_enabled: q.depth_enabled,
+        depth_question: q.depth_question,
+        depth_levels: q.depth_levels
+      }));
+
+      clearQuestions();
+      addQuestions(mappedQuestions);
+
+      (data.answers || []).forEach((a) => {
+        if (a.value !== undefined && a.value !== null) {
+          currentAnswers.set(a.question_id, a.value);
+        }
+      });
+
+      const firstRemainingIndex = mappedQuestions.findIndex((q) => remainingIds.has(q.id));
+      if (firstRemainingIndex >= 0) {
+        currentPageIndex = Math.floor(firstRemainingIndex / PAGE_SIZE);
+      } else {
+        currentPageIndex = 0;
+      }
+
+      renderCurrentPage();
+      updateAnswerGuidance();
+      updateWizardStepper('questions');
+
+      const isActive = data.session.status === "active" || data.session.status === "ready_to_finalize";
+
+      if (startBtn) {
+        startBtn.disabled = isActive;
+        startBtn.textContent = isActive ? "Session in progress" : "Start wizard";
+      }
+      if (data.progress?.answered >= data.progress?.total && data.progress?.total > 0) {
+        setWizardStatus("All questions answered. You can finalize when ready.", "info");
+      } else {
+        setWizardStatus("Resumed your running session. Continue answering the remaining questions.", "info");
+      }
+    } catch (err) {
+      console.warn("[wizard] Failed to hydrate existing session", err);
+    }
+  }
   
   // Add questions to the global list (with sequential numbering)
   function addQuestions(newQuestions) {
@@ -346,6 +465,39 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
         questionNumber: startIndex + idx + 1 // 1-based numbering
       });
     });
+    
+    // Auto-update indicators when questions are added
+    // This fixes the issue where page count shows "1 of 1" initially
+    // Note: We check if indicators exist, not if container is visible,
+    // because we need to update even before first render
+    if (progressIndicator) {
+      updateProgressIndicator();
+    }
+    
+    // Update pagination buttons if they exist
+    if (nextBatchBtn) {
+      updatePaginationButtons();
+    }
+    
+    // Also update the inline page indicator if it exists
+    if (questionsContainer) {
+      const existingPageIndicator = questionsContainer.querySelector(".wizard-page-indicator");
+      if (existingPageIndicator) {
+        const totalPages = getTotalPages();
+        const startQ = currentPageIndex * PAGE_SIZE + 1;
+        const endQ = Math.min((currentPageIndex + 1) * PAGE_SIZE, allQuestions.length);
+        
+        // Update the entire indicator text
+        const indicatorDiv = existingPageIndicator.querySelector("div");
+        if (indicatorDiv) {
+          indicatorDiv.innerHTML = `
+            <span>Page <span class="wizard-page-indicator-number">${currentPageIndex + 1}</span> of ${totalPages}</span>
+            <span style="color:rgba(148,163,184,0.5);">•</span>
+            <span>Questions ${startQ}–${endQ} of ${allQuestions.length}</span>
+          `;
+        }
+      }
+    }
   }
   
   // Get current page of questions
@@ -427,13 +579,22 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
       }
     }
     
-    // Update Next button text
+    // Update Next button text and show/hide Finalize button based on current page
     const nextTextSpan = nextBatchBtn.querySelector("span:not(.wizard-button-icon)");
     if (nextTextSpan) {
-      if (totalPages <= 1 || currentPageIndex >= totalPages - 1) {
-        nextTextSpan.textContent = "Submit & Continue";
+      if (currentPageIndex >= totalPages - 1 && totalPages > 0) {
+        // Last page - show Finalize Spec button, hide Save & Continue
+        nextBatchBtn.classList.add("hidden");
+        if (finalizeBtn) {
+          finalizeBtn.classList.remove("hidden");
+        }
       } else {
-        nextTextSpan.textContent = `Next (Page ${currentPageIndex + 2}/${totalPages})`;
+        // Not last page - show Save & Continue, hide Finalize Spec
+        nextBatchBtn.classList.remove("hidden");
+        if (finalizeBtn) {
+          finalizeBtn.classList.add("hidden");
+        }
+        nextTextSpan.textContent = `Save & Continue`;
       }
     }
     
@@ -460,28 +621,34 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
     finalizeBtn.classList.remove("hidden");
     saveSnapshotBtn.classList.remove("hidden");
     
-    // Add page indicator (FIX 6)
+    // Add page indicator with auto-save notice
     const pageIndicator = document.createElement("div");
     pageIndicator.className = "wizard-page-indicator";
     const totalPages = getTotalPages();
     const startQ = currentPageIndex * PAGE_SIZE + 1;
     const endQ = Math.min((currentPageIndex + 1) * PAGE_SIZE, allQuestions.length);
     pageIndicator.innerHTML = `
-      <span>Page <span class="wizard-page-indicator-number">${currentPageIndex + 1}</span> of ${totalPages}</span>
-      <span style="color:rgba(148,163,184,0.5);">•</span>
-      <span>Questions ${startQ}–${endQ} of ${allQuestions.length}</span>
+      <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.5rem;">
+        <span>Page <span class="wizard-page-indicator-number">${currentPageIndex + 1}</span> of ${totalPages}</span>
+        <span style="color:rgba(148,163,184,0.5);">•</span>
+        <span>Questions ${startQ}–${endQ} of ${allQuestions.length}</span>
+      </div>
+      <div style="font-size: 0.8rem; color: rgba(34, 197, 94, 0.8); display: flex; align-items: center; gap: 0.25rem;">
+        <span>✓</span>
+        <span>Answers are automatically saved as you type</span>
+      </div>
     `;
     questionsContainer.appendChild(pageIndicator);
     
     const pageQuestions = getCurrentPageQuestions();
-    
+
     pageQuestions.forEach((q, idx) => {
       const card = document.createElement("div");
       card.className = "wizard-question-card";
-      // Stagger animation: 0ms, 80ms, 160ms, 240ms, 320ms
       card.style.animationDelay = `${idx * 80}ms`;
-      
-      // Question number (fixed, permanent)
+
+      const answered = hasAnswerForQuestion(q.id);
+
       const numberDiv = document.createElement("div");
       numberDiv.className = "wizard-question-number";
       numberDiv.textContent = `Question ${q.questionNumber}`;
@@ -489,65 +656,101 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
       const typeSpan = document.createElement("div");
       typeSpan.className = "wizard-question-type";
       const typeLabels = {
-        "single_choice": "Single Choice (Pick one)",
-        "multi_choice": "Multiple Choice (Pick any)",
-        "yes_no": "Yes/No",
-        "short_text": "Short Text"
+        "single_choice": "Single Choice",
+        "multi_choice": "Multiple Choice",
+        "yes_no": "Yes / No",
+        "short_text": "Short Answer"
       };
-      typeSpan.textContent = typeLabels[q.type] || q.type || "question";
+      typeSpan.textContent = typeLabels[q.type] || "问题";
+
+      const header = document.createElement("div");
+      header.className = "wizard-question-card-header";
+      const titleGroup = document.createElement("div");
+      titleGroup.className = "wizard-question-title-group";
+      titleGroup.appendChild(numberDiv);
+      titleGroup.appendChild(typeSpan);
+      header.appendChild(titleGroup);
+
+      const badge = document.createElement("span");
+      badge.className = "wizard-answer-badge";
+
+      function markAnsweredState(isAnswered) {
+        card.classList.toggle("is-answered", isAnswered);
+        badge.textContent = isAnswered ? "Answered" : "Pending";
+        badge.classList.toggle("answered", isAnswered);
+        badge.classList.toggle("pending", !isAnswered);
+      }
+
+      markAnsweredState(answered);
+      header.appendChild(badge);
+
+      const regenerateBtn = document.createElement("button");
+      regenerateBtn.type = "button";
+      regenerateBtn.className = "wizard-regenerate-icon";
+      regenerateBtn.setAttribute("aria-label", "Regenerate question");
+      regenerateBtn.title = "重新生成此问题";
+      regenerateBtn.innerHTML = `
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
+        </svg>
+      `;
+      regenerateBtn.addEventListener("click", () => regenerateQuestion(q.id, card));
+      header.appendChild(regenerateBtn);
 
       const textDiv = document.createElement("div");
       textDiv.className = "wizard-question-text";
       textDiv.textContent = q.content || "";
 
-      card.appendChild(numberDiv);
-      card.appendChild(typeSpan);
-      card.appendChild(textDiv);
+      const answerArea = document.createElement("div");
+      answerArea.className = "wizard-answer-area";
 
-      // Add regenerate button for each question (FIX 3)
-      const regenerateBtn = document.createElement("button");
-      regenerateBtn.type = "button";
-      regenerateBtn.className = "wizard-regenerate-icon";
-      regenerateBtn.innerHTML = `
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
-        </svg>
-        <span>Regenerate</span>
-      `;
-      regenerateBtn.style.marginTop = "8px";
-      regenerateBtn.addEventListener("click", () => regenerateQuestion(q.id, card));
-      card.appendChild(regenerateBtn);
+      const previewText = (q.content || "").replace(/\s+/g, " ").trim();
+      const truncatedPreview = previewText
+        ? `${previewText.slice(0, 40)}${previewText.length > 40 ? "..." : ""}`
+        : "此问题的核心内容";
+      const placeholderForShortText = q.hint || `请简要说明：${truncatedPreview}`;
 
       if (q.type === "short_text") {
         const input = document.createElement("input");
         input.className = "wizard-input-short";
         input.type = "text";
-        input.placeholder = "Type your answer here";
+        input.placeholder = placeholderForShortText;
         input.value = currentAnswers.get(q.id) ?? "";
         input.addEventListener("input", () => {
           currentAnswers.set(q.id, input.value);
-          onAnswerChange(); // Phase 3: Track answer changes
+          onAnswerChange();
+          input.style.borderColor = "#22C55E";
+          setTimeout(() => {
+            input.style.borderColor = "";
+          }, 300);
+          const hasValue = input.value.trim().length > 0;
+          markAnsweredState(hasValue);
         });
-        card.appendChild(input);
+        answerArea.appendChild(input);
       } else if (q.type === "yes_no") {
         const row = document.createElement("div");
         row.className = "wizard-choice-row";
 
         const yes = document.createElement("button");
         yes.type = "button";
-        yes.className = "wizard-pill";
-        yes.textContent = "Yes";
+        yes.className = "wizard-pill wizard-pill--yes";
+        yes.innerHTML = `<span class="wizard-pill-icon">✓</span><span>是</span>`;
 
         const no = document.createElement("button");
         no.type = "button";
-        no.className = "wizard-pill";
-        no.textContent = "No";
+        no.className = "wizard-pill wizard-pill--no";
+        no.innerHTML = `<span class="wizard-pill-icon">✗</span><span>否</span>`;
 
         function update(selected) {
           currentAnswers.set(q.id, selected);
           yes.classList.toggle("is-selected", selected === true);
           no.classList.toggle("is-selected", selected === false);
-          onAnswerChange(); // Phase 3: Track answer changes
+          onAnswerChange();
+          row.style.borderColor = "#22C55E";
+          setTimeout(() => {
+            row.style.borderColor = "";
+          }, 300);
+          markAnsweredState(true);
         }
 
         yes.addEventListener("click", () => update(true));
@@ -560,24 +763,26 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
 
         row.appendChild(yes);
         row.appendChild(no);
-        card.appendChild(row);
+        answerArea.appendChild(row);
       } else if (q.type === "single_choice" || q.type === "multi_choice") {
         const row = document.createElement("div");
         row.className = "wizard-choice-row";
         const options = q.options || [];
         const isMulti = q.type === "multi_choice";
 
-        // FIX 5: Handle missing options
         if (options.length === 0) {
           const missingDiv = document.createElement("div");
           missingDiv.className = "wizard-missing-options";
           missingDiv.innerHTML = `
             <span class="wizard-missing-options-icon">⚠️</span>
-            <span>No options available. Click "Regenerate" to try again.</span>
+            <span>No options available. Click "Regenerate" to try more questions.</span>
           `;
-          card.appendChild(missingDiv);
+          answerArea.appendChild(missingDiv);
+          card.appendChild(header);
+          card.appendChild(textDiv);
+          card.appendChild(answerArea);
           questionsContainer.appendChild(card);
-          return; // Skip this question
+          return;
         }
 
         const existing = currentAnswers.get(q.id);
@@ -595,16 +800,13 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
           pill.textContent = opt.label || opt.value || "";
           pill.setAttribute("data-value", opt.value);
 
-          // FIX 4: Check if this is "Other" option
           const isOther = opt.is_other === true || (opt.label && opt.label.toLowerCase().includes("other"));
 
           function updateSelection() {
             if (isMulti) {
-              // Multi-choice: toggle selection
               if (selected.has(opt.value)) {
                 selected.delete(opt.value);
                 pill.classList.remove("is-selected");
-                // Hide other input if unselecting "Other"
                 if (isOther && otherInputContainer) {
                   otherInputContainer.remove();
                   otherInputContainer = null;
@@ -612,50 +814,46 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
               } else {
                 selected.add(opt.value);
                 pill.classList.add("is-selected");
-                // Show other input if selecting "Other"
                 if (isOther && !otherInputContainer) {
                   showOtherInput();
                 }
               }
               currentAnswers.set(q.id, Array.from(selected));
             } else {
-              // Single-choice: deselect all others, select this one
               selected.clear();
               selected.add(opt.value);
               currentAnswers.set(q.id, opt.value);
-              
-              // Update all pills in this row
               pills.forEach(p => p.classList.remove("is-selected"));
               pill.classList.add("is-selected");
-              
-              // Handle "Other" input field
               if (isOther) {
                 if (!otherInputContainer) {
                   showOtherInput();
                 }
-              } else {
-                // Remove other input if switching to different option
-                if (otherInputContainer) {
-                  otherInputContainer.remove();
-                  otherInputContainer = null;
-                }
+              } else if (otherInputContainer) {
+                otherInputContainer.remove();
+                otherInputContainer = null;
               }
             }
-            onAnswerChange(); // Phase 3: Track answer changes
+            onAnswerChange();
+            row.style.borderColor = "#22C55E";
+            setTimeout(() => {
+              row.style.borderColor = "";
+            }, 300);
+            const hasSelection = isMulti ? selected.size > 0 : Boolean(currentAnswers.get(q.id));
+            markAnsweredState(hasSelection);
           }
 
           function showOtherInput() {
-            if (otherInputContainer) return; // Already showing
-            
+            if (otherInputContainer) return;
+
             otherInputContainer = document.createElement("div");
             otherInputContainer.className = "wizard-other-input-container";
-            
+
             const input = document.createElement("input");
             input.type = "text";
             input.className = "wizard-other-input";
-            input.placeholder = "Please specify...";
+            input.placeholder = "Please specify your custom option...";
             input.addEventListener("input", () => {
-              // Store custom text with the answer
               const customValue = `${opt.value}:${input.value}`;
               if (isMulti) {
                 selected.delete(opt.value);
@@ -664,12 +862,12 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
               } else {
                 currentAnswers.set(q.id, customValue);
               }
+              badge.textContent = "Answered";
+              badge.classList.add("answered");
             });
-            
+
             otherInputContainer.appendChild(input);
-            card.appendChild(otherInputContainer);
-            
-            // Auto-focus
+            answerArea.appendChild(otherInputContainer);
             setTimeout(() => input.focus(), 100);
           }
 
@@ -686,17 +884,19 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
           row.appendChild(pill);
         });
 
-        card.appendChild(row);
+        answerArea.appendChild(row);
       }
 
+      card.appendChild(header);
+      card.appendChild(textDiv);
+      card.appendChild(answerArea);
       questionsContainer.appendChild(card);
     });
 
     // Update pagination buttons
     updatePaginationButtons();
     
-    // Show all buttons
-    skipBtn.classList.remove("hidden");
+    // Show navigation buttons
     
     // Phase 3: Update guidance banner when page renders
     updateAnswerGuidance();
@@ -734,16 +934,17 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
     startBtn.disabled = true;
     startBtn.textContent = "Starting...";
     cancelWizardBtn?.classList.remove("hidden");
-    setWizardStatus(`Generating ${modeLabels[currentMode]} mode questions... (${modeEstimates[currentMode]})`, "info", { showTicks: true });
-
-    // Show global status bar for cross-page visibility (compact floating notification)
-    if (typeof window.globalStatus !== 'undefined') {
-      window.globalStatus.show({
-        title: '🧙‍♂️ Wizard Running',
-        subtitle: 'Starting...',
-        mode: currentMode
-      });
+    
+    // Show fixed top warning banner
+    const warningBanner = document.getElementById("wizardRunningWarning");
+    if (warningBanner) {
+      warningBanner.classList.remove("hidden");
     }
+    
+    // Initial status with warning - will be updated when loading starts
+    setWizardStatus(`⚠️ DO NOT EXIT THIS PAGE ⚠️ Generating ${modeLabels[currentMode]} mode questions...`, "warn", { showTicks: true });
+
+    // Global status removed - no cross-page indicator
 
     // Wait for fade-out animation before starting API call
     await new Promise(resolve => setTimeout(resolve, 300));
@@ -766,7 +967,15 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
         <div class="wizard-loading-text wizard-loading-main" style="font-size:1rem;margin-top:0.5rem;">Generating questions...</div>
         <div class="wizard-loading-text wizard-loading-elapsed" style="font-size:0.875rem;opacity:0.8;margin-top:0.3rem;">0s elapsed • ~${Math.round((estimate.min + estimate.max) / 2)}s estimated</div>
         <div class="wizard-loading-text" style="font-size:0.75rem;margin-top:0.5rem;opacity:0.6;">Analyzing your project to create personalized questions</div>
+        <div class="wizard-loading-warning" style="display:flex !important; visibility:visible !important; opacity:1 !important;">
+          <span>⚠️</span>
+          <span>DO NOT EXIT THIS PAGE</span>
+          <span>⚠️</span>
+        </div>
       `);
+      
+      // Also add warning to status bar
+      setWizardStatus(`Generating ${modeLabels[currentMode]} mode questions... ⚠️ DO NOT EXIT THIS PAGE ⚠️`, "warn", { showTicks: true });
       
       // Start real-time elapsed counter
       const elapsedCounterRef = setInterval(() => {
@@ -803,8 +1012,13 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
             mainText.textContent = "Still working on it...";
           }
         }
-      }, estimate.max * 1000 / 2); // Half of max estimate
+      }, estimate.max * 1000); // Show warning only after exceeding mode's max time
 
+      // Get current language from i18n or localStorage
+      const currentLanguage = (window.i18nManager && window.i18nManager.currentLang) 
+        || localStorage.getItem('promptly-language') 
+        || 'en';
+      
       const res = await fetch(`${API_BASE}/api/question-sessions`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -812,7 +1026,8 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
           initial_description: idea,
           kind,
           mode: currentMode,
-          model: currentModel
+          model: currentModel,
+          language: currentLanguage  // Pass user's language preference to backend
         }),
         signal: startController.signal
       });
@@ -830,14 +1045,54 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
         startBtn.disabled = false;
         startBtn.textContent = "Start wizard";
         cancelWizardBtn?.classList.add("hidden");
-        setWizardStatus("Could not start the wizard. Please verify your connection or API key and try again.", "error");
+        
+        // Parse error message for user-friendly display
+        let errorData = {};
+        try {
+          errorData = JSON.parse(txt);
+        } catch {
+          // Response is plain text, not JSON - this is expected for some error responses
+          // The fallback userMessage below handles this case
+        }
+        
+        // Provide specific error messages based on error type
+        let userMessage = "Could not start the wizard. Please try again.";
+        if (res.status === 503 || txt.includes("LLM disabled")) {
+          userMessage = "⚠️ LLM features are currently unavailable. The API key may not be configured. Please contact support or try again later.";
+        } else if (res.status === 502) {
+          if (txt.includes("Invalid OpenAI API Key") || txt.includes("invalid_api_key")) {
+            userMessage = "⚠️ API key is invalid. Please check the OPENAI_API_KEY configuration.";
+          } else if (txt.includes("OpenAI API error")) {
+            userMessage = "⚠️ LLM service error. The AI service is temporarily unavailable. Please try again later.";
+          } else {
+            userMessage = "⚠️ Question engine failed. Please verify your connection and try again.";
+          }
+        } else if (res.status >= 500) {
+          userMessage = "⚠️ Server error. Please try again later.";
+        } else if (res.status === 400) {
+          userMessage = errorData.error || "Invalid request. Please check your input and try again.";
+        }
+        
+        setWizardStatus(userMessage, "error");
+        hideLoadingInQuestionPanel();
+        
+        // Hide warning banner on error
+        const errorWarningBanner = document.getElementById("wizardRunningWarning");
+        if (errorWarningBanner) {
+          errorWarningBanner.classList.add("hidden");
+        }
+        
+        // Show fallback notice in global status (using optional chaining for safety)
+        window.promptlyWizardSession?.update({
+          message: '❌ LLM Unavailable',
+          details: userMessage,
+          autoHide: false
+        });
         return;
       }
       const data = await res.json();
       currentSessionId = data.session_id;
-      if (window.promptlyWizardSession && typeof window.promptlyWizardSession.markRunning === "function") {
-        window.promptlyWizardSession.markRunning(currentSessionId);
-      }
+      window.promptlyWizardSession?.markRunning?.(currentSessionId);
       log(`Session created: ${currentSessionId}`);
       
       // Hide loading overlay
@@ -849,20 +1104,28 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
       renderCurrentPage();
       log(`Loaded ${allQuestions.length} questions (showing page 1/${getTotalPages()})`);
 
+      // Hide warning banner when questions are loaded
+      const warningBanner = document.getElementById("wizardRunningWarning");
+      if (warningBanner) {
+        warningBanner.classList.add("hidden");
+      }
+      
       setWizardStatus("Answer the questions below. Use Next/Back to navigate.");
       cancelWizardBtn?.classList.add("hidden");
+      
+      // Show timing info based on mode
+      updateTimingInfo();
 
       // Update wizard stepper to Questions step
       updateWizardStepper('questions');
 
       // Update global status to show questions are ready
-      if (typeof window.globalStatus !== 'undefined') {
-        window.globalStatus.complete({
-          message: `✅ ${allQuestions.length} questions ready!`,
-          autoHide: true,
-          autoHideDelay: 3000
-        });
-      }
+      window.promptlyWizardSession?.update({
+        message: `✅ ${allQuestions.length} questions ready!`,
+        autoHide: true,
+        autoHideDelay: 3000,
+        sessionId: currentSessionId
+      });
 
       // Keep button disabled after successful start
       startBtn.textContent = "Session started";
@@ -870,23 +1133,28 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
     } catch (err) {
       if (err.name === "AbortError") {
         log("Wizard start cancelled by user.");
-        setWizardStatus("Wizard cancelled. You can edit your idea and start again.", "warn");
-        // Hide global status on cancel
-        if (typeof window.globalStatus !== 'undefined') {
-          window.globalStatus.hide();
+        
+        // Hide warning banner on cancel
+        const warningBanner = document.getElementById("wizardRunningWarning");
+        if (warningBanner) {
+          warningBanner.classList.add("hidden");
         }
+        
+        setWizardStatus("Wizard cancelled. You can edit your idea and start again.", "warn");
+        // Clear status indicator on cancellation
+        window.promptlyWizardSession?.clear?.();
       } else {
         console.error(err);
         log("Error while starting wizard: " + err.message);
         setWizardStatus("Something went wrong while preparing questions. Please try again.", "error");
         // Show error in global status
-        if (typeof window.globalStatus !== 'undefined') {
-          window.globalStatus.error({
-            message: '❌ Question generation failed',
-            details: err.message || 'Unknown error',
-            autoHide: false
-          });
-        }
+        window.promptlyWizardSession?.update({
+          message: '❌ Question generation failed',
+          details: err.message || 'Unknown error',
+          autoHide: false
+        });
+        // Clear status indicator on error
+        window.promptlyWizardSession?.clear?.();
       }
       // Revert animations on error
       ideaPanel?.classList.remove("is-starting");
@@ -939,10 +1207,19 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
 
     try {
       log("Submitting all answers...");
+      // Get current language
+      const currentLanguage = (window.i18nManager && window.i18nManager.currentLang) 
+        || localStorage.getItem('promptly-language') 
+        || 'en';
+      
       const res = await fetch(`${API_BASE}/api/question-sessions/${encodeURIComponent(currentSessionId)}/answer`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ answers: answersPayload, model: currentModel })
+        body: JSON.stringify({ 
+          answers: answersPayload, 
+          model: currentModel,
+          language: currentLanguage  // Pass user's language preference
+        })
       });
       if (!res.ok) {
         const txt = await res.text();
@@ -968,18 +1245,125 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
     }
   }
 
+  // 🔥 FORGE CEREMONY - Ultimate result reveal animation
+  function triggerForgeCeremony() {
+    // Get all forge elements
+    const forgeBlocks = document.querySelectorAll('.forge-block');
+    const forgeBadge = document.querySelector('.forge-badge');
+    const forgeContents = document.querySelectorAll('.forge-content');
+    
+    // Trigger block animations with stagger
+    forgeBlocks.forEach((block, index) => {
+      setTimeout(() => {
+        block.classList.add('forge-animate');
+      }, index * 50);
+    });
+    
+    // Trigger content reveal animations
+    forgeContents.forEach((content, index) => {
+      setTimeout(() => {
+        content.classList.add('forge-reveal');
+      }, 1800 + (index * 100));
+    });
+    
+    // Show and animate the SEALED badge
+    if (forgeBadge) {
+      setTimeout(() => {
+        forgeBadge.classList.remove('hidden');
+        forgeBadge.classList.add('visible');
+      }, 2500);
+    }
+    
+    // Scroll result panel into view
+    const resultPanel = document.querySelector('.wizard-panel--result');
+    if (resultPanel) {
+      setTimeout(() => {
+        resultPanel.scrollIntoView({ 
+          behavior: 'smooth', 
+          block: 'start' 
+        });
+      }, 300);
+    }
+    
+    // Initialize copy buttons
+    initializeCopyButtons();
+    
+    log("🎉 Forge ceremony complete - your spec is SEALED!");
+  }
+  
+  // Initialize copy-to-clipboard functionality
+  function initializeCopyButtons() {
+    const copyButtons = document.querySelectorAll('.forge-copy-btn');
+    
+    copyButtons.forEach(button => {
+      // Remove any existing listeners
+      const newButton = button.cloneNode(true);
+      button.parentNode.replaceChild(newButton, button);
+      
+      newButton.addEventListener('click', async function() {
+        const targetId = this.getAttribute('data-copy-target');
+        const targetElement = document.getElementById(targetId);
+        
+        if (!targetElement) return;
+        
+        try {
+          await navigator.clipboard.writeText(targetElement.textContent);
+          
+          // Visual feedback
+          const originalText = this.querySelector('.forge-copy-text').textContent;
+          this.querySelector('.forge-copy-text').textContent = 'Copied!';
+          this.classList.add('copied');
+          
+          // Reset after 2 seconds
+          setTimeout(() => {
+            this.querySelector('.forge-copy-text').textContent = originalText;
+            this.classList.remove('copied');
+          }, 2000);
+          
+          log(`✅ Copied ${targetId} to clipboard`);
+        } catch (err) {
+          log(`❌ Failed to copy: ${err.message}`);
+          this.querySelector('.forge-copy-text').textContent = 'Failed';
+          setTimeout(() => {
+            this.querySelector('.forge-copy-text').textContent = 'Copy';
+          }, 2000);
+        }
+      });
+    });
+  }
+
   async function finalizeSession() {
     if (!currentSessionId) return;
     try {
       log("Finalizing session and generating spec + compiled prompt...");
+      setWizardStatus("Finalizing and generating your spec... This may take a moment.", "info", { showTicks: true });
+      
+      // Get current language
+      const currentLanguage = (window.i18nManager && window.i18nManager.currentLang) 
+        || localStorage.getItem('promptly-language') 
+        || 'en';
+      
       const res = await fetch(`${API_BASE}/api/question-sessions/${encodeURIComponent(currentSessionId)}/finalize`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ model: currentModel })
+        body: JSON.stringify({ 
+          model: currentModel,
+          language: currentLanguage  // Pass user's language for prompt generation
+        })
       });
       if (!res.ok) {
         const txt = await res.text();
         log(`Failed to finalize session: HTTP ${res.status} ${txt}`);
+        
+        // Parse error for specific messaging
+        let userMessage = "Failed to finalize session. Please try again.";
+        if (res.status === 503 || txt.includes("LLM disabled")) {
+          userMessage = "⚠️ LLM features are unavailable. The AI service is not configured. Your progress has been saved - please try again later.";
+        } else if (res.status === 502) {
+          userMessage = "⚠️ AI service temporarily unavailable. Your progress has been saved - please try again shortly.";
+        }
+        
+        setWizardStatus(userMessage, "error");
         return;
       }
       const data = await res.json();
@@ -990,20 +1374,45 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
       
       resultEmptyState.classList.add("hidden");
       resultContainer.classList.remove("hidden");
-      specOutput.textContent = JSON.stringify(data.spec, null, 2);
+      
+      // 🔥 TRIGGER FORGE CEREMONY ANIMATION
+      triggerForgeCeremony();
+      
+      // Display the complete spec (includes all wizard inputs: initial description, answers, mode, model)
+      const specDisplay = {
+        ...data.spec,
+        _metadata: {
+          session_id: currentSessionId,
+          mode: currentMode,
+          model: currentModel,
+          generated_at: new Date().toISOString(),
+          note: "This spec was generated from your wizard answers and includes all relevant inputs."
+        }
+      };
+      specOutput.textContent = JSON.stringify(specDisplay, null, 2);
+      
+      // Display the compiled prompt blocks (final merged result)
       if (data.compiled_prompt && data.compiled_prompt.blocks) {
         const blocksText = data.compiled_prompt.blocks
-          .map((b) => `[${b.role} · ${b.label || ""}]\n${b.content}\n`)
-          .join("\n");
+          .map((b, idx) => `[Block ${idx + 1}: ${b.role} · ${b.label || ""}]\n${b.content}\n`)
+          .join("\n\n");
         promptOutput.textContent = blocksText;
+        
+        // Add metadata note
+        const metadataNote = `\n\n---\nCompiled from spec with ${data.compiled_prompt.blocks.length} blocks.\nThis is the final prompt that will be used in the optimization pipeline.`;
+        promptOutput.textContent += metadataNote;
       } else {
         promptOutput.textContent = "(no compiled prompt blocks returned)";
       }
-      explanationOutput.textContent = data.explanation || "(no explanation provided)";
+      
+      // Display explanation
+      explanationOutput.textContent = data.explanation || data.compiled_prompt?.explanation || "(no explanation provided)";
 
-      if (window.promptlyWizardSession && typeof window.promptlyWizardSession.clear === "function") {
-        window.promptlyWizardSession.clear();
-      }
+      // Clear wizard status indicator when finalization completes
+      window.promptlyWizardSession?.clear?.();
+      
+      // Update status to show completion
+      setWizardStatus("Spec finalized successfully! You can now view the compiled prompt below.", "info");
 
       if (resultPageLink && data.spec_id) {
         currentSpecId = data.spec_id;
@@ -1019,6 +1428,9 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
     } catch (err) {
       console.error(err);
       log("Error while finalizing session: " + err.message);
+      setWizardStatus("Failed to finalize session. Please try again.", "error");
+      // Clear status indicator on error
+      window.promptlyWizardSession?.clear?.();
     }
   }
 
@@ -1162,43 +1574,6 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
     }
   }
 
-  // Q2: Skip current page of questions
-  async function skipCurrent() {
-    if (!currentSessionId || allQuestions.length === 0) return;
-    const pageQuestions = getCurrentPageQuestions();
-    if (pageQuestions.length === 0) return;
-    const firstQuestionId = pageQuestions[0].id;
-    try {
-      log("Skipping current question...");
-      const res = await fetch(`${API_BASE}/api/question-sessions/${encodeURIComponent(currentSessionId)}/answer`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          answers: [{ question_id: firstQuestionId, value: null }],
-          control: "skip",
-          model: currentModel
-        })
-      });
-      if (!res.ok) {
-        const txt = await res.text();
-        log(`Failed to skip: HTTP ${res.status} ${txt}`);
-        return;
-      }
-      const data = await res.json();
-      log(data.message || "Question skipped");
-      if (data.done) {
-        clearQuestions();
-      } else if (data.questions && data.questions.length > 0) {
-        clearQuestions();
-        addQuestions(data.questions);
-        currentPageIndex = 0;
-        renderCurrentPage();
-      }
-    } catch (err) {
-      console.error(err);
-      log("Error while skipping: " + err.message);
-    }
-  }
 
   // Q3: Regenerate a specific question
   async function regenerateQuestion(questionId, cardElement) {
@@ -1239,6 +1614,13 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
         if (cardElement) {
           cardElement.classList.remove("is-regenerating");
           if (loadingOverlay) loadingOverlay.remove();
+        }
+        
+        // Show user-friendly error for LLM unavailable
+        if (res.status === 503 || txt.includes("LLM disabled")) {
+          setWizardStatus("⚠️ Question regeneration unavailable - AI service is not configured.", "warn");
+        } else if (res.status === 502) {
+          setWizardStatus("⚠️ Could not regenerate question - AI service temporarily unavailable.", "warn");
         }
         return;
       }
@@ -1305,7 +1687,6 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
   nextBatchBtn?.addEventListener("click", handleNext);
   finalizeBtn?.addEventListener("click", finalizeSession);
   backBtn?.addEventListener("click", goBack);
-  skipBtn?.addEventListener("click", skipCurrent);
   saveSnapshotBtn?.addEventListener("click", saveSnapshot);
   restoreSnapshotBtn?.addEventListener("click", restoreSnapshot);
   cancelWizardBtn?.addEventListener("click", cancelWizard);
@@ -1342,6 +1723,11 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
     sessionStorage.removeItem("projectIdea");
     sessionStorage.removeItem("projectKind");
   })();
+
+  if (resumeSessionId) {
+    log(`Found active session ${resumeSessionId}. Restoring...`);
+    hydrateExistingSession(resumeSessionId);
+  }
 
   log("Wizard page loaded. Describe your idea on the left to begin.");
 })();

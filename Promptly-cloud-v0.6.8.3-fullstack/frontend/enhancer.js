@@ -11,6 +11,7 @@
   const scoreResultEl = document.getElementById("scoreResult");
   const validationResultEl = document.getElementById("validationResult");
   const logEl = document.getElementById("enhancerLog");
+  const llmStatusEl = document.getElementById("llmStatus");
 
   /**
    * ATTACHMENT FEATURE
@@ -25,6 +26,63 @@
     const ts = new Date().toISOString().slice(11, 19);
     logEl.textContent += `[${ts}] ${line}\n`;
     logEl.scrollTop = logEl.scrollHeight;
+  }
+
+  function setLlmStatus(message, level = "ok") {
+    if (!llmStatusEl) return;
+    llmStatusEl.textContent = message;
+    llmStatusEl.classList.remove("hidden", "enhancer-status--ok", "enhancer-status--warning", "enhancer-status--error");
+    llmStatusEl.classList.add(`enhancer-status--${level}`);
+  }
+
+  function t(key, options = {}) {
+    // Use centralized i18nManager for consistency
+    if (!window.i18nManager || !window.i18nManager.instance) {
+      console.warn(`[enhancer.js] i18nManager not ready for key: ${key}`);
+      // Return a friendly fallback instead of the full key
+      return key.split('.').pop();
+    }
+    
+    const result = window.i18nManager.instance.t(key, options);
+    
+    // Validate translation succeeded (check if i18next returned the key itself)
+    if (!result || result === key) {
+      console.warn(`[enhancer.js] Translation not found for key: ${key}`);
+      // Return the last part of the key as a friendly fallback
+      return key.split('.').pop();
+    }
+    
+    return result;
+  }
+
+  function disableLlmActions() {
+    [runEnhanceBtn, runScoreBtn, runValidateBtn, attachBtn].forEach((btn) => {
+      if (btn) btn.disabled = true;
+    });
+  }
+
+  async function checkLlmStatus() {
+    try {
+      const res = await fetch("/api/settings");
+      const data = await res.json();
+
+      if (!res.ok || !data.ok) {
+        throw new Error(`Settings unavailable (HTTP ${res.status})`);
+      }
+
+      const enabled = !!data.settings?.llmEnabled;
+      const model = data.settings?.defaultModel || "gpt-4o-mini";
+      if (!enabled) {
+        setLlmStatus(t("enhancer.statusLlmDisabled"), "error");
+        disableLlmActions();
+        log("LLM disabled: set OPENAI_API_KEY on backend");
+      } else {
+        setLlmStatus(t("enhancer.statusLlmOnline", { model }), "ok");
+      }
+    } catch (err) {
+      setLlmStatus(t("enhancer.statusLlmUnavailable"), "warning");
+      log(`Failed to load settings: ${err.message}`);
+    }
   }
 
   function getPrompt() {
@@ -50,7 +108,7 @@
   async function callEnhancer(path) {
     const prompt = getPrompt();
     if (!prompt) {
-      showError("Please paste a prompt first.");
+      showError(t("enhancer.errorNoPrompt"));
       return null;
     }
     clearError();
@@ -75,11 +133,20 @@
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok || !data.ok) {
-        log(`Enhancer error on ${path}: HTTP ${res.status} ${JSON.stringify(data)}`);
+        const errorMsg = data?.error || `HTTP ${res.status}`;
+        log(`Enhancer error on ${path}: ${errorMsg}`);
+        showError(`Enhancer unavailable: ${errorMsg}`);
+        if (res.status === 503 && errorMsg.toLowerCase().includes("llm")) {
+          setLlmStatus(errorMsg, "error");
+          disableLlmActions();
+        }
         return null;
       }
       log(`Enhancer OK on ${path}`);
-      
+      if (data.result?.modelUsed) {
+        log(`LLM model in use: ${data.result.modelUsed} (completion ${data.result.completionId || 'n/a'})`);
+      }
+
       // Clear attachments after successful request
       clearAttachments();
       
@@ -107,7 +174,7 @@
   async function onRunScore() {
     const prompt = enhancedPromptEl.textContent.trim() || getPrompt();
     if (!prompt) {
-      showError("No prompt to score. Enhance first or paste a prompt.");
+      showError(t("enhancer.errorNoPromptToScore"));
       return;
     }
     rawPromptEl.value = prompt;
@@ -145,7 +212,7 @@
   async function onRunValidate() {
     const prompt = enhancedPromptEl.textContent.trim() || getPrompt();
     if (!prompt) {
-      showError("No prompt to validate. Enhance first or paste a prompt.");
+      showError(t("enhancer.errorNoPromptToValidate"));
       return;
     }
     rawPromptEl.value = prompt;
@@ -165,7 +232,7 @@
       const result = data.result;
       const issues = result.issues || [];
       if (!issues.length) {
-        validationResultEl.innerText = "No issues found. Prompt looks good.";
+        validationResultEl.innerText = t("enhancer.validationNoIssues");
       } else {
         const items = issues.map((iss) => {
           const prefix = iss.level === "error" ? "[!]" :
@@ -223,6 +290,7 @@
       return;
     }
 
+    const removeTitle = t("enhancer.removeAttachment");
     attachmentList.innerHTML = attachments.map((att, index) => `
       <div class="attachment-item" data-index="${index}">
         <span class="attachment-icon">${getFileIcon(att.type)}</span>
@@ -230,7 +298,7 @@
           <div class="attachment-name" title="${att.name}">${att.name}</div>
           <div class="attachment-size">${formatSize(att.size)}</div>
         </div>
-        <button class="attachment-remove" data-index="${index}" title="Remove attachment">×</button>
+        <button class="attachment-remove" data-index="${index}" title="${removeTitle}">×</button>
       </div>
     `).join('');
 
@@ -250,7 +318,7 @@
     // Warn for large files (>10MB)
     if (file.size > 10 * 1024 * 1024) {
       const confirmLarge = confirm(
-        `"${file.name}" is ${formatSize(file.size)}. Large files may take time to upload. Continue?`
+        t("enhancer.confirmLargeFile", { fileName: file.name, fileSize: formatSize(file.size) })
       );
       if (!confirmLarge) return;
     }
@@ -314,5 +382,16 @@
   runValidateBtn?.addEventListener("click", onRunValidate);
   copyEnhancedBtn?.addEventListener("click", onCopyEnhanced);
 
+  checkLlmStatus();
+  
+  // Wait for i18n to be ready before logging
+  if (window.i18n) {
+    log(t("enhancer.logLoaded"));
+  } else {
+    // Fallback if i18n not ready yet
+    window.addEventListener('i18nReady', () => {
+      log(t("enhancer.logLoaded"));
+    });
   log("Prompt Enhancer loaded. Paste a prompt to get started.");
+  }
 })();

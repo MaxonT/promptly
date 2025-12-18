@@ -61,7 +61,7 @@ class PromptlyDataAggregator {
         'Promptly v0': 'promptly-v0',
         'Promptly v0 Max': 'promptly-v0-max'
       };
-      model = modelMap[modelLabel] || 'promptly-mini';
+      model = modelMap[modelLabel] || 'promptly-v0-mini';
     }
 
     // Also check sessionStorage for model selection

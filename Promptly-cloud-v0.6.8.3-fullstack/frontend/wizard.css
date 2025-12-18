@@ -2545,8 +2545,13 @@ html[data-theme="light"] .wizard-question-card{
 /* Fix various text colors */
 [data-theme="light"] .wizard-panel-desc,
 [data-theme="light"] .wizard-label,
-[data-theme="light"] .wizard-inline-hint {
-  color: var(--muted) !important;
+[data-theme="light"] .wizard-inline-hint,
+[data-theme="light"] .wizard-question-type {
+  color: var(--muted, rgba(51, 65, 85, 0.85)) !important;
+}
+
+[data-theme="light"] .wizard-question-text {
+  color: var(--text, rgba(15, 23, 42, 0.95)) !important;
 }
 
 /* Fix question content backgrounds */

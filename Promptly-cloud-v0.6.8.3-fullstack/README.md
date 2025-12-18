@@ -1,6 +1,27 @@
-# Promptly Cloud v0.6.8.3
+# Promptly Cloud v0.6.10.6 🚀
+
+[![CI Status](https://github.com/your-username/promptly-cloud/workflows/ci/badge.svg)](https://github.com/your-username/promptly-cloud/actions)
+[![Version](https://img.shields.io/badge/version-v0.6.10.6-blue.svg)](VERSION.txt)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 Promptly 提供一整套 Prompt 优化流水线：前端负责收集目标并展示多阶段可视化，后端负责 Spec → Question → Agents → Metrics → Outcome 的完整运行。
+
+## 🌍 多语言支持 (9种语言)
+
+✅ 中文 (zh-CN) | ✅ English (en) | ✅ Español (es) | ✅ Français (fr) | ✅ 日本語 (ja) | ✅ العربية (ar) | ✅ 한국어 (ko) | ✅ Português (pt) | ✅ हिन्दी (hi)
+
+## ⚡ 快速开始
+
+### 🚀 一键部署
+
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/your-username/promptly-cloud)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/your-username/promptly-cloud/tree/main/frontend)
+
+### 📋 5分钟部署指南
+
+1. **部署后端**：[查看详细指南](docs/DEPLOYMENT_COMPLETE_GUIDE.md)
+2. **部署前端**：[Vercel部署指南](QUICK_START_DEPLOYMENT.md)
+3. **验证集成**：运行 `./verify-integration.sh`
 
 ## 目录概览
 

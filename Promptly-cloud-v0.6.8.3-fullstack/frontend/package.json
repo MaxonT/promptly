@@ -1,6 +1,6 @@
 {
   "name": "promptly-frontend",
-  "version": "0.6.8.3",
+  "version": "0.6.10.6",
   "private": true,
   "description": "Promptly Frontend - Prompt Optimizer Studio",
   "scripts": {

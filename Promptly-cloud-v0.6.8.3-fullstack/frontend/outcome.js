@@ -178,6 +178,25 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
 
   runBtn?.addEventListener("click", onRunOutcome);
 
+  copyBtn?.addEventListener("click", () => {
+    const text = bestContentEl.textContent;
+    if (!text) return;
+
+    navigator.clipboard.writeText(text).then(() => {
+      copyBtn.classList.add("copied");
+      const originalText = copyTextEl.textContent;
+      copyTextEl.textContent = t("outcome.copied", { defaultValue: "Copied!" });
+      
+      setTimeout(() => {
+        copyBtn.classList.remove("copied");
+        copyTextEl.textContent = originalText;
+      }, 2000);
+    }).catch(err => {
+      console.error("Failed to copy:", err);
+      log("Copy failed: " + err.message);
+    });
+  });
+
   // Wait for i18n to be ready before logging
   if (window.i18n) {
     log(t("outcome.logLoaded") || "Outcome-first Runner loaded. Define your task and click run.");

@@ -461,5 +461,9 @@
   "examples": {
     "title": "Veja Promptly em fluxos de trabalho reais",
     "subtitle": "Transforme solicitações de negócios confusas em especificações de prompts executáveis, testes e relatórios."
+  },
+  "outcome": {
+    "copy": "Copiar",
+    "copied": "Copiado!"
   }
 }

@@ -73,12 +73,23 @@
     </section>
 
     <section class="outcome-panel outcome-panel--best">
-      <h2 data-i18n="outcome.section2Title">2. Selected best candidate</h2>
+      <div class="outcome-panel-header">
+        <h2 data-i18n="outcome.section2Title">2. Selected best candidate</h2>
+        <button id="copyBtn" class="outcome-copy-btn" title="Copy to clipboard">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+          </svg>
+          <span class="outcome-copy-text" data-i18n="outcome.copy">Copy</span>
+        </button>
+      </div>
       <p class="outcome-panel-desc" data-i18n="outcome.section2Desc">
         This is the candidate with the highest finalScore after scoring and tests.
       </p>
       <div id="bestScoreMeta" class="outcome-best-meta"></div>
-      <pre id="bestContent" class="outcome-code-block"></pre>
+      <div class="outcome-code-wrapper">
+        <pre id="bestContent" class="outcome-code-block"></pre>
+      </div>
     </section>
 
     <section class="outcome-panel outcome-panel--list">

@@ -461,5 +461,9 @@
   "examples": {
     "title": "Voir Promptly dans des flux de travail réels",
     "subtitle": "Transformez des demandes commerciales désordonnées en spécifications de prompts exécutables, tests et rapports."
+  },
+  "outcome": {
+    "copy": "Copier",
+    "copied": "Copié !"
   }
 }

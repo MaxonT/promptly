@@ -272,7 +272,9 @@
     "bestCandidateMeta": "Best candidate: {id} · finalScore {score} / 10 (LLM score {llmScore}), tests: {testStatus}",
     "testsIssues": "Tests: {issues}",
     "testsPassed": "Tests: passed",
-    "logLoaded": "Outcome-first Runner loaded. Define your task and click run."
+    "logLoaded": "Outcome-first Runner loaded. Define your task and click run.",
+    "copy": "Copy",
+    "copied": "Copied!"
   },
   "whyPromptly": {
     "title": "✨ Why Promptly Beats Plain AI Models",

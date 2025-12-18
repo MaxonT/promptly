@@ -300,7 +300,9 @@
     "taskPlaceholder": "¿Qué quieres que haga el modelo?",
     "testsIssues": "Pruebas: {issues}",
     "testsPassed": "Pruebas: aprobadas",
-    "title": "Ejecutor Orientado a Resultados"
+    "title": "Ejecutor Orientado a Resultados",
+    "copy": "Copiar",
+    "copied": "¡Copiado!"
   },
   "specs": {
     "compileBtn": "Compilar a prompt",

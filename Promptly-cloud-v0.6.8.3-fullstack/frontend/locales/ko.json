@@ -461,5 +461,9 @@
   "examples": {
     "title": "실제 워크플로에서 Promptly 보기",
     "subtitle": "복잡한 비즈니스 요청을 실행 가능한 프롬프트 사양, 테스트 및 보고서로 전환하세요."
+  },
+  "outcome": {
+    "copy": "복사",
+    "copied": "복사됨!"
   }
 }

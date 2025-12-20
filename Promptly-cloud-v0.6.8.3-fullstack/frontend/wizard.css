@@ -394,7 +394,7 @@ html[data-theme="light"] .wizard-mode-option.is-selected{
   transition:all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
 html[data-theme="light"] .wizard-panel{
-  background:var(--text-secondary);
+  background:var(--surface);
   border-color:var(--border-light);
 }
 .wizard-panel::before{
@@ -2453,7 +2453,8 @@ html[data-theme="light"] .wizard-question-card{
 
 /* Fix section backgrounds */
 [data-theme="light"] .wizard-result-section {
-  background: rgba(248, 250, 252, 0.4) !important;
+  background: rgba(255, 255, 255, 0.95) !important;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
 }
 
 /* Fix wizard panels */
@@ -2556,7 +2557,8 @@ html[data-theme="light"] .wizard-question-card{
 
 /* Fix question content backgrounds */
 [data-theme="light"] .wizard-question {
-  background: rgba(248, 250, 252, 0.6) !important;
+  background: rgba(255, 255, 255, 0.95) !important;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
 }
 
 /* Fix input fields */
@@ -2587,12 +2589,15 @@ html[data-theme="light"] .wizard-question-card{
 
 /* Fix mode cards */
 [data-theme="light"] .wizard-mode-option {
-  background: rgba(248, 250, 252, 0.6) !important;
+  background: rgba(255, 255, 255, 0.95) !important;
   border-color: rgba(148, 163, 184, 0.3) !important;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
 }
 
 [data-theme="light"] .wizard-mode-option:hover {
-  background: rgba(124, 58, 237, 0.08) !important;
+  background: rgba(255, 255, 255, 1) !important;
+  border-color: rgba(124, 58, 237, 0.4) !important;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.025);
 }
 
 /* Fix answer badges */

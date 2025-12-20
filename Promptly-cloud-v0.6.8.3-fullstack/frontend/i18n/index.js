@@ -179,7 +179,7 @@ class I18nManager {
       } catch (e) {
         console.error('[i18n] Re-initialization failed', e);
         alert("语言系统初始化失败。请刷新页面。\nLanguage system failed to initialize. Please refresh the page.");
-        return;
+      return;
       }
     }
 

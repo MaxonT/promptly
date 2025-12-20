@@ -14,7 +14,8 @@
   <link rel="apple-touch-icon" href="assets/promptly-icon.svg"/>
 
 
-<link rel="stylesheet" href="style.css" />
+<link rel="stylesheet" href="theme.css" />
+  <link rel="stylesheet" href="style.css" />
   <script src="config.js"></script>
   <script src="lib/dataAggregator.js"></script>
   <script src="lib/i18next.min.js"></script>
@@ -280,7 +281,7 @@ html[data-theme="light"] .grey-gradient-text{
 }
 .example-tab{
   border-radius:999px;
-  border:1px solid rgba(255,255,255,0.2);
+  border:1px solid var(--border-light);
   background:transparent;
   color:inherit;
   font-size:0.82rem;
@@ -289,21 +290,21 @@ html[data-theme="light"] .grey-gradient-text{
   transition:all 0.2s ease;
 }
 .example-tab:hover{
-  border-color:rgba(124,58,237,0.8);
+  border-color:var(--border-hover);
 }
 .example-tab--active{
   border-color:transparent;
-  background:linear-gradient(120deg,#7c3aed,#06b6d4);
+  background:linear-gradient(120deg,var(--brand-1),var(--brand-2));
   font-weight:600;
-  box-shadow:0 6px 18px rgba(0,0,0,0.25);
+  box-shadow:var(--shadow-sm);
 }
 .example-card{
-  background:rgba(15,23,42,0.95);
+  background:var(--surface);
   border-radius:1rem;
   padding:1.25rem;
-  border:1px solid rgba(255,255,255,0.08);
+  border:1px solid var(--border-light);
   transition:opacity .35s ease,transform .35s ease;
-  box-shadow:0 15px 35px rgba(0,0,0,0.35);
+  box-shadow:var(--shadow-sm);
   opacity:0;
   transform:translateY(6px);
 }
@@ -322,7 +323,7 @@ html[data-theme="light"] .grey-gradient-text{
   width:46px;
   height:46px;
   border-radius:0.85rem;
-  background:rgba(255,255,255,0.05);
+  background:var(--surface-lighter);
   display:flex;
   align-items:center;
   justify-content:center;
@@ -331,7 +332,7 @@ html[data-theme="light"] .grey-gradient-text{
 .example-card__title{
   font-size:1.25rem;
   font-weight:600;
-  color:rgba(255,255,255,0.95);
+  color:var(--text);
 }
 .example-card__body{
   display:grid;
@@ -340,9 +341,9 @@ html[data-theme="light"] .grey-gradient-text{
 }
 .workflow-step{
   border-radius:0.9rem;
-  border:1px solid rgba(255,255,255,0.08);
+  border:1px solid var(--border-light);
   padding:1rem;
-  background:rgba(255,255,255,0.04);
+  background:var(--surface-lighter);
   overflow:hidden;
   display:flex;
   flex-direction:column;
@@ -353,19 +354,19 @@ html[data-theme="light"] .grey-gradient-text{
   letter-spacing:0.08em;
   text-transform:uppercase;
   font-weight:700;
-  color:rgba(124,58,237,0.9);
+  color:var(--primary);
   padding:0.3rem 0.6rem;
-  background:rgba(124,58,237,0.15);
+  background:var(--surface-hover);
   border-radius:0.4rem;
   width:fit-content;
-  border:1px solid rgba(124,58,237,0.3);
+  border:1px solid var(--border-hover);
 }
 .workflow-step__content{
   margin:0;
   white-space:pre-wrap;
   font-size:0.83rem;
   line-height:1.6;
-  color:rgba(255,255,255,0.88);
+  color:var(--text-secondary);
   font-family:inherit;
 }
 @media (max-width:768px){

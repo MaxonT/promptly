@@ -3,7 +3,7 @@
   align-items:center;
   justify-content:space-between;
   padding:1.25rem 1.5rem;
-  border-bottom:1px solid rgba(148,163,184,0.4);
+  border-bottom:1px solid var(--border);
   background:linear-gradient(90deg,rgba(37,99,235,0.18),rgba(6,182,212,0.08));
 }
 .outcome-header-main{
@@ -30,7 +30,7 @@
 .outcome-tag{
   padding:0.2rem 0.6rem;
   border-radius:999px;
-  border:1px solid rgba(148,163,184,0.8);
+  border:1px solid var(--border);
 }
 .outcome-main{
   display:grid;
@@ -41,9 +41,9 @@
 }
 .outcome-panel{
   border-radius:0.75rem;
-  border:1px solid rgba(148,163,184,0.5);
+  border:1px solid var(--border);
   padding:1rem 1.1rem;
-  background:rgba(15,23,42,0.78);
+  background:var(--surface-light);
   backdrop-filter:blur(14px);
   position: relative;
 }
@@ -84,10 +84,10 @@
 .outcome-label input{
   width:100%;
   border-radius:0.6rem;
-  border:1px solid rgba(148,163,184,0.7);
+  border:1px solid var(--input-border);
   padding:0.5rem 0.7rem;
-  background:rgba(15,23,42,0.9);
-  color:inherit;
+  background:var(--input-bg);
+  color:var(--input-text);
 }
 .outcome-row{
   display:flex;
@@ -128,21 +128,22 @@
   margin:0;
   min-height:7rem;
   border-radius:0.6rem;
-  border:1px solid rgba(148,163,184,0.7);
+  border:1px solid var(--input-border);
   padding:0.8rem;
-  background:rgba(15,23,42,0.95);
+  background:var(--input-bg);
   font-size:0.8rem;
   overflow:auto;
   white-space: pre-wrap;
   word-break: break-word;
+  color:var(--input-text);
 }
 .outcome-copy-btn {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  background: rgba(148,163,184,0.15);
-  border: 1px solid rgba(148,163,184,0.3);
-  color: inherit;
+  background: var(--surface-lighter);
+  border: 1px solid var(--border-light);
+  color: var(--text);
   padding: 4px 10px;
   border-radius: 6px;
   cursor: pointer;
@@ -150,8 +151,8 @@
   transition: all 0.2s;
 }
 .outcome-copy-btn:hover {
-  background: rgba(148,163,184,0.25);
-  border-color: rgba(148,163,184,0.5);
+  background: var(--surface-hover);
+  border-color: var(--border-hover);
 }
 .outcome-copy-btn.copied {
   background: rgba(16, 185, 129, 0.2);
@@ -168,9 +169,9 @@
 }
 .outcome-candidate{
   border-radius:0.65rem;
-  border:1px solid rgba(148,163,184,0.45);
+  border:1px solid var(--border);
   padding:0.55rem 0.65rem;
-  background:rgba(15,23,42,0.9);
+  background:var(--surface);
   font-size:0.8rem;
 }
 .outcome-candidate-header{
@@ -193,9 +194,9 @@
 .outcome-log{
   font-size:0.75rem;
   border-radius:0.6rem;
-  border:1px dashed rgba(148,163,184,0.7);
+  border:1px dashed var(--border);
   padding:0.5rem 0.6rem;
-  background:rgba(15,23,42,0.9);
+  background:var(--surface);
   max-height:160px;
   overflow:auto;
 }

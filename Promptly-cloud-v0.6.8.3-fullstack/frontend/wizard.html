@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Promptly Wizard — Question Engine Demo</title>
   <link rel="icon" href="assets/promptly-icon.svg" type="image/svg+xml"/>
+  <link rel="stylesheet" href="theme.css" />
   <link rel="stylesheet" href="style.css" />
   <link rel="stylesheet" href="wizard.css" />
   <script src="config.js"></script>
@@ -19,15 +20,15 @@
       left: 0;
       right: 0;
       z-index: 2000;
-      background: rgba(15, 23, 42, 0.95);
+      background: var(--surface);
       backdrop-filter: blur(12px);
-      border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+      border-bottom: 1px solid var(--border-light);
       padding: 0.75rem 1.5rem;
       display: flex;
       justify-content: space-between;
       align-items: center;
       gap: 1rem;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      box-shadow: var(--shadow-sm);
     }
     html[data-theme="light"] .global-topbar {
       background: rgba(255, 255, 255, 0.95);

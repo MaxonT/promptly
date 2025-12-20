@@ -265,7 +265,7 @@ html[data-theme="light"] .wizard-background{
   margin:0;
   padding:0.75rem;
   border:1px solid var(--border-lighter);
-  background:var(--surface-lighter);
+  background:rgba(10,14,25,0.95);
   backdrop-filter:blur(8px);
   border-radius:14px;
   display:grid;
@@ -277,7 +277,7 @@ html[data-theme="light"] .wizard-background{
 }
 .wizard-mode-option{
   border:1px solid var(--border-lighter);
-  background:linear-gradient(145deg,rgba(30,41,59,0.8),var(--surface-light));
+  background:linear-gradient(145deg,rgba(30,41,59,0.95),rgba(15,23,42,0.95));
   border-radius:12px;
   padding:0.75rem 0.9rem;
   cursor:pointer;
@@ -619,7 +619,7 @@ html[data-theme="light"] .wizard-label select{
   border-radius:12px;
   border:1px solid var(--border-light);
   padding:1.25rem 1.5rem;
-  background:rgba(10,14,25,0.9);
+  background:rgba(10,14,25,0.98);
   backdrop-filter:blur(10px);
   box-shadow:0 4px 18px rgba(0,0,0,0.15);
   transition:all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -627,7 +627,7 @@ html[data-theme="light"] .wizard-label select{
   position:relative;
 }
 html[data-theme="light"] .wizard-question-card{
-  background:rgba(248,250,252,0.95);
+  background:rgba(248,250,252,0.98);
   border-color:var(--border-light);
   box-shadow:0 2px 12px rgba(0,0,0,0.05);
 }
@@ -1742,8 +1742,9 @@ html[data-theme="light"] .wizard-question-card{
 /* SEALED badge - appears in top right */
 .forge-badge {
   position: absolute;
-  top: 20px;
+  top: 50%;
   right: 20px;
+  transform: translateY(-50%);
   display: flex;
   align-items: center;
   gap: 10px;
@@ -1761,7 +1762,7 @@ html[data-theme="light"] .wizard-question-card{
     inset 0 1px 0 rgba(255, 255, 255, 0.2),
     inset 0 -1px 0 rgba(0, 0, 0, 0.2);
   z-index: 30;
-  transform-origin: top right;
+  transform-origin: center right;
   position: relative;
   overflow: hidden;
 }
@@ -1769,6 +1770,7 @@ html[data-theme="light"] .wizard-question-card{
 .forge-badge.visible {
   animation: forgeBadgeAppear 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) 2.5s forwards,
               forgeBadgePulse 2s ease-in-out 3.1s infinite;
+  transform: translateY(-50%);
 }
 
 .forge-badge-icon {
@@ -2004,8 +2006,9 @@ html[data-theme="light"] .wizard-question-card{
 /* SEALED badge - Premium metal/glass finish */
 .forge-badge {
   position: absolute;
-  top: 24px;
+  top: 50%;
   right: 24px;
+  transform: translateY(-50%);
   display: flex;
   align-items: center;
   gap: 10px;
@@ -2023,7 +2026,7 @@ html[data-theme="light"] .wizard-question-card{
     inset 0 1px 0 rgba(255, 255, 255, 0.2),
     inset 0 -1px 0 rgba(0, 0, 0, 0.2);
   z-index: 30;
-  transform-origin: top right;
+  transform-origin: center right;
   position: relative;
   overflow: hidden;
 }
@@ -2046,6 +2049,7 @@ html[data-theme="light"] .wizard-question-card{
 .forge-badge.visible {
   animation: forgeBadgeAppear 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) 2.5s forwards,
               forgeBadgePulse 3s ease-in-out 3.5s infinite;
+  transform: translateY(-50%);
 }
 
 .forge-badge-icon {

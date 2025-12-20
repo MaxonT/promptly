@@ -277,7 +277,7 @@ html[data-theme="light"] .wizard-background{
 }
 .wizard-mode-option{
   border:1px solid var(--border-lighter);
-  background:linear-gradient(145deg,rgba(30,41,59,0.8),var(--surface-light));
+  background:linear-gradient(145deg,rgba(30,41,59,0.95),var(--surface-light));
   border-radius:12px;
   padding:0.75rem 0.9rem;
   cursor:pointer;
@@ -286,6 +286,8 @@ html[data-theme="light"] .wizard-background{
   display:flex;
   flex-direction:column;
   gap:0.25rem;
+  color:var(--text);
+  box-shadow:0 12px 30px rgba(0,0,0,0.16);
 }
 .wizard-mode-option:hover{
   border-color:var(--border-hover);
@@ -313,7 +315,7 @@ html[data-theme="light"] .wizard-background{
   display:inline-flex;
   align-items:center;
   justify-content:center;
-  background:rgba(124,58,237,0.15);
+  background:rgba(124,58,237,0.25);
   color:#c084fc;
   border:1px solid rgba(124,58,237,0.4);
   border-radius:999px;
@@ -325,15 +327,16 @@ html[data-theme="light"] .wizard-background{
 .wizard-mode-desc{
   margin:0;
   font-size:0.85rem;
-  color:var(--text-med, #cbd5e1);
+  color:var(--text-high, #e5e7eb);
 }
 html[data-theme="light"] .wizard-mode-toggle{
   background:rgba(248,250,252,0.9);
   border-color:var(--border-light);
 }
 html[data-theme="light"] .wizard-mode-option{
-  background:linear-gradient(145deg,#ffffff, #f8fafc);
+  background:linear-gradient(145deg,#ffffff, #f1f5f9);
   border-color:var(--border);
+  box-shadow:0 12px 30px rgba(148,163,184,0.18);
 }
 html[data-theme="light"] .wizard-mode-option.is-selected{
   border-color:rgba(124,58,237,0.6);
@@ -429,11 +432,11 @@ html[data-theme="light"] .wizard-panel{
   opacity:1;
 }
 .wizard-panel--idea.is-starting{
-  opacity: 0.35;
-  transform: scale(0.97);
+  opacity: 0.7;
+  transform: scale(0.985);
   transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   pointer-events: none;
-  filter: blur(0.5px);
+  filter: blur(0.25px);
 }
 .wizard-panel--qa.is-appearing{
   animation:fadeInRight 0.6s cubic-bezier(0.4, 0, 0.2, 1) forwards;
@@ -619,17 +622,18 @@ html[data-theme="light"] .wizard-label select{
   border-radius:12px;
   border:1px solid var(--border-light);
   padding:1.25rem 1.5rem;
-  background:rgba(10,14,25,0.9);
+  background:rgba(10,14,25,0.97);
   backdrop-filter:blur(10px);
   box-shadow:0 4px 18px rgba(0,0,0,0.15);
   transition:all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   animation:slideInUp 0.4s cubic-bezier(0.4, 0, 0.2, 1) both;
   position:relative;
+  color:var(--text-high, #e5e7eb);
 }
 html[data-theme="light"] .wizard-question-card{
-  background:rgba(248,250,252,0.95);
+  background:#ffffff;
   border-color:var(--border-light);
-  box-shadow:0 2px 12px rgba(0,0,0,0.05);
+  box-shadow:0 2px 18px rgba(0,0,0,0.08);
 }
 .wizard-question-card:hover{
   transform:translateY(-2px);

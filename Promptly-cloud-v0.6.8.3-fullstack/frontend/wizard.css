@@ -2773,3 +2773,40 @@ html[data-theme="light"] .wizard-timing-info {
 html[data-theme="light"] .wizard-timing-info p {
   color: var(--text-secondary);
 }
+
+/* --- Light Mode Fixes for Thinking Modes & Header --- */
+
+/* Fix Thinking Mode Text Contrast */
+html[data-theme="light"] .wizard-mode-option-header {
+  color: var(--text-secondary); /* Darker text for title */
+}
+
+html[data-theme="light"] .wizard-mode-desc {
+  color: var(--muted); /* Readable grey for description */
+}
+
+html[data-theme="light"] .wizard-mode-tier {
+  background: rgba(124, 58, 237, 0.1);
+  color: var(--primary);
+  border-color: rgba(124, 58, 237, 0.2);
+}
+
+/* Fix Wizard Header Text Contrast */
+html[data-theme="light"] .wizard-title {
+  color: var(--text);
+}
+
+html[data-theme="light"] .wizard-subtitle {
+  color: var(--text-secondary);
+  opacity: 1; /* Ensure full visibility */
+}
+
+html[data-theme="light"] .wizard-header-meta {
+  color: var(--muted);
+  opacity: 1;
+}
+
+html[data-theme="light"] .wizard-tag {
+  border-color: var(--border);
+  color: var(--text-secondary);
+}

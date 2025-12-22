@@ -34,6 +34,18 @@
       background: rgba(255, 255, 255, 0.95);
       border-bottom-color: rgba(203, 213, 225, 0.5);
     }
+    html[data-theme="light"] .global-topbar .brand {
+      color: var(--text-secondary);
+    }
+    html[data-theme="light"] .global-topbar .navlinks a {
+      color: var(--muted);
+    }
+    html[data-theme="light"] .global-topbar .navlinks a:hover {
+      color: var(--brand-b, #06B6D4);
+    }
+    html[data-theme="light"] .global-topbar .navlinks a.active {
+      color: var(--brand-a, #7C3AED);
+    }
     .global-topbar .brand {
       display: flex;
       align-items: center;

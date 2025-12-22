@@ -1399,9 +1399,66 @@ html[data-theme="light"] .topbar .navlinks a:visited{
 .topbar .navlinks a:hover,
 .topbar .navlinks a[aria-current="page"]{
   background-position: 100% 50%;
-  text-shadow: 0 0 10px rgba(255,255,255,.18), 0 0 18px rgba(0,229,255,.20);
+  text-shadow: 0 0 10px rgba(255,255,255,.20), 0 0 16px rgba(109,40,217,.22);
 }
 
+/* === Particles Animation === */
+.particles-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  z-index: 0;
+  pointer-events: none;
+}
+
+/* Ensure content sits above particles */
+main, header, footer, .container, .card, .grid, .layer-card, .mode-selector {
+  position: relative;
+  z-index: 1;
+}
+
+.particle {
+  position: absolute;
+  background: var(--particle-color, rgba(139, 92, 246, 0.25));
+  border-radius: 50%;
+  opacity: 0;
+  animation: floatUp linear infinite;
+}
+
+@keyframes floatUp {
+  0% {
+    transform: translateY(0) translateX(0);
+    opacity: 0;
+  }
+  20% {
+    opacity: var(--particle-opacity, 0.5);
+  }
+  50% {
+    transform: translateY(-40vh) translateX(20px);
+    opacity: var(--particle-opacity, 0.3);
+  }
+  80% {
+    opacity: var(--particle-opacity, 0.5);
+  }
+  100% {
+    transform: translateY(-80vh) translateX(-20px);
+    opacity: 0;
+  }
+}
+
+/* Theme variables for particles */
+:root {
+  --particle-color: rgba(139, 92, 246, 0.25);
+  --particle-opacity: 0.4;
+}
+
+html[data-theme="light"] {
+  --particle-color: rgba(99, 102, 241, 0.4);
+  --particle-opacity: 0.6;
+}
 /* Labels (System / English) */
 .topbar label.control span{
   display:inline-block;

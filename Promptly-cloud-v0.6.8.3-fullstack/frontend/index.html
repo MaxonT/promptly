@@ -640,7 +640,7 @@ html[data-theme="light"] .grey-gradient-text{
             <h3 class="gradient-text">Best Prompt Output</h3>
             <small>We run Spec → Questions → LLM agents → Metrics → Outcome Runner before surfacing this prompt.</small>
           </div>
-          <button class="btn copy-btn" type="button" onclick="navigator.clipboard?.writeText(document.getElementById('bestPrompt').value)">Copy</button>
+          <button class="btn copy-btn" type="button" id="copyBestPromptBtn">Copy</button>
         </div>
         <textarea id="bestPrompt" class="codeblock" rows="14" placeholder="Click “Generate optimized prompt” to see the strongest prompt for your goal."></textarea>
       </div>
@@ -2003,6 +2003,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Integrated click handler: animation → API → toast → scroll
   const runBtn = document.getElementById("runBtn");
+  const copyBestPromptBtn = document.getElementById("copyBestPromptBtn");
   const bestPromptEl = document.getElementById('bestPrompt');
   const taskEl = document.getElementById('task');
   const modelToggle = document.getElementById('modelDropdownToggle');
@@ -2093,6 +2094,20 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!modelMenu.contains(e.target) && !modelToggle.contains(e.target)) {
       closeModelMenu();
     }
+  });
+
+  copyBestPromptBtn?.addEventListener('click', () => {
+    const text = bestPromptEl.value;
+    if (!text) return;
+    navigator.clipboard.writeText(text).then(() => {
+      const originalText = copyBestPromptBtn.textContent;
+      copyBestPromptBtn.textContent = 'Copied!';
+      copyBestPromptBtn.classList.add('btn--success');
+      setTimeout(() => {
+        copyBestPromptBtn.textContent = originalText;
+        copyBestPromptBtn.classList.remove('btn--success');
+      }, 2000);
+    });
   });
 
   if (!runBtn) {

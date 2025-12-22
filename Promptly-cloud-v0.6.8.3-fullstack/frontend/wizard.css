@@ -2810,3 +2810,133 @@ html[data-theme="light"] .wizard-tag {
   border-color: var(--border);
   color: var(--text-secondary);
 }
+
+/* ==========================================================================
+   WIZARD LIGHT MODE REDESIGN (Directionality & Contrast)
+   ========================================================================== */
+
+html[data-theme="light"] .wizard-stepper {
+  background: #ffffff;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+/* Stepper: Clearer progress indication */
+html[data-theme="light"] .wizard-stepper-circle {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+  color: #64748b;
+  font-weight: 700;
+}
+
+html[data-theme="light"] .wizard-stepper-step--active .wizard-stepper-circle {
+  background: #ffffff;
+  border-color: var(--primary);
+  color: var(--primary);
+  box-shadow: 0 0 0 4px rgba(124, 58, 237, 0.15); /* Ring effect */
+}
+
+html[data-theme="light"] .wizard-stepper-step--active .wizard-stepper-label {
+  color: #0f172a; /* Slate-900 */
+  font-weight: 700;
+}
+
+html[data-theme="light"] .wizard-stepper-step--completed .wizard-stepper-circle {
+  background: #dcfce7; /* Green-100 */
+  border-color: #16a34a; /* Green-600 */
+  color: #15803d; /* Green-700 */
+}
+
+/* Mode Options: Directional Selection */
+html[data-theme="light"] .wizard-mode-option {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+}
+
+html[data-theme="light"] .wizard-mode-option:hover {
+  border-color: #94a3b8;
+  transform: translateY(-2px);
+}
+
+html[data-theme="light"] .wizard-mode-option.is-selected {
+  background: #ffffff;
+  border-color: var(--primary); /* Primary border color */
+  border-left-width: 5px; /* Directional Indicator */
+  box-shadow: 0 10px 25px -5px rgba(124, 58, 237, 0.15);
+  padding-left: calc(0.9rem - 4px); /* Adjust padding to prevent layout shift */
+}
+
+html[data-theme="light"] .wizard-mode-label {
+  color: #0f172a;
+}
+
+html[data-theme="light"] .wizard-mode-desc {
+  color: #475569;
+}
+
+/* Inputs: Focus Directionality */
+html[data-theme="light"] .wizard-label textarea:focus,
+html[data-theme="light"] .wizard-label select:focus {
+  border-color: var(--primary);
+  border-left-width: 4px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+/* Question Cards: Clearer Hierarchy */
+html[data-theme="light"] .wizard-question-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.02);
+}
+
+html[data-theme="light"] .wizard-question-card:hover {
+  border-color: #cbd5e1;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05);
+}
+
+/* Answer Area */
+html[data-theme="light"] .wizard-answer-area {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+}
+
+/* Pills: Crisp Selection */
+html[data-theme="light"] .wizard-pill {
+  border-color: #cbd5e1;
+  background: #ffffff;
+  color: #334155;
+}
+
+html[data-theme="light"] .wizard-pill:hover {
+  border-color: var(--primary);
+  background: #f5f3ff; /* Violet-50 */
+}
+
+html[data-theme="light"] .wizard-pill.is-selected {
+  background: #eff6ff; /* Blue-50 (or slight Violet tint) */
+  border-color: var(--primary);
+  color: var(--primary);
+  font-weight: 700;
+  box-shadow: 0 4px 6px -1px rgba(124, 58, 237, 0.1);
+}
+
+html[data-theme="light"] .wizard-pill.is-selected::before {
+  border-color: var(--primary);
+  background: var(--primary);
+}
+
+html[data-theme="light"] .wizard-pill.is-selected::after {
+  color: #ffffff;
+}
+
+/* Panels: Clean Separation */
+html[data-theme="light"] .wizard-panel {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.03);
+}
+
+html[data-theme="light"] .wizard-panel--qa {
+  border-top: 4px solid var(--primary); /* Retain top accent for main QA panel */
+}
+

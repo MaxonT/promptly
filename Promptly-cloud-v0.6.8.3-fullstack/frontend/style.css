@@ -3690,3 +3690,128 @@ html[data-theme="light"] .text-keyword {
   background: linear-gradient(90deg, rgba(124, 58, 237, 0.7), rgba(34, 211, 238, 0.7)) !important;
 }
 
+
+/* ==========================================================================
+   PARTICLE ANIMATION (Enhanced Visibility - 2x)
+   ========================================================================== */
+.particles-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.particle {
+  position: absolute;
+  background: var(--particle-color);
+  border-radius: 50%;
+  opacity: 0; /* Start hidden, animate in */
+  animation: floatUp linear infinite;
+  box-shadow: 0 0 4px var(--particle-color); /* Glow for extra visibility */
+}
+
+@keyframes floatUp {
+  0% {
+    transform: translateY(0) translateX(0);
+    opacity: 0;
+  }
+  10% {
+    opacity: var(--particle-opacity);
+  }
+  90% {
+    opacity: var(--particle-opacity);
+  }
+  100% {
+    transform: translateY(-100vh) translateX(20px);
+    opacity: 0;
+  }
+}
+
+:root {
+  /* Dark Mode: Vivid Violet */
+  --particle-color: rgba(139, 92, 246, 0.6);
+  --particle-opacity: 0.7;
+}
+
+html[data-theme="light"] {
+  /* Light Mode: Deep Indigo - "Directional" color, high visibility */
+  --particle-color: rgba(79, 70, 229, 0.5); 
+  --particle-opacity: 0.85; /* Increased opacity (2x more visible) */
+}
+
+/* ==========================================================================
+   LIGHT MODE REDESIGN (Directionality & Contrast Philosophy)
+   ========================================================================== */
+
+html[data-theme="light"] body {
+  /* Subtle gradient from top -> bottom: "Light comes from above" */
+  background: linear-gradient(to bottom, #f1f5f9 0%, #ffffff 30%, #ffffff 100%);
+}
+
+/* 1. LAYER CARDS: Crispness > Flatness */
+html[data-theme="light"] .layer-card {
+  background: #ffffff;
+  /* Crisp, directional border (heavier bottom often helps, but uniform is cleaner here) */
+  border: 1px solid #cbd5e1; 
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 10px 15px -3px rgba(0, 0, 0, 0.03); /* Lifted */
+}
+
+/* 2. LAYER TOGGLE (Header): "Anchor" / Signpost */
+html[data-theme="light"] .layer-toggle {
+  background: #f8fafc; /* Distinct from card body */
+  border: 1px solid #e2e8f0;
+  border-bottom: 2px solid #e2e8f0; /* "Weight" */
+  color: #0f172a; /* Slate-900: High Contrast */
+  box-shadow: none;
+}
+
+html[data-theme="light"] .layer-toggle:hover {
+  background: #f1f5f9;
+  border-color: #94a3b8; /* Interaction Feedback */
+}
+
+/* 3. ADVANCED PANELS: "Active" not "Disabled" */
+html[data-theme="light"] .layer-panel {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  /* Directional Indicator: Left Border */
+  border-left: 4px solid #cbd5e1; 
+  box-shadow: inset 0 2px 4px 0 rgba(0, 0, 0, 0.02);
+}
+
+/* Focus States: Brand Color as "Direction" */
+html[data-theme="light"] .layer-field textarea:focus,
+html[data-theme="light"] .layer-field input:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.1);
+  border-left-width: 4px; /* Directional focus */
+}
+
+/* 4. BADGES & CHIPS: High Contrast Wayfinding */
+html[data-theme="light"] .layer-badge {
+  background: #ede9fe; /* Violet-100 */
+  color: #5b21b6;    /* Violet-800 (Very High Contrast) */
+  border: 1px solid #ddd6fe;
+  font-weight: 700;
+}
+
+/* 5. TEXT HIERARCHY */
+html[data-theme="light"] .layer-note {
+  color: #475569; /* Slate-600 */
+}
+
+html[data-theme="light"] .keyword {
+  color: #0f172a;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  font-weight: 600;
+}
+
+/* Ensure particles stay behind everything */
+.particles-container {
+  z-index: -1;
+}

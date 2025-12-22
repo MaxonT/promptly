@@ -298,18 +298,19 @@ enhanceRouter.post("/structure", async (req, res) => {
 
 CRITICAL: Output MUST differ from input. Add structure, headings (#, ##), bullet points, and explicit instructions.
 
-Output: Enhanced prompt only. If unchanged, append "> needs more change".`;
+Output: Enhanced prompt only.`;
 
     console.log(`[promptly] 🔄 About to call LLM (chatText) for structure enhancement...`);
 
-    // 4) Test Layer: 稳定性验证 - LLM 调用，温度为默认低随机度配置（在 openaiClient.js 中配置为 0.2）
-    // 4) Test Layer: 格式自检 - chatText 确保返回纯文本，避免 JSON 解析错误
-    // Enable similarity check with retry (default: similarity >= 0.85 triggers retry)
+    // 4) Test Layer: 稳定性验证 - LLM 调用
+    // Optimization: Use temp 0.5 to encourage divergence in the first shot, reducing the need for retries.
+    // We KEEP the retry mechanism (maxRetries: 1) as a safety net, but it should trigger less often.
     const { text: enhanced, model: modelUsed, completionId, similarity } = await chatText({ 
       system, 
       user: fullPrompt,
-      minSimilarity: 0.85,  // Retry if similarity >= 0.85
-      maxRetries: 1
+      temperature: 0.5,     // Increased from default 0.2 to reduce retry probability
+      minSimilarity: 0.85,  // Keep quality check
+      maxRetries: 1         // Keep safety net
     });
     
     console.log(`[promptly] ✅ Received enhanced prompt from LLM, length: ${enhanced?.length || 0} chars`);
@@ -361,13 +362,14 @@ enhanceRouter.post("/style", async (req, res) => {
 
 CRITICAL: Output MUST differ from input. Refine language, sentence structure, and flow.
 
-Output: Enhanced prompt only. If unchanged, append "> needs more change".`;
+Output: Enhanced prompt only.`;
 
-    // Enable similarity check with retry (default: similarity >= 0.85 triggers retry)
+    // Optimization: Use temp 0.5 to encourage divergence in the first shot
     const { text: enhanced, model: modelUsed, completionId, similarity } = await chatText({ 
       system, 
       user: fullPrompt,
-      minSimilarity: 0.85,  // Retry if similarity >= 0.85
+      temperature: 0.5,     // Increased from default 0.2
+      minSimilarity: 0.85,
       maxRetries: 1
     });
     logModelUsage("/enhance/style", modelUsed, completionId);
@@ -411,13 +413,14 @@ enhanceRouter.post("/simplify", async (req, res) => {
 
 CRITICAL: Output MUST differ from input. Remove complexity, use plain language, active voice.
 
-Output: Simplified prompt only. If unchanged, append "> needs more change".`;
+Output: Simplified prompt only.`;
 
-    // Enable similarity check with retry (default: similarity >= 0.85 triggers retry)
+    // Optimization: Use temp 0.5 to encourage divergence in the first shot
     const { text: enhanced, model: modelUsed, completionId, similarity } = await chatText({ 
       system, 
       user: fullPrompt,
-      minSimilarity: 0.85,  // Retry if similarity >= 0.85
+      temperature: 0.5,     // Increased from default 0.2
+      minSimilarity: 0.85,
       maxRetries: 1
     });
     logModelUsage("/enhance/simplify", modelUsed, completionId);

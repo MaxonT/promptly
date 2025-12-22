@@ -43,14 +43,14 @@
     };
     b.innerHTML=`<span data-i18n="common.consent_text">${getText("common.consent_text")}</span>
     <div style="display:flex;gap:8px">
-      <button class="btn" id="consentDenyBtn" data-i18n="common.deny_btn" style="background:transparent;border:1px solid currentColor;opacity:0.8">${getText("common.deny_btn")}</button>
+      <button class="btn" id="consentDenyBtn" data-i18n="common.deny_btn">${getText("common.deny_btn")}</button>
       <button class="btn" id="consentBtn" data-i18n="common.consent_btn">${getText("common.consent_btn")}</button>
     </div>`;
     document.body.appendChild(b); 
-    // Re-translate after i18n is ready
+    // Re-translate after i18n is ready - SCOPED TO BANNER ONLY
     if (window.i18n) {
       setTimeout(() => {
-        document.querySelectorAll('[data-i18n]').forEach(el => {
+        b.querySelectorAll('[data-i18n]').forEach(el => {
           const key = el.getAttribute('data-i18n');
           if (key) el.textContent = window.i18n.t(key);
         });

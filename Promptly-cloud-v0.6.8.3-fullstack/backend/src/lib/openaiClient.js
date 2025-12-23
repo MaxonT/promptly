@@ -184,19 +184,12 @@ export async function chatJson({ system, user, model, promptlyModelId }) {
       console.warn(`[promptly] ⚠️ Original error: ${error.message}`);
       
       // Recursive call with safe fallback model
-      return executeChatText(
-        {
-          system,
-          model: SAFE_FALLBACK_MODEL,
-          promptlyModelId,
-          baseUser,
-          temperature: appliedTemperature,
-          forceRewritePrompt,
-          minSimilarity,
-          maxRetries
-        },
-        attempt // Keep attempt count
-      );
+      return chatJson({
+        system,
+        user, // Use the correct variable 'user' instead of 'baseUser'
+        model: SAFE_FALLBACK_MODEL,
+        promptlyModelId
+      });
     }
 
     const duration = Date.now() - startTime;

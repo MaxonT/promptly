@@ -139,10 +139,10 @@ export async function chatJson({ system, user, model, promptlyModelId }) {
         ]
       });
     } catch (apiError) {
-      if (apiError.status === 400 && apiError.message.includes("decommissioned")) {
-        console.warn(`[promptly] ⚠️ Model ${usedModel} is decommissioned. Falling back to ${DEFAULT_MODEL}`);
+      if ((apiError.status === 400 || apiError.status === 409) && apiError.message.includes("decommissioned")) {
+        console.warn(`[promptly] ⚠️ Model ${usedModel} is decommissioned (Status: ${apiError.status}). Falling back to ${SAFE_FALLBACK_MODEL}`);
         completion = await client.chat.completions.create({
-          model: DEFAULT_MODEL,
+          model: SAFE_FALLBACK_MODEL,
           temperature: DEFAULT_TEMPERATURE,
           response_format: { type: "json_object" },
           messages: [

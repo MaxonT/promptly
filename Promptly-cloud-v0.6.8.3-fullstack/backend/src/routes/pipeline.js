@@ -503,7 +503,7 @@ ${JSON.stringify(specData, null, 2)}`;
 
     const agentPromises = agents.map(async (agent, i) => {
       // Stagger agent calls slightly to avoid immediate rate limits
-      await new Promise(resolve => setTimeout(resolve, i * 2000));
+      await new Promise(resolve => setTimeout(resolve, i * 500));
       
       checkTimeout();
 

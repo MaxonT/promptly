@@ -457,11 +457,12 @@ CRITICAL: If output lacks safety improvements, append "> needs more change" to s
     const baseContext = `Specification:
 ${JSON.stringify(specData, null, 2)}`;
 
-    for (let i = 0; i < agents.length; i++) {
-      const agent = agents[i];
-      
-      checkTimeout(); // Check timeout before each agent
-      
+    // Parallelize agent calls for significantly faster response time
+    console.log(`[pipeline] [${runId}] Stage 3: Generating candidates with ${agents.length} agents in parallel...`);
+
+    const agentPromises = agents.map(async (agent, i) => {
+      checkTimeout();
+
       sendEvent(runId, "stage-progress", {
         stage: "agents",
         step: `generating-${agent.name}`,
@@ -474,10 +475,11 @@ ${JSON.stringify(specData, null, 2)}`;
       const { text: content, similarity } = await chatText({
         system: agent.systemPrompt,
         user: `Generate optimized prompt. The output MUST be substantially different from the spec. Transform and enhance it:\n\n${baseContext}`,
-        minSimilarity: 0.75,  // Retry if similarity >= 0.75 (lowered from 0.85)
-        maxRetries: 2  // Increased from 1 to 2 retries
+        model: model, // Pass the selected model to the agent call
+        minSimilarity: 0.75,
+        maxRetries: 2
       });
-      
+
       // Log similarity for debugging
       console.log(`[pipeline] [${runId}] Stage 3: ${agent.name} completed - similarity: ${similarity.toFixed(3)}, length: ${content.length}`);
       if (similarity > 0.7) {
@@ -485,7 +487,6 @@ ${JSON.stringify(specData, null, 2)}`;
       }
 
       const candidateId = `candidate_${nanoid(12)}`;
-      candidateIds.push(candidateId);
 
       db.prepare(`
         INSERT INTO candidate_prompts (id, spec_id, session_id, agent, model, content, created_at)
@@ -506,12 +507,31 @@ ${JSON.stringify(specData, null, 2)}`;
         message: `${agent.name} agent completed`,
         details: { candidateId, agent: agent.name, contentLength: content.length }
       });
+
+      return candidateId;
+    });
+
+    const results = await Promise.allSettled(agentPromises);
+    
+    // Filter successful candidates and log failures
+    candidateIds = results
+      .filter(r => r.status === 'fulfilled')
+      .map(r => r.value);
+      
+    const failures = results.filter(r => r.status === 'rejected');
+    if (failures.length > 0) {
+      console.warn(`[pipeline] [${runId}] ⚠️ ${failures.length} agents failed to generate candidates.`);
+      failures.forEach((f, idx) => console.error(`[pipeline] [${runId}] Agent failure ${idx + 1}:`, f.reason));
+    }
+
+    if (candidateIds.length === 0) {
+      throw new Error(`All ${agents.length} agents failed to generate candidates. Check logs for details.`);
     }
 
     sendEvent(runId, "stage-complete", {
       stage: "agents",
-      message: `Generated ${candidateIds.length} candidate prompts`,
-      result: { candidateIds, count: candidateIds.length }
+      message: `Generated ${candidateIds.length} candidate prompts (${failures.length} failed)`,
+      result: { candidateIds, count: candidateIds.length, failures: failures.length }
     });
 
     // ============================================
@@ -519,26 +539,25 @@ ${JSON.stringify(specData, null, 2)}`;
     // ============================================
     sendEvent(runId, "stage-start", {
       stage: "metrics",
-      message: "Starting Metrics & Scoring...",
+      message: "Starting Metrics & Scoring in parallel...",
       timestamp: new Date().toISOString()
     });
 
-    for (let i = 0; i < candidateIds.length; i++) {
-      const candidateId = candidateIds[i];
-      
-      checkTimeout(); // Check timeout before each scoring
-      
-      sendEvent(runId, "stage-progress", {
-        stage: "metrics",
-        step: `scoring-${candidateId}`,
-        message: `Scoring candidate ${i + 1}/${candidateIds.length}...`,
-        details: { candidateId, progress: `${i + 1}/${candidateIds.length}` }
-      });
+    const scoringPromises = candidateIds.map(async (candidateId, i) => {
+      try {
+        checkTimeout();
+        
+        sendEvent(runId, "stage-progress", {
+          stage: "metrics",
+          step: `scoring-${candidateId}`,
+          message: `Scoring candidate ${i + 1}/${candidateIds.length}...`,
+          details: { candidateId, progress: `${i + 1}/${candidateIds.length}` }
+        });
 
-      const candidate = db.prepare("SELECT * FROM candidate_prompts WHERE id = ?").get(candidateId);
-      
-      // Enhanced: Metrics evaluator prompt with detailed criteria
-      const metricsSystem = `Evaluate the candidate prompt and provide scores (0-1 scale).
+        const candidate = db.prepare("SELECT * FROM candidate_prompts WHERE id = ?").get(candidateId);
+        
+        // Enhanced: Metrics evaluator prompt with detailed criteria
+        const metricsSystem = `Evaluate the candidate prompt and provide scores (0-1 scale).
 
 SCORING CRITERIA:
 - clarity: How clear and understandable is the prompt? (0-1)
@@ -552,47 +571,53 @@ OUTPUT FORMAT (JSON only):
 
 Provide honest, objective scores based on the criteria.`;
 
-      const { data: metricsData } = await chatJson({
-        system: metricsSystem,
-        user: `Evaluate this candidate prompt:\n\n${candidate.content}\n\nSpec:\n${JSON.stringify(specData, null, 2)}`
-      });
+        const { data: metricsData } = await chatJson({
+          system: metricsSystem,
+          user: `Evaluate this candidate prompt:\n\n${candidate.content}\n\nSpec:\n${JSON.stringify(specData, null, 2)}`
+        });
 
-      // Estimate token cost (simplified)
-      const tokenCost = Math.ceil(candidate.content.length / 4);
-      const normalizedToken = Math.min(1, 1000 / tokenCost);
-      
-      const compositeScore = (
-        metricsData.clarity +
-        metricsData.coherence +
-        metricsData.styleMatch +
-        metricsData.safety +
-        (1 - metricsData.risk) +
-        normalizedToken
-      ) / 6;
+        // Estimate token cost (simplified)
+        const tokenCost = Math.ceil(candidate.content.length / 4);
+        const normalizedToken = Math.min(1, 1000 / tokenCost);
+        
+        const compositeScore = (
+          metricsData.clarity +
+          metricsData.coherence +
+          metricsData.styleMatch +
+          metricsData.safety +
+          (1 - metricsData.risk) +
+          normalizedToken
+        ) / 6;
 
-      const metricsJson = JSON.stringify({
-        ...metricsData,
-        tokenCost,
-        compositeScore
-      });
+        const metricsJson = JSON.stringify({
+          ...metricsData,
+          tokenCost,
+          compositeScore
+        });
 
-      db.prepare(`
-        UPDATE candidate_prompts
-        SET metrics_json = ?
-        WHERE id = ?
-      `).run(metricsJson, candidateId);
+        db.prepare(`
+          UPDATE candidate_prompts
+          SET metrics_json = ?
+          WHERE id = ?
+        `).run(metricsJson, candidateId);
 
-      sendEvent(runId, "stage-progress", {
-        stage: "metrics",
-        step: `scored-${candidateId}`,
-        message: `Candidate ${i + 1} scored`,
-        details: { candidateId, compositeScore: compositeScore.toFixed(3), metrics: metricsData }
-      });
-    }
+        sendEvent(runId, "stage-progress", {
+          stage: "metrics",
+          step: `scored-${candidateId}`,
+          message: `Candidate ${i + 1} scored`,
+          details: { candidateId, compositeScore: compositeScore.toFixed(3), metrics: metricsData }
+        });
+      } catch (err) {
+        console.error(`[pipeline] [${runId}] Failed to score candidate ${candidateId}:`, err);
+        // Don't throw, just let this candidate be unscored (will be filtered out in selection)
+      }
+    });
+
+    await Promise.all(scoringPromises);
 
     sendEvent(runId, "stage-complete", {
       stage: "metrics",
-      message: `Scored ${candidateIds.length} candidates`,
+      message: `Scoring completed`,
       result: { candidateIds, count: candidateIds.length }
     });
 

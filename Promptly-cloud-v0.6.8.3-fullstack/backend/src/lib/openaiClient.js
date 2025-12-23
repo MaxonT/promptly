@@ -2,6 +2,7 @@ import OpenAI from "openai";
 import { resolveModelName, getSystemPromptSuffix, buildSystemPrompt } from "./modelRegistry.js";
 
 const apiKey = process.env.OPENAI_API_KEY || "";
+const baseURL = process.env.OPENAI_BASE_URL || "https://api.openai.com/v1";
 
 // Resolve the configured default model (prefers OPENAI_DEFAULT_MODEL but
 // also supports legacy OPENAI_MODEL).
@@ -10,8 +11,12 @@ const DEFAULT_MODEL = process.env.OPENAI_DEFAULT_MODEL || process.env.OPENAI_MOD
 let client = null;
 
 if (apiKey) {
-  client = new OpenAI({ apiKey });
+  client = new OpenAI({ 
+    apiKey,
+    baseURL
+  });
   console.log(`[promptly] ✅ OpenAI client initialized successfully`);
+  console.log(`[promptly] Base URL: ${baseURL}`);
   console.log(`[promptly] Default model: ${DEFAULT_MODEL}`);
   const maskedKey = apiKey.length > 11 
     ? `${apiKey.substring(0, 7)}...${apiKey.substring(apiKey.length - 4)}` 

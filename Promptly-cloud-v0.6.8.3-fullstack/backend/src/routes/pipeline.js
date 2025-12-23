@@ -500,6 +500,7 @@ ${JSON.stringify(specData, null, 2)}`;
 
     // Serial execution to guarantee stability
     console.log(`[pipeline] [${runId}] Stage 3: Generating candidates with ${agents.length} agents sequentially...`);
+    const failures = [];
 
     for (let i = 0; i < agents.length; i++) {
       const agent = agents[i];
@@ -558,6 +559,7 @@ ${JSON.stringify(specData, null, 2)}`;
         
       } catch (err) {
         console.error(`[pipeline] [${runId}] Agent ${agent.name} failed:`, err);
+        failures.push({ agent: agent.name, error: err.message });
         // Continue to next agent even if one fails
       }
     }
@@ -700,7 +702,23 @@ Provide honest, objective scores based on the criteria.`;
         return scoreB - scoreA;
       });
 
-    const bestCandidate = sortedCandidates[0];
+    const bestCandidate = sortedCandidates[0] || (candidates.length > 0 ? {
+      ...candidates[0],
+      metrics: {
+        compositeScore: 0.1, // Low score to indicate fallback
+        clarity: 0.5,
+        coherence: 0.5,
+        styleMatch: 0.5,
+        safety: 0.5,
+        risk: 0.5,
+        tokenCost: 0
+      }
+    } : null);
+
+    if (!bestCandidate) {
+      throw new Error("No candidates available for selection (all agents failed or no output generated).");
+    }
+
     const outcomeId = `outcome_${nanoid(12)}`;
 
     // Store outcome in outcome_runs table (matching actual schema)

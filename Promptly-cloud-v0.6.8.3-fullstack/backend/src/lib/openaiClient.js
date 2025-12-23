@@ -247,14 +247,31 @@ async function executeChatText(
 
   const startTime = Date.now();
   try {
-  const completion = await client.chat.completions.create({
-    model: usedModel,
-      temperature: appliedTemperature,
-    messages: [
-      { role: "system", content: enhancedSystem },
-        { role: "user", content: userContent }
-    ]
-  });
+    let completion;
+    try {
+      completion = await client.chat.completions.create({
+        model: usedModel,
+        temperature: appliedTemperature,
+        messages: [
+          { role: "system", content: enhancedSystem },
+          { role: "user", content: userContent }
+        ]
+      });
+    } catch (apiError) {
+      if ((apiError.status === 400 || apiError.status === 409) && apiError.message.includes("decommissioned")) {
+        console.warn(`[promptly] ⚠️ Model ${usedModel} is decommissioned (Status: ${apiError.status}). Falling back to ${SAFE_FALLBACK_MODEL}`);
+        completion = await client.chat.completions.create({
+          model: SAFE_FALLBACK_MODEL,
+          temperature: appliedTemperature,
+          messages: [
+            { role: "system", content: enhancedSystem },
+            { role: "user", content: userContent }
+          ]
+        });
+      } else {
+        throw apiError;
+      }
+    }
 
     const duration = Date.now() - startTime;
     const responseText = completion.choices?.[0]?.message?.content || "";
@@ -296,14 +313,35 @@ async function executeChatText(
       console.warn(`[promptly] ⚠️ Final output similarity still high (${similarity.toFixed(3)}), but retry limit reached`);
     }
 
-  return {
+    return {
       text: responseText,
-    usage: completion.usage || {},
-    model: usedModel,
+      usage: completion.usage || {},
+      model: usedModel,
       completionId: completion.id || null,
       similarity
-  };
+    };
   } catch (error) {
+    // Global fallback for ANY error if we're not already using the safe model
+    if (usedModel !== SAFE_FALLBACK_MODEL) {
+      console.warn(`[promptly] ⚠️ LLM call failed with model ${usedModel} (Status: ${error.status || 'unknown'}). Falling back to ${SAFE_FALLBACK_MODEL}`);
+      console.warn(`[promptly] ⚠️ Original error: ${error.message}`);
+      
+      // Recursive call with safe fallback model
+      return executeChatText(
+        {
+          system,
+          model: SAFE_FALLBACK_MODEL,
+          promptlyModelId,
+          baseUser,
+          temperature: appliedTemperature, // Use original temperature
+          forceRewritePrompt,
+          minSimilarity,
+          maxRetries
+        },
+        attempt // Keep attempt count
+      );
+    }
+
     const duration = Date.now() - startTime;
     console.error(`[promptly] ❌ LLM call failed after ${duration}ms:`, error.message);
     console.error(`[promptly] Error type: ${error.constructor.name}`);

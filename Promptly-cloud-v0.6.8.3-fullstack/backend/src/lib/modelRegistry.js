@@ -64,8 +64,8 @@ export const MODEL_REGISTRY = {
   'promptly-v0-mini': {
     id: 'promptly-v0-mini',
     provider: MODEL_PROVIDERS.OPENAI,
-    model: 'qwen-2.5-7b',
-    _futureModel: 'qwen-2.5-7b',
+    model: 'qwen-2.5-7b-instruct',
+    _futureModel: 'qwen-2.5-7b-instruct',
     tier: MODEL_TIERS.MINI,
     category: MODEL_CATEGORIES.GENERAL,
     label: 'Promptly v0 mini',
@@ -96,8 +96,8 @@ export const MODEL_REGISTRY = {
   'promptly-v0': {
     id: 'promptly-v0',
     provider: MODEL_PROVIDERS.OPENAI,
-    model: 'qwen-2.5-32b',
-    _futureModel: 'qwen-2.5-32b',
+    model: 'qwen-2.5-72b-instruct',
+    _futureModel: 'qwen-2.5-72b-instruct',
     tier: MODEL_TIERS.STANDARD,
     category: MODEL_CATEGORIES.GENERAL,
     label: 'Promptly v0',

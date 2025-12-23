@@ -127,15 +127,33 @@ export async function chatJson({ system, user, model, promptlyModelId }) {
   const startTime = Date.now();
   try {
     console.log(`[promptly] 📡 Calling OpenAI API: client.chat.completions.create() with JSON format`);
-  const completion = await client.chat.completions.create({
-    model: usedModel,
-    temperature: DEFAULT_TEMPERATURE,
-    response_format: { type: "json_object" },
-    messages: [
-      { role: "system", content: enhancedSystem },
-      { role: "user", content: user }
-    ]
-  });
+    let completion;
+    try {
+      completion = await client.chat.completions.create({
+        model: usedModel,
+        temperature: DEFAULT_TEMPERATURE,
+        response_format: { type: "json_object" },
+        messages: [
+          { role: "system", content: enhancedSystem },
+          { role: "user", content: user }
+        ]
+      });
+    } catch (apiError) {
+      if (apiError.status === 400 && apiError.message.includes("decommissioned")) {
+        console.warn(`[promptly] ⚠️ Model ${usedModel} is decommissioned. Falling back to ${DEFAULT_MODEL}`);
+        completion = await client.chat.completions.create({
+          model: DEFAULT_MODEL,
+          temperature: DEFAULT_TEMPERATURE,
+          response_format: { type: "json_object" },
+          messages: [
+            { role: "system", content: enhancedSystem },
+            { role: "user", content: user }
+          ]
+        });
+      } else {
+        throw apiError;
+      }
+    }
     
     const duration = Date.now() - startTime;
   const content = completion.choices?.[0]?.message?.content || "{}";

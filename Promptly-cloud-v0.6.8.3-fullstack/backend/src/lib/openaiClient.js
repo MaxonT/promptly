@@ -178,9 +178,11 @@ export async function chatJson({ system, user, model, promptlyModelId }) {
     completionId: completion.id || null
   };
   } catch (error) {
-    // Handle decommissioned models (fallback logic)
-    if ((error.status === 400 || error.status === 409) && error.message.includes("decommissioned")) {
-      console.warn(`[promptly] ⚠️ Model ${usedModel} is decommissioned (Status: ${error.status}). Falling back to ${SAFE_FALLBACK_MODEL}`);
+    // Global fallback for ANY error if we're not already using the safe model
+    if (usedModel !== SAFE_FALLBACK_MODEL) {
+      console.warn(`[promptly] ⚠️ LLM call failed with model ${usedModel} (Status: ${error.status || 'unknown'}). Falling back to ${SAFE_FALLBACK_MODEL}`);
+      console.warn(`[promptly] ⚠️ Original error: ${error.message}`);
+      
       // Recursive call with safe fallback model
       return executeChatText(
         {

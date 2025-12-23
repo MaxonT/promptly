@@ -502,6 +502,9 @@ ${JSON.stringify(specData, null, 2)}`;
     console.log(`[pipeline] [${runId}] Stage 3: Generating candidates with ${agents.length} agents in parallel...`);
 
     const agentPromises = agents.map(async (agent, i) => {
+      // Stagger agent calls slightly to avoid immediate rate limits
+      await new Promise(resolve => setTimeout(resolve, i * 2000));
+      
       checkTimeout();
 
       sendEvent(runId, "stage-progress", {

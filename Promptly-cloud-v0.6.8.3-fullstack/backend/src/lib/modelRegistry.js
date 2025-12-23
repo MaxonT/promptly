@@ -80,8 +80,8 @@ export const MODEL_REGISTRY = {
   'promptly': {
     id: 'promptly',
     provider: MODEL_PROVIDERS.OPENAI,
-    model: 'llama-3.3-70b-versatile',
-    _futureModel: 'llama-3.3-70b-versatile',
+    model: 'qwen-2.5-72b-instruct',
+    _futureModel: 'qwen-2.5-72b-instruct',
     tier: MODEL_TIERS.STANDARD,
     category: MODEL_CATEGORIES.GENERAL,
     label: 'Promptly',

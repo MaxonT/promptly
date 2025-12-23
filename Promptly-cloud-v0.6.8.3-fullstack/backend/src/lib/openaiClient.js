@@ -179,6 +179,25 @@ export async function chatJson({ system, user, model, promptlyModelId }) {
     completionId: completion.id || null
   };
   } catch (error) {
+    // Handle decommissioned models (fallback logic)
+    if ((error.status === 400 || error.status === 409) && error.message.includes("decommissioned")) {
+      console.warn(`[promptly] ⚠️ Model ${usedModel} is decommissioned (Status: ${error.status}). Falling back to ${DEFAULT_MODEL}`);
+      // Recursive call with default model, preserving other params but resetting attempts for fairness
+      return executeChatText(
+        {
+          system,
+          model: DEFAULT_MODEL,
+          promptlyModelId,
+          baseUser,
+          temperature: appliedTemperature,
+          forceRewritePrompt,
+          minSimilarity,
+          maxRetries
+        },
+        attempt // Keep attempt count to avoid infinite loops if default also fails
+      );
+    }
+
     const duration = Date.now() - startTime;
     console.error(`[promptly] ❌ LLM call failed after ${duration}ms:`, error.message);
     console.error(`[promptly] Error type: ${error.constructor.name}`);

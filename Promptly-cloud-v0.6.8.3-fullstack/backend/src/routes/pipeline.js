@@ -498,74 +498,68 @@ CRITICAL: If output lacks safety improvements, append "> needs more change" to s
     const baseContext = `Specification:
 ${JSON.stringify(specData, null, 2)}`;
 
-    // Parallelize agent calls for significantly faster response time
-    console.log(`[pipeline] [${runId}] Stage 3: Generating candidates with ${agents.length} agents in parallel...`);
+    // Serial execution to guarantee stability
+    console.log(`[pipeline] [${runId}] Stage 3: Generating candidates with ${agents.length} agents sequentially...`);
 
-    const agentPromises = agents.map(async (agent, i) => {
-      // Stagger agent calls slightly to avoid immediate rate limits
-      await new Promise(resolve => setTimeout(resolve, i * 500));
-      
-      checkTimeout();
+    for (let i = 0; i < agents.length; i++) {
+      const agent = agents[i];
+      try {
+        checkTimeout();
 
-      sendEvent(runId, "stage-progress", {
-        stage: "agents",
-        step: `generating-${agent.name}`,
-        message: `Generating candidate with ${agent.name} agent...`,
-        details: { agent: agent.name, progress: `${i + 1}/${agents.length}` }
-      });
+        sendEvent(runId, "stage-progress", {
+          stage: "agents",
+          step: `generating-${agent.name}`,
+          message: `Generating candidate with ${agent.name} agent...`,
+          details: { agent: agent.name, progress: `${i + 1}/${agents.length}` }
+        });
 
-      console.log(`[pipeline] [${runId}] Stage 3: Generating candidate with ${agent.name} agent...`);
-      // Enable similarity check with retry (lowered threshold for better change detection)
-      const { text: content, similarity } = await chatText({
-        system: agent.systemPrompt,
-        user: `Generate optimized prompt. The output MUST be substantially different from the spec. Transform and enhance it:\n\n${baseContext}`,
-        model: model, // Pass the selected model to the agent call
-        minSimilarity: 0.75,
-        maxRetries: 2
-      });
+        console.log(`[pipeline] [${runId}] Stage 3: Generating candidate with ${agent.name} agent...`);
+        // Enable similarity check with retry (lowered threshold for better change detection)
+        const { text: content, similarity } = await chatText({
+          system: agent.systemPrompt,
+          user: `Generate optimized prompt. The output MUST be substantially different from the spec. Transform and enhance it:\n\n${baseContext}`,
+          model: model, // Pass the selected model to the agent call
+          minSimilarity: 0.75,
+          maxRetries: 2
+        });
 
-      // Log similarity for debugging
-      console.log(`[pipeline] [${runId}] Stage 3: ${agent.name} completed - similarity: ${similarity.toFixed(3)}, length: ${content.length}`);
-      if (similarity > 0.7) {
-        console.warn(`[pipeline] [${runId}] ⚠️ ${agent.name} output similarity is high: ${similarity.toFixed(3)}`);
+        // Log similarity for debugging
+        console.log(`[pipeline] [${runId}] Stage 3: ${agent.name} completed - similarity: ${similarity.toFixed(3)}, length: ${content.length}`);
+        if (similarity > 0.7) {
+          console.warn(`[pipeline] [${runId}] ⚠️ ${agent.name} output similarity is high: ${similarity.toFixed(3)}`);
+        }
+
+        const candidateId = `candidate_${nanoid(12)}`;
+
+        db.prepare(`
+          INSERT INTO candidate_prompts (id, spec_id, session_id, agent, model, content, created_at)
+          VALUES (?, ?, ?, ?, ?, ?, ?)
+        `).run(
+          candidateId,
+          specId,
+          sessionId,
+          agent.name,
+          model || "gpt-4o-mini",
+          content,
+          now
+        );
+
+        sendEvent(runId, "stage-progress", {
+          stage: "agents",
+          step: `completed-${agent.name}`,
+          message: `${agent.name} agent completed`,
+          details: { candidateId, agent: agent.name, contentLength: content.length }
+        });
+
+        candidateIds.push(candidateId);
+        
+        // Small delay between agents to ensure system stability
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+      } catch (err) {
+        console.error(`[pipeline] [${runId}] Agent ${agent.name} failed:`, err);
+        // Continue to next agent even if one fails
       }
-
-      const candidateId = `candidate_${nanoid(12)}`;
-
-      db.prepare(`
-        INSERT INTO candidate_prompts (id, spec_id, session_id, agent, model, content, created_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
-      `).run(
-        candidateId,
-        specId,
-        sessionId,
-        agent.name,
-        model || "gpt-4o-mini",
-        content,
-        now
-      );
-
-      sendEvent(runId, "stage-progress", {
-        stage: "agents",
-        step: `completed-${agent.name}`,
-        message: `${agent.name} agent completed`,
-        details: { candidateId, agent: agent.name, contentLength: content.length }
-      });
-
-      return candidateId;
-    });
-
-    const results = await Promise.allSettled(agentPromises);
-    
-    // Filter successful candidates and log failures
-    candidateIds = results
-      .filter(r => r.status === 'fulfilled')
-      .map(r => r.value);
-      
-    const failures = results.filter(r => r.status === 'rejected');
-    if (failures.length > 0) {
-      console.warn(`[pipeline] [${runId}] ⚠️ ${failures.length} agents failed to generate candidates.`);
-      failures.forEach((f, idx) => console.error(`[pipeline] [${runId}] Agent failure ${idx + 1}:`, f.reason));
     }
 
     if (candidateIds.length === 0) {

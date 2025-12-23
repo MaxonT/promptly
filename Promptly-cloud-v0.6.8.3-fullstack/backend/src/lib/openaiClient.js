@@ -2,12 +2,11 @@ import OpenAI from "openai";
 import { resolveModelName, getSystemPromptSuffix, buildSystemPrompt } from "./modelRegistry.js";
 
 const apiKey = process.env.OPENAI_API_KEY || "";
-const baseURL = process.env.OPENAI_BASE_URL || "https://api.openai.com/v1";
+const baseURL = process.env.OPENAI_BASE_URL || "https://api.openai.com/v1";const SAFE_FALLBACK_MODEL = "llama-3.3-70b-versatile";
 
 // Resolve the configured default model (prefers OPENAI_DEFAULT_MODEL but
 // also supports legacy OPENAI_MODEL).
 const DEFAULT_MODEL = process.env.OPENAI_DEFAULT_MODEL || process.env.OPENAI_MODEL || "gpt-4o-mini";
-
 let client = null;
 
 if (apiKey) {
@@ -181,12 +180,12 @@ export async function chatJson({ system, user, model, promptlyModelId }) {
   } catch (error) {
     // Handle decommissioned models (fallback logic)
     if ((error.status === 400 || error.status === 409) && error.message.includes("decommissioned")) {
-      console.warn(`[promptly] ⚠️ Model ${usedModel} is decommissioned (Status: ${error.status}). Falling back to ${DEFAULT_MODEL}`);
-      // Recursive call with default model, preserving other params but resetting attempts for fairness
+      console.warn(`[promptly] ⚠️ Model ${usedModel} is decommissioned (Status: ${error.status}). Falling back to ${SAFE_FALLBACK_MODEL}`);
+      // Recursive call with safe fallback model
       return executeChatText(
         {
           system,
-          model: DEFAULT_MODEL,
+          model: SAFE_FALLBACK_MODEL,
           promptlyModelId,
           baseUser,
           temperature: appliedTemperature,
@@ -194,7 +193,7 @@ export async function chatJson({ system, user, model, promptlyModelId }) {
           minSimilarity,
           maxRetries
         },
-        attempt // Keep attempt count to avoid infinite loops if default also fails
+        attempt // Keep attempt count
       );
     }
 

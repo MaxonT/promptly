@@ -2,7 +2,7 @@
  * Model Registry - Centralized Model Configuration
  * 
  * Provides a single source of truth for all model configurations.
- * Maps frontend model names to actual OpenAI model identifiers.
+ * Maps frontend model names to provider model identifiers (OpenAI-compatible).
  * 
  * Features:
  * - Full metadata for each model (tier, category, cost, speed)
@@ -48,8 +48,8 @@ export const MODEL_REGISTRY = {
   'promptly-mini': {
     id: 'promptly-mini',
     provider: MODEL_PROVIDERS.OPENAI,
-    model: 'gpt-4o-mini',
-    _futureModel: 'gpt-4o-mini',
+    model: 'qwen-2.5-7b',
+    _futureModel: 'qwen-2.5-7b',
     tier: MODEL_TIERS.MINI,
     category: MODEL_CATEGORIES.GENERAL,
     label: 'Promptly Mini',
@@ -64,8 +64,8 @@ export const MODEL_REGISTRY = {
   'promptly-v0-mini': {
     id: 'promptly-v0-mini',
     provider: MODEL_PROVIDERS.OPENAI,
-    model: 'gpt-4o-mini',
-    _futureModel: 'gpt-4o-mini',
+    model: 'qwen-2.5-7b',
+    _futureModel: 'qwen-2.5-7b',
     tier: MODEL_TIERS.MINI,
     category: MODEL_CATEGORIES.GENERAL,
     label: 'Promptly v0 mini',
@@ -80,8 +80,8 @@ export const MODEL_REGISTRY = {
   'promptly': {
     id: 'promptly',
     provider: MODEL_PROVIDERS.OPENAI,
-    model: 'gpt-4o',
-    _futureModel: 'gpt-4o',
+    model: 'qwen-2.5-32b',
+    _futureModel: 'qwen-2.5-32b',
     tier: MODEL_TIERS.STANDARD,
     category: MODEL_CATEGORIES.GENERAL,
     label: 'Promptly',
@@ -96,8 +96,8 @@ export const MODEL_REGISTRY = {
   'promptly-v0': {
     id: 'promptly-v0',
     provider: MODEL_PROVIDERS.OPENAI,
-    model: 'gpt-4o',
-    _futureModel: 'gpt-4o',
+    model: 'qwen-2.5-32b',
+    _futureModel: 'qwen-2.5-32b',
     tier: MODEL_TIERS.STANDARD,
     category: MODEL_CATEGORIES.GENERAL,
     label: 'Promptly v0',
@@ -112,24 +112,24 @@ export const MODEL_REGISTRY = {
   'promptly-v0-max': {
     id: 'promptly-v0-max',
     provider: MODEL_PROVIDERS.OPENAI,
-    model: 'o1-mini',
-    _futureModel: 'o1-mini',
+    model: 'llama-3.3-70b-versatile',
+    _futureModel: 'llama-3.3-70b-versatile',
     tier: MODEL_TIERS.PRO_MAX,
     category: MODEL_CATEGORIES.GENERAL,
     label: 'Promptly v0 Max',
     description: 'Advanced reasoning for complex tasks',
     costMultiplier: 5,
     speedMultiplier: 0.7,
-    maxTokens: 65536,
-    supportsJson: false,
+    maxTokens: 8192,
+    supportsJson: true,
     systemPromptSuffix: null
   },
 
   'promptly-plus': {
     id: 'promptly-plus',
     provider: MODEL_PROVIDERS.OPENAI,
-    model: 'gpt-4o',
-    _futureModel: 'gpt-4-turbo',
+    model: 'qwen-2.5-32b',
+    _futureModel: 'qwen-2.5-32b',
     tier: MODEL_TIERS.PLUS,
     category: MODEL_CATEGORIES.GENERAL,
     label: 'Promptly Plus',
@@ -144,8 +144,8 @@ export const MODEL_REGISTRY = {
   'promptly-pro': {
     id: 'promptly-pro',
     provider: MODEL_PROVIDERS.OPENAI,
-    model: 'gpt-4o',
-    _futureModel: 'gpt-4-turbo',
+    model: 'qwen-2.5-32b',
+    _futureModel: 'qwen-2.5-32b',
     tier: MODEL_TIERS.PRO,
     category: MODEL_CATEGORIES.GENERAL,
     label: 'Promptly Pro',
@@ -160,15 +160,15 @@ export const MODEL_REGISTRY = {
   'promptly-pro-max': {
     id: 'promptly-pro-max',
     provider: MODEL_PROVIDERS.OPENAI,
-    model: 'gpt-4o',
-    _futureModel: 'gpt-4-turbo',
+    model: 'llama-3.3-70b-versatile',
+    _futureModel: 'llama-3.3-70b-versatile',
     tier: MODEL_TIERS.PRO_MAX,
     category: MODEL_CATEGORIES.GENERAL,
     label: 'Promptly Pro Max',
     description: 'Maximum capability for the most demanding tasks',
     costMultiplier: 10,
     speedMultiplier: 0.6,
-    maxTokens: 32768,
+    maxTokens: 8192,
     supportsJson: true,
     systemPromptSuffix: null
   },
@@ -176,8 +176,8 @@ export const MODEL_REGISTRY = {
   'promptly-code-mini': {
     id: 'promptly-code-mini',
     provider: MODEL_PROVIDERS.OPENAI,
-    model: 'gpt-4o-mini',
-    _futureModel: 'gpt-4o-mini',
+    model: 'qwen-2.5-coder-32b',
+    _futureModel: 'qwen-2.5-coder-32b',
     tier: MODEL_TIERS.MINI,
     category: MODEL_CATEGORIES.CODE,
     label: 'Promptly Code Mini',
@@ -192,8 +192,8 @@ export const MODEL_REGISTRY = {
   'promptly-code': {
     id: 'promptly-code',
     provider: MODEL_PROVIDERS.OPENAI,
-    model: 'gpt-4o-mini',
-    _futureModel: 'gpt-4o',
+    model: 'qwen-2.5-coder-32b',
+    _futureModel: 'qwen-2.5-coder-32b',
     tier: MODEL_TIERS.STANDARD,
     category: MODEL_CATEGORIES.CODE,
     label: 'Promptly Code',
@@ -208,8 +208,8 @@ export const MODEL_REGISTRY = {
   'promptly-code-plus': {
     id: 'promptly-code-plus',
     provider: MODEL_PROVIDERS.OPENAI,
-    model: 'gpt-4o',
-    _futureModel: 'gpt-4-turbo',
+    model: 'qwen-2.5-coder-32b',
+    _futureModel: 'qwen-2.5-coder-32b',
     tier: MODEL_TIERS.PLUS,
     category: MODEL_CATEGORIES.CODE,
     label: 'Promptly Code Plus',
@@ -224,8 +224,8 @@ export const MODEL_REGISTRY = {
   'promptly-code-pro': {
     id: 'promptly-code-pro',
     provider: MODEL_PROVIDERS.OPENAI,
-    model: 'gpt-4o',
-    _futureModel: 'gpt-4-turbo',
+    model: 'qwen-2.5-coder-32b',
+    _futureModel: 'qwen-2.5-coder-32b',
     tier: MODEL_TIERS.PRO,
     category: MODEL_CATEGORIES.CODE,
     label: 'Promptly Code Pro',
@@ -240,8 +240,8 @@ export const MODEL_REGISTRY = {
   'promptly-code-pro-max': {
     id: 'promptly-code-pro-max',
     provider: MODEL_PROVIDERS.OPENAI,
-    model: 'gpt-4o',
-    _futureModel: 'gpt-4-turbo',
+    model: 'qwen-2.5-coder-32b',
+    _futureModel: 'qwen-2.5-coder-32b',
     tier: MODEL_TIERS.PRO_MAX,
     category: MODEL_CATEGORIES.CODE,
     label: 'Promptly Code Pro Max',

@@ -6,7 +6,7 @@ const baseURL = process.env.OPENAI_BASE_URL || "https://api.openai.com/v1";const
 
 // Resolve the configured default model (prefers OPENAI_DEFAULT_MODEL but
 // also supports legacy OPENAI_MODEL).
-const DEFAULT_MODEL = process.env.OPENAI_DEFAULT_MODEL || process.env.OPENAI_MODEL || "gpt-4o-mini";
+const DEFAULT_MODEL = process.env.OPENAI_DEFAULT_MODEL || process.env.OPENAI_MODEL || "qwen-2.5-72b-instruct";
 let client = null;
 
 if (apiKey) {

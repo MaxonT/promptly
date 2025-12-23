@@ -136,7 +136,7 @@ outcomeRunsRouter.post("/", async (req, res) => {
   const resolvedModel = model && isValidModel(model) ? model : 'promptly-mini';
   const modelConfig = getModelConfig(resolvedModel);
   
-  console.log(`[outcomeRunner] Using model: ${resolvedModel} -> ${modelConfig?.model || 'gpt-4o-mini'}`);
+  console.log(`[outcomeRunner] Using model: ${resolvedModel} -> ${modelConfig?.model || 'qwen-2.5-7b'}`);
   if (model && !isValidModel(model)) {
     console.log(`[outcomeRunner] Warning: Invalid model "${model}", using default "${resolvedModel}"`);
   }

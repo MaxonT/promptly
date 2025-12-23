@@ -328,7 +328,7 @@ specsRouter.post("/:id/evaluate", async (req, res) => {
     }
 
     // Evaluate the prompt
-    const model = req.body.model || process.env.OPENAI_MODEL || "gpt-4o-mini";
+    const model = req.body.model || process.env.OPENAI_MODEL || "qwen-2.5-72b-instruct";
     const evaluation = await evaluatePrompt({ spec, compiledPrompt, model });
 
     // Store evaluation

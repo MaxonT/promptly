@@ -90,7 +90,7 @@ export async function evaluatePrompt({ spec, compiledPrompt, model }) {
     }
   });
 
-  const evalModel = model || process.env.OPENAI_MODEL || "gpt-4o-mini";
+  const evalModel = model || process.env.OPENAI_MODEL || "qwen-2.5-72b-instruct";
   const runId = createRun({
     model: evalModel,
     inputBlocks: {

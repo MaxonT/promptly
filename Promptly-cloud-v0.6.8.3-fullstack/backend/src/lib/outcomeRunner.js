@@ -160,7 +160,7 @@ export async function runOutcomeCheck({ runId, outcomeSpecId, modelOverride }) {
   const model = modelOverride 
     || process.env.OUTCOME_MODEL 
     || process.env.OPENAI_MODEL 
-    || "gpt-4o-mini";
+    || "qwen-2.5-72b-instruct";
 
   // 4. Create a run log for this outcome check
   const judgeRunId = createRun({

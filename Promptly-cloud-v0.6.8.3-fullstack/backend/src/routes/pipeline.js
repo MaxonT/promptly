@@ -540,7 +540,7 @@ ${JSON.stringify(specData, null, 2)}`;
           specId,
           sessionId,
           agent.name,
-          model || "gpt-4o-mini",
+          model || "qwen-2.5-72b-instruct",
           content,
           now
         );
@@ -730,7 +730,7 @@ Provide honest, objective scores based on the criteria.`;
       specId,
       idea.substring(0, 500), // Use first 500 chars of idea as task
       candidateIds.length,
-      model || "gpt-4o-mini",
+      model || "qwen-2.5-72b-instruct",
       "completed",
       bestCandidate.id,
       JSON.stringify({

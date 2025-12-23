@@ -144,7 +144,7 @@ export async function generateBroadQuestions({ initialDescription, kind, modePro
     mode_profile: modeProfile
   });
 
-  const usedModel = model || process.env.OPENAI_MODEL || "gpt-4o-mini";
+  const usedModel = model || process.env.OPENAI_MODEL || "qwen-2.5-72b-instruct";
   const runId = createRun({
     model: usedModel,
     inputBlocks: { agent: "A", initial_description: initialDescription, kind, mode: modeProfile?.id }
@@ -380,7 +380,7 @@ export async function generateChoiceQuestions({ initialDescription, kind, broadQ
     mode_profile: modeProfile
   });
 
-  const usedModel = model || process.env.OPENAI_MODEL || "gpt-4o-mini";
+  const usedModel = model || process.env.OPENAI_MODEL || "qwen-2.5-72b-instruct";
   const runId = createRun({
     model: usedModel,
     inputBlocks: { agent: "B", initial_description: initialDescription, kind, broad_questions: broadQuestions, mode: modeProfile?.id }
@@ -693,7 +693,7 @@ export async function generateRawSpec({ initialDescription, kind, qaPairs, modeP
   
   const user = JSON.stringify(userInput);
 
-  const usedModel = model || process.env.OPENAI_MODEL || "gpt-4o-mini";
+  const usedModel = model || process.env.OPENAI_MODEL || "qwen-2.5-72b-instruct";
   const runId = createRun({
     model: usedModel,
     inputBlocks: { agent: "C", initial_description: initialDescription, kind, qa_pairs: qaPairs, mode: modeProfile?.id }

@@ -188,7 +188,7 @@ async function executePipelineWithEvents(runId, userId, { idea, attachments, ski
     } else {
       clearInterval(pingInterval);
     }
-  }, 15000); // Send ping every 15 seconds
+  }, 5000); // Send ping every 5 seconds (Critical for stability)
   
   const checkTimeout = () => {
     const elapsed = Date.now() - startTime;

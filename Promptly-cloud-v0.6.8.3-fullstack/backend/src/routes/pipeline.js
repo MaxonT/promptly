@@ -81,9 +81,19 @@ pipelineRouter.get("/stream/:runId", (req, res) => {
   res.write(`event: connected\n`);
   res.write(`data: ${JSON.stringify({ runId, timestamp: new Date().toISOString() })}\n\n`);
 
+  // Heartbeat to keep connection alive
+  const pingInterval = setInterval(() => {
+    if (activeStreams.has(runId)) {
+      sendEvent(runId, "ping", { timestamp: new Date().toISOString() });
+    } else {
+      clearInterval(pingInterval);
+    }
+  }, 5000); // 每 5 秒发送一次 ping (必须)
+
   // Handle client disconnect
   req.on("close", () => {
     console.log(`[pipeline] Client disconnected from stream ${runId}`);
+    clearInterval(pingInterval);
     activeStreams.delete(runId);
     res.end();
   });
@@ -148,6 +158,37 @@ pipelineRouter.post("/run", async (req, res) => {
 async function executePipelineWithEvents(runId, userId, { idea, attachments, skipQuestions, model }) {
   const PIPELINE_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
   const startTime = Date.now();
+  
+  // 1. Wait for client to connect (max 10 seconds)
+  // This prevents the race condition where events are sent before the client connects
+  const MAX_WAIT_ATTEMPTS = 20;
+  const WAIT_INTERVAL_MS = 500;
+  
+  let clientConnected = false;
+  for (let i = 0; i < MAX_WAIT_ATTEMPTS; i++) {
+    if (activeStreams.has(runId)) {
+      clientConnected = true;
+      break;
+    }
+    await new Promise(resolve => setTimeout(resolve, WAIT_INTERVAL_MS));
+  }
+
+  if (!clientConnected) {
+    console.warn(`[pipeline] [${runId}] Client did not connect within timeout, aborting execution.`);
+    // Clean up if somehow it was added but not detected, though unlikely
+    activeStreams.delete(runId);
+    return;
+  }
+
+  // 2. Setup Keep-Alive Heartbeat
+  // Prevents load balancers or browsers from dropping idle connections during long LLM calls
+  const pingInterval = setInterval(() => {
+    if (activeStreams.has(runId)) {
+      sendEvent(runId, 'ping', { timestamp: new Date().toISOString() });
+    } else {
+      clearInterval(pingInterval);
+    }
+  }, 15000); // Send ping every 15 seconds
   
   const checkTimeout = () => {
     const elapsed = Date.now() - startTime;
@@ -798,6 +839,17 @@ Provide honest, objective scores based on the criteria.`;
     
     // Clean up stream connection
     activeStreams.delete(runId);
+  } finally {
+    // 3. Ensure Cleanup
+    if (pingInterval) clearInterval(pingInterval);
+    
+    // Close the stream gracefully if it's still open
+    const stream = activeStreams.get(runId);
+    if (stream) {
+      console.log(`[pipeline] [${runId}] Closing stream connection.`);
+      stream.end();
+      activeStreams.delete(runId);
+    }
   }
 }
 

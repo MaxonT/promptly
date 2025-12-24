@@ -657,7 +657,7 @@ export async function generateChoiceQuestions({ initialDescription, kind, broadQ
   }
 }
 
-export async function generateRawSpec({ initialDescription, kind, qaPairs, modeProfile = null, model = null, language = 'en' }) {
+export async function generateRawSpec({ initialDescription, kind, qaPairs, modeProfile = null, model = null, provider = 'openai', language = 'en' }) {
   const system = [
     "You are Agent C in Promptly's Question Engine.",
     "You receive all questions and answers from a wizard.",
@@ -734,7 +734,7 @@ export async function generateRawSpec({ initialDescription, kind, qaPairs, modeP
   while (retryCount <= MAX_RETRIES) {
     try {
       const start = Date.now();
-      const response = await chatJson({ provider: 'openai', system, user, model: usedModel });
+      const response = await chatJson({ provider, system, user, model: usedModel });
       raw = response.data;
       const runMetrics = buildRunMetrics({
         latencyMs: Date.now() - start,

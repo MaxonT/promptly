@@ -661,6 +661,7 @@ questionSessionRouter.post("/:sessionId/finalize", async (req, res) => {
       qaPairs,
       modeProfile,
       model: modelChoice.targetModel,
+      provider: modelChoice.provider,
       language: userLanguage
     });
 

@@ -2,7 +2,8 @@ import OpenAI from "openai";
 import { resolveModelName, getSystemPromptSuffix, buildSystemPrompt } from "./modelRegistry.js";
 
 const apiKey = process.env.OPENAI_API_KEY || "";
-const baseURL = process.env.OPENAI_BASE_URL || "https://api.openai.com/v1";const SAFE_FALLBACK_MODEL = "llama-3.3-70b-versatile";
+const baseURL = process.env.OPENAI_BASE_URL || "https://api.openai.com/v1";
+const SAFE_FALLBACK_MODEL = "llama-3.3-70b";
 
 // Resolve the configured default model (prefers OPENAI_DEFAULT_MODEL but
 // also supports legacy OPENAI_MODEL).

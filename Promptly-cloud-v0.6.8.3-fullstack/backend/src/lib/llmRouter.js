@@ -13,7 +13,10 @@ export { LlmDisabledError, getResolvedDefaultModel, isLlmEnabled };
 /**
  * Standardized JSON Chat Completion
  */
-export async function chatJson({ system, user, model, promptlyModelId, provider = 'openai', apiKey, maxTokens, temperature }) {
+export async function chatJson({ system, user, model, promptlyModelId, provider, apiKey, maxTokens, temperature }) {
+  if (!provider) {
+    throw new Error(`[llmRouter] ❌ Contract Violation: 'provider' MUST be explicitly set. Received: ${provider}`);
+  }
   if (provider === 'groq') {
     return chatJsonGroq({
       system,
@@ -40,7 +43,10 @@ export async function chatJson({ system, user, model, promptlyModelId, provider 
 /**
  * Standardized Text Chat Completion
  */
-export async function chatText({ system, user, model, promptlyModelId, provider = 'openai', temperature, forceRewritePrompt, minSimilarity, maxRetries }) {
+export async function chatText({ system, user, model, promptlyModelId, provider, temperature, forceRewritePrompt, minSimilarity, maxRetries }) {
+  if (!provider) {
+    throw new Error(`[llmRouter] ❌ Contract Violation: 'provider' MUST be explicitly set. Received: ${provider}`);
+  }
   if (provider === 'groq') {
     return chatTextGroq({
       system,

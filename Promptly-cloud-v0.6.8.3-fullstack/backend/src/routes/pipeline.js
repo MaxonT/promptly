@@ -126,8 +126,8 @@ pipelineRouter.post("/run", async (req, res) => {
     return res.status(400).json({ ok: false, error: parsed.error.flatten() });
   }
 
-  const { idea, attachments = [], skipQuestions = false, model = null } = parsed.data;
-  console.log(`[pipeline] Starting pipeline - idea length: ${idea.length}, skipQuestions: ${skipQuestions}, model: ${model || 'default'}`);
+  const { idea, attachments = [], skipQuestions = false, model: modeInput = null } = parsed.data;
+  console.log(`[pipeline] Starting pipeline - idea length: ${idea.length}, skipQuestions: ${skipQuestions}, mode: ${modeInput || 'default (fast)'}`);
 
   // Generate a unique runId for this pipeline execution
   const runId = `run_${nanoid(16)}`;
@@ -141,7 +141,7 @@ pipelineRouter.post("/run", async (req, res) => {
   });
 
   // Execute pipeline asynchronously and send events
-  executePipelineWithEvents(runId, userId, { idea, attachments, skipQuestions, model })
+  executePipelineWithEvents(runId, userId, { idea, attachments, skipQuestions, modeInput })
     .catch((err) => {
       console.error(`[pipeline] Pipeline execution failed for ${runId}:`, err);
       sendEvent(runId, "error", {
@@ -156,12 +156,12 @@ pipelineRouter.post("/run", async (req, res) => {
  * Execute full pipeline and send SSE events
  * With timeout protection (default: 5 minutes)
  */
-async function executePipelineWithEvents(runId, userId, { idea, attachments, skipQuestions, model }) {
+async function executePipelineWithEvents(runId, userId, { idea, attachments, skipQuestions, modeInput }) {
   const PIPELINE_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
   const startTime = Date.now();
   
-  // Resolve Policy based on mode (model param holds the mode: fast, standard, premium)
-  const mode = model || 'fast';
+  // Resolve Policy based on mode (modeInput param holds the mode: fast, standard, premium)
+  const mode = modeInput || 'fast';
   const policy = getModePolicy(mode);
   console.log(`[pipeline] [${runId}] Executing with policy: ${policy.name} (${policy.id})`);
   console.log(`[pipeline] [${runId}] Policy Details: Spec=${policy.specBuilder.model}, QEngine=${policy.questionEngine.enabled}, Gen=${policy.generation.model}`);
@@ -531,7 +531,8 @@ ${JSON.stringify(specData, null, 2)}`;
         const { text: content, similarity } = await chatText({
           system: agent.systemPrompt,
           user: `Generate optimized prompt. The output MUST be substantially different from the spec. Transform and enhance it:\n\n${baseContext}`,
-          model: model, // Pass the selected model to the agent call
+          model: policy.generation.model, // Pass the policy model
+          provider: policy.generation.provider, // Pass the policy provider
           minSimilarity: 0.75,
           maxRetries: 2
         });
@@ -552,7 +553,7 @@ ${JSON.stringify(specData, null, 2)}`;
           specId,
           sessionId,
           agent.name,
-          model || "qwen-2.5-72b-instruct",
+          policy.generation.model, // Log correct model from policy
           content,
           now
         );

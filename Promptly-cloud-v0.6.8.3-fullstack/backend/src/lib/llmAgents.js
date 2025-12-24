@@ -832,6 +832,15 @@ export async function generateRawSpec({ initialDescription, kind, qaPairs, modeP
       
       completeRunSuccess(runId, raw, { metrics: runMetrics });
       parsed = AgentCOutputSchema.parse(raw);
+      
+      // QUALITY SENTINEL: Fail fast if spec is low quality
+      try {
+        validateSpecQuality(parsed);
+      } catch (qualityErr) {
+        console.warn(`[promptly] ⚠️ Spec quality check failed: ${qualityErr.message}`);
+        throw qualityErr; // Re-throw to trigger retry or failure
+      }
+
       break; // Success, exit retry loop
     } catch (err) {
       retryCount++;

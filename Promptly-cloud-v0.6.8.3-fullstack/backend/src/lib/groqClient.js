@@ -1,0 +1,82 @@
+import Groq from "groq-sdk";
+
+let groqClient = null;
+const apiKey = process.env.GROQ_API_KEY || "";
+
+if (apiKey) {
+  groqClient = new Groq({
+    apiKey
+  });
+  console.log(`[promptly] ✅ Groq client initialized successfully`);
+} else {
+  console.warn("[promptly] ⚠️  GROQ_API_KEY is not set; Groq features are disabled.");
+}
+
+export class GroqDisabledError extends Error {
+  constructor(message = "Groq features are disabled") {
+    super(message);
+    this.name = "GroqDisabledError";
+    this.code = "GROQ_DISABLED";
+  }
+}
+
+/**
+ * Chat completion that returns JSON via Groq
+ */
+export async function chatJsonGroq({ system, user, model, apiKey: overrideKey, maxTokens, temperature }) {
+  let client = groqClient;
+  
+  if (overrideKey) {
+    client = new Groq({ apiKey: overrideKey });
+  }
+  
+  if (!client) {
+    console.error("[promptly] ❌ Groq call blocked: Groq client not initialized (GROQ_API_KEY not set)");
+    throw new GroqDisabledError();
+  }
+  
+  console.log(`[promptly] 🚀 Starting Groq call - Model: ${model}`);
+  
+  try {
+    const completionParams = {
+      model: model,
+      temperature: temperature || 0.3,
+      response_format: { type: "json_object" },
+      messages: [
+        { role: "system", content: system || "" },
+        { role: "user", content: user }
+      ]
+    };
+    
+    if (maxTokens) {
+      completionParams.max_tokens = maxTokens;
+    }
+    
+    const startTime = Date.now();
+    const completion = await client.chat.completions.create(completionParams);
+    const duration = Date.now() - startTime;
+    
+    const content = completion.choices?.[0]?.message?.content || "{}";
+    const tokensUsed = completion.usage?.total_tokens || 0;
+    
+    console.log(`[promptly] ✅ Groq call succeeded - Duration: ${duration}ms, Response: ${content.length} chars, Tokens: ${tokensUsed}`);
+    
+    let parsed;
+    try {
+      parsed = JSON.parse(content);
+    } catch (parseError) {
+      console.error(`[promptly] ⚠️  Groq JSON parse failed:`, parseError.message);
+      parsed = {};
+    }
+    
+    return {
+      data: parsed,
+      usage: completion.usage || {},
+      model: model,
+      completionId: completion.id || null
+    };
+  } catch (error) {
+    console.error(`[promptly] ❌ Groq call failed:`, error.message);
+    throw error;
+  }
+}

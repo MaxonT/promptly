@@ -1,9 +1,7 @@
 import OpenAI from "openai";
-import Groq from "groq-sdk";
 import { resolveModelName, getSystemPromptSuffix, buildSystemPrompt } from "./modelRegistry.js";
 
 const apiKey = process.env.OPENAI_API_KEY || "";
-const groqApiKey = process.env.GROQ_API_KEY || "";
 
 const baseURL = process.env.OPENAI_BASE_URL || "https://api.openai.com/v1";
 const SAFE_FALLBACK_MODEL = "llama-3.3-70b-versatile";
@@ -12,7 +10,6 @@ const SAFE_FALLBACK_MODEL = "llama-3.3-70b-versatile";
 // also supports legacy OPENAI_MODEL).
 const DEFAULT_MODEL = process.env.OPENAI_DEFAULT_MODEL || process.env.OPENAI_MODEL || "qwen-2.5-72b-instruct";
 let client = null;
-let groqClient = null;
 
 if (apiKey) {
   client = new OpenAI({ 
@@ -29,15 +26,6 @@ if (apiKey) {
 } else {
   console.warn("[promptly] ⚠️  OPENAI_API_KEY is not set; LLM features are disabled.");
   console.warn("[promptly] ⚠️  All enhancement endpoints will return 503 errors.");
-}
-
-if (groqApiKey) {
-  groqClient = new Groq({
-    apiKey: groqApiKey
-  });
-  console.log(`[promptly] ✅ Groq client initialized successfully`);
-} else {
-  console.warn("[promptly] ⚠️  GROQ_API_KEY is not set; Groq features are disabled.");
 }
 
 export class LlmDisabledError extends Error {

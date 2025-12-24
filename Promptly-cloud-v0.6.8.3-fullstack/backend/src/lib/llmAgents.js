@@ -253,7 +253,7 @@ function cleanOptionsArray(options) {
   return cleaned;
 }
 
-export async function generateChoiceQuestions({ initialDescription, kind, broadQuestions, modeProfile = null, model = null, language = 'en' }) {
+export async function generateChoiceQuestions({ initialDescription, kind, broadQuestions, modeProfile = null, model = null, language = 'en', inferenceConfig = null }) {
   const system = [
     "You are Agent B in Promptly's Question Engine.",
     "Goal: convert broad axes into concrete, user-friendly questions with depth levels.",
@@ -380,7 +380,25 @@ export async function generateChoiceQuestions({ initialDescription, kind, broadQ
     mode_profile: modeProfile
   });
 
-  const usedModel = model || process.env.OPENAI_MODEL || "qwen-2.5-72b-instruct";
+  // Strict Inference Policy Application
+  let usedModel = model || process.env.OPENAI_MODEL || "qwen-2.5-72b-instruct";
+  let provider = 'openai';
+  let apiKey = undefined;
+  let maxTokens = undefined;
+  let temperature = undefined;
+
+  if (inferenceConfig) {
+    usedModel = inferenceConfig.model;
+    provider = inferenceConfig.provider;
+    // Inject API Key based on policy
+    if (inferenceConfig.envKey && process.env[inferenceConfig.envKey]) {
+      apiKey = process.env[inferenceConfig.envKey];
+    }
+    maxTokens = inferenceConfig.maxTokens;
+    temperature = inferenceConfig.temperature;
+    console.log(`[promptly] 🔒 Applied Strict Inference Config for Agent B: ${provider}/${usedModel}`);
+  }
+
   const runId = createRun({
     model: usedModel,
     inputBlocks: { agent: "B", initial_description: initialDescription, kind, broad_questions: broadQuestions, mode: modeProfile?.id }
@@ -395,7 +413,15 @@ export async function generateChoiceQuestions({ initialDescription, kind, broadQ
   while (retryCount <= MAX_RETRIES) {
     try {
       const start = Date.now();
-      const response = await chatJson({ system, user, model: usedModel });
+      const response = await chatJson({ 
+        system, 
+        user, 
+        model: usedModel,
+        provider,
+        apiKey,
+        maxTokens,
+        temperature
+      });
       raw = response.data;
       const runMetrics = buildRunMetrics({
         latencyMs: Date.now() - start,

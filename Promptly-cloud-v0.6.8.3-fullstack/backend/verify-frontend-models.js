@@ -5,8 +5,9 @@ import { fileURLToPath } from 'url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 dotenv.config({ path: path.join(__dirname, '.env') });
 
-import { resolveModelName } from './src/lib/modelRegistry.js';
-import { chatText } from './src/lib/openaiClient.js';
+// Dynamic import to ensure env vars are loaded BEFORE openaiClient.js is evaluated
+const { resolveModelName } = await import('./src/lib/modelRegistry.js');
+const { chatText } = await import('./src/lib/openaiClient.js');
 
 // 模拟前端传来的三个 ID
 const FRONTEND_CHOICES = [
@@ -28,10 +29,19 @@ async function verify() {
     // 2. 验证实际调用 (发送一个极简请求)
     try {
       console.log(`📡 发起请求 (模拟实际调用)...`);
+      
+      // Print debug info about env vars
+      if (id === FRONTEND_CHOICES[0]) {
+         console.log(`[Debug] OPENAI_BASE_URL: ${process.env.OPENAI_BASE_URL || 'Using Default (OpenAI)'}`);
+         console.log(`[Debug] OPENAI_MODEL (Env): ${process.env.OPENAI_MODEL}`);
+      }
+
       const start = Date.now();
-      const result = await chatText([
-        { role: 'user', content: 'Hi' } // 极短内容，省 Token
-      ], { model: id }); // 传入前端 ID，让系统自己解析
+      // Use correct object signature for chatText
+      const result = await chatText({
+        user: 'Hi', // 极短内容，省 Token
+        model: id   // 传入前端 ID，让系统自己解析
+      }); 
       
       const duration = Date.now() - start;
       console.log(`🎉 调用成功! 耗时: ${duration}ms`);

@@ -1,7 +1,10 @@
 import OpenAI from "openai";
+import Groq from "groq-sdk";
 import { resolveModelName, getSystemPromptSuffix, buildSystemPrompt } from "./modelRegistry.js";
 
 const apiKey = process.env.OPENAI_API_KEY || "";
+const groqApiKey = process.env.GROQ_API_KEY || "";
+
 const baseURL = process.env.OPENAI_BASE_URL || "https://api.openai.com/v1";
 const SAFE_FALLBACK_MODEL = "llama-3.3-70b-versatile";
 
@@ -9,6 +12,7 @@ const SAFE_FALLBACK_MODEL = "llama-3.3-70b-versatile";
 // also supports legacy OPENAI_MODEL).
 const DEFAULT_MODEL = process.env.OPENAI_DEFAULT_MODEL || process.env.OPENAI_MODEL || "qwen-2.5-72b-instruct";
 let client = null;
+let groqClient = null;
 
 if (apiKey) {
   client = new OpenAI({ 
@@ -25,6 +29,15 @@ if (apiKey) {
 } else {
   console.warn("[promptly] ⚠️  OPENAI_API_KEY is not set; LLM features are disabled.");
   console.warn("[promptly] ⚠️  All enhancement endpoints will return 503 errors.");
+}
+
+if (groqApiKey) {
+  groqClient = new Groq({
+    apiKey: groqApiKey
+  });
+  console.log(`[promptly] ✅ Groq client initialized successfully`);
+} else {
+  console.warn("[promptly] ⚠️  GROQ_API_KEY is not set; Groq features are disabled.");
 }
 
 export class LlmDisabledError extends Error {
@@ -101,22 +114,53 @@ export function isLlmEnabled() {
  * @param {string} options.user - User message
  * @param {string} options.model - OpenAI model name OR Promptly model ID
  * @param {string} [options.promptlyModelId] - Optional Promptly model ID for system prompt enhancement
+ * @param {string} [options.provider] - 'openai' or 'groq'
+ * @param {string} [options.apiKey] - API key to use (optional, uses env vars by default)
+ * @param {number} [options.maxTokens] - Max tokens
+ * @param {number} [options.temperature] - Temperature
  */
-export async function chatJson({ system, user, model, promptlyModelId }) {
-  if (!client) {
-    console.error("[promptly] ❌ LLM call blocked: OpenAI client not initialized (OPENAI_API_KEY not set)");
-    throw new LlmDisabledError();
-  }
+export async function chatJson({ system, user, model, promptlyModelId, provider = 'openai', apiKey, maxTokens, temperature }) {
+  let usedClient;
   
+  // Select client based on provider
+  if (provider === 'groq') {
+    if (!groqClient) {
+      // Try to initialize if key is provided
+      if (apiKey) {
+        usedClient = new Groq({ apiKey });
+      } else {
+        console.error("[promptly] ❌ Groq call blocked: Groq client not initialized (GROQ_API_KEY not set)");
+        throw new LlmDisabledError("Groq features are disabled");
+      }
+    } else {
+      usedClient = groqClient;
+    }
+  } else {
+    // Default to OpenAI
+    if (!client) {
+      // Try to initialize if key is provided
+      if (apiKey) {
+        usedClient = new OpenAI({ apiKey, baseURL });
+      } else {
+        console.error("[promptly] ❌ LLM call blocked: OpenAI client not initialized (OPENAI_API_KEY not set)");
+        throw new LlmDisabledError();
+      }
+    } else {
+      usedClient = client;
+    }
+  }
+
   // Resolve model and potentially enhance system prompt
+  // NOTE: For Groq, we should use the model name as is if it doesn't look like a Promptly ID
+  // But strict mode requires passing exact model names.
   const usedModel = resolveModel(model);
-  console.log(`[promptly] 🚀 Starting LLM call - Model: ${usedModel}, Type: chatJson`);
+  const appliedTemperature = temperature ?? DEFAULT_TEMPERATURE;
+
+  console.log(`[promptly] 🚀 Starting LLM call - Provider: ${provider}, Model: ${usedModel}, Type: chatJson`);
   console.log(`[promptly] System prompt length: ${system?.length || 0} chars`);
   console.log(`[promptly] User prompt length: ${user?.length || 0} chars`);
   
-  let enhancedSystem = system;
-  
-  // If a Promptly model ID is provided, apply system prompt suffix if applicable
+  let enhancedSystem = system || ""; // If a Promptly model ID is provided, apply system prompt suffix if applicable
   if (promptlyModelId) {
     const suffix = getSystemPromptSuffix(promptlyModelId);
     if (suffix) {
@@ -126,24 +170,32 @@ export async function chatJson({ system, user, model, promptlyModelId }) {
   
   const startTime = Date.now();
   try {
-    console.log(`[promptly] 📡 Calling OpenAI API: client.chat.completions.create() with JSON format`);
+    console.log(`[promptly] 📡 Calling ${provider} API: client.chat.completions.create() with JSON format`);
     let completion;
     try {
-      completion = await client.chat.completions.create({
+      const completionParams = {
         model: usedModel,
-        temperature: DEFAULT_TEMPERATURE,
+        temperature: appliedTemperature,
         response_format: { type: "json_object" },
         messages: [
           { role: "system", content: enhancedSystem },
           { role: "user", content: user }
         ]
-      });
+      };
+      
+      if (maxTokens) {
+        completionParams.max_tokens = maxTokens;
+      }
+      
+      completion = await usedClient.chat.completions.create(completionParams);
     } catch (apiError) {
-      if ((apiError.status === 400 || apiError.status === 409) && apiError.message.includes("decommissioned")) {
+      // Strict mode: NO automatic fallback remapping for Groq/Specific policies
+      // But for legacy calls (provider=openai), we keep the fallback logic
+      if (provider === 'openai' && (apiError.status === 400 || apiError.status === 409) && apiError.message.includes("decommissioned")) {
         console.warn(`[promptly] ⚠️ Model ${usedModel} is decommissioned (Status: ${apiError.status}). Falling back to ${SAFE_FALLBACK_MODEL}`);
-        completion = await client.chat.completions.create({
+        completion = await usedClient.chat.completions.create({
           model: SAFE_FALLBACK_MODEL,
-          temperature: DEFAULT_TEMPERATURE,
+          temperature: appliedTemperature,
           response_format: { type: "json_object" },
           messages: [
             { role: "system", content: enhancedSystem },
@@ -179,8 +231,8 @@ export async function chatJson({ system, user, model, promptlyModelId }) {
     completionId: completion.id || null
   };
   } catch (error) {
-    // Global fallback for ANY error if we're not already using the safe model
-    if (usedModel !== SAFE_FALLBACK_MODEL) {
+    // Global fallback for ANY error if we're not already using the safe model AND it's an OpenAI call
+    if (provider === 'openai' && usedModel !== SAFE_FALLBACK_MODEL) {
       console.warn(`[promptly] ⚠️ LLM call failed with model ${usedModel} (Status: ${error.status || 'unknown'}). Falling back to ${SAFE_FALLBACK_MODEL}`);
       console.warn(`[promptly] ⚠️ Original error: ${error.message}`);
       
@@ -189,7 +241,11 @@ export async function chatJson({ system, user, model, promptlyModelId }) {
         system,
         user, // Use the correct variable 'user' instead of 'baseUser'
         model: SAFE_FALLBACK_MODEL,
-        promptlyModelId
+        promptlyModelId,
+        provider,
+        apiKey,
+        maxTokens,
+        temperature
       });
     }
 
@@ -227,7 +283,7 @@ async function executeChatText(
   console.log(`[promptly] System prompt length: ${system?.length || 0} chars`);
   console.log(`[promptly] Base user prompt length: ${baseUser?.length || 0} chars`);
 
-  let enhancedSystem = system;
+  let enhancedSystem = system || "";
   if (promptlyModelId) {
     const suffix = getSystemPromptSuffix(promptlyModelId);
     if (suffix) {
@@ -247,8 +303,8 @@ async function executeChatText(
         model: usedModel,
         temperature: appliedTemperature,
         messages: [
-          { role: "system", content: enhancedSystem },
-          { role: "user", content: userContent }
+          { role: "system", content: enhancedSystem || "" },
+          { role: "user", content: userContent || "" }
         ]
       });
     } catch (apiError) {
@@ -258,8 +314,8 @@ async function executeChatText(
           model: SAFE_FALLBACK_MODEL,
           temperature: appliedTemperature,
           messages: [
-            { role: "system", content: enhancedSystem },
-            { role: "user", content: userContent }
+            { role: "system", content: enhancedSystem || "" },
+            { role: "user", content: userContent || "" }
           ]
         });
       } else {

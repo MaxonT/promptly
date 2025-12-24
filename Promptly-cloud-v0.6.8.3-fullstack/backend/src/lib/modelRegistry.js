@@ -66,12 +66,12 @@ export const MODEL_REGISTRY = {
   'promptly-v0-mini': {
     id: 'promptly-v0-mini',
     provider: MODEL_PROVIDERS.OPENAI,
-    model: 'qwen-2.5-32b', // Groq ID correction
-    _futureModel: 'qwen-2.5-32b',
+    model: 'qwen/qwen3-32b',
+    _futureModel: 'qwen/qwen3-32b',
     tier: MODEL_TIERS.MINI,
     category: MODEL_CATEGORIES.GENERAL,
     label: 'Promptly v0 mini',
-    description: 'Fast and efficient using Qwen 2.5 32B',
+    description: 'Fast and efficient using Qwen 3 32B',
     costMultiplier: 1,
     speedMultiplier: 1.5,
     maxTokens: 4096,
@@ -94,16 +94,15 @@ export const MODEL_REGISTRY = {
     supportsJson: true,
     systemPromptSuffix: null
   },
-
   'promptly-v0-max': {
     id: 'promptly-v0-max',
     provider: MODEL_PROVIDERS.OPENAI,
-    model: 'llama-3.3-70b-versatile', // Temporary fallback as gpt-oss-120b might be unstable
-    _futureModel: 'llama-3.3-70b-versatile',
+    model: 'openai/gpt-oss-120b',
+    _futureModel: 'openai/gpt-oss-120b',
     tier: MODEL_TIERS.PRO_MAX,
     category: MODEL_CATEGORIES.GENERAL,
-    label: 'Promptly v0 Max',
-    description: 'Advanced reasoning',
+    label: 'Promptly Max (v0)',
+    description: 'Maximum capability using GPT-OSS 120B',
     costMultiplier: 5,
     speedMultiplier: 0.7,
     maxTokens: 8192,

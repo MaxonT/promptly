@@ -11,6 +11,7 @@ import { compileSpecToPrompt } from "../lib/specCompiler.js";
 import { chatJson, LlmDisabledError } from "../lib/openaiClient.js";
 import { goBack, skipQuestion } from "../lib/questionNavigator.js";
 import { getModelIds, resolveModelName, isValidModel } from "../lib/modelRegistry.js";
+import { INFERENCE_PROFILES } from "../lib/inferenceProfiles.js";
 
 export const questionSessionRouter = Router();
 
@@ -846,16 +847,24 @@ questionSessionRouter.post("/:sessionId/questions/:questionId/regenerate", async
 
   try {
     // Use LLM to generate a new variation of this question
+    // REGENERATION STRATEGY: Use the same inference profile as the session mode
+    // For regeneration, we re-run Agent A (broad) and Agent B (choice) to get context
+    // Ideally we should have a specialized regeneration agent, but for now we reuse A/B
+    const modeProfile = resolveModeProfile(session.mode);
+    const inferenceProfile = INFERENCE_PROFILES[modeProfile.id] || INFERENCE_PROFILES.fast;
+
     const broadQuestions = await generateBroadQuestions({
       initialDescription: session.initial_description,
       kind: session.kind || null,
-      model: modelChoice.targetModel
+      model: modelChoice.targetModel,
+      inferenceConfig: inferenceProfile.stages.agentA
     });
     const choiceQuestions = await generateChoiceQuestions({
       initialDescription: session.initial_description,
       kind: session.kind || null,
       broadQuestions,
-      model: modelChoice.targetModel
+      model: modelChoice.targetModel,
+      inferenceConfig: inferenceProfile.stages.agentB
     });
 
     // Pick a new question that's similar in type

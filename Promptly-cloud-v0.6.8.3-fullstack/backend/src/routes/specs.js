@@ -559,8 +559,10 @@ ${idea}${attachmentContext}`;
 
     // Call LLM to generate structured spec
     const { data, model: modelUsed, completionId } = await chatJson({
+      provider: 'openai',
       system,
-      user: userPrompt
+      user: userPrompt,
+      provider: 'openai' // STRICT CONTRACT: Explicitly set provider
     });
 
     console.log(`[promptly] ✅ Received spec from LLM`);

@@ -306,8 +306,10 @@ Output: Enhanced prompt only.`;
     // Optimization: Use temp 0.5 to encourage divergence in the first shot, reducing the need for retries.
     // We KEEP the retry mechanism (maxRetries: 1) as a safety net, but it should trigger less often.
     const { text: enhanced, model: modelUsed, completionId, similarity } = await chatText({ 
+      provider: 'openai',
       system, 
       user: fullPrompt,
+      provider: 'openai', // STRICT CONTRACT: Explicitly set provider
       temperature: 0.5,     // Increased from default 0.2 to reduce retry probability
       minSimilarity: 0.85,  // Keep quality check
       maxRetries: 1         // Keep safety net
@@ -366,8 +368,10 @@ Output: Enhanced prompt only.`;
 
     // Optimization: Use temp 0.5 to encourage divergence in the first shot
     const { text: enhanced, model: modelUsed, completionId, similarity } = await chatText({ 
+      provider: 'openai',
       system, 
       user: fullPrompt,
+      provider: 'openai', // STRICT CONTRACT: Explicitly set provider
       temperature: 0.5,     // Increased from default 0.2
       minSimilarity: 0.85,
       maxRetries: 1
@@ -417,8 +421,10 @@ Output: Simplified prompt only.`;
 
     // Optimization: Use temp 0.5 to encourage divergence in the first shot
     const { text: enhanced, model: modelUsed, completionId, similarity } = await chatText({ 
+      provider: 'openai',
       system, 
       user: fullPrompt,
+      provider: 'openai', // STRICT CONTRACT: Explicitly set provider
       temperature: 0.5,     // Increased from default 0.2
       minSimilarity: 0.85,
       maxRetries: 1
@@ -479,7 +485,11 @@ Return ONLY a JSON object in this exact format:
   ]
 }`;
 
-    const { data: result, model: modelUsed, completionId } = await chatJson({ system, user: fullPrompt });
+    const { data: result, model: modelUsed, completionId } = await chatJson({ 
+      system, 
+      user: fullPrompt,
+      provider: 'openai' // STRICT CONTRACT: Explicitly set provider
+    });
     logModelUsage("/enhance/score", modelUsed, completionId);
 
     res.json({
@@ -535,7 +545,11 @@ Return ONLY a JSON object in this exact format:
 
 If no issues found, return {"issues": []}`;
 
-    const { data: result, model: modelUsed, completionId } = await chatJson({ system, user: fullPrompt });
+    const { data: result, model: modelUsed, completionId } = await chatJson({ 
+      system, 
+      user: fullPrompt,
+      provider: 'openai' // STRICT CONTRACT: Explicitly set provider
+    });
     logModelUsage("/enhance/validate", modelUsed, completionId);
 
     res.json({

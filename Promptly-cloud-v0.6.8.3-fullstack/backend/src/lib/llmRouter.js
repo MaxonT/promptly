@@ -26,7 +26,7 @@ export async function chatJson({ system, user, model, promptlyModelId, provider,
       maxTokens,
       temperature
     });
-  } else {
+  } else if (provider === 'openai') {
     // Default to OpenAI
     return chatJsonOpenAI({
       system,
@@ -37,6 +37,8 @@ export async function chatJson({ system, user, model, promptlyModelId, provider,
       maxTokens,
       temperature
     });
+  } else {
+    throw new Error(`[llmRouter] ❌ Contract Violation: Unknown provider '${provider}'. Supported: 'openai', 'groq'`);
   }
 }
 
@@ -56,7 +58,7 @@ export async function chatText({ system, user, model, promptlyModelId, provider,
       minSimilarity,
       maxRetries
     });
-  } else {
+  } else if (provider === 'openai') {
     // Default to OpenAI
     return chatTextOpenAI({
       system,
@@ -68,5 +70,7 @@ export async function chatText({ system, user, model, promptlyModelId, provider,
       minSimilarity,
       maxRetries
     });
+  } else {
+    throw new Error(`[llmRouter] ❌ Contract Violation: Unknown provider '${provider}'. Supported: 'openai', 'groq'`);
   }
 }

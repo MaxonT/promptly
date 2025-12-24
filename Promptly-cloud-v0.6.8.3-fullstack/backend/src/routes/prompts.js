@@ -143,10 +143,12 @@ Output: Enhanced prompt text only. If output mirrors input, append "> needs more
         // Concise user prompt - key instruction right before the content
         // Enable similarity check with retry (default: similarity >= 0.85 triggers retry)
         const { text: content, completionId, similarity } = await chatText({
+          provider: 'openai',
           system: agent.systemPrompt,
           user: `Transform this spec into a complete prompt. Output MUST differ significantly:
 
 ${baseContext}`,
+          provider: 'openai', // STRICT CONTRACT: Explicitly set provider (default to openai for legacy pipeline)
           minSimilarity: 0.85,  // Retry if similarity >= 0.85
           maxRetries: 1
         });
@@ -277,7 +279,8 @@ Please evaluate this candidate prompt and return the scores as JSON.`;
       try {
         const { data: scores } = await chatJson({
           system: systemPrompt,
-          user: userPrompt
+          user: userPrompt,
+          provider: 'openai' // STRICT CONTRACT: Explicitly set provider
         });
 
         const clarity = Math.max(0, Math.min(1, scores.clarity || 0.5));

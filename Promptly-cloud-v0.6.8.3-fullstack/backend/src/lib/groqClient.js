@@ -2,12 +2,15 @@ import Groq from "groq-sdk";
 
 export let groqClient = null;
 const apiKey = process.env.GROQ_API_KEY || "";
+const baseURL = process.env.GROQ_BASE_URL || "https://api.groq.com/openai/v1";
 
 if (apiKey) {
   groqClient = new Groq({
-    apiKey
+    apiKey,
+    baseURL
   });
   console.log(`[promptly] ✅ Groq client initialized successfully`);
+  console.log(`[promptly] Groq Base URL: ${baseURL}`);
 } else {
   console.warn("[promptly] ⚠️  GROQ_API_KEY is not set; Groq features are disabled.");
 }
@@ -27,7 +30,7 @@ export async function chatJsonGroq({ system, user, model, apiKey: overrideKey, m
   let client = groqClient;
   
   if (overrideKey) {
-    client = new Groq({ apiKey: overrideKey });
+    client = new Groq({ apiKey: overrideKey, baseURL });
   }
   
   if (!client) {
@@ -88,7 +91,7 @@ export async function chatTextGroq({ system, user, model, apiKey: overrideKey, t
   let client = groqClient;
   
   if (overrideKey) {
-    client = new Groq({ apiKey: overrideKey });
+    client = new Groq({ apiKey: overrideKey, baseURL });
   }
   
   if (!client) {

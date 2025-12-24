@@ -259,6 +259,7 @@ outcomeRunsRouter.post("/", async (req, res) => {
       .join("\n");
 
     const { data, usage } = await chatJson({
+      provider: 'openai',
       system: systemPrompt,
       user: userPrompt,
       model: resolvedModel,

@@ -1200,6 +1200,7 @@ Based on this specification and Q&A history, generate the next clarifying questi
 
     // 6. Call LLM to generate next question
     const { data: llmResponse } = await chatJson({
+      provider: 'openai',
       system: systemPrompt,
       user: userPrompt
     });

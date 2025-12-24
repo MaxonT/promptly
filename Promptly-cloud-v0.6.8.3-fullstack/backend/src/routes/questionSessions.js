@@ -10,7 +10,7 @@ import {
 import { compileSpecToPrompt } from "../lib/specCompiler.js";
 import { chatJson, LlmDisabledError } from "../lib/llmRouter.js";
 import { goBack, skipQuestion } from "../lib/questionNavigator.js";
-import { getModelIds, resolveModelName, isValidModel } from "../lib/modelRegistry.js";
+import { getModelIds, resolveModelName, isValidModel, getModelConfig } from "../lib/modelRegistry.js";
 import { INFERENCE_PROFILES } from "../lib/inferenceProfiles.js";
 
 export const questionSessionRouter = Router();
@@ -148,14 +148,16 @@ function resolveModelChoice(modelId) {
   // Use model registry to validate and resolve model
   const selected = isValidModel(modelId) ? modelId : "promptly";
   const targetModel = resolveModelName(selected) || fallback;
+  const config = getModelConfig(selected);
+  const provider = config?.provider || 'openai';
   
   // Log model resolution for debugging
   if (selected !== modelId) {
     console.log(`[promptly] Model ${modelId} not found, using default: ${selected}`);
   }
-  console.log(`[promptly] Resolved model: ${selected} -> ${targetModel}`);
+  console.log(`[promptly] Resolved model: ${selected} -> ${targetModel} (${provider})`);
   
-  return { id: selected, targetModel };
+  return { id: selected, targetModel, provider };
 }
 
 function resolveAndPersistModel(sessionId, sessionModel, incomingModel) {
@@ -227,6 +229,7 @@ questionSessionRouter.post("/", async (req, res) => {
         kind: kind || null,
         modeProfile,
         model: modelChoice.targetModel,
+        provider: modelChoice.provider,
         language: userLanguage
       }),
       modeProfile.timeoutMs,
@@ -239,6 +242,7 @@ questionSessionRouter.post("/", async (req, res) => {
         broadQuestions,
         modeProfile,
         model: modelChoice.targetModel,
+        provider: modelChoice.provider,
         language: userLanguage
       }),
       modeProfile.timeoutMs,

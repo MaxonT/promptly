@@ -97,7 +97,7 @@ const AgentCOutputSchema = z.object({
   explanation: z.string()
 });
 
-export async function generateBroadQuestions({ initialDescription, kind, modeProfile = null, model = null, language = 'en' }) {
+export async function generateBroadQuestions({ initialDescription, kind, modeProfile = null, model = null, provider = 'openai', language = 'en' }) {
   const system = [
     "You are Agent A in Promptly's Question Engine.",
     "Goal: from a fuzzy project idea, propose 8-12 broad clarification axes.",
@@ -159,7 +159,7 @@ export async function generateBroadQuestions({ initialDescription, kind, modePro
   while (retryCount <= MAX_RETRIES) {
     try {
       const start = Date.now();
-      const response = await chatJson({ provider: 'openai', system, user, model: usedModel });
+      const response = await chatJson({ provider, system, user, model: usedModel });
       raw = response.data;
       const runMetrics = buildRunMetrics({
         latencyMs: Date.now() - start,
@@ -253,7 +253,7 @@ function cleanOptionsArray(options) {
   return cleaned;
 }
 
-export async function generateChoiceQuestions({ initialDescription, kind, broadQuestions, modeProfile = null, model = null, language = 'en', inferenceConfig = null }) {
+export async function generateChoiceQuestions({ initialDescription, kind, broadQuestions, modeProfile = null, model = null, provider = 'openai', language = 'en', inferenceConfig = null }) {
   const system = [
     "You are Agent B in Promptly's Question Engine.",
     "Goal: convert broad axes into concrete, user-friendly questions with depth levels.",
@@ -382,21 +382,21 @@ export async function generateChoiceQuestions({ initialDescription, kind, broadQ
 
   // Strict Inference Policy Application
   let usedModel = model || process.env.OPENAI_MODEL || "qwen-2.5-72b-instruct";
-  let provider = 'openai';
+  let usedProvider = provider;
   let apiKey = undefined;
   let maxTokens = undefined;
   let temperature = undefined;
 
   if (inferenceConfig) {
     usedModel = inferenceConfig.model;
-    provider = inferenceConfig.provider;
+    usedProvider = inferenceConfig.provider;
     // Inject API Key based on policy
     if (inferenceConfig.envKey && process.env[inferenceConfig.envKey]) {
       apiKey = process.env[inferenceConfig.envKey];
     }
     maxTokens = inferenceConfig.maxTokens;
     temperature = inferenceConfig.temperature;
-    console.log(`[promptly] 🔒 Applied Strict Inference Config for Agent B: ${provider}/${usedModel}`);
+    console.log(`[promptly] 🔒 Applied Strict Inference Config for Agent B: ${usedProvider}/${usedModel}`);
   }
 
   const runId = createRun({
@@ -417,7 +417,7 @@ export async function generateChoiceQuestions({ initialDescription, kind, broadQ
         system, 
         user, 
         model: usedModel,
-        provider,
+        provider: usedProvider,
         apiKey,
         maxTokens,
         temperature

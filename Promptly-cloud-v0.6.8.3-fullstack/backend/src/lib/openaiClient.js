@@ -1,5 +1,5 @@
 import OpenAI from "openai";
-import { resolveModelName, getSystemPromptSuffix, buildSystemPrompt } from "./modelRegistry.js";
+import { resolveModelName, getModelConfig, getSystemPromptSuffix, buildSystemPrompt } from "./modelRegistry.js";
 
 const apiKey = process.env.OPENAI_API_KEY || "";
 
@@ -79,7 +79,13 @@ function normalizedSimilarity(a = "", b = "") {
  * @returns {string} The resolved OpenAI model name
  */
 function resolveModel(model) {
-  // If model looks like a Promptly model ID, resolve it via registry
+  // If model is a known ID in the registry, use the resolved model name
+  const config = getModelConfig(model);
+  if (config) {
+    return config.model;
+  }
+
+  // If model looks like a Promptly model ID (legacy check), resolve it via registry
   if (model && model.startsWith('promptly')) {
     return resolveModelName(model);
   }

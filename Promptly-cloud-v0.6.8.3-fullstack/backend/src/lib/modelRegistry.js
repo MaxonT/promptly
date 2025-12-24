@@ -38,6 +38,7 @@ export const MODEL_CATEGORIES = {
  */
 export const MODEL_PROVIDERS = {
   OPENAI: 'openai',
+  GROQ: 'groq',
   ANTHROPIC: 'anthropic' // Future support
 };
 
@@ -48,7 +49,7 @@ export const MODEL_REGISTRY = {
   // --- Default Alias (Points to standard) ---
   'promptly': {
     id: 'standard',
-    provider: MODEL_PROVIDERS.OPENAI,
+    provider: MODEL_PROVIDERS.GROQ,
     model: 'llama-3.3-70b-versatile',
     _futureModel: 'llama-3.3-70b-versatile',
     tier: MODEL_TIERS.STANDARD,
@@ -65,9 +66,9 @@ export const MODEL_REGISTRY = {
   // --- Optimization Modes ---
   'fast': {
     id: 'fast',
-    provider: MODEL_PROVIDERS.OPENAI,
-    model: 'qwen/qwen3-32b',
-    _futureModel: 'qwen/qwen3-32b',
+    provider: MODEL_PROVIDERS.GROQ,
+    model: 'llama-3.1-8b-instant',
+    _futureModel: 'llama-3.1-8b-instant',
     tier: MODEL_TIERS.MINI,
     category: MODEL_CATEGORIES.GENERAL,
     label: 'Fast',
@@ -81,7 +82,7 @@ export const MODEL_REGISTRY = {
 
   'standard': {
     id: 'standard',
-    provider: MODEL_PROVIDERS.OPENAI,
+    provider: MODEL_PROVIDERS.GROQ,
     model: 'llama-3.3-70b-versatile',
     _futureModel: 'llama-3.3-70b-versatile',
     tier: MODEL_TIERS.STANDARD,
@@ -97,8 +98,8 @@ export const MODEL_REGISTRY = {
   'premium': {
     id: 'premium',
     provider: MODEL_PROVIDERS.OPENAI,
-    model: 'openai/gpt-oss-120b',
-    _futureModel: 'openai/gpt-oss-120b',
+    model: 'gpt-4o',
+    _futureModel: 'gpt-4o',
     tier: MODEL_TIERS.PRO_MAX,
     category: MODEL_CATEGORIES.GENERAL,
     label: 'Premium',

@@ -133,10 +133,13 @@ outcomeRunsRouter.post("/", async (req, res) => {
   const outcomeRunId = `outcome_run_${nanoid(12)}`;
 
   // Validate and resolve model
-  const resolvedModel = model && isValidModel(model) ? model : 'promptly-mini';
+  const resolvedModel = model && isValidModel(model) ? model : 'fast';
   const modelConfig = getModelConfig(resolvedModel);
   
-  console.log(`[outcomeRunner] Using model: ${resolvedModel} -> ${modelConfig?.model || 'qwen-2.5-7b'}`);
+  const targetModel = modelConfig?.model || 'llama-3.1-8b-instant';
+  const targetProvider = modelConfig?.provider || 'groq';
+
+  console.log(`[outcomeRunner] Using model: ${resolvedModel} -> ${targetModel} (${targetProvider})`);
   if (model && !isValidModel(model)) {
     console.log(`[outcomeRunner] Warning: Invalid model "${model}", using default "${resolvedModel}"`);
   }
@@ -259,11 +262,11 @@ outcomeRunsRouter.post("/", async (req, res) => {
       .join("\n");
 
     const { data, usage } = await chatJson({
-      provider: 'openai',
+      provider: targetProvider,
       system: systemPrompt,
       user: userPrompt,
-      model: resolvedModel,
-      promptlyModelId: model || resolvedModel
+      model: targetModel,
+      promptlyModelId: resolvedModel
     });
 
     llmUsage = usage || null;

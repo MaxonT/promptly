@@ -2,7 +2,18 @@ import Groq from "groq-sdk";
 
 export let groqClient = null;
 const apiKey = process.env.GROQ_API_KEY || "";
-const baseURL = process.env.GROQ_BASE_URL || "https://api.groq.com/openai/v1";
+let baseURL = process.env.GROQ_BASE_URL;
+
+// Fix: Groq SDK automatically appends /openai/v1, so we must strip it if the user provided the full path
+if (baseURL) {
+  if (baseURL.endsWith('/openai/v1')) {
+    baseURL = baseURL.slice(0, -'/openai/v1'.length);
+  }
+  // Remove trailing slash if present
+  if (baseURL.endsWith('/')) {
+    baseURL = baseURL.slice(0, -1);
+  }
+}
 
 if (apiKey) {
   groqClient = new Groq({

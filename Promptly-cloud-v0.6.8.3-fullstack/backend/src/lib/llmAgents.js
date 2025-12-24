@@ -159,7 +159,7 @@ export async function generateBroadQuestions({ initialDescription, kind, modePro
   while (retryCount <= MAX_RETRIES) {
     try {
       const start = Date.now();
-      const response = await chatJson({ system, user, model: usedModel });
+      const response = await chatJson({ provider: 'openai', system, user, model: usedModel });
       raw = response.data;
       const runMetrics = buildRunMetrics({
         latencyMs: Date.now() - start,
@@ -734,7 +734,7 @@ export async function generateRawSpec({ initialDescription, kind, qaPairs, modeP
   while (retryCount <= MAX_RETRIES) {
     try {
       const start = Date.now();
-      const response = await chatJson({ system, user, model: usedModel });
+      const response = await chatJson({ provider: 'openai', system, user, model: usedModel });
       raw = response.data;
       const runMetrics = buildRunMetrics({
         latencyMs: Date.now() - start,

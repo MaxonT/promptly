@@ -102,7 +102,7 @@ export async function evaluatePrompt({ spec, compiledPrompt, model }) {
 
   try {
     const start = Date.now();
-    const { data: raw, usage } = await chatJson({ system, user, model: evalModel });
+    const { data: raw, usage } = await chatJson({ provider: 'openai', system, user, model: evalModel });
     const runMetrics = buildRunMetrics({ latencyMs: Date.now() - start, usage });
     completeRunSuccess(runId, raw, { metrics: runMetrics });
 

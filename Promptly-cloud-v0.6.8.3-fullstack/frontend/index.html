@@ -464,22 +464,22 @@ html[data-theme="light"] .grey-gradient-text{
           <span>What should the AI do?</span>
           <textarea id="task" rows="6" placeholder="Summarize customer interviews into 5 product requirements."></textarea>
           </label>
-        <div class="model-select" title="Select model (quality vs. speed)">
+        <div class="model-select" title="Select Optimization Mode">
           <button id="modelDropdownToggle" class="model-select__toggle" type="button">
             <span class="model-select__label">
-              <span class="model-select__title">Choose LLM Model</span>
+              <span class="model-select__title">Choose Optimization Mode</span>
               <span class="model-select__name-wrap">
                 <span aria-hidden="true" class="model-select__arrow">👉</span>
-                <span class="model-select__name">Promptly v0 mini</span>
+                <span class="model-select__name">⚡ Fast — Quick, low-cost, instant results</span>
                 <span aria-hidden="true" class="model-select__arrow">👈</span>
               </span>
             </span>
             <span class="model-select__chevron">▾</span>
           </button>
           <div class="model-select__menu" id="modelDropdownMenu" role="menu" aria-hidden="true">
-            <button type="button" class="model-select__option" data-model="promptly-v0-mini">Promptly v0 mini</button>
-            <button type="button" class="model-select__option" data-model="promptly-v0">Promptly v0</button>
-            <button type="button" class="model-select__option" data-model="promptly-v0-max">Promptly v0 Max</button>
+            <button type="button" class="model-select__option" data-model="promptly-v0-mini">⚡ Fast — Quick, low-cost, instant results</button>
+            <button type="button" class="model-select__option" data-model="promptly-v0">⚖️ Standard — Balanced quality & depth</button>
+            <button type="button" class="model-select__option" data-model="promptly-v0-max">💎 Premium — Maximum quality, slower, best result</button>
           </div>
         </div>
         <details class="layer-field">
@@ -2015,9 +2015,9 @@ document.addEventListener('DOMContentLoaded', () => {
   
   const MODEL_STORAGE_KEY = 'promptly:model-selection';
   const MODEL_OPTIONS = [
-    { slug: 'promptly-v0-mini', label: 'Promptly v0 mini' },
-    { slug: 'promptly-v0', label: 'Promptly v0' },
-    { slug: 'promptly-v0-max', label: 'Promptly v0 Max' }
+    { slug: 'promptly-v0-mini', label: '⚡ Fast — Quick, low-cost, instant results' },
+    { slug: 'promptly-v0', label: '⚖️ Standard — Balanced quality & depth' },
+    { slug: 'promptly-v0-max', label: '💎 Premium — Maximum quality, slower, best result' }
   ];
 
   function getModelLabel(slug) {
@@ -2037,7 +2037,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (nameEl) {
           nameEl.textContent = getModelLabel(slug);
         } else {
-          labelEl.textContent = `Choose LLM Model👉 ${getModelLabel(slug)} 👈`;
+          labelEl.textContent = `Choose Optimization Mode👉 ${getModelLabel(slug)} 👈`;
         }
       }
     }

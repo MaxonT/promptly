@@ -3,7 +3,7 @@ import { resolveModelName, getSystemPromptSuffix, buildSystemPrompt } from "./mo
 
 const apiKey = process.env.OPENAI_API_KEY || "";
 const baseURL = process.env.OPENAI_BASE_URL || "https://api.openai.com/v1";
-const SAFE_FALLBACK_MODEL = "llama-3.3-70b";
+const SAFE_FALLBACK_MODEL = "llama-3.3-70b-versatile";
 
 // Resolve the configured default model (prefers OPENAI_DEFAULT_MODEL but
 // also supports legacy OPENAI_MODEL).

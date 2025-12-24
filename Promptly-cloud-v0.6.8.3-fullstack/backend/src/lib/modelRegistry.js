@@ -45,47 +45,16 @@ export const MODEL_PROVIDERS = {
  * Complete model registry with all configurations
  */
 export const MODEL_REGISTRY = {
-  'promptly-mini': {
-    id: 'promptly-mini',
-    provider: MODEL_PROVIDERS.OPENAI,
-    model: 'qwen-3-32b',
-    _futureModel: 'qwen-3-32b',
-    tier: MODEL_TIERS.MINI,
-    category: MODEL_CATEGORIES.GENERAL,
-    label: 'Promptly Mini',
-    description: 'Fast and cost-effective using Qwen 3 32B',
-    costMultiplier: 1,
-    speedMultiplier: 1.5,
-    maxTokens: 4096,
-    supportsJson: true,
-    systemPromptSuffix: null
-  },
-
-  'promptly-v0-mini': {
-    id: 'promptly-v0-mini',
-    provider: MODEL_PROVIDERS.OPENAI,
-    model: 'qwen-2.5-7b-instruct',
-    _futureModel: 'qwen-2.5-7b-instruct',
-    tier: MODEL_TIERS.MINI,
-    category: MODEL_CATEGORIES.GENERAL,
-    label: 'Promptly v0 mini',
-    description: 'Fast and efficient for simple tasks',
-    costMultiplier: 1,
-    speedMultiplier: 1.5,
-    maxTokens: 4096,
-    supportsJson: true,
-    systemPromptSuffix: null
-  },
-
+  // --- Default Alias (Points to v0) ---
   'promptly': {
     id: 'promptly',
     provider: MODEL_PROVIDERS.OPENAI,
-    model: 'llama-3.3-70b',
-    _futureModel: 'llama-3.3-70b',
+    model: 'llama-3.3-70b-versatile',
+    _futureModel: 'llama-3.3-70b-versatile',
     tier: MODEL_TIERS.STANDARD,
     category: MODEL_CATEGORIES.GENERAL,
-    label: 'Promptly',
-    description: 'Balanced performance using Llama 3.3 70B',
+    label: 'Promptly (Default)',
+    description: 'Alias for Promptly v0',
     costMultiplier: 3,
     speedMultiplier: 1,
     maxTokens: 8192,
@@ -93,15 +62,32 @@ export const MODEL_REGISTRY = {
     systemPromptSuffix: null
   },
 
+  // --- v0 Series (Active) ---
+  'promptly-v0-mini': {
+    id: 'promptly-v0-mini',
+    provider: MODEL_PROVIDERS.OPENAI,
+    model: 'qwen-2.5-32b', // Groq ID correction
+    _futureModel: 'qwen-2.5-32b',
+    tier: MODEL_TIERS.MINI,
+    category: MODEL_CATEGORIES.GENERAL,
+    label: 'Promptly v0 mini',
+    description: 'Fast and efficient using Qwen 2.5 32B',
+    costMultiplier: 1,
+    speedMultiplier: 1.5,
+    maxTokens: 4096,
+    supportsJson: true,
+    systemPromptSuffix: null
+  },
+
   'promptly-v0': {
     id: 'promptly-v0',
     provider: MODEL_PROVIDERS.OPENAI,
-    model: 'qwen-2.5-72b-instruct',
-    _futureModel: 'qwen-2.5-72b-instruct',
+    model: 'llama-3.3-70b-versatile',
+    _futureModel: 'llama-3.3-70b-versatile',
     tier: MODEL_TIERS.STANDARD,
     category: MODEL_CATEGORIES.GENERAL,
     label: 'Promptly v0',
-    description: 'Balanced performance for most tasks',
+    description: 'Balanced performance using Llama 3.3 70B',
     costMultiplier: 3,
     speedMultiplier: 1,
     maxTokens: 8192,
@@ -112,145 +98,17 @@ export const MODEL_REGISTRY = {
   'promptly-v0-max': {
     id: 'promptly-v0-max',
     provider: MODEL_PROVIDERS.OPENAI,
-    model: 'llama-3.3-70b-versatile',
+    model: 'llama-3.3-70b-versatile', // Temporary fallback as gpt-oss-120b might be unstable
     _futureModel: 'llama-3.3-70b-versatile',
     tier: MODEL_TIERS.PRO_MAX,
     category: MODEL_CATEGORIES.GENERAL,
     label: 'Promptly v0 Max',
-    description: 'Advanced reasoning for complex tasks',
+    description: 'Advanced reasoning',
     costMultiplier: 5,
     speedMultiplier: 0.7,
     maxTokens: 8192,
     supportsJson: true,
     systemPromptSuffix: null
-  },
-
-  'promptly-plus': {
-    id: 'promptly-plus',
-    provider: MODEL_PROVIDERS.OPENAI,
-    model: 'qwen-2.5-32b',
-    _futureModel: 'qwen-2.5-32b',
-    tier: MODEL_TIERS.PLUS,
-    category: MODEL_CATEGORIES.GENERAL,
-    label: 'Promptly Plus',
-    description: 'Enhanced reasoning and creativity',
-    costMultiplier: 5,
-    speedMultiplier: 0.8,
-    maxTokens: 8192,
-    supportsJson: true,
-    systemPromptSuffix: null
-  },
-
-  'promptly-pro': {
-    id: 'promptly-pro',
-    provider: MODEL_PROVIDERS.OPENAI,
-    model: 'qwen-2.5-32b',
-    _futureModel: 'qwen-2.5-32b',
-    tier: MODEL_TIERS.PRO,
-    category: MODEL_CATEGORIES.GENERAL,
-    label: 'Promptly Pro',
-    description: 'Advanced capabilities for complex tasks',
-    costMultiplier: 8,
-    speedMultiplier: 0.7,
-    maxTokens: 16384,
-    supportsJson: true,
-    systemPromptSuffix: null
-  },
-
-  'promptly-pro-max': {
-    id: 'promptly-pro-max',
-    provider: MODEL_PROVIDERS.OPENAI,
-    model: 'gpt-oss-120b',
-    _futureModel: 'gpt-oss-120b',
-    tier: MODEL_TIERS.PRO_MAX,
-    category: MODEL_CATEGORIES.GENERAL,
-    label: 'Promptly Pro Max',
-    description: 'Maximum capability using GPT-OSS 120B',
-    costMultiplier: 10,
-    speedMultiplier: 0.6,
-    maxTokens: 8192,
-    supportsJson: true,
-    systemPromptSuffix: null
-  },
-
-  'promptly-code-mini': {
-    id: 'promptly-code-mini',
-    provider: MODEL_PROVIDERS.OPENAI,
-    model: 'qwen-2.5-coder-32b',
-    _futureModel: 'qwen-2.5-coder-32b',
-    tier: MODEL_TIERS.MINI,
-    category: MODEL_CATEGORIES.CODE,
-    label: 'Promptly Code Mini',
-    description: 'Quick code assistance and snippets',
-    costMultiplier: 1,
-    speedMultiplier: 1.5,
-    maxTokens: 4096,
-    supportsJson: true,
-    systemPromptSuffix: 'You are an expert code-focused AI assistant. Prioritize code quality, best practices, and clear explanations.'
-  },
-
-  'promptly-code': {
-    id: 'promptly-code',
-    provider: MODEL_PROVIDERS.OPENAI,
-    model: 'qwen-2.5-coder-32b',
-    _futureModel: 'qwen-2.5-coder-32b',
-    tier: MODEL_TIERS.STANDARD,
-    category: MODEL_CATEGORIES.CODE,
-    label: 'Promptly Code',
-    description: 'Reliable code generation and review',
-    costMultiplier: 2,
-    speedMultiplier: 1.2,
-    maxTokens: 8192,
-    supportsJson: true,
-    systemPromptSuffix: 'You are an expert code-focused AI assistant. Prioritize code quality, best practices, and clear explanations.'
-  },
-
-  'promptly-code-plus': {
-    id: 'promptly-code-plus',
-    provider: MODEL_PROVIDERS.OPENAI,
-    model: 'qwen-2.5-coder-32b',
-    _futureModel: 'qwen-2.5-coder-32b',
-    tier: MODEL_TIERS.PLUS,
-    category: MODEL_CATEGORIES.CODE,
-    label: 'Promptly Code Plus',
-    description: 'Enhanced code understanding and architecture',
-    costMultiplier: 5,
-    speedMultiplier: 0.9,
-    maxTokens: 16384,
-    supportsJson: true,
-    systemPromptSuffix: 'You are an expert code-focused AI assistant. Prioritize code quality, best practices, architecture patterns, and maintainability.'
-  },
-
-  'promptly-code-pro': {
-    id: 'promptly-code-pro',
-    provider: MODEL_PROVIDERS.OPENAI,
-    model: 'qwen-2.5-coder-32b',
-    _futureModel: 'qwen-2.5-coder-32b',
-    tier: MODEL_TIERS.PRO,
-    category: MODEL_CATEGORIES.CODE,
-    label: 'Promptly Code Pro',
-    description: 'Professional-grade code assistance',
-    costMultiplier: 8,
-    speedMultiplier: 0.7,
-    maxTokens: 32768,
-    supportsJson: true,
-    systemPromptSuffix: 'You are an expert senior software engineer AI assistant. Prioritize production-ready code, security, performance, and comprehensive documentation.'
-  },
-
-  'promptly-code-pro-max': {
-    id: 'promptly-code-pro-max',
-    provider: MODEL_PROVIDERS.OPENAI,
-    model: 'qwen-2.5-coder-32b',
-    _futureModel: 'qwen-2.5-coder-32b',
-    tier: MODEL_TIERS.PRO_MAX,
-    category: MODEL_CATEGORIES.CODE,
-    label: 'Promptly Code Pro Max',
-    description: 'Ultimate code generation for enterprise applications',
-    costMultiplier: 10,
-    speedMultiplier: 0.6,
-    maxTokens: 32768,
-    supportsJson: true,
-    systemPromptSuffix: 'You are an expert principal engineer AI assistant. Prioritize enterprise-grade code, scalability, security, comprehensive testing, and architectural excellence.'
   }
 };
 

@@ -112,16 +112,9 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
   // Model selection is managed on the landing hero; the wizard reads that shared choice.
   const MODEL_STORAGE_KEY = "promptly:model-selection";
   const AVAILABLE_MODELS = [
-    "promptly-mini",
-    "promptly",
-    "promptly-plus",
-    "promptly-pro",
-    "promptly-pro-max",
-    "promptly-code-mini",
-    "promptly-code",
-    "promptly-code-plus",
-    "promptly-code-pro",
-    "promptly-code-pro-max"
+    "fast",
+    "standard",
+    "premium"
   ];
 
   let currentModel = sessionStorage.getItem(MODEL_STORAGE_KEY) || AVAILABLE_MODELS[0];

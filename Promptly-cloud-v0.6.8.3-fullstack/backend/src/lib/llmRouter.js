@@ -1,8 +1,17 @@
-import { chatJson as chatJsonOpenAI } from "./openaiClient.js";
-import { chatJsonGroq } from "./groqClient.js";
+import { chatJson as chatJsonOpenAI, chatText as chatTextOpenAI, LlmDisabledError, getResolvedDefaultModel, isLlmEnabled } from "./openaiClient.js";
+import { chatJsonGroq, chatTextGroq } from "./groqClient.js";
+
+export { LlmDisabledError, getResolvedDefaultModel, isLlmEnabled };
 
 /**
  * Route LLM calls to the appropriate provider
+ * 
+ * This is the SINGLE SOURCE OF TRUTH for provider dispatching.
+ * No client should know about other clients.
+ */
+
+/**
+ * Standardized JSON Chat Completion
  */
 export async function chatJson({ system, user, model, promptlyModelId, provider = 'openai', apiKey, maxTokens, temperature }) {
   if (provider === 'groq') {
@@ -16,17 +25,42 @@ export async function chatJson({ system, user, model, promptlyModelId, provider 
     });
   } else {
     // Default to OpenAI
-    // We pass extra params even if openaiClient might not use all of them yet (though we updated it to use them)
-    // Note: openaiClient.js might need to be reverted to not handle 'groq' provider internally anymore
     return chatJsonOpenAI({
       system,
       user,
       model,
       promptlyModelId,
-      provider: 'openai', // Force provider to openai
       apiKey,
       maxTokens,
       temperature
+    });
+  }
+}
+
+/**
+ * Standardized Text Chat Completion
+ */
+export async function chatText({ system, user, model, promptlyModelId, provider = 'openai', temperature, forceRewritePrompt, minSimilarity, maxRetries }) {
+  if (provider === 'groq') {
+    return chatTextGroq({
+      system,
+      user,
+      model,
+      temperature,
+      minSimilarity,
+      maxRetries
+    });
+  } else {
+    // Default to OpenAI
+    return chatTextOpenAI({
+      system,
+      user,
+      model,
+      promptlyModelId,
+      temperature,
+      forceRewritePrompt,
+      minSimilarity,
+      maxRetries
     });
   }
 }

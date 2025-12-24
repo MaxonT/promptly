@@ -8,7 +8,7 @@ import {
   generateRawSpec
 } from "../lib/llmAgents.js";
 import { compileSpecToPrompt } from "../lib/specCompiler.js";
-import { chatJson, LlmDisabledError } from "../lib/openaiClient.js";
+import { chatJson, LlmDisabledError } from "../lib/llmRouter.js";
 import { goBack, skipQuestion } from "../lib/questionNavigator.js";
 import { getModelIds, resolveModelName, isValidModel } from "../lib/modelRegistry.js";
 import { INFERENCE_PROFILES } from "../lib/inferenceProfiles.js";

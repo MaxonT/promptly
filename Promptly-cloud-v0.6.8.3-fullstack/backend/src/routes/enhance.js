@@ -83,7 +83,7 @@
  */
 
 import express from "express";
-import { chatJson, chatText, LlmDisabledError } from "../lib/openaiClient.js";
+import { chatJson, chatText, LlmDisabledError } from "../lib/llmRouter.js";
 
 const enhanceRouter = express.Router();
 

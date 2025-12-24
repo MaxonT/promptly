@@ -1,6 +1,6 @@
 import Groq from "groq-sdk";
 
-let groqClient = null;
+export let groqClient = null;
 const apiKey = process.env.GROQ_API_KEY || "";
 
 if (apiKey) {
@@ -74,6 +74,58 @@ export async function chatJsonGroq({ system, user, model, apiKey: overrideKey, m
       usage: completion.usage || {},
       model: model,
       completionId: completion.id || null
+    };
+  } catch (error) {
+    console.error(`[promptly] ❌ Groq call failed:`, error.message);
+    throw error;
+  }
+}
+
+/**
+ * Chat completion that returns Text via Groq (Standardized with chatText interface)
+ */
+export async function chatTextGroq({ system, user, model, apiKey: overrideKey, temperature, minSimilarity, maxRetries }) {
+  let client = groqClient;
+  
+  if (overrideKey) {
+    client = new Groq({ apiKey: overrideKey });
+  }
+  
+  if (!client) {
+    console.error("[promptly] ❌ Groq call blocked: Groq client not initialized (GROQ_API_KEY not set)");
+    throw new GroqDisabledError();
+  }
+  
+  console.log(`[promptly] 🚀 Starting Groq call - Model: ${model} (Text Mode)`);
+  
+  try {
+    const completionParams = {
+      model: model,
+      temperature: temperature || 0.3,
+      messages: [
+        { role: "system", content: system || "" },
+        { role: "user", content: user }
+      ]
+    };
+    
+    const startTime = Date.now();
+    const completion = await client.chat.completions.create(completionParams);
+    const duration = Date.now() - startTime;
+    
+    const content = completion.choices?.[0]?.message?.content || "";
+    const tokensUsed = completion.usage?.total_tokens || 0;
+    
+    console.log(`[promptly] ✅ Groq call succeeded - Duration: ${duration}ms, Response: ${content.length} chars, Tokens: ${tokensUsed}`);
+    
+    // Similarity check is NOT implemented here yet as it depends on shared logic. 
+    // For now, we return standard structure.
+    
+    return {
+      text: content,
+      usage: completion.usage || {},
+      model: model,
+      completionId: completion.id || null,
+      similarity: 0 // Placeholder
     };
   } catch (error) {
     console.error(`[promptly] ❌ Groq call failed:`, error.message);

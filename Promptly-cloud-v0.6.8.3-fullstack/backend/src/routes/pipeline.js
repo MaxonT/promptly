@@ -13,7 +13,8 @@ import { Router } from "express";
 import { nanoid } from "nanoid";
 import { z } from "zod";
 import { db, ensureUser } from "../lib/db.js";
-import { chatText, chatJson, LlmDisabledError } from "../lib/openaiClient.js";
+import { chatText, chatJson, LlmDisabledError } from "../lib/llmRouter.js";
+import { getModePolicy } from "../lib/modePolicies.js";
 
 export const pipelineRouter = Router();
 
@@ -159,6 +160,12 @@ async function executePipelineWithEvents(runId, userId, { idea, attachments, ski
   const PIPELINE_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
   const startTime = Date.now();
   
+  // Resolve Policy based on mode (model param holds the mode: fast, standard, premium)
+  const mode = model || 'fast';
+  const policy = getModePolicy(mode);
+  console.log(`[pipeline] [${runId}] Executing with policy: ${policy.name} (${policy.id})`);
+  console.log(`[pipeline] [${runId}] Policy Details: Spec=${policy.specBuilder.model}, QEngine=${policy.questionEngine.enabled}, Gen=${policy.generation.model}`);
+  
   // 1. Wait for client to connect (max 10 seconds)
   // This prevents the race condition where events are sent before the client connects
   const MAX_WAIT_ATTEMPTS = 20;
@@ -247,14 +254,16 @@ ${idea}${attachmentContext}`;
       stage: "spec",
       step: "llm-call",
       message: "Calling LLM to generate structured spec...",
-      details: { model: model || "default", ideaLength: idea.length }
+      details: { model: policy.specBuilder.model, provider: policy.specBuilder.provider, ideaLength: idea.length }
     });
 
     checkTimeout(); // Check timeout before LLM call
-    console.log(`[pipeline] [${runId}] Stage 1: Calling Spec Builder LLM...`);
+    console.log(`[pipeline] [${runId}] Stage 1: Calling Spec Builder LLM (${policy.specBuilder.provider}/${policy.specBuilder.model})...`);
     const { data: rawSpecData } = await chatJson({
       system: specSystem,
-      user: specUserPrompt
+      user: specUserPrompt,
+      model: policy.specBuilder.model,
+      provider: policy.specBuilder.provider
     });
     const specData = rawSpecData || {};
     console.log(`[pipeline] [${runId}] Stage 1: Spec Builder completed, extracted ${Object.keys(specData).length} fields`);
@@ -307,7 +316,10 @@ ${idea}${attachmentContext}`;
     // ============================================
     // Stage 2: Question Engine (Q1-Q3 Loop)
     // ============================================
-    if (!skipQuestions) {
+    // Check policy enablement AND user skip preference
+    const shouldRunQuestions = !skipQuestions && policy.questionEngine.enabled;
+    
+    if (shouldRunQuestions) {
       sendEvent(runId, "stage-start", {
         stage: "question",
         message: "Starting Question Engine (Q1-Q3)...",
@@ -613,7 +625,10 @@ Provide honest, objective scores based on the criteria.`;
 
         const { data: metricsData } = await chatJson({
           system: metricsSystem,
-          user: `Evaluate this candidate prompt:\n\n${candidate.content}\n\nSpec:\n${JSON.stringify(specData, null, 2)}`
+          user: `Evaluate this candidate prompt:\n\n${candidate.content}\n\nSpec:\n${JSON.stringify(specData, null, 2)}`,
+          model: policy.scoring.model,
+          provider: policy.scoring.provider,
+          temperature: policy.scoring.temperature
         });
 
         // Estimate token cost (simplified)
@@ -719,6 +734,15 @@ Provide honest, objective scores based on the criteria.`;
       throw new Error("No candidates available for selection (all agents failed or no output generated).");
     }
 
+    // Optional: Add Fast Mode specific flags
+    if (mode === 'fast') {
+      bestCandidate.metrics = {
+        ...bestCandidate.metrics,
+        assumptions_used: true,
+        confidence: "low"
+      };
+    }
+
     const outcomeId = `outcome_${nanoid(12)}`;
 
     // Store outcome in outcome_runs table (matching actual schema)
@@ -730,7 +754,7 @@ Provide honest, objective scores based on the criteria.`;
       specId,
       idea.substring(0, 500), // Use first 500 chars of idea as task
       candidateIds.length,
-      model || "qwen-2.5-72b-instruct",
+      policy.outcomeRunner.model, // Log the model specified in policy (even if we just used sorting)
       "completed",
       bestCandidate.id,
       JSON.stringify({

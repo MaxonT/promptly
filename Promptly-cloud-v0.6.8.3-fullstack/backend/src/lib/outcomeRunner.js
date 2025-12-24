@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { nanoid } from "nanoid";
 import { db } from "./db.js";
-import { chatJson, LlmDisabledError } from "./openaiClient.js";
+import { chatJson, LlmDisabledError } from "./llmRouter.js";
 import { createRun, completeRunSuccess, completeRunFailure } from "./runLogger.js";
 import { buildOutcomeMetrics, buildRunMetrics } from "./metricsEngine.js";
 

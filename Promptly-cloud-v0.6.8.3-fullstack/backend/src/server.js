@@ -4,7 +4,7 @@ import helmet from "helmet";
 import cookieParser from "cookie-parser";
 import dotenv from "dotenv";
 import { db } from "./lib/db.js";
-import { getResolvedDefaultModel, isLlmEnabled } from "./lib/openaiClient.js";
+import { getResolvedDefaultModel, isLlmEnabled } from "./lib/llmRouter.js";
 import { authRouter } from "./routes/auth.js";
 import { docRouter } from "./routes/doc.js";
 import { shareRouter } from "./routes/share.js";

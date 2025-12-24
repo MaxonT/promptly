@@ -14,7 +14,7 @@ import { Router } from "express";
 import { nanoid } from "nanoid";
 import { z } from "zod";
 import { db, ensureUser } from "../lib/db.js";
-import { chatText, chatJson, LlmDisabledError } from "../lib/openaiClient.js";
+import { chatText, chatJson, LlmDisabledError } from "../lib/llmRouter.js";
 import { getModelConfig, resolveModelName, isValidModel } from "../lib/modelRegistry.js";
 
 export const promptsRouter = Router();

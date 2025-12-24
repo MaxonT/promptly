@@ -4,7 +4,7 @@ import { z } from "zod";
 import { db, ensureUser } from "../lib/db.js";
 import { compileSpecToPrompt } from "../lib/specCompiler.js";
 import { evaluatePrompt } from "../lib/evaluationEngine.js";
-import { chatJson, LlmDisabledError } from "../lib/openaiClient.js";
+import { chatJson, LlmDisabledError } from "../lib/llmRouter.js";
 
 export const specsRouter = Router();
 

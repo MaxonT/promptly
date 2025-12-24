@@ -7,13 +7,13 @@ dotenv.config({ path: path.join(__dirname, '.env') });
 
 // Dynamic import to ensure env vars are loaded BEFORE openaiClient.js is evaluated
 const { resolveModelName } = await import('./src/lib/modelRegistry.js');
-const { chatText } = await import('./src/lib/openaiClient.js');
+const { chatText } = await import('./src/lib/llmRouter.js');
 
 // 模拟前端传来的三个 ID
 const FRONTEND_CHOICES = [
-  'promptly-v0-mini',
-  'promptly-v0',
-  'promptly-v0-max'
+  'fast',
+  'standard',
+  'premium'
 ];
 
 async function verify() {

@@ -2,7 +2,7 @@ import { Router } from "express";
 import { nanoid } from "nanoid";
 import { z } from "zod";
 import { db } from "../lib/db.js";
-import { chatJson, LlmDisabledError } from "../lib/openaiClient.js";
+import { chatJson, LlmDisabledError } from "../lib/llmRouter.js";
 import { buildEvaluationMetrics } from "../lib/metricsEngine.js";
 import { isValidModel, getModelConfig, MODEL_REGISTRY } from "../lib/modelRegistry.js";
 

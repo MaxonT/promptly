@@ -477,9 +477,9 @@ html[data-theme="light"] .grey-gradient-text{
             <span class="model-select__chevron">▾</span>
           </button>
           <div class="model-select__menu" id="modelDropdownMenu" role="menu" aria-hidden="true">
-            <button type="button" class="model-select__option" data-model="promptly-v0-mini">⚡ Fast — Quick, low-cost, instant results</button>
-            <button type="button" class="model-select__option" data-model="promptly-v0">⚖️ Standard — Balanced quality & depth</button>
-            <button type="button" class="model-select__option" data-model="promptly-v0-max">💎 Premium — Maximum quality, slower, best result</button>
+            <button type="button" class="model-select__option" data-model="fast">⚡ Fast — Quick, low-cost, instant results</button>
+            <button type="button" class="model-select__option" data-model="standard">⚖️ Standard — Balanced quality & depth</button>
+            <button type="button" class="model-select__option" data-model="premium">💎 Premium — Maximum quality, slower, best result</button>
           </div>
         </div>
         <details class="layer-field">
@@ -2015,9 +2015,9 @@ document.addEventListener('DOMContentLoaded', () => {
   
   const MODEL_STORAGE_KEY = 'promptly:model-selection';
   const MODEL_OPTIONS = [
-    { slug: 'promptly-v0-mini', label: '⚡ Fast — Quick, low-cost, instant results' },
-    { slug: 'promptly-v0', label: '⚖️ Standard — Balanced quality & depth' },
-    { slug: 'promptly-v0-max', label: '💎 Premium — Maximum quality, slower, best result' }
+    { slug: 'fast', label: '⚡ Fast — Quick, low-cost, instant results' },
+    { slug: 'standard', label: '⚖️ Standard — Balanced quality & depth' },
+    { slug: 'premium', label: '💎 Premium — Maximum quality, slower, best result' }
   ];
 
   function getModelLabel(slug) {

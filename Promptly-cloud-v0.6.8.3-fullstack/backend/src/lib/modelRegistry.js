@@ -45,16 +45,16 @@ export const MODEL_PROVIDERS = {
  * Complete model registry with all configurations
  */
 export const MODEL_REGISTRY = {
-  // --- Default Alias (Points to v0) ---
+  // --- Default Alias (Points to standard) ---
   'promptly': {
-    id: 'promptly',
+    id: 'standard',
     provider: MODEL_PROVIDERS.OPENAI,
     model: 'llama-3.3-70b-versatile',
     _futureModel: 'llama-3.3-70b-versatile',
     tier: MODEL_TIERS.STANDARD,
     category: MODEL_CATEGORIES.GENERAL,
-    label: 'Promptly (Default)',
-    description: 'Alias for Promptly v0',
+    label: 'Standard',
+    description: 'Balanced quality & depth',
     costMultiplier: 3,
     speedMultiplier: 1,
     maxTokens: 8192,
@@ -62,16 +62,16 @@ export const MODEL_REGISTRY = {
     systemPromptSuffix: null
   },
 
-  // --- v0 Series (Active) ---
-  'promptly-v0-mini': {
-    id: 'promptly-v0-mini',
+  // --- Optimization Modes ---
+  'fast': {
+    id: 'fast',
     provider: MODEL_PROVIDERS.OPENAI,
     model: 'qwen/qwen3-32b',
     _futureModel: 'qwen/qwen3-32b',
     tier: MODEL_TIERS.MINI,
     category: MODEL_CATEGORIES.GENERAL,
-    label: 'Promptly v0 mini',
-    description: 'Fast and efficient using Qwen 3 32B',
+    label: 'Fast',
+    description: 'Quick, low-cost, instant results',
     costMultiplier: 1,
     speedMultiplier: 1.5,
     maxTokens: 4096,
@@ -79,30 +79,30 @@ export const MODEL_REGISTRY = {
     systemPromptSuffix: null
   },
 
-  'promptly-v0': {
-    id: 'promptly-v0',
+  'standard': {
+    id: 'standard',
     provider: MODEL_PROVIDERS.OPENAI,
     model: 'llama-3.3-70b-versatile',
     _futureModel: 'llama-3.3-70b-versatile',
     tier: MODEL_TIERS.STANDARD,
     category: MODEL_CATEGORIES.GENERAL,
-    label: 'Promptly v0',
-    description: 'Balanced performance using Llama 3.3 70B',
+    label: 'Standard',
+    description: 'Balanced quality & depth',
     costMultiplier: 3,
     speedMultiplier: 1,
     maxTokens: 8192,
     supportsJson: true,
     systemPromptSuffix: null
   },
-  'promptly-v0-max': {
-    id: 'promptly-v0-max',
+  'premium': {
+    id: 'premium',
     provider: MODEL_PROVIDERS.OPENAI,
     model: 'openai/gpt-oss-120b',
     _futureModel: 'openai/gpt-oss-120b',
     tier: MODEL_TIERS.PRO_MAX,
     category: MODEL_CATEGORIES.GENERAL,
-    label: 'Promptly Max (v0)',
-    description: 'Maximum capability using GPT-OSS 120B',
+    label: 'Premium',
+    description: 'Maximum quality, slower, best result',
     costMultiplier: 5,
     speedMultiplier: 0.7,
     maxTokens: 8192,

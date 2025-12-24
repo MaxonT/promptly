@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { chatJson } from "./openaiClient.js";
+import { chatJson } from "./llmRouter.js";
 import { createRun, completeRunSuccess, completeRunFailure } from "./runLogger.js";
 import { buildEvaluationMetrics, buildRunMetrics } from "./metricsEngine.js";
 

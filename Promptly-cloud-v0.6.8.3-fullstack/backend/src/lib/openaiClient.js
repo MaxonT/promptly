@@ -102,49 +102,31 @@ export function isLlmEnabled() {
  * @param {string} options.user - User message
  * @param {string} options.model - OpenAI model name OR Promptly model ID
  * @param {string} [options.promptlyModelId] - Optional Promptly model ID for system prompt enhancement
- * @param {string} [options.provider] - 'openai' or 'groq'
  * @param {string} [options.apiKey] - API key to use (optional, uses env vars by default)
  * @param {number} [options.maxTokens] - Max tokens
  * @param {number} [options.temperature] - Temperature
  */
-export async function chatJson({ system, user, model, promptlyModelId, provider = 'openai', apiKey, maxTokens, temperature }) {
+export async function chatJson({ system, user, model, promptlyModelId, apiKey, maxTokens, temperature }) {
   let usedClient;
   
-  // Select client based on provider
-  if (provider === 'groq') {
-    if (!groqClient) {
-      // Try to initialize if key is provided
-      if (apiKey) {
-        usedClient = new Groq({ apiKey });
-      } else {
-        console.error("[promptly] ❌ Groq call blocked: Groq client not initialized (GROQ_API_KEY not set)");
-        throw new LlmDisabledError("Groq features are disabled");
-      }
+  // Default to OpenAI
+  if (!client) {
+    // Try to initialize if key is provided
+    if (apiKey) {
+      usedClient = new OpenAI({ apiKey, baseURL });
     } else {
-      usedClient = groqClient;
+      console.error("[promptly] ❌ LLM call blocked: OpenAI client not initialized (OPENAI_API_KEY not set)");
+      throw new LlmDisabledError();
     }
   } else {
-    // Default to OpenAI
-    if (!client) {
-      // Try to initialize if key is provided
-      if (apiKey) {
-        usedClient = new OpenAI({ apiKey, baseURL });
-      } else {
-        console.error("[promptly] ❌ LLM call blocked: OpenAI client not initialized (OPENAI_API_KEY not set)");
-        throw new LlmDisabledError();
-      }
-    } else {
-      usedClient = client;
-    }
+    usedClient = client;
   }
 
   // Resolve model and potentially enhance system prompt
-  // NOTE: For Groq, we should use the model name as is if it doesn't look like a Promptly ID
-  // But strict mode requires passing exact model names.
   const usedModel = resolveModel(model);
   const appliedTemperature = temperature ?? DEFAULT_TEMPERATURE;
 
-  console.log(`[promptly] 🚀 Starting LLM call - Provider: ${provider}, Model: ${usedModel}, Type: chatJson`);
+  console.log(`[promptly] 🚀 Starting LLM call - Model: ${usedModel}, Type: chatJson`);
   console.log(`[promptly] System prompt length: ${system?.length || 0} chars`);
   console.log(`[promptly] User prompt length: ${user?.length || 0} chars`);
   
@@ -158,7 +140,7 @@ export async function chatJson({ system, user, model, promptlyModelId, provider 
   
   const startTime = Date.now();
   try {
-    console.log(`[promptly] 📡 Calling ${provider} API: client.chat.completions.create() with JSON format`);
+    console.log(`[promptly] 📡 Calling OpenAI API: client.chat.completions.create() with JSON format`);
     let completion;
     try {
       const completionParams = {
@@ -177,9 +159,8 @@ export async function chatJson({ system, user, model, promptlyModelId, provider 
       
       completion = await usedClient.chat.completions.create(completionParams);
     } catch (apiError) {
-      // Strict mode: NO automatic fallback remapping for Groq/Specific policies
-      // But for legacy calls (provider=openai), we keep the fallback logic
-      if (provider === 'openai' && (apiError.status === 400 || apiError.status === 409) && apiError.message.includes("decommissioned")) {
+      // Legacy calls keep the fallback logic
+      if ((apiError.status === 400 || apiError.status === 409) && apiError.message.includes("decommissioned")) {
         console.warn(`[promptly] ⚠️ Model ${usedModel} is decommissioned (Status: ${apiError.status}). Falling back to ${SAFE_FALLBACK_MODEL}`);
         completion = await usedClient.chat.completions.create({
           model: SAFE_FALLBACK_MODEL,
@@ -219,8 +200,8 @@ export async function chatJson({ system, user, model, promptlyModelId, provider 
     completionId: completion.id || null
   };
   } catch (error) {
-    // Global fallback for ANY error if we're not already using the safe model AND it's an OpenAI call
-    if (provider === 'openai' && usedModel !== SAFE_FALLBACK_MODEL) {
+    // Global fallback for ANY error if we're not already using the safe model
+    if (usedModel !== SAFE_FALLBACK_MODEL) {
       console.warn(`[promptly] ⚠️ LLM call failed with model ${usedModel} (Status: ${error.status || 'unknown'}). Falling back to ${SAFE_FALLBACK_MODEL}`);
       console.warn(`[promptly] ⚠️ Original error: ${error.message}`);
       
@@ -230,7 +211,6 @@ export async function chatJson({ system, user, model, promptlyModelId, provider 
         user, // Use the correct variable 'user' instead of 'baseUser'
         model: SAFE_FALLBACK_MODEL,
         promptlyModelId,
-        provider,
         apiKey,
         maxTokens,
         temperature
@@ -261,10 +241,14 @@ async function executeChatText(
   },
   attempt
 ) {
+  let usedClient;
+  
+  // Default to OpenAI
   if (!client) {
     console.error("[promptly] ❌ LLM call blocked: OpenAI client not initialized (OPENAI_API_KEY not set)");
     throw new LlmDisabledError();
   }
+  usedClient = client;
   
   const usedModel = resolveModel(model);
   console.log(`[promptly] 🚀 Starting LLM call - Model: ${usedModel}, Type: chatText, Attempt: ${attempt + 1}`);
@@ -287,7 +271,7 @@ async function executeChatText(
   try {
     let completion;
     try {
-      completion = await client.chat.completions.create({
+      completion = await usedClient.chat.completions.create({
         model: usedModel,
         temperature: appliedTemperature,
         messages: [
@@ -298,7 +282,7 @@ async function executeChatText(
     } catch (apiError) {
       if ((apiError.status === 400 || apiError.status === 409) && apiError.message.includes("decommissioned")) {
         console.warn(`[promptly] ⚠️ Model ${usedModel} is decommissioned (Status: ${apiError.status}). Falling back to ${SAFE_FALLBACK_MODEL}`);
-        completion = await client.chat.completions.create({
+        completion = await usedClient.chat.completions.create({
           model: SAFE_FALLBACK_MODEL,
           temperature: appliedTemperature,
           messages: [

@@ -375,7 +375,9 @@ CRITICAL: Question must be specific and valuable. If too generic, append "> need
         console.log(`[pipeline] [${runId}] Stage 2: Generating Q${currentStep}...`);
         const { data: qData } = await chatJson({
           system: questionSystem,
-          user: `Generate Q${currentStep} for:\n${qaContext}`
+          user: `Generate Q${currentStep} for:\n${qaContext}`,
+          model: policy.questionEngine.model,
+          provider: policy.questionEngine.provider
         });
         console.log(`[pipeline] [${runId}] Stage 2: Q${currentStep} generated, shouldStop: ${qData?.shouldStop || false}`);
 

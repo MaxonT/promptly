@@ -293,12 +293,25 @@ enhanceRouter.post("/structure", async (req, res) => {
 
     console.log(`[promptly] Full prompt length (with attachments): ${fullPrompt.length} chars`);
 
-    // Optimized: Concise system prompt to reduce token usage
-    const system = `Restructure prompt with clear sections, headings, and formatting.
+    // Optimized: Ultra-concise system prompt for Structured Prompt Card (Token Efficient)
+    const system = `Rewrite input into a plain-text Structured Prompt Card. NO MARKDOWN.
+Required Format:
 
-CRITICAL: Output MUST differ from input. Add structure, headings (#, ##), bullet points, and explicit instructions.
+[ SYSTEM PROMPT ]
+────────────────
+<concise instructions>
 
-Output: Enhanced prompt only.`;
+[ USER PROMPT ]
+────────────────
+<user content>
+
+[ CONSTRAINTS ]
+────────────────
+• <constraint 1>
+
+[ OUTPUT FORMAT ]
+────────────────
+<format specs>`;
 
     console.log(`[promptly] 🔄 About to call LLM (chatText) for structure enhancement...`);
 

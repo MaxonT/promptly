@@ -126,6 +126,24 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
     });
   }
 
+  // Remove markdown formatting helper
+  function removeMarkdown(text) {
+    if (!text || typeof text !== "string") return text;
+    return text
+      .replace(/\*\*([^*]+)\*\*/g, '$1')
+      .replace(/\*([^*]+)\*/g, '$1')
+      .replace(/__([^_]+)__/g, '$1')
+      .replace(/_([^_]+)_/g, '$1')
+      .replace(/^#{1,6}\s+/gm, '')
+      .replace(/```[\s\S]*?```/g, '')
+      .replace(/`([^`]+)`/g, '$1')
+      .replace(/\[([^\]]+)\]\([^\)]+\)/g, '$1')
+      .replace(/!\[([^\]]*)\]\([^\)]+\)/g, '$1')
+      .replace(/~~([^~]+)~~/g, '$1')
+      .replace(/\n{3,}/g, '\n\n')
+      .trim();
+  }
+
   function renderPromptBlocks() {
     promptBlocksContainer.innerHTML = "";
     
@@ -168,6 +186,7 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
       copyBtn.title = "Copy block";
       copyBtn.onclick = (e) => {
         e.stopPropagation();
+        // Copy original content (with markdown) to clipboard, but display cleaned version
         copyToClipboard(block.content, blockEl);
       };
 
@@ -183,7 +202,8 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
 
       const body = document.createElement("div");
       body.className = "result-prompt-block-body";
-      body.textContent = block.content || "";
+      // Remove markdown formatting for display
+      body.textContent = removeMarkdown(block.content || "");
 
       blockEl.appendChild(header);
       blockEl.appendChild(body);

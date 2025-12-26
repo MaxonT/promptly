@@ -2163,6 +2163,32 @@ document.addEventListener('DOMContentLoaded', () => {
   // ============================================
   // Live Trace for Best Prompt Area
   // ============================================
+  
+  // Remove markdown formatting for cleaner display
+  function removeMarkdownFormatting(text) {
+    if (!text || typeof text !== "string") return text;
+    return text
+      // Remove bold/italic: **text** or *text* or __text__ or _text_
+      .replace(/\*\*([^*]+)\*\*/g, '$1')
+      .replace(/\*([^*]+)\*/g, '$1')
+      .replace(/__([^_]+)__/g, '$1')
+      .replace(/_([^_]+)_/g, '$1')
+      // Remove headers: # Header, ## Header, etc.
+      .replace(/^#{1,6}\s+/gm, '')
+      // Remove code blocks: ```code``` or `code`
+      .replace(/```[\s\S]*?```/g, '')
+      .replace(/`([^`]+)`/g, '$1')
+      // Remove links: [text](url)
+      .replace(/\[([^\]]+)\]\([^\)]+\)/g, '$1')
+      // Remove images: ![alt](url)
+      .replace(/!\[([^\]]*)\]\([^\)]+\)/g, '$1')
+      // Remove strikethrough: ~~text~~
+      .replace(/~~([^~]+)~~/g, '$1')
+      // Clean up extra whitespace
+      .replace(/\n{3,}/g, '\n\n')
+      .trim();
+  }
+  
   let liveTraceLines = [];
   const MAX_TRACE_LINES = 20; // Keep only recent N lines
 
@@ -2547,7 +2573,9 @@ document.addEventListener('DOMContentLoaded', () => {
           setTimeout(() => {
             clearBestPromptTrace();
             if (bestPromptEl && data.bestCandidate.content) {
-              bestPromptEl.value = data.bestCandidate.content;
+              // Remove markdown formatting for cleaner display
+              const cleanContent = removeMarkdownFormatting(data.bestCandidate.content);
+              bestPromptEl.value = cleanContent;
               bestPromptEl.classList.remove('processing-animation');
               bestPromptEl.classList.add('success-highlight');
               bestPromptEl.style.borderColor = '#22C55E';

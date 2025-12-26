@@ -614,14 +614,45 @@
     showGlobal: updateGlobalStatus,
     hideGlobal: hideGlobalStatus
   };
+  // Remove markdown formatting for cleaner display
+  function removeMarkdown(text) {
+    if (!text || typeof text !== "string") return text;
+    return text
+      // Remove bold/italic: **text** or *text* or __text__ or _text_
+      .replace(/\*\*([^*]+)\*\*/g, '$1')
+      .replace(/\*([^*]+)\*/g, '$1')
+      .replace(/__([^_]+)__/g, '$1')
+      .replace(/_([^_]+)_/g, '$1')
+      // Remove headers: # Header, ## Header, etc.
+      .replace(/^#{1,6}\s+/gm, '')
+      // Remove code blocks: ```code``` or `code`
+      .replace(/```[\s\S]*?```/g, '')
+      .replace(/`([^`]+)`/g, '$1')
+      // Remove links: [text](url)
+      .replace(/\[([^\]]+)\]\([^\)]+\)/g, '$1')
+      // Remove images: ![alt](url)
+      .replace(/!\[([^\]]*)\]\([^\)]+\)/g, '$1')
+      // Remove strikethrough: ~~text~~
+      .replace(/~~([^~]+)~~/g, '$1')
+      // Clean up extra whitespace
+      .replace(/\n{3,}/g, '\n\n')
+      .trim();
+  }
+
   function formatBestPrompt(rawOutput) {
     if (!rawOutput) return "";
-    if (typeof rawOutput === "string") return rawOutput;
-    try {
-      return JSON.stringify(rawOutput, null, 2);
-    } catch {
-      return String(rawOutput);
+    let text = "";
+    if (typeof rawOutput === "string") {
+      text = rawOutput;
+    } else {
+      try {
+        text = JSON.stringify(rawOutput, null, 2);
+      } catch {
+        text = String(rawOutput);
+      }
     }
+    // Remove markdown formatting for cleaner display
+    return removeMarkdown(text);
   }
 
   async function refreshMetrics() {

@@ -1384,10 +1384,31 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
       };
       specOutput.textContent = JSON.stringify(specDisplay, null, 2);
       
+      // Remove markdown formatting helper
+      function removeMarkdown(text) {
+        if (!text || typeof text !== "string") return text;
+        return text
+          .replace(/\*\*([^*]+)\*\*/g, '$1')
+          .replace(/\*([^*]+)\*/g, '$1')
+          .replace(/__([^_]+)__/g, '$1')
+          .replace(/_([^_]+)_/g, '$1')
+          .replace(/^#{1,6}\s+/gm, '')
+          .replace(/```[\s\S]*?```/g, '')
+          .replace(/`([^`]+)`/g, '$1')
+          .replace(/\[([^\]]+)\]\([^\)]+\)/g, '$1')
+          .replace(/!\[([^\]]*)\]\([^\)]+\)/g, '$1')
+          .replace(/~~([^~]+)~~/g, '$1')
+          .replace(/\n{3,}/g, '\n\n')
+          .trim();
+      }
+      
       // Display the compiled prompt blocks (final merged result)
       if (data.compiled_prompt && data.compiled_prompt.blocks) {
         const blocksText = data.compiled_prompt.blocks
-          .map((b, idx) => `[Block ${idx + 1}: ${b.role} · ${b.label || ""}]\n${b.content}\n`)
+          .map((b, idx) => {
+            const cleanContent = removeMarkdown(b.content || "");
+            return `[Block ${idx + 1}: ${b.role} · ${b.label || ""}]\n${cleanContent}\n`;
+          })
           .join("\n\n");
         promptOutput.textContent = blocksText;
         
@@ -1399,7 +1420,8 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
       }
       
       // Display explanation
-      explanationOutput.textContent = data.explanation || data.compiled_prompt?.explanation || "(no explanation provided)";
+      const explanation = data.explanation || data.compiled_prompt?.explanation || "(no explanation provided)";
+      explanationOutput.textContent = removeMarkdown(explanation);
 
       // Clear wizard status indicator when finalization completes
       window.promptlyWizardSession?.clear?.();

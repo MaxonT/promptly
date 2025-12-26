@@ -15,6 +15,9 @@ import { outcomeRunsRouter } from "./routes/outcomeRuns.js";
 import { enhanceRouter } from "./routes/enhance.js";
 import { promptsRouter } from "./routes/prompts.js";
 import { pipelineRouter } from "./routes/pipeline.js";
+import { billingRouter, stripeWebhookRouter } from "./routes/billing.js";
+import { dailyRefreshJob } from "./lib/dailyRefreshJob.js";
+import { FEATURES } from "./lib/subscriptionConfig.js";
 
 dotenv.config();
 const app = express();
@@ -22,6 +25,12 @@ const app = express();
 const CORS_ORIGIN = process.env.CORS_ORIGIN || "*";
 app.use(cors({ origin: CORS_ORIGIN, credentials: true }));
 app.use(helmet());
+
+// Stripe webhook needs raw body for signature verification
+// Must be before express.json() middleware
+app.use("/api/stripe/webhook", express.raw({ type: "application/json" }));
+app.use("/api/stripe", stripeWebhookRouter);
+
 app.use(express.json({ limit: "2mb" }));
 app.use(cookieParser());
 
@@ -98,6 +107,10 @@ console.log(`[promptly]   ✓ /api/enhance`);
 app.use("/api/prompts", promptsRouter);
 console.log(`[promptly]   ✓ /api/prompts`);
 
+app.use("/api/billing", billingRouter);
+console.log(`[promptly]   ✓ /api/billing`);
+console.log(`[promptly]   ✓ /api/stripe/webhook`);
+
 app.use("/api/pipeline", pipelineRouter);
 console.log(`[promptly]   ✓ /api/pipeline (health, run, stream)`);
 
@@ -106,13 +119,26 @@ console.log(`[promptly] 📋 Pipeline routes:`);
 console.log(`[promptly]    GET  /api/pipeline/health`);
 console.log(`[promptly]    POST /api/pipeline/run`);
 console.log(`[promptly]    GET  /api/pipeline/stream/:runId`);
+console.log(`[promptly] 💳 Billing routes:`);
+console.log(`[promptly]    GET  /api/billing/plans`);
+console.log(`[promptly]    GET  /api/billing/status`);
+console.log(`[promptly]    POST /api/billing/checkout-session`);
+console.log(`[promptly]    POST /api/billing/portal-session`);
+console.log(`[promptly]    POST /api/billing/start-trial`);
+console.log(`[promptly]    POST /api/stripe/webhook`);
+
+// Start daily refresh scheduler if subscriptions are enabled
+if (FEATURES.subscriptionsEnabled) {
+  dailyRefreshJob.startScheduler();
+  console.log(`[promptly] 🔄 Daily token refresh scheduler started`);
+}
 
 // Root path handler - useful for checking if backend is alive
 app.get("/", (req, res) => {
   res.json({
     ok: true,
     service: "Promptly Backend API",
-    version: "0.6.8.3",
+    version: "0.6.9.0",
     status: "running",
     timestamp: new Date().toISOString(),
     environment: process.env.NODE_ENV || "production",
@@ -131,6 +157,14 @@ app.get("/", (req, res) => {
         health: "/api/pipeline/health",
         run: "POST /api/pipeline/run",
         stream: "GET /api/pipeline/stream/:runId"
+      },
+      billing: {
+        plans: "GET /api/billing/plans",
+        status: "GET /api/billing/status",
+        checkoutSession: "POST /api/billing/checkout-session",
+        portalSession: "POST /api/billing/portal-session",
+        startTrial: "POST /api/billing/start-trial",
+        webhook: "POST /api/stripe/webhook"
       },
       specs: "/api/specs",
       questionSessions: "/api/question-sessions",

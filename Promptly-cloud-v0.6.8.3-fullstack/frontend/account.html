@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="auto">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <title>Account - Promptly</title>
+  <link rel="icon" href="assets/promptly-icon.svg" type="image/svg+xml"/>
+  <link rel="stylesheet" href="theme.css" />
+  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="account.css" />
+  <script src="config.js"></script>
+  <script src="lib/i18next.min.js"></script>
+  <script type="module" src="i18n/index.js"></script>
+</head>
+<body>
+  <!-- Navigation Header -->
+  <header class="nav-header">
+    <div class="nav-container">
+      <a href="index.html" class="nav-logo">
+        <img src="assets/promptly-icon.svg" alt="Promptly" class="nav-logo-icon" />
+        <span class="nav-logo-text">Promptly</span>
+      </a>
+      <nav class="nav-links">
+        <a href="index.html" data-i18n="nav.home">Home</a>
+        <a href="wizard.html" data-i18n="nav.wizard">Wizard</a>
+        <a href="specs.html" data-i18n="nav.specs">Specs</a>
+        <a href="subscription.html" data-i18n="nav.subscription">Subscription</a>
+        <a href="account.html" class="active" data-i18n="nav.account">Account</a>
+      </nav>
+      <div class="nav-actions">
+        <button id="themeToggle" class="btn btn-icon" title="Toggle theme">
+          <span class="theme-icon">🌙</span>
+        </button>
+        <select id="langSelect" class="lang-select">
+          <option value="en">EN</option>
+          <option value="zh-CN">中文</option>
+          <option value="es">ES</option>
+          <option value="fr">FR</option>
+          <option value="ja">JP</option>
+        </select>
+      </div>
+    </div>
+  </header>
+
+  <main class="account-page">
+    <!-- Login Required Notice (shown if not logged in) -->
+    <section id="loginRequired" class="login-required hidden">
+      <div class="login-card">
+        <h2 data-i18n="account.login_required">Login Required</h2>
+        <p data-i18n="account.login_required_desc">Please log in to view your account details.</p>
+        <a href="index.html?login=1&redirect=account" class="btn btn-primary" data-i18n="account.login_btn">Log In</a>
+      </div>
+    </section>
+
+    <!-- Account Content (shown if logged in) -->
+    <section id="accountContent" class="account-content hidden">
+      <h1 class="page-title" data-i18n="account.title">My Account</h1>
+
+      <!-- Subscription Card -->
+      <div class="account-card">
+        <div class="card-header">
+          <h2 data-i18n="account.subscription">Subscription</h2>
+          <span id="subscriptionStatus" class="status-badge">--</span>
+        </div>
+        <div class="card-body">
+          <div class="info-grid">
+            <div class="info-item">
+              <span class="info-label" data-i18n="account.plan">Plan</span>
+              <span id="planName" class="info-value">--</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label" data-i18n="account.period_end">Period End</span>
+              <span id="periodEnd" class="info-value">--</span>
+            </div>
+            <div class="info-item" id="trialEndItem" style="display: none;">
+              <span class="info-label" data-i18n="account.trial_ends">Trial Ends</span>
+              <span id="trialEnd" class="info-value">--</span>
+            </div>
+            <div class="info-item" id="cancelNotice" style="display: none;">
+              <span class="cancel-notice" data-i18n="account.cancel_notice">
+                Your subscription will end at the period end date.
+              </span>
+            </div>
+          </div>
+          <div class="card-actions">
+            <button id="manageSubscriptionBtn" class="btn btn-primary" data-i18n="account.manage_subscription">
+              Manage Subscription
+            </button>
+            <a href="subscription.html" class="btn btn-secondary" data-i18n="account.view_plans">
+              View Plans
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Token Balance Card -->
+      <div class="account-card">
+        <div class="card-header">
+          <h2 data-i18n="account.token_balance">Token Balance</h2>
+        </div>
+        <div class="card-body">
+          <div class="token-overview">
+            <div class="token-total">
+              <span id="totalTokens" class="token-amount">--</span>
+              <span class="token-label" data-i18n="account.total_tokens">Total Available</span>
+            </div>
+          </div>
+          <div class="token-breakdown">
+            <div class="token-bucket">
+              <div class="bucket-header">
+                <span class="bucket-name" data-i18n="account.daily_free">Daily Free</span>
+                <span id="dailyFreeTokens" class="bucket-value">--</span>
+              </div>
+              <div class="bucket-bar">
+                <div id="dailyFreeBar" class="bucket-fill" style="width: 0%"></div>
+              </div>
+              <span class="bucket-note" data-i18n="account.daily_refresh_note">Refreshes at UTC 00:00</span>
+            </div>
+            <div class="token-bucket">
+              <div class="bucket-header">
+                <span class="bucket-name" data-i18n="account.monthly">Monthly Allocation</span>
+                <span id="monthlyTokens" class="bucket-value">--</span>
+              </div>
+              <div class="bucket-bar">
+                <div id="monthlyBar" class="bucket-fill" style="width: 0%"></div>
+              </div>
+            </div>
+            <div class="token-bucket" id="trialBucket" style="display: none;">
+              <div class="bucket-header">
+                <span class="bucket-name" data-i18n="account.trial_tokens">Trial Tokens</span>
+                <span id="trialTokens" class="bucket-value">--</span>
+              </div>
+              <div class="bucket-bar">
+                <div id="trialBar" class="bucket-fill trial" style="width: 0%"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Usage History Card -->
+      <div class="account-card">
+        <div class="card-header">
+          <h2 data-i18n="account.usage_history">Usage History</h2>
+          <button id="refreshHistoryBtn" class="btn btn-sm btn-secondary" data-i18n="account.refresh">
+            Refresh
+          </button>
+        </div>
+        <div class="card-body">
+          <div id="usageHistory" class="usage-history">
+            <div class="loading-placeholder" data-i18n="common.loading">Loading...</div>
+          </div>
+          <button id="loadMoreBtn" class="btn btn-secondary btn-block" style="display: none;">
+            <span data-i18n="account.load_more">Load More</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Account Info Card -->
+      <div class="account-card">
+        <div class="card-header">
+          <h2 data-i18n="account.account_info">Account Information</h2>
+        </div>
+        <div class="card-body">
+          <div class="info-grid">
+            <div class="info-item">
+              <span class="info-label" data-i18n="account.email">Email</span>
+              <span id="userEmail" class="info-value">--</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label" data-i18n="account.member_since">Member Since</span>
+              <span id="memberSince" class="info-value">--</span>
+            </div>
+          </div>
+          <div class="card-actions">
+            <button id="logoutBtn" class="btn btn-danger" data-i18n="account.logout">
+              Log Out
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Footer -->
+  <footer class="site-footer">
+    <div class="footer-content">
+      <div class="footer-links">
+        <a href="terms.html" data-i18n="footer.terms">Terms</a>
+        <a href="privacy.html" data-i18n="footer.privacy">Privacy</a>
+        <a href="mailto:support@promptly.app" data-i18n="footer.contact">Contact</a>
+      </div>
+      <p class="footer-copyright">© 2025 Promptly. All rights reserved.</p>
+    </div>
+  </footer>
+
+  <!-- Loading Overlay -->
+  <div id="loadingOverlay" class="loading-overlay hidden">
+    <div class="loading-spinner"></div>
+    <p data-i18n="common.loading">Loading...</p>
+  </div>
+
+  <!-- Toast Container -->
+  <div id="toastContainer" class="toast-container"></div>
+
+  <script type="module" src="account.js"></script>
+</body>
+</html>

@@ -15,6 +15,8 @@ import { z } from "zod";
 import { db, ensureUser } from "../lib/db.js";
 import { chatText, chatJson, LlmDisabledError } from "../lib/llmRouter.js";
 import { getModePolicy } from "../lib/modePolicies.js";
+import { spendTokensForRun, getTokenStatus } from "../lib/tokenUsage.js";
+import { FEATURES } from "../lib/subscriptionConfig.js";
 
 export const pipelineRouter = Router();
 
@@ -213,6 +215,10 @@ async function executePipelineWithEvents(runId, userId, { idea, attachments, ski
   let specId = null;
   let sessionId = null;
   let candidateIds = [];
+  
+  // Token usage tracking
+  let totalInputTokens = 0;
+  let totalOutputTokens = 0;
 
   try {
     // ============================================
@@ -264,12 +270,19 @@ ${idea}${attachmentContext}`;
 
     checkTimeout(); // Check timeout before LLM call
     console.log(`[pipeline] [${runId}] Stage 1: Calling Spec Builder LLM (${policy.specBuilder.provider}/${policy.specBuilder.model})...`);
-    const { data: rawSpecData } = await chatJson({
+    const { data: rawSpecData, usage: specUsage } = await chatJson({
       system: specSystem,
       user: specUserPrompt,
       model: policy.specBuilder.model,
       provider: policy.specBuilder.provider
     });
+    
+    // Track token usage for spec builder
+    if (specUsage) {
+      totalInputTokens += specUsage.prompt_tokens || 0;
+      totalOutputTokens += specUsage.completion_tokens || 0;
+    }
+    
     const specData = rawSpecData || {};
     console.log(`[pipeline] [${runId}] Stage 1: Spec Builder completed, extracted ${Object.keys(specData).length} fields`);
 
@@ -378,12 +391,19 @@ CRITICAL: Question must be specific and valuable. If too generic, append "> need
 
         // Generate next question
         console.log(`[pipeline] [${runId}] Stage 2: Generating Q${currentStep}...`);
-        const { data: qData } = await chatJson({
+        const { data: qData, usage: qUsage } = await chatJson({
           system: questionSystem,
           user: `Generate Q${currentStep} for:\n${qaContext}`,
           model: policy.questionEngine.model,
           provider: policy.questionEngine.provider
         });
+        
+        // Track token usage for question engine
+        if (qUsage) {
+          totalInputTokens += qUsage.prompt_tokens || 0;
+          totalOutputTokens += qUsage.completion_tokens || 0;
+        }
+        
         console.log(`[pipeline] [${runId}] Stage 2: Q${currentStep} generated, shouldStop: ${qData?.shouldStop || false}`);
 
         if (!qData || qData.shouldStop) {
@@ -535,7 +555,7 @@ ${JSON.stringify(specData, null, 2)}`;
 
         console.log(`[pipeline] [${runId}] Stage 3: Generating candidate with ${agent.name} agent...`);
         // Enable similarity check with retry (lowered threshold for better change detection)
-        const { text: contentRaw, similarity } = await chatText({
+        const { text: contentRaw, similarity, usage: agentUsage } = await chatText({
           system: agent.systemPrompt,
           user: `Generate optimized prompt. The output MUST be substantially different from the spec. Transform and enhance it:\n\n${baseContext}`,
           model: policy.generation.model, // Pass the policy model
@@ -543,6 +563,12 @@ ${JSON.stringify(specData, null, 2)}`;
           minSimilarity: 0.75,
           maxRetries: 2
         });
+        
+        // Track token usage for agent generation
+        if (agentUsage) {
+          totalInputTokens += agentUsage.prompt_tokens || 0;
+          totalOutputTokens += agentUsage.completion_tokens || 0;
+        }
 
         const content = stripThinkBlocks(contentRaw);
 
@@ -633,13 +659,19 @@ OUTPUT FORMAT (JSON only):
 
 Provide honest, objective scores based on the criteria.`;
 
-        const { data: metricsData } = await chatJson({
+        const { data: metricsData, usage: metricsUsage } = await chatJson({
           system: metricsSystem,
           user: `Evaluate this candidate prompt:\n\n${candidate.content}\n\nSpec:\n${JSON.stringify(specData, null, 2)}`,
           model: policy.scoring.model,
           provider: policy.scoring.provider,
           temperature: policy.scoring.temperature
         });
+        
+        // Track token usage for metrics evaluation
+        if (metricsUsage) {
+          totalInputTokens += metricsUsage.prompt_tokens || 0;
+          totalOutputTokens += metricsUsage.completion_tokens || 0;
+        }
 
         // Estimate token cost (simplified)
         const tokenCost = Math.ceil(candidate.content.length / 4);
@@ -847,7 +879,32 @@ Provide honest, objective scores based on the criteria.`;
       contributions.unshift(0);
     }
     
-    // Final completion event with historical data
+    // ============================================
+    // Token Usage Tracking and Spending
+    // ============================================
+    let tokenUsageResult = null;
+    if (FEATURES.trackTokenUsage && totalInputTokens + totalOutputTokens > 0) {
+      console.log(`[pipeline] [${runId}] Recording token usage: input=${totalInputTokens}, output=${totalOutputTokens}`);
+      
+      try {
+        tokenUsageResult = spendTokensForRun({
+          userId,
+          runId,
+          inputTokens: totalInputTokens,
+          outputTokens: totalOutputTokens,
+          options: {
+            isPremium: mode === 'premium',
+            isPipeline: true,
+          },
+        });
+        
+        console.log(`[pipeline] [${runId}] Token spend result: success=${tokenUsageResult.success}, credits=${tokenUsageResult.creditsSpent}`);
+      } catch (tokenErr) {
+        console.error(`[pipeline] [${runId}] Failed to record token usage:`, tokenErr);
+      }
+    }
+    
+    // Final completion event with historical data and token usage
     sendEvent(runId, "complete", {
       success: true,
       specId,
@@ -861,7 +918,14 @@ Provide honest, objective scores based on the criteria.`;
           history: history,           // Historical progress values
           contributions: contributions // Change contributions per run
         }
-      }
+      },
+      tokenUsage: tokenUsageResult ? {
+        inputTokens: totalInputTokens,
+        outputTokens: totalOutputTokens,
+        totalTokens: totalInputTokens + totalOutputTokens,
+        creditsSpent: tokenUsageResult.creditsSpent,
+        creditsRemaining: tokenUsageResult.balances?.total || null,
+      } : null
     });
 
   } catch (err) {

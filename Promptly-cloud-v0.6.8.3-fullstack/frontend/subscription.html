@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="auto">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <title>Subscription - Promptly</title>
+  <link rel="icon" href="assets/promptly-icon.svg" type="image/svg+xml"/>
+  <link rel="stylesheet" href="theme.css" />
+  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="subscription.css" />
+  <script src="config.js"></script>
+  <script src="lib/i18next.min.js"></script>
+  <script type="module" src="i18n/index.js"></script>
+</head>
+<body>
+  <!-- Navigation Header -->
+  <header class="nav-header">
+    <div class="nav-container">
+      <a href="index.html" class="nav-logo">
+        <img src="assets/promptly-icon.svg" alt="Promptly" class="nav-logo-icon" />
+        <span class="nav-logo-text">Promptly</span>
+      </a>
+      <nav class="nav-links">
+        <a href="index.html" data-i18n="nav.home">Home</a>
+        <a href="wizard.html" data-i18n="nav.wizard">Wizard</a>
+        <a href="specs.html" data-i18n="nav.specs">Specs</a>
+        <a href="subscription.html" class="active" data-i18n="nav.subscription">Subscription</a>
+        <a href="account.html" data-i18n="nav.account">Account</a>
+      </nav>
+      <div class="nav-actions">
+        <button id="themeToggle" class="btn btn-icon" title="Toggle theme">
+          <span class="theme-icon">🌙</span>
+        </button>
+        <select id="langSelect" class="lang-select">
+          <option value="en">EN</option>
+          <option value="zh-CN">中文</option>
+          <option value="es">ES</option>
+          <option value="fr">FR</option>
+          <option value="ja">JP</option>
+        </select>
+      </div>
+    </div>
+  </header>
+
+  <main class="subscription-page">
+    <!-- Hero Section -->
+    <section class="pricing-hero">
+      <h1 class="gradient-animated" data-i18n="subscription.title">Choose Your Plan</h1>
+      <p class="hero-subtitle" data-i18n="subscription.subtitle">
+        Unlock the full power of AI-powered prompt engineering
+      </p>
+    </section>
+
+    <!-- Current Status Banner (for logged-in users) -->
+    <section id="statusBanner" class="status-banner hidden">
+      <div class="status-content">
+        <div class="status-info">
+          <span class="status-label" data-i18n="subscription.current_status">Current Status:</span>
+          <span id="statusValue" class="status-value">--</span>
+        </div>
+        <div class="token-info">
+          <span class="token-label" data-i18n="subscription.tokens_remaining">Tokens Remaining:</span>
+          <span id="tokenValue" class="token-value">--</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Trial Banner -->
+    <section id="trialBanner" class="trial-banner hidden">
+      <div class="trial-content">
+        <div class="trial-icon">🎉</div>
+        <div class="trial-text">
+          <h3 data-i18n="subscription.trial_title">Start Your 14-Day Free Trial</h3>
+          <p data-i18n="subscription.trial_description">
+            No credit card required. Get full access to all features with 200K base tokens + 20K daily tokens.
+          </p>
+        </div>
+        <button id="startTrialBtn" class="btn btn-primary btn-lg" data-i18n="subscription.start_trial">
+          Start Free Trial
+        </button>
+      </div>
+    </section>
+
+    <!-- Pricing Cards -->
+    <section class="pricing-section">
+      <div class="billing-toggle">
+        <button id="monthlyToggle" class="toggle-btn active" data-i18n="subscription.monthly">Monthly</button>
+        <button id="yearlyToggle" class="toggle-btn" data-i18n="subscription.yearly">Yearly</button>
+        <span class="save-badge" data-i18n="subscription.save_badge">Save 22%</span>
+      </div>
+
+      <div class="pricing-cards">
+        <!-- Monthly Plan -->
+        <div class="pricing-card" data-plan="monthly">
+          <div class="card-header">
+            <h2 class="plan-name" data-i18n="subscription.plan_monthly">Monthly</h2>
+            <div class="plan-price">
+              <span class="currency">$</span>
+              <span class="amount">9</span>
+              <span class="period" data-i18n="subscription.per_month">/month</span>
+            </div>
+          </div>
+          <ul class="plan-features">
+            <li><span class="feature-icon">✓</span> <span data-i18n="subscription.feature_full_access">Full access to all features</span></li>
+            <li><span class="feature-icon">✓</span> <span data-i18n="subscription.feature_monthly_tokens">1M tokens per month</span></li>
+            <li><span class="feature-icon">✓</span> <span data-i18n="subscription.feature_daily_tokens">50K daily free tokens</span></li>
+            <li><span class="feature-icon">✓</span> <span data-i18n="subscription.feature_priority_support">Priority support</span></li>
+            <li><span class="feature-icon">✓</span> <span data-i18n="subscription.feature_cancel_anytime">Cancel anytime</span></li>
+          </ul>
+          <button class="btn btn-primary btn-block subscribe-btn" data-plan="monthly" data-i18n="subscription.subscribe">
+            Subscribe
+          </button>
+        </div>
+
+        <!-- Yearly Plan (Featured) -->
+        <div class="pricing-card featured" data-plan="yearly">
+          <div class="featured-badge" data-i18n="subscription.best_value">Best Value</div>
+          <div class="card-header">
+            <h2 class="plan-name" data-i18n="subscription.plan_yearly">Annual</h2>
+            <div class="plan-price">
+              <span class="currency">$</span>
+              <span class="amount">84</span>
+              <span class="period" data-i18n="subscription.per_year">/year</span>
+            </div>
+            <div class="monthly-equivalent">
+              <span data-i18n="subscription.equivalent_to">Equivalent to</span> $7<span data-i18n="subscription.per_month">/month</span>
+            </div>
+          </div>
+          <ul class="plan-features">
+            <li><span class="feature-icon">✓</span> <span data-i18n="subscription.feature_full_access">Full access to all features</span></li>
+            <li><span class="feature-icon">✓</span> <span data-i18n="subscription.feature_yearly_tokens">12M tokens per year</span></li>
+            <li><span class="feature-icon">✓</span> <span data-i18n="subscription.feature_daily_tokens">50K daily free tokens</span></li>
+            <li><span class="feature-icon">✓</span> <span data-i18n="subscription.feature_priority_support">Priority support</span></li>
+            <li><span class="feature-icon">✓</span> <span data-i18n="subscription.feature_save">Save $24/year</span></li>
+          </ul>
+          <button class="btn btn-primary btn-block subscribe-btn" data-plan="yearly" data-i18n="subscription.subscribe">
+            Subscribe
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Token Explanation Section -->
+    <section class="token-explanation">
+      <h2 data-i18n="subscription.token_title">Understanding Token Credits</h2>
+      <div class="token-cards">
+        <div class="token-card">
+          <div class="token-icon">🎯</div>
+          <h3 data-i18n="subscription.token_what_title">What are Tokens?</h3>
+          <p data-i18n="subscription.token_what_desc">
+            Tokens are units used by AI models to process text. Each word typically uses 1-4 tokens.
+            Your usage is metered based on both input and output tokens.
+          </p>
+        </div>
+        <div class="token-card">
+          <div class="token-icon">📊</div>
+          <h3 data-i18n="subscription.token_usage_title">Transparent Billing</h3>
+          <p data-i18n="subscription.token_usage_desc">
+            After each run, you'll see a detailed breakdown: input tokens, output tokens,
+            total tokens used, and your remaining balance. No hidden fees.
+          </p>
+        </div>
+        <div class="token-card">
+          <div class="token-icon">🔄</div>
+          <h3 data-i18n="subscription.token_daily_title">Daily Refresh</h3>
+          <p data-i18n="subscription.token_daily_desc">
+            Get free daily tokens that refresh at UTC midnight. These are used first before
+            your monthly allocation, maximizing your value.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- FAQ Section -->
+    <section class="faq-section">
+      <h2 data-i18n="subscription.faq_title">Frequently Asked Questions</h2>
+      <div class="faq-list">
+        <details class="faq-item">
+          <summary data-i18n="subscription.faq_cancel_q">Can I cancel anytime?</summary>
+          <p data-i18n="subscription.faq_cancel_a">
+            Yes! You can cancel your subscription at any time. Your access will continue
+            until the end of your current billing period.
+          </p>
+        </details>
+        <details class="faq-item">
+          <summary data-i18n="subscription.faq_trial_q">What happens after my trial?</summary>
+          <p data-i18n="subscription.faq_trial_a">
+            After your 14-day trial ends, you can subscribe to continue using Promptly.
+            Your unused tokens will expire, but you won't be charged automatically.
+          </p>
+        </details>
+        <details class="faq-item">
+          <summary data-i18n="subscription.faq_rollover_q">Do unused tokens roll over?</summary>
+          <p data-i18n="subscription.faq_rollover_a">
+            Monthly tokens do not roll over to the next period. Daily free tokens can
+            accumulate up to 2 days' worth (40K max).
+          </p>
+        </details>
+        <details class="faq-item">
+          <summary data-i18n="subscription.faq_payment_q">What payment methods do you accept?</summary>
+          <p data-i18n="subscription.faq_payment_a">
+            We accept all major credit cards through Stripe's secure payment platform.
+            We never store your card details.
+          </p>
+        </details>
+      </div>
+    </section>
+  </main>
+
+  <!-- Footer -->
+  <footer class="site-footer">
+    <div class="footer-content">
+      <div class="footer-links">
+        <a href="terms.html" data-i18n="footer.terms">Terms</a>
+        <a href="privacy.html" data-i18n="footer.privacy">Privacy</a>
+        <a href="mailto:support@promptly.app" data-i18n="footer.contact">Contact</a>
+      </div>
+      <p class="footer-copyright">© 2025 Promptly. All rights reserved.</p>
+    </div>
+  </footer>
+
+  <!-- Loading Overlay -->
+  <div id="loadingOverlay" class="loading-overlay hidden">
+    <div class="loading-spinner"></div>
+    <p data-i18n="common.loading">Loading...</p>
+  </div>
+
+  <!-- Toast Container -->
+  <div id="toastContainer" class="toast-container"></div>
+
+  <script type="module" src="subscription.js"></script>
+</body>
+</html>

@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Subscription Success - Promptly</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    .success-page {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+      text-align: center;
+      background: var(--bg-color);
+    }
+    
+    .success-card {
+      max-width: 480px;
+      background: var(--card-bg);
+      border-radius: 16px;
+      padding: 3rem;
+      box-shadow: 0 4px 24px rgba(0, 0, 0, 0.1);
+    }
+    
+    .success-icon {
+      font-size: 4rem;
+      margin-bottom: 1.5rem;
+      animation: bounce 0.6s ease-out;
+    }
+    
+    @keyframes bounce {
+      0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
+      40% { transform: translateY(-20px); }
+      60% { transform: translateY(-10px); }
+    }
+    
+    .success-title {
+      font-size: 1.75rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin-bottom: 1rem;
+    }
+    
+    .success-message {
+      font-size: 1rem;
+      color: var(--text-secondary);
+      line-height: 1.6;
+      margin-bottom: 2rem;
+    }
+    
+    .success-details {
+      background: var(--bg-secondary);
+      border-radius: 8px;
+      padding: 1rem 1.5rem;
+      margin-bottom: 2rem;
+      text-align: left;
+    }
+    
+    .detail-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 0.5rem 0;
+      border-bottom: 1px solid var(--border-color);
+    }
+    
+    .detail-row:last-child {
+      border-bottom: none;
+    }
+    
+    .detail-label {
+      color: var(--text-secondary);
+    }
+    
+    .detail-value {
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+    
+    .btn-group {
+      display: flex;
+      gap: 1rem;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+    
+    .btn {
+      padding: 0.875rem 2rem;
+      border-radius: 8px;
+      font-weight: 600;
+      text-decoration: none;
+      transition: all 0.2s ease;
+      cursor: pointer;
+      border: none;
+      font-size: 1rem;
+    }
+    
+    .btn-primary {
+      background: var(--primary-color);
+      color: white;
+    }
+    
+    .btn-primary:hover {
+      background: var(--primary-hover);
+      transform: translateY(-2px);
+    }
+    
+    .btn-secondary {
+      background: var(--bg-secondary);
+      color: var(--text-primary);
+      border: 1px solid var(--border-color);
+    }
+    
+    .btn-secondary:hover {
+      background: var(--border-color);
+    }
+    
+    .confetti {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      overflow: hidden;
+      z-index: -1;
+    }
+    
+    .confetti-piece {
+      position: absolute;
+      width: 10px;
+      height: 10px;
+      opacity: 0;
+      animation: fall 3s ease-in-out forwards;
+    }
+    
+    @keyframes fall {
+      0% {
+        transform: translateY(-100px) rotate(0deg);
+        opacity: 1;
+      }
+      100% {
+        transform: translateY(100vh) rotate(720deg);
+        opacity: 0;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="confetti" id="confetti"></div>
+  
+  <div class="success-page">
+    <div class="success-card">
+      <div class="success-icon">🎉</div>
+      <h1 class="success-title" data-i18n="success.title">Welcome to Promptly Pro!</h1>
+      <p class="success-message" data-i18n="success.message">
+        Your subscription has been activated successfully. You now have access to all Pro features and your monthly token allocation.
+      </p>
+      
+      <div class="success-details" id="subscriptionDetails">
+        <div class="detail-row">
+          <span class="detail-label" data-i18n="success.plan">Plan</span>
+          <span class="detail-value" id="planName">Pro</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label" data-i18n="success.tokens">Monthly Tokens</span>
+          <span class="detail-value" id="tokenAmount">1,000,000</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label" data-i18n="success.next_billing">Next Billing</span>
+          <span class="detail-value" id="nextBilling">--</span>
+        </div>
+      </div>
+      
+      <div class="btn-group">
+        <a href="index.html" class="btn btn-primary" data-i18n="success.start_creating">Start Creating</a>
+        <a href="account.html" class="btn btn-secondary" data-i18n="success.view_account">View Account</a>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Create confetti
+    function createConfetti() {
+      const confettiContainer = document.getElementById('confetti');
+      const colors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7', '#DDA0DD', '#98D8C8'];
+      
+      for (let i = 0; i < 50; i++) {
+        const piece = document.createElement('div');
+        piece.className = 'confetti-piece';
+        piece.style.left = `${Math.random() * 100}%`;
+        piece.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+        piece.style.animationDelay = `${Math.random() * 2}s`;
+        piece.style.borderRadius = Math.random() > 0.5 ? '50%' : '0';
+        confettiContainer.appendChild(piece);
+      }
+    }
+    
+    // Load subscription status
+    async function loadSubscriptionStatus() {
+      const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim()) || 
+        (window.location && window.location.origin && window.location.origin !== "null" 
+          ? window.location.origin 
+          : "http://localhost:8080");
+      
+      const token = localStorage.getItem('promptly.token');
+      if (!token) return;
+      
+      try {
+        const response = await fetch(`${API_BASE}/api/billing/status`, {
+          headers: { 'Authorization': `Bearer ${token}` },
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          
+          document.getElementById('planName').textContent = 
+            data.subscription.plan ? data.subscription.plan.charAt(0).toUpperCase() + data.subscription.plan.slice(1) : 'Pro';
+          
+          document.getElementById('tokenAmount').textContent = 
+            data.tokens.monthly ? data.tokens.monthly.toLocaleString() : '1,000,000';
+          
+          if (data.subscription.periodEnd) {
+            const date = new Date(data.subscription.periodEnd);
+            document.getElementById('nextBilling').textContent = date.toLocaleDateString();
+          }
+        }
+      } catch (err) {
+        console.error('Failed to load subscription status:', err);
+      }
+    }
+    
+    // Initialize
+    createConfetti();
+    loadSubscriptionStatus();
+    
+    // Apply theme
+    const savedTheme = localStorage.getItem('promptly.theme');
+    if (savedTheme) {
+      document.documentElement.setAttribute('data-theme', savedTheme);
+    }
+  </script>
+</body>
+</html>

@@ -85,12 +85,29 @@ html[data-theme="light"] .kpi-card h1,
 html[data-theme="light"] .kpi-card h2, 
 html[data-theme="light"] .kpi-card .value, 
 html[data-theme="light"] .card .value, 
+html[data-theme="light"] .card.kpi .value,
+html[data-theme="light"] .kpi .value,
 html[data-theme="light"] .stat h2, 
 html[data-theme="light"] .stat .value {
-  background: none;
-  -webkit-background-clip: border-box;
-  background-clip: border-box;
-  color: #111827; /* gray-900 */
+  background: none !important;
+  -webkit-background-clip: border-box !important;
+  background-clip: border-box !important;
+  color: #111827 !important; /* gray-900 */
+  -webkit-text-fill-color: #111827 !important;
+}
+
+/* Light mode fixes for metrics labels and text-highlight */
+html[data-theme="light"] .kpi .label,
+html[data-theme="light"] .card.kpi .label {
+  color: #1F2937 !important; /* gray-800, better contrast */
+}
+
+html[data-theme="light"] .text-highlight {
+  background: none !important;
+  -webkit-background-clip: border-box !important;
+  background-clip: border-box !important;
+  color: #111827 !important; /* gray-900 */
+  -webkit-text-fill-color: #111827 !important;
 }
 
 /* === TigerFix1: UI Hotfixes === */

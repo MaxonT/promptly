@@ -8,7 +8,7 @@ const SAFE_FALLBACK_MODEL = "llama-3.3-70b-versatile";
 
 // Resolve the configured default model (prefers OPENAI_DEFAULT_MODEL but
 // also supports legacy OPENAI_MODEL).
-const DEFAULT_MODEL = process.env.OPENAI_DEFAULT_MODEL || process.env.OPENAI_MODEL || "qwen-2.5-72b-instruct";
+const DEFAULT_MODEL = process.env.OPENAI_DEFAULT_MODEL || process.env.OPENAI_MODEL;
 let client = null;
 
 if (apiKey) {

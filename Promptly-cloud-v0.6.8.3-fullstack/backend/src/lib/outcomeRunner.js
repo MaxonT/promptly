@@ -159,8 +159,7 @@ export async function runOutcomeCheck({ runId, outcomeSpecId, modelOverride }) {
   // 3. Determine model to use
   const model = modelOverride 
     || process.env.OUTCOME_MODEL 
-    || process.env.OPENAI_MODEL 
-    || "qwen-2.5-72b-instruct";
+    || process.env.OPENAI_MODEL;
 
   // 4. Create a run log for this outcome check
   const judgeRunId = createRun({

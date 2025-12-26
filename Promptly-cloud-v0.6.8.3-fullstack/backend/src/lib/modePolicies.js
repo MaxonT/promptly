@@ -40,10 +40,10 @@ export const MODE_POLICIES = {
       temperature: 0
     },
     
-    // Stage 5 — Outcome Runner
+    // Stage 5 — Outcome Runner (no LLM call, only sorting)
     outcomeRunner: {
-      provider: 'groq',
-      model: 'llama-3.1-8b-instant'
+      provider: null,
+      model: null
     }
   },
 
@@ -55,15 +55,15 @@ export const MODE_POLICIES = {
     
     // Stage 1 — Spec Builder
     specBuilder: {
-      provider: 'openai',
-      model: 'gpt-4o-mini'
+      provider: 'groq',
+      model: 'openai/gpt-oss-20b'
     },
     
     // Stage 2 — Question Engine
     questionEngine: {
       enabled: true,
-      provider: 'openai',
-      model: 'gpt-4o-mini',
+      provider: 'groq',
+      model: 'openai/gpt-oss-20b',
       max_rounds: 2,
       clarity_threshold: 0.75
     },
@@ -82,10 +82,10 @@ export const MODE_POLICIES = {
       temperature: 0
     },
     
-    // Stage 5 — Outcome Runner
+    // Stage 5 — Outcome Runner (no LLM call, only sorting)
     outcomeRunner: {
-      provider: 'openai',
-      model: 'gpt-4o'
+      provider: null,
+      model: null
     }
   },
 
@@ -97,15 +97,15 @@ export const MODE_POLICIES = {
     
     // Stage 1 — Spec Builder
     specBuilder: {
-      provider: 'openai',
-      model: 'gpt-4o'
+      provider: 'groq',
+      model: 'qwen/qwen3-32b'
     },
     
     // Stage 2 — Question Engine
     questionEngine: {
       enabled: true,
-      provider: 'openai',
-      model: 'gpt-4o',
+      provider: 'groq',
+      model: 'qwen/qwen3-32b',
       mode: 'iterative',
       clarity_threshold: 0.85
     },
@@ -124,10 +124,10 @@ export const MODE_POLICIES = {
       temperature: 0
     },
     
-    // Stage 5 — Outcome Runner
+    // Stage 5 — Outcome Runner (no LLM call, only sorting)
     outcomeRunner: {
-      provider: 'openai',
-      model: 'gpt-5.2' // Future model placeholder as requested
+      provider: null,
+      model: null
     }
   }
 };

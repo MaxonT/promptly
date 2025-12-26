@@ -137,7 +137,7 @@ export function getModelConfig(modelId) {
 export function resolveModelName(modelId) {
   const config = MODEL_REGISTRY[modelId];
   if (!config) {
-    return process.env.OPENAI_MODEL || 'qwen-2.5-72b-instruct';
+    return process.env.OPENAI_MODEL || null;
   }
   return config.model;
 }

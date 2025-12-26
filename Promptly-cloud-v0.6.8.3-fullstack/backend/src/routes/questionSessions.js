@@ -144,10 +144,10 @@ function resolveModeProfile(mode) {
  * @returns {{id: string, targetModel: string}} - Resolved model ID and target OpenAI model
  */
 function resolveModelChoice(modelId) {
-  const fallback = process.env.OPENAI_MODEL || "qwen-2.5-72b-instruct";
+  const fallback = process.env.OPENAI_MODEL;
   // Use model registry to validate and resolve model
   const selected = isValidModel(modelId) ? modelId : "promptly";
-  const targetModel = resolveModelName(selected) || fallback;
+  const targetModel = resolveModelName(selected) || fallback || null;
   const config = getModelConfig(selected);
   const provider = config?.provider || 'openai';
   

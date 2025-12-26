@@ -136,8 +136,8 @@ outcomeRunsRouter.post("/", async (req, res) => {
   const resolvedModel = model && isValidModel(model) ? model : 'fast';
   const modelConfig = getModelConfig(resolvedModel);
   
-  const targetModel = modelConfig?.model || 'llama-3.1-8b-instant';
-  const targetProvider = modelConfig?.provider || 'groq';
+  const targetModel = modelConfig?.model || process.env.OPENAI_MODEL;
+  const targetProvider = modelConfig?.provider || (process.env.GROQ_API_KEY ? 'groq' : null);
 
   console.log(`[outcomeRunner] Using model: ${resolvedModel} -> ${targetModel} (${targetProvider})`);
   if (model && !isValidModel(model)) {

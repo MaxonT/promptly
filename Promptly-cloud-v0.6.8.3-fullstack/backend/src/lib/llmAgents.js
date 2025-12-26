@@ -144,7 +144,7 @@ export async function generateBroadQuestions({ initialDescription, kind, modePro
     mode_profile: modeProfile
   });
 
-  const usedModel = model || process.env.OPENAI_MODEL || "qwen-2.5-72b-instruct";
+  const usedModel = model || process.env.OPENAI_MODEL;
   const runId = createRun({
     model: usedModel,
     inputBlocks: { agent: "A", initial_description: initialDescription, kind, mode: modeProfile?.id }
@@ -381,7 +381,7 @@ export async function generateChoiceQuestions({ initialDescription, kind, broadQ
   });
 
   // Strict Inference Policy Application
-  let usedModel = model || process.env.OPENAI_MODEL || "qwen-2.5-72b-instruct";
+  let usedModel = model || process.env.OPENAI_MODEL;
   let usedProvider = provider;
   let apiKey = undefined;
   let maxTokens = undefined;
@@ -719,7 +719,7 @@ export async function generateRawSpec({ initialDescription, kind, qaPairs, modeP
   
   const user = JSON.stringify(userInput);
 
-  const usedModel = model || process.env.OPENAI_MODEL || "qwen-2.5-72b-instruct";
+  const usedModel = model || process.env.OPENAI_MODEL;
   const runId = createRun({
     model: usedModel,
     inputBlocks: { agent: "C", initial_description: initialDescription, kind, qa_pairs: qaPairs, mode: modeProfile?.id }

@@ -18,9 +18,9 @@ export const INFERENCE_PROFILES = {
         temperature: 0.2
       },
       agentC: {
-        provider: "openai",
-        envKey: "OPENAI_API_KEY",
-        model: "gpt-4o-mini",
+        provider: "groq",
+        envKey: "GROQ_API_KEY",
+        model: "openai/gpt-oss-20b",
         maxTokens: 600,
         temperature: 0.3
       }
@@ -45,9 +45,9 @@ export const INFERENCE_PROFILES = {
         temperature: 0.3
       },
       agentC: {
-        provider: "openai",
-        envKey: "OPENAI_API_KEY",
-        model: "gpt-4o-mini",
+        provider: "groq",
+        envKey: "GROQ_API_KEY",
+        model: "qwen/qwen3-32b",
         maxTokens: 900,
         temperature: 0.35
       }
@@ -72,9 +72,9 @@ export const INFERENCE_PROFILES = {
         temperature: 0.35
       },
       agentC: {
-        provider: "openai",
-        envKey: "OPENAI_API_KEY",
-        model: "gpt-4o-mini",
+        provider: "groq",
+        envKey: "GROQ_API_KEY",
+        model: "qwen/qwen3-32b",
         maxTokens: 1400,
         temperature: 0.4
       }

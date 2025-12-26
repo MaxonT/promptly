@@ -46,6 +46,11 @@ function getUserId(req) {
   return "demo-user";
 }
 
+function stripThinkBlocks(text) {
+  if (!text || typeof text !== "string") return text;
+  return text.replace(/<think>[\s\S]*?<\/think>\s*/gi, "").trim();
+}
+
 /**
  * Send SSE event to a specific stream
  */
@@ -530,7 +535,7 @@ ${JSON.stringify(specData, null, 2)}`;
 
         console.log(`[pipeline] [${runId}] Stage 3: Generating candidate with ${agent.name} agent...`);
         // Enable similarity check with retry (lowered threshold for better change detection)
-        const { text: content, similarity } = await chatText({
+        const { text: contentRaw, similarity } = await chatText({
           system: agent.systemPrompt,
           user: `Generate optimized prompt. The output MUST be substantially different from the spec. Transform and enhance it:\n\n${baseContext}`,
           model: policy.generation.model, // Pass the policy model
@@ -538,6 +543,8 @@ ${JSON.stringify(specData, null, 2)}`;
           minSimilarity: 0.75,
           maxRetries: 2
         });
+
+        const content = stripThinkBlocks(contentRaw);
 
         // Log similarity for debugging
         console.log(`[pipeline] [${runId}] Stage 3: ${agent.name} completed - similarity: ${similarity.toFixed(3)}, length: ${content.length}`);
@@ -757,7 +764,7 @@ Provide honest, objective scores based on the criteria.`;
       specId,
       idea.substring(0, 500), // Use first 500 chars of idea as task
       candidateIds.length,
-      policy.outcomeRunner.model, // Log the model specified in policy (even if we just used sorting)
+      policy.outcomeRunner.model || "sorting-only", // No LLM call, only sorting by composite score
       "completed",
       bestCandidate.id,
       JSON.stringify({

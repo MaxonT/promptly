@@ -219,6 +219,21 @@ async function executePipelineWithEvents(runId, userId, { idea, attachments, ski
   // Token usage tracking
   let totalInputTokens = 0;
   let totalOutputTokens = 0;
+  
+  // Token Hardening: Metrics tracking for observability
+  const pipelineMetrics = {
+    calls_total: {
+      spec_builder: 0,
+      question_engine: 0,
+      generation: 0,
+      scoring: 0,
+      outcome_runner: 0
+    },
+    retries_total: 0,
+    qe_rounds: 0,
+    generation_retries: 0, // Track generation similarity retries separately
+    score_calls: 0
+  };
 
   try {
     // ============================================
@@ -282,6 +297,9 @@ ${idea}${attachmentContext}`;
       totalInputTokens += specUsage.prompt_tokens || 0;
       totalOutputTokens += specUsage.completion_tokens || 0;
     }
+    
+    // Token Hardening: Track spec builder call
+    pipelineMetrics.calls_total.spec_builder = 1;
     
     const specData = rawSpecData || {};
     console.log(`[pipeline] [${runId}] Stage 1: Spec Builder completed, extracted ${Object.keys(specData).length} fields`);
@@ -365,8 +383,17 @@ CRITICAL: Question must be specific and valuable. If too generic, append "> need
       let shouldStop = false;
       let finalCompletenessScore = 0.0;
 
-      // Q1-Q3 Loop: Ask up to 3 questions sequentially
-      while (currentStep < 3 && !shouldStop) {
+      // Token Hardening: Use policy.max_rounds instead of hardcoded 3
+      // Feature Flag: QE_STRICT_MAX_ROUNDS (default: true, can disable via env)
+      const useStrictQERounds = process.env.QE_STRICT_MAX_ROUNDS !== 'false';
+      const maxQERounds = useStrictQERounds 
+        ? (policy.questionEngine?.max_rounds ?? 3)  // Use policy config (Standard=2, Premium=3)
+        : 3; // Fallback to 3 if feature flag disabled (old behavior)
+      
+      console.log(`[pipeline] [${runId}] QE Loop: max_rounds=${maxQERounds} (from policy: ${policy.questionEngine?.max_rounds ?? 'not set'}, feature flag: ${useStrictQERounds})`);
+
+      // Q1-Q3 Loop: Ask questions sequentially (up to max_rounds)
+      while (currentStep < maxQERounds && !shouldStop) {
         checkTimeout(); // Check timeout before each question
         
         currentStep++;
@@ -403,6 +430,10 @@ CRITICAL: Question must be specific and valuable. If too generic, append "> need
           totalInputTokens += qUsage.prompt_tokens || 0;
           totalOutputTokens += qUsage.completion_tokens || 0;
         }
+        
+        // Token Hardening: Track QE call
+        pipelineMetrics.calls_total.question_engine++;
+        pipelineMetrics.qe_rounds = currentStep;
         
         console.log(`[pipeline] [${runId}] Stage 2: Q${currentStep} generated, shouldStop: ${qData?.shouldStop || false}`);
 
@@ -569,6 +600,10 @@ ${JSON.stringify(specData, null, 2)}`;
           totalInputTokens += agentUsage.prompt_tokens || 0;
           totalOutputTokens += agentUsage.completion_tokens || 0;
         }
+        
+        // Token Hardening: Track generation call
+        pipelineMetrics.calls_total.generation++;
+        // Note: similarity retries are tracked in chatText/openaiClient (will add later if needed)
 
         const content = stripThinkBlocks(contentRaw);
 
@@ -644,6 +679,23 @@ ${JSON.stringify(specData, null, 2)}`;
 
         const candidate = db.prepare("SELECT * FROM candidate_prompts WHERE id = ?").get(candidateId);
         
+        // Token Hardening: Spec minification for scoring (feature flag controlled)
+        const useSpecMinify = process.env.SCORING_SPEC_MINIFY === 'true';
+        let scoringSpec;
+        if (useSpecMinify) {
+          // Only include fields needed for scoring evaluation
+          scoringSpec = {
+            userGoal: specData.userGoal,
+            tone: specData.tone,
+            format: specData.format,
+            audience: specData.audience
+            // Omit: examples, constraints (details), domain (if not needed for scoring)
+          };
+          console.log(`[pipeline] [${runId}] Scoring spec minified: ${JSON.stringify(specData).length} -> ${JSON.stringify(scoringSpec).length} chars`);
+        } else {
+          scoringSpec = specData;
+        }
+        
         // Enhanced: Metrics evaluator prompt with detailed criteria
         const metricsSystem = `Evaluate the candidate prompt and provide scores (0-1 scale).
 
@@ -661,7 +713,7 @@ Provide honest, objective scores based on the criteria.`;
 
         const { data: metricsData, usage: metricsUsage } = await chatJson({
           system: metricsSystem,
-          user: `Evaluate this candidate prompt:\n\n${candidate.content}\n\nSpec:\n${JSON.stringify(specData, null, 2)}`,
+          user: `Evaluate this candidate prompt:\n\n${candidate.content}\n\nSpec:\n${JSON.stringify(scoringSpec, null, 2)}`,
           model: policy.scoring.model,
           provider: policy.scoring.provider,
           temperature: policy.scoring.temperature
@@ -672,6 +724,10 @@ Provide honest, objective scores based on the criteria.`;
           totalInputTokens += metricsUsage.prompt_tokens || 0;
           totalOutputTokens += metricsUsage.completion_tokens || 0;
         }
+        
+        // Token Hardening: Track scoring call
+        pipelineMetrics.calls_total.scoring++;
+        pipelineMetrics.score_calls++;
 
         // Estimate token cost (simplified)
         const tokenCost = Math.ceil(candidate.content.length / 4);
@@ -903,6 +959,30 @@ Provide honest, objective scores based on the criteria.`;
         console.error(`[pipeline] [${runId}] Failed to record token usage:`, tokenErr);
       }
     }
+    
+    // ============================================
+    // Token Hardening: Pipeline Metrics Summary
+    // ============================================
+    pipelineMetrics.calls_total.outcome_runner = 0; // No LLM call
+    const metricsSummary = {
+      runId,
+      mode,
+      calls_total: pipelineMetrics.calls_total,
+      retries_total: pipelineMetrics.retries_total,
+      qe_rounds: pipelineMetrics.qe_rounds,
+      generation_retries: pipelineMetrics.generation_retries,
+      score_calls: pipelineMetrics.score_calls,
+      tokens_estimated: {
+        input: totalInputTokens,
+        output: totalOutputTokens,
+        total: totalInputTokens + totalOutputTokens
+      },
+      feature_flags: {
+        QE_STRICT_MAX_ROUNDS: process.env.QE_STRICT_MAX_ROUNDS !== 'false',
+        SCORING_SPEC_MINIFY: process.env.SCORING_SPEC_MINIFY === 'true'
+      }
+    };
+    console.log(`[pipeline] [${runId}] 🔍 Token Hardening Metrics Summary:`, JSON.stringify(metricsSummary, null, 2));
     
     // Final completion event with historical data and token usage
     sendEvent(runId, "complete", {

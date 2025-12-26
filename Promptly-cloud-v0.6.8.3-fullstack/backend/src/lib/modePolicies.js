@@ -107,6 +107,7 @@ export const MODE_POLICIES = {
       provider: 'groq',
       model: 'qwen/qwen3-32b',
       mode: 'iterative',
+      max_rounds: 3, // Token Hardening: Explicitly configure max_rounds (was hardcoded to 3)
       clarity_threshold: 0.85
     },
     

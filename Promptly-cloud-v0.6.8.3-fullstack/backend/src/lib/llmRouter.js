@@ -50,6 +50,8 @@ export async function chatText({ system, user, model, promptlyModelId, provider,
     throw new Error(`[llmRouter] ❌ Contract Violation: 'provider' MUST be explicitly set. Received: ${provider}`);
   }
   if (provider === 'groq') {
+    // Token Hardening: Groq returns similarity=0, which will skip similarity gate in openaiClient
+    // This prevents unnecessary retries for Groq provider (0 < any threshold, so no retry triggered)
     return chatTextGroq({
       system,
       user,

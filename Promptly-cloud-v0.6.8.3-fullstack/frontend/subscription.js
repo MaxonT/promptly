@@ -1,12 +1,17 @@
 /**
- * Subscription Page JavaScript
+ * Subscription Page JavaScript (v2 - with State Machine & Auth Modal)
  * 
  * Handles:
- * - Plan display and selection
- * - Stripe Checkout integration
+ * - Auth Modal flow (inline login/register)
+ * - Subscription State Machine integration
+ * - Analytics tracking
+ * - Stripe Checkout with idempotency
  * - Trial start
  * - Status display
  */
+
+import { SubscriptionStateMachine, SubscriptionState } from './lib/subscriptionStateMachine.js';
+import { track, EVENTS } from './lib/analytics.js';
 
 (function() {
   const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim()) || 
@@ -26,11 +31,23 @@
   const toastContainer = document.getElementById('toastContainer');
   const subscribeButtons = document.querySelectorAll('.subscribe-btn');
   const pricingCards = document.querySelectorAll('.pricing-card');
+  
+  // Auth Modal Elements
+  const authModal = document.getElementById('authModal');
+  const authModalClose = authModal?.querySelector('.auth-modal-close');
+  const showLoginBtn = document.getElementById('showLoginBtn');
+  const showRegisterBtn = document.getElementById('showRegisterBtn');
+  const loginForm = document.getElementById('loginForm');
+  const registerForm = document.getElementById('registerForm');
+  const stepper = document.querySelector('.checkout-stepper');
 
   // State
   let currentPlan = 'monthly';
   let billingStatus = null;
   let authToken = null;
+  let stateMachine = null;
+  let selectedPlan = null;
+  let idempotencyKey = null;
 
   // =============================================
   // Initialization
@@ -41,15 +58,213 @@
     setupBillingToggle();
     setupSubscribeButtons();
     setupTrialButton();
+    setupAuthModal();
     
     // Check authentication
     authToken = localStorage.getItem('promptly.token');
     
+    // Initialize State Machine
+    stateMachine = new SubscriptionStateMachine();
+    stateMachine.on('stateChange', handleStateChange);
+    
     if (authToken) {
       await loadBillingStatus();
     } else {
-      // Show trial banner for non-logged-in users
       showTrialBanner(true);
+    }
+    
+    // Check for interrupted flow
+    recoverInterruptedFlow();
+  }
+
+  // =============================================
+  // State Machine Handlers
+  // =============================================
+
+  function handleStateChange(oldState, newState) {
+    console.log(`[subscription] State: ${oldState} → ${newState}`);
+    track(EVENTS.STATE_CHANGE, { from: oldState, to: newState });
+    
+    updateStepperUI(newState);
+    
+    // State-specific actions
+    switch (newState) {
+      case SubscriptionState.AUTH_MODAL:
+        showAuthModal();
+        break;
+      case SubscriptionState.CREATING_CHECKOUT:
+        createCheckoutSession();
+        break;
+      case SubscriptionState.ERROR:
+        const error = stateMachine.getState().error;
+        showToast('error', error || 'An error occurred');
+        stateMachine.transitionTo(SubscriptionState.IDLE);
+        break;
+    }
+  }
+
+  function updateStepperUI(state) {
+    if (!stepper) return;
+    
+    const steps = stepper.querySelectorAll('.step');
+    steps.forEach(step => {
+      step.classList.remove('active', 'completed');
+    });
+    
+    // Map states to stepper steps
+    if ([SubscriptionState.CHECK_AUTH, SubscriptionState.AUTH_MODAL].includes(state)) {
+      steps[0]?.classList.add('active');
+    } else if ([SubscriptionState.CREATING_CHECKOUT, SubscriptionState.CHECKOUT_REDIRECT].includes(state)) {
+      steps[0]?.classList.add('completed');
+      steps[1]?.classList.add('active');
+    } else if ([SubscriptionState.CONFIRMING_PAYMENT, SubscriptionState.ACTIVATED].includes(state)) {
+      steps[0]?.classList.add('completed');
+      steps[1]?.classList.add('completed');
+      steps[2]?.classList.add('active');
+    }
+  }
+
+  function recoverInterruptedFlow() {
+    const saved = sessionStorage.getItem('subscription_pending');
+    if (!saved) return;
+    
+    try {
+      const data = JSON.parse(saved);
+      const { plan, sessionId, timestamp } = data;
+      
+      // Only recover if less than 1 hour old
+      if (Date.now() - timestamp < 3600000 && authToken) {
+        console.log('[subscription] Recovering interrupted flow', data);
+        selectedPlan = plan;
+        stateMachine.transitionTo(SubscriptionState.CHECK_AUTH);
+        track(EVENTS.CHECKOUT_FLOW_RECOVERED, { plan, sessionId });
+      } else {
+        sessionStorage.removeItem('subscription_pending');
+      }
+    } catch (err) {
+      console.error('[subscription] Failed to recover flow:', err);
+      sessionStorage.removeItem('subscription_pending');
+    }
+  }
+
+  // =============================================
+  // Auth Modal
+  // =============================================
+
+  function setupAuthModal() {
+    // Close button
+    authModalClose?.addEventListener('click', () => {
+      hideAuthModal();
+      stateMachine.transitionTo(SubscriptionState.IDLE);
+    });
+    
+    // Click outside to close
+    authModal?.addEventListener('click', (e) => {
+      if (e.target === authModal) {
+        hideAuthModal();
+        stateMachine.transitionTo(SubscriptionState.IDLE);
+      }
+    });
+    
+    // Toggle between login/register
+    showLoginBtn?.addEventListener('click', () => {
+      loginForm.classList.remove('hidden');
+      registerForm.classList.add('hidden');
+      showLoginBtn.classList.add('active');
+      showRegisterBtn.classList.remove('active');
+      track(EVENTS.AUTH_TAB_SWITCHED, { tab: 'login' });
+    });
+    
+    showRegisterBtn?.addEventListener('click', () => {
+      registerForm.classList.remove('hidden');
+      loginForm.classList.add('hidden');
+      showRegisterBtn.classList.add('active');
+      showLoginBtn.classList.remove('active');
+      track(EVENTS.AUTH_TAB_SWITCHED, { tab: 'register' });
+    });
+    
+    // Form submissions
+    loginForm?.addEventListener('submit', handleLogin);
+    registerForm?.addEventListener('submit', handleRegister);
+  }
+
+  function showAuthModal() {
+    authModal?.classList.remove('hidden');
+    track(EVENTS.AUTH_MODAL_OPENED, { plan: selectedPlan });
+  }
+
+  function hideAuthModal() {
+    authModal?.classList.add('hidden');
+    track(EVENTS.AUTH_MODAL_CLOSED);
+  }
+
+  async function handleLogin(e) {
+    e.preventDefault();
+    const email = document.getElementById('loginEmail').value;
+    const password = document.getElementById('loginPassword').value;
+    
+    showLoading(true);
+    track(EVENTS.AUTH_LOGIN_ATTEMPTED, { email });
+    
+    try {
+      const result = await apiCall('/api/auth/login', {
+        method: 'POST',
+        body: JSON.stringify({ email, password }),
+      });
+      
+      localStorage.setItem('promptly.token', result.token);
+      authToken = result.token;
+      
+      track(EVENTS.AUTH_LOGIN_SUCCESS, { email });
+      hideAuthModal();
+      
+      // Continue with checkout
+      stateMachine.transitionTo(SubscriptionState.CREATING_CHECKOUT);
+      
+    } catch (err) {
+      console.error('Login failed:', err);
+      showToast('error', err.message || 'Login failed');
+      track(EVENTS.AUTH_LOGIN_FAILED, { email, error: err.message });
+    } finally {
+      showLoading(false);
+    }
+  }
+
+  async function handleRegister(e) {
+    e.preventDefault();
+    const email = document.getElementById('registerEmail').value;
+    const password = document.getElementById('registerPassword').value;
+    const confirm = document.getElementById('registerConfirm').value;
+    
+    if (password !== confirm) {
+      showToast('error', 'Passwords do not match');
+      return;
+    }
+    
+    showLoading(true);
+    track(EVENTS.AUTH_REGISTER_ATTEMPTED, { email });
+    
+    try {
+      const result = await apiCall('/api/auth/register', {
+        method: 'POST',
+        body: JSON.stringify({ email, password }),
+      });
+      
+      localStorage.setItem('promptly.token', result.token);
+      authToken = result.token;
+      
+      track(EVENTS.AUTH_REGISTER_SUCCESS, { email });
+      hideAuthModal();
+      
+      // Continue with checkout
+      stateMachine.transitionTo(SubscriptionState.CREATING_CHECKOUT);
+      
+    } catch (err) {
+      console.error('Registration failed:', err);
+      showToast('error', err.message || 'Registration failed');
+      track(EVENTS.AUTH_REGISTER_FAILED, { email, error: err.message });
+    } finally {
+      showLoading(false);
     }
   }
 
@@ -87,7 +302,6 @@
       updateStatusDisplay();
     } catch (err) {
       console.error('Failed to load billing status:', err);
-      // If auth fails, clear token and show trial banner
       if (err.message.includes('token') || err.message.includes('auth')) {
         localStorage.removeItem('promptly.token');
         authToken = null;
@@ -97,10 +311,18 @@
   }
 
   async function startTrial() {
+    track(EVENTS.TRIAL_START_CLICKED);
+    
+    if (!authToken) {
+      selectedPlan = 'trial';
+      stateMachine.transitionTo(SubscriptionState.CHECK_AUTH);
+      stateMachine.transitionTo(SubscriptionState.AUTH_MODAL);
+      return;
+    }
+    
     showLoading(true);
     
     try {
-      // Get fingerprint (simple implementation - can be enhanced)
       const fingerprint = await getFingerprint();
       
       const result = await apiCall('/api/billing/start-trial', {
@@ -109,43 +331,81 @@
       });
       
       if (result.requiresPaymentMethod) {
-        // Redirect to Stripe checkout
         window.location.href = result.checkoutUrl;
         return;
       }
       
-      showToast('success', 'Trial started successfully! You now have access to all features.');
+      showToast('success', 'Trial started successfully!');
+      track(EVENTS.TRIAL_STARTED);
       await loadBillingStatus();
       
     } catch (err) {
       console.error('Failed to start trial:', err);
-      showToast('error', err.message || 'Failed to start trial. Please try again.');
+      showToast('error', err.message || 'Failed to start trial');
+      track(EVENTS.TRIAL_START_FAILED, { error: err.message });
     } finally {
       showLoading(false);
     }
   }
 
   async function subscribe(plan) {
+    selectedPlan = plan;
+    track(EVENTS.SUBSCRIBE_CLICKED, { plan });
+    
+    // Check auth
+    stateMachine.transitionTo(SubscriptionState.CHECK_AUTH);
+    
     if (!authToken) {
-      // Redirect to login
-      window.location.href = 'index.html?login=1&redirect=subscription';
+      stateMachine.transitionTo(SubscriptionState.AUTH_MODAL);
       return;
     }
     
+    // Proceed to checkout
+    stateMachine.transitionTo(SubscriptionState.CREATING_CHECKOUT);
+  }
+
+  async function createCheckoutSession() {
     showLoading(true);
+    track(EVENTS.CHECKOUT_SESSION_CREATING, { plan: selectedPlan });
     
     try {
+      // Generate idempotency key
+      idempotencyKey = `checkout_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      
       const result = await apiCall('/api/billing/checkout-session', {
         method: 'POST',
-        body: JSON.stringify({ plan }),
+        body: JSON.stringify({ 
+          plan: selectedPlan,
+          idempotencyKey,
+        }),
       });
       
-      // Redirect to Stripe Checkout
+      // Save pending state
+      sessionStorage.setItem('subscription_pending', JSON.stringify({
+        plan: selectedPlan,
+        sessionId: result.sessionId,
+        idempotencyKey,
+        timestamp: Date.now(),
+      }));
+      
+      track(EVENTS.CHECKOUT_SESSION_CREATED, { 
+        plan: selectedPlan,
+        sessionId: result.sessionId,
+        reused: result.reused || false,
+      });
+      
+      // Transition to redirect
+      stateMachine.transitionTo(SubscriptionState.CHECKOUT_REDIRECT);
+      
+      // Redirect to Stripe
       window.location.href = result.url;
       
     } catch (err) {
       console.error('Failed to create checkout session:', err);
-      showToast('error', err.message || 'Failed to start checkout. Please try again.');
+      showToast('error', err.message || 'Failed to start checkout');
+      track(EVENTS.CHECKOUT_SESSION_FAILED, { plan: selectedPlan, error: err.message });
+      stateMachine.transitionTo(SubscriptionState.ERROR, { error: err.message });
+    } finally {
       showLoading(false);
     }
   }
@@ -159,21 +419,16 @@
     
     const { subscription, tokens } = billingStatus;
     
-    // Show status banner
     statusBanner.classList.remove('hidden');
     
-    // Update status value
     const statusText = getStatusText(subscription.status);
     statusValue.textContent = statusText;
     statusValue.className = `status-value ${subscription.status}`;
     
-    // Update token value
     tokenValue.textContent = tokens.totalFormatted;
     
-    // Show/hide trial banner based on eligibility
     showTrialBanner(subscription.canStartTrial && subscription.status === 'none');
     
-    // Update subscribe buttons based on current status
     updateSubscribeButtons(subscription);
   }
 
@@ -208,6 +463,7 @@
 
   async function openBillingPortal() {
     showLoading(true);
+    track(EVENTS.BILLING_PORTAL_OPENED);
     
     try {
       const result = await apiCall('/api/billing/portal-session', {
@@ -218,7 +474,8 @@
       
     } catch (err) {
       console.error('Failed to open billing portal:', err);
-      showToast('error', err.message || 'Failed to open billing portal.');
+      showToast('error', err.message || 'Failed to open billing portal');
+    } finally {
       showLoading(false);
     }
   }
@@ -233,6 +490,7 @@
       monthlyToggle.classList.add('active');
       yearlyToggle.classList.remove('active');
       updatePlanDisplay();
+      track(EVENTS.PRICING_TOGGLE_CLICKED, { plan: 'monthly' });
     });
     
     yearlyToggle.addEventListener('click', () => {
@@ -240,24 +498,18 @@
       yearlyToggle.classList.add('active');
       monthlyToggle.classList.remove('active');
       updatePlanDisplay();
+      track(EVENTS.PRICING_TOGGLE_CLICKED, { plan: 'yearly' });
     });
   }
 
   function updatePlanDisplay() {
     pricingCards.forEach(card => {
       const plan = card.dataset.plan;
-      if (currentPlan === 'monthly') {
-        card.style.display = plan === 'monthly' ? 'block' : 'block';
-      } else {
-        card.style.display = plan === 'yearly' ? 'block' : 'block';
-      }
       
-      // Highlight selected plan
       if (plan === currentPlan) {
         card.classList.add('featured');
       } else {
         card.classList.remove('featured');
-        // Keep yearly always featured
         if (plan === 'yearly') {
           card.classList.add('featured');
         }
@@ -276,14 +528,7 @@
 
   function setupTrialButton() {
     if (startTrialBtn) {
-      startTrialBtn.addEventListener('click', () => {
-        if (!authToken) {
-          // Redirect to login/register
-          window.location.href = 'index.html?register=1&redirect=subscription&trial=1';
-          return;
-        }
-        startTrial();
-      });
+      startTrialBtn.addEventListener('click', startTrial);
     }
   }
 
@@ -335,8 +580,6 @@
   }
 
   async function getFingerprint() {
-    // Simple fingerprint based on available browser info
-    // In production, consider using FingerprintJS or similar
     const components = [
       navigator.userAgent,
       navigator.language,
@@ -347,7 +590,6 @@
     
     const text = components.join('|');
     
-    // Simple hash
     let hash = 0;
     for (let i = 0; i < text.length; i++) {
       const char = text.charCodeAt(i);
@@ -359,21 +601,22 @@
   }
 
   // =============================================
-  // URL Parameter Handling (for success/cancel redirects)
+  // URL Parameter Handling
   // =============================================
 
   function handleUrlParams() {
     const params = new URLSearchParams(window.location.search);
     
     if (params.has('session_id')) {
-      // Returning from successful checkout
-      showToast('success', 'Subscription activated! Your payment is being processed.');
-      // Clean URL
+      // This will be handled by checkout-success.html
+      showToast('success', 'Processing your subscription...');
       window.history.replaceState({}, document.title, window.location.pathname);
     }
     
     if (params.has('canceled')) {
-      showToast('error', 'Checkout was canceled. You can try again anytime.');
+      showToast('error', 'Checkout was canceled');
+      track(EVENTS.CHECKOUT_CANCELED);
+      sessionStorage.removeItem('subscription_pending');
       window.history.replaceState({}, document.title, window.location.pathname);
     }
   }
@@ -382,23 +625,21 @@
   // Initialize
   // =============================================
 
-  // Wait for i18n to be ready if available
   if (window.i18n) {
     window.i18n.on('initialized', () => {
       init();
       handleUrlParams();
     });
     
-    // Fallback if already initialized
     setTimeout(() => {
       init();
       handleUrlParams();
     }, 500);
   } else {
-    // No i18n, initialize immediately
     document.addEventListener('DOMContentLoaded', () => {
       init();
       handleUrlParams();
     });
   }
 })();
+

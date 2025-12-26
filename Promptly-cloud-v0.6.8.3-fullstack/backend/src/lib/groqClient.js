@@ -131,15 +131,20 @@ export async function chatTextGroq({ system, user, model, apiKey: overrideKey, t
     
     console.log(`[promptly] ✅ Groq call succeeded - Duration: ${duration}ms, Response: ${content.length} chars, Tokens: ${tokensUsed}`);
     
-    // Similarity check is NOT implemented here yet as it depends on shared logic. 
-    // For now, we return standard structure.
+    // Token Hardening: Groq similarity check disabled (returns 0)
+    // Similarity-based retry is NOT implemented for Groq as it depends on shared logic.
+    // When similarity=0 and minSimilarity > 0, retry gate will be skipped (0 < threshold).
+    // This prevents unnecessary retries for Groq provider.
+    if (minSimilarity && maxRetries && maxRetries > 0) {
+      console.log(`[promptly] ⚠️ Token Hardening: Similarity check disabled for Groq (returns 0). minSimilarity=${minSimilarity}, maxRetries=${maxRetries} - retry gate will be skipped.`);
+    }
     
     return {
       text: content,
       usage: completion.usage || {},
       model: model,
       completionId: completion.id || null,
-      similarity: 0 // Placeholder
+      similarity: 0 // Token Hardening: Explicitly return 0 to skip similarity gate (0 < any threshold)
     };
   } catch (error) {
     console.error(`[promptly] ❌ Groq call failed:`, error.message);

@@ -13,11 +13,13 @@
  */
 
 import { Router } from "express";
+import { nanoid } from "nanoid";
 import { requireAuth } from "./auth.js";
 import { db } from "../lib/db.js";
 import { stripeService } from "../lib/stripeService.js";
 import { tokenLedger } from "../lib/tokenLedger.js";
 import { trialAntiAbuse } from "../lib/trialAntiAbuse.js";
+import { shouldInjectError, injectDelay, InjectedError } from "../lib/errorInjector.js";
 import {
   PLANS,
   FEATURES,
@@ -139,8 +141,14 @@ billingRouter.post("/checkout-session", requireAuth, async (req, res) => {
       });
     }
     
+    // Error injection for testing
+    await injectDelay();
+    if (shouldInjectError('fail_checkout_creation')) {
+      throw new InjectedError('Injected checkout creation failure', 'fail_checkout_creation');
+    }
+    
     const userId = req.user.sub;
-    const { plan } = req.body;
+    const { plan, idempotencyKey } = req.body;
     
     if (!plan || !["monthly", "yearly"].includes(plan)) {
       return res.status(400).json({
@@ -150,13 +158,36 @@ billingRouter.post("/checkout-session", requireAuth, async (req, res) => {
       });
     }
     
+    // Generate idempotency key (1-hour window)
+    const effectiveIdempotencyKey = idempotencyKey || 
+      `checkout_${userId}_${plan}_${Math.floor(Date.now() / 3600000)}`;
+    
+    // Check for existing pending session (within 1 hour)
+    const existingSession = db.prepare(`
+      SELECT stripe_session_id, session_url, created_at 
+      FROM checkout_sessions 
+      WHERE user_id = ? AND plan = ? AND status = 'pending'
+        AND created_at > datetime('now', '-1 hour')
+      ORDER BY created_at DESC LIMIT 1
+    `).get(userId, plan);
+    
+    if (existingSession) {
+      console.log(`[billing] Reusing existing session for user ${userId}`);
+      return res.json({
+        ok: true,
+        sessionId: existingSession.stripe_session_id,
+        url: existingSession.session_url,
+        reused: true,
+      });
+    }
+    
     // Get user email
     const user = db.prepare("SELECT email, trial_used FROM users WHERE id = ?").get(userId);
     if (!user) {
       return res.status(404).json({ ok: false, error: "User not found" });
     }
     
-    // Create checkout session (with or without trial based on trial_used)
+    // Create checkout session
     let session;
     if (user.trial_used) {
       session = await stripeService.createCheckoutSessionNoTrial({
@@ -172,6 +203,16 @@ billingRouter.post("/checkout-session", requireAuth, async (req, res) => {
       });
     }
     
+    // Save session to DB
+    const sessionId = nanoid(16);
+    db.prepare(`
+      INSERT INTO checkout_sessions 
+        (id, user_id, stripe_session_id, session_url, plan, status, idempotency_key, created_at)
+      VALUES (?, ?, ?, ?, ?, 'pending', ?, datetime('now'))
+    `).run(sessionId, userId, session.sessionId, session.url, plan, effectiveIdempotencyKey);
+    
+    console.log(`[billing] Created checkout session ${session.sessionId} for user ${userId}`);
+    
     res.json({
       ok: true,
       sessionId: session.sessionId,
@@ -179,7 +220,110 @@ billingRouter.post("/checkout-session", requireAuth, async (req, res) => {
     });
   } catch (err) {
     console.error("[billing] Checkout session error:", err);
-    res.status(500).json({ ok: false, error: "Failed to create checkout session" });
+    res.status(500).json({ 
+      ok: false, 
+      error: "Failed to create checkout session",
+      message: err.message,
+    });
+  }
+});
+
+// =============================================
+// Verify Checkout Session
+// =============================================
+
+/**
+ * GET /api/billing/verify-session/:sessionId
+ * Verifies checkout session completion and subscription activation
+ */
+billingRouter.get("/verify-session/:sessionId", requireAuth, async (req, res) => {
+  try {
+    if (!isStripeConfigured()) {
+      return res.status(503).json({
+        ok: false,
+        error: "Stripe not configured",
+      });
+    }
+    
+    const userId = req.user.sub;
+    const { sessionId } = req.params;
+    
+    // Error injection for testing
+    await injectDelay();
+    if (shouldInjectError('fail_session_verification')) {
+      throw new InjectedError('Injected verification failure', 'fail_session_verification');
+    }
+    
+    // Check local DB session
+    const dbSession = db.prepare(`
+      SELECT status, stripe_session_id, plan 
+      FROM checkout_sessions 
+      WHERE stripe_session_id = ? AND user_id = ?
+    `).get(sessionId, userId);
+    
+    if (!dbSession) {
+      return res.status(404).json({
+        ok: false,
+        error: "Session not found",
+      });
+    }
+    
+    // If already completed, return success immediately
+    if (dbSession.status === 'completed') {
+      const user = db.prepare("SELECT subscription_status FROM users WHERE id = ?").get(userId);
+      return res.json({
+        ok: true,
+        status: 'completed',
+        subscriptionStatus: user?.subscription_status || 'inactive',
+      });
+    }
+    
+    // Query Stripe for session status
+    const stripeSession = await stripeService.getCheckoutSession(sessionId);
+    
+    if (stripeSession.payment_status === 'paid' && stripeSession.status === 'complete') {
+      // Update session status
+      db.prepare(`
+        UPDATE checkout_sessions 
+        SET status = 'completed', completed_at = datetime('now')
+        WHERE stripe_session_id = ?
+      `).run(sessionId);
+      
+      // Verify subscription status
+      const user = db.prepare("SELECT subscription_status FROM users WHERE id = ?").get(userId);
+      
+      return res.json({
+        ok: true,
+        status: 'completed',
+        subscriptionStatus: user?.subscription_status || 'inactive',
+      });
+    } else if (stripeSession.status === 'expired') {
+      db.prepare(`
+        UPDATE checkout_sessions 
+        SET status = 'expired'
+        WHERE stripe_session_id = ?
+      `).run(sessionId);
+      
+      return res.json({
+        ok: false,
+        status: 'expired',
+        error: 'Session expired',
+      });
+    } else {
+      // Still pending
+      return res.json({
+        ok: true,
+        status: 'pending',
+        paymentStatus: stripeSession.payment_status,
+      });
+    }
+  } catch (err) {
+    console.error("[billing] Verify session error:", err);
+    res.status(500).json({
+      ok: false,
+      error: "Verification failed",
+      message: err.message,
+    });
   }
 });
 

@@ -190,6 +190,16 @@ export async function createCheckoutSessionNoTrial({
   };
 }
 
+/**
+ * Retrieve a Stripe Checkout Session by ID
+ */
+export async function getCheckoutSession(sessionId) {
+  if (!stripe) throw new Error("Stripe not configured");
+  
+  const session = await stripe.checkout.sessions.retrieve(sessionId);
+  return session;
+}
+
 // =============================================
 // Billing Portal
 // =============================================

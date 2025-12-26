@@ -16,6 +16,7 @@ import { enhanceRouter } from "./routes/enhance.js";
 import { promptsRouter } from "./routes/prompts.js";
 import { pipelineRouter } from "./routes/pipeline.js";
 import { billingRouter, stripeWebhookRouter } from "./routes/billing.js";
+import { analyticsRouter } from "./routes/analytics.js";
 import { dailyRefreshJob } from "./lib/dailyRefreshJob.js";
 import { FEATURES } from "./lib/subscriptionConfig.js";
 
@@ -110,6 +111,9 @@ console.log(`[promptly]   ✓ /api/prompts`);
 app.use("/api/billing", billingRouter);
 console.log(`[promptly]   ✓ /api/billing`);
 console.log(`[promptly]   ✓ /api/stripe/webhook`);
+
+app.use("/api/analytics", analyticsRouter);
+console.log(`[promptly]   ✓ /api/analytics`);
 
 app.use("/api/pipeline", pipelineRouter);
 console.log(`[promptly]   ✓ /api/pipeline (health, run, stream)`);

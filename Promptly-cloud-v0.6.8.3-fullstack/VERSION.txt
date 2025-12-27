@@ -1,3 +1,28 @@
+v0.6.12.0
+
+Release Date: 2025-12-27
+Type: MAJOR - Subscription V2 MVP Complete (Days 5-8)
+
+生产级订阅系统韧性功能：
+✅ Webhook 幂等性 (stripe_events 表，status tracking)
+✅ 每日补偿任务 (自动修复 stuck sessions，webhook retry)
+✅ 错误恢复 UI (用户重试按钮，enhanced error handling)
+✅ 自动化测试套件 (14 tests, 100% pass rate)
+
+Technical Highlights:
+- Daily job at 2:00 AM reconciles pending sessions with Stripe
+- Webhook retry logic: max 3 attempts within 7 days
+- User-initiated retry buttons in checkout-success.html & subscription.js
+- Comprehensive test coverage for all MVP features (Days 1-8)
+
+Files: 6 new files, 4 modified files
+Database: 1 new table (stripe_events)
+Tests: 14/14 passed
+
+---
+
+Previous Releases:
+
 v0.6.11.0
 
 Release Date: 2025-12-20

@@ -225,6 +225,26 @@
       margin-bottom: 1.5rem;
     }
     
+    .error-content {
+      margin-bottom: 1rem;
+    }
+    
+    .btn-retry {
+      margin-top: 0.75rem;
+      background: #dc2626;
+      color: white;
+      border: none;
+      padding: 0.625rem 1.5rem;
+      border-radius: 6px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    
+    .btn-retry:hover {
+      background: #b91c1c;
+    }
+    
     [data-theme="dark"] .error-message {
       background: rgba(239, 68, 68, 0.1);
       border-color: rgba(239, 68, 68, 0.3);
@@ -249,7 +269,12 @@
       </div>
       
       <!-- Error Message (hidden by default) -->
-      <div class="error-message hidden" id="errorMessage"></div>
+      <div class="error-message hidden" id="errorMessage">
+        <div class="error-content"></div>
+        <button class="btn btn-primary btn-retry hidden" id="retryBtn" onclick="retryVerification()">
+          Retry Verification
+        </button>
+      </div>
       
       <!-- Success Icon (hidden initially) -->
       <div class="success-icon hidden" id="successIcon">🎉</div>
@@ -344,7 +369,7 @@
           updateProgress(Math.min(20 + (retryCount / MAX_RETRIES) * 70, 90));
           
           if (retryCount >= MAX_RETRIES) {
-            showError('Verification timed out. Your payment may still be processing. Please check your account in a few minutes.');
+            showError('Verification timed out. Your payment may still be processing. Please check your account in a few minutes.', true);
             track(EVENTS.CHECKOUT_SUCCESS_ERROR, { error: 'timeout' });
           } else {
             document.getElementById('statusText').textContent = 
@@ -362,7 +387,7 @@
           updateProgress(Math.min(20 + (retryCount / MAX_RETRIES) * 70, 90));
           setTimeout(startVerification, 2000);
         } else {
-          showError(`Verification failed: ${err.message}`);
+          showError(`Verification failed: ${err.message}`, true);
           track(EVENTS.CHECKOUT_SUCCESS_ERROR, { error: err.message });
         }
       }
@@ -400,13 +425,22 @@
       loadSubscriptionDetails();
     }
     
-    function showError(message) {
+    function showError(message, showRetry = false) {
       document.getElementById('verificationStatus').classList.add('hidden');
       document.getElementById('spinner').classList.add('hidden');
       
       const errorEl = document.getElementById('errorMessage');
-      errorEl.textContent = message;
+      const errorContent = errorEl.querySelector('.error-content');
+      const retryBtn = document.getElementById('retryBtn');
+      
+      errorContent.textContent = message;
       errorEl.classList.remove('hidden');
+      
+      if (showRetry) {
+        retryBtn.classList.remove('hidden');
+      } else {
+        retryBtn.classList.add('hidden');
+      }
       
       document.getElementById('titleText').textContent = 'Verification Issue';
       document.getElementById('messageText').textContent = 
@@ -414,6 +448,26 @@
       
       // Enable account button for checking status
       document.getElementById('accountBtn').removeAttribute('disabled');
+    }
+    
+    // Retry verification function
+    function retryVerification() {
+      // Hide error message
+      document.getElementById('errorMessage').classList.add('hidden');
+      
+      // Reset state
+      document.getElementById('verificationStatus').classList.remove('hidden');
+      document.getElementById('spinner').classList.remove('hidden');
+      document.getElementById('titleText').textContent = 'Processing Your Subscription';
+      document.getElementById('messageText').textContent = 
+        'Please wait while we confirm your payment and activate your subscription...';
+      
+      // Reset retry count and progress
+      retryCount = 0;
+      updateProgress(20);
+      
+      // Restart verification
+      startVerification();
     }
     
     async function loadSubscriptionDetails() {

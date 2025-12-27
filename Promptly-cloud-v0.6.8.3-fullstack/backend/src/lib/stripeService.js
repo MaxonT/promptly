@@ -383,22 +383,41 @@ export function isEventProcessed(eventId) {
 export function recordEvent(eventId, eventType, status = "processed", error = null, payload = null) {
   const now = new Date().toISOString();
   
-  db.prepare(`
-    INSERT INTO stripe_events (event_id, event_type, status, error, payload, created_at, processed_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?)
-    ON CONFLICT(event_id) DO UPDATE SET
-      status = excluded.status,
-      error = excluded.error,
-      processed_at = excluded.processed_at
-  `).run(
-    eventId,
-    eventType,
-    status,
-    error,
-    payload ? JSON.stringify(payload) : null,
-    now,
-    status === "processed" ? now : null
-  );
+  // Check if event exists
+  const existing = db.prepare(`
+    SELECT retry_count FROM stripe_events WHERE event_id = ?
+  `).get(eventId);
+  
+  if (existing) {
+    // Update existing event
+    db.prepare(`
+      UPDATE stripe_events SET
+        status = ?,
+        error = ?,
+        processed_at = ?,
+        retry_count = retry_count + 1
+      WHERE event_id = ?
+    `).run(
+      status,
+      error,
+      status === "processed" ? now : null,
+      eventId
+    );
+  } else {
+    // Insert new event
+    db.prepare(`
+      INSERT INTO stripe_events (event_id, event_type, status, error, payload, created_at, processed_at, retry_count)
+      VALUES (?, ?, ?, ?, ?, ?, ?, 0)
+    `).run(
+      eventId,
+      eventType,
+      status,
+      error,
+      payload ? JSON.stringify(payload) : null,
+      now,
+      status === "processed" ? now : null
+    );
+  }
 }
 
 /**
@@ -408,10 +427,11 @@ async function handleCheckoutCompleted(event) {
   const session = event.data.object;
   const userId = session.metadata?.userId;
   const customerId = session.customer;
+  const sessionId = session.id;
   
   if (!userId) {
     console.error("[stripe] No userId in checkout session metadata");
-    return;
+    throw new Error("Missing userId in checkout session metadata");
   }
   
   // Ensure customer mapping exists
@@ -425,6 +445,17 @@ async function handleCheckoutCompleted(event) {
       INSERT INTO stripe_customers (user_id, stripe_customer_id, email, created_at, updated_at)
       VALUES (?, ?, ?, ?, ?)
     `).run(userId, customerId, session.customer_email, now, now);
+  }
+  
+  // Update checkout_sessions table status
+  const updated = db.prepare(`
+    UPDATE checkout_sessions 
+    SET status = 'completed', completed_at = datetime('now')
+    WHERE stripe_session_id = ? AND user_id = ?
+  `).run(sessionId, userId);
+  
+  if (updated.changes > 0) {
+    console.log(`[stripe] Checkout session ${sessionId} marked as completed`);
   }
   
   console.log(`[stripe] Checkout completed for user ${userId}`);
@@ -610,6 +641,9 @@ export async function processWebhookEvent(event) {
     return { skipped: true };
   }
   
+  // Record event as pending
+  recordEvent(eventId, eventType, "pending", null, event.data.object);
+  
   try {
     switch (eventType) {
       case "checkout.session.completed":
@@ -637,6 +671,7 @@ export async function processWebhookEvent(event) {
         console.log(`[stripe] Unhandled event type: ${eventType}`);
     }
     
+    // Mark as processed
     recordEvent(eventId, eventType, "processed", null, event.data.object);
     return { processed: true };
     

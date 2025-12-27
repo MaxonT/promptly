@@ -18,6 +18,7 @@ import { pipelineRouter } from "./routes/pipeline.js";
 import { billingRouter, stripeWebhookRouter } from "./routes/billing.js";
 import { analyticsRouter } from "./routes/analytics.js";
 import { dailyRefreshJob } from "./lib/dailyRefreshJob.js";
+import dailyCompensationJob from "./lib/dailyCompensationJob.js";
 import { FEATURES } from "./lib/subscriptionConfig.js";
 
 dotenv.config();
@@ -135,6 +136,10 @@ console.log(`[promptly]    POST /api/stripe/webhook`);
 if (FEATURES.subscriptionsEnabled) {
   dailyRefreshJob.startScheduler();
   console.log(`[promptly] 🔄 Daily token refresh scheduler started`);
+  
+  // Start daily compensation job (runs at 2:00 AM)
+  dailyCompensationJob.scheduleDailyJob("02:00");
+  console.log(`[promptly] 🔧 Daily compensation job scheduled`);
 }
 
 // Root path handler - useful for checking if backend is alive

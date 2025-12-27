@@ -97,7 +97,17 @@ import { track, EVENTS } from './lib/analytics.js';
         break;
       case SubscriptionState.ERROR:
         const error = stateMachine.getState().error;
-        showToast('error', error || 'An error occurred');
+        const errorMessage = error || 'An error occurred';
+        
+        // Show detailed error toast with retry option
+        showErrorToast(errorMessage, () => {
+          // Retry callback
+          if (selectedPlan) {
+            stateMachine.transitionTo(SubscriptionState.IDLE);
+            subscribe(selectedPlan);
+          }
+        });
+        
         stateMachine.transitionTo(SubscriptionState.IDLE);
         break;
     }
@@ -577,6 +587,44 @@ import { track, EVENTS } from './lib/analytics.js';
     setTimeout(() => {
       toast.remove();
     }, 5000);
+  }
+
+  function showErrorToast(message, retryCallback) {
+    const toast = document.createElement('div');
+    toast.className = 'toast error';
+    
+    const messageDiv = document.createElement('div');
+    messageDiv.textContent = message;
+    messageDiv.style.marginBottom = '0.5rem';
+    toast.appendChild(messageDiv);
+    
+    if (retryCallback) {
+      const retryBtn = document.createElement('button');
+      retryBtn.textContent = 'Retry';
+      retryBtn.className = 'toast-retry-btn';
+      retryBtn.style.cssText = `
+        background: white;
+        color: #dc2626;
+        border: none;
+        padding: 0.25rem 0.75rem;
+        border-radius: 4px;
+        font-weight: 600;
+        font-size: 0.875rem;
+        cursor: pointer;
+        margin-top: 0.5rem;
+      `;
+      retryBtn.onclick = () => {
+        toast.remove();
+        retryCallback();
+      };
+      toast.appendChild(retryBtn);
+    }
+    
+    toastContainer.appendChild(toast);
+    
+    setTimeout(() => {
+      toast.remove();
+    }, 8000); // Longer timeout for error with retry
   }
 
   async function getFingerprint() {

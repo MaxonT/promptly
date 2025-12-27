@@ -184,3 +184,4 @@ SCORING_SPEC_MINIFY=false
 2. **QE循环**: 默认使用policy配置（Standard=2, Premium=3），可通过feature flag禁用。
 3. **Metrics汇总**: 每次pipeline执行结束时都会输出，可用于监控和分析。
 
+

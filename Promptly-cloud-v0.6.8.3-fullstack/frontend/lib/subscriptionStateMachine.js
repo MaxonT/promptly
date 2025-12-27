@@ -72,6 +72,7 @@ export class SubscriptionStateMachine {
     this.currentState = initialState;
     this.listeners = [];
     this.history = [{ state: initialState, timestamp: Date.now() }];
+    this.error = null; // Store error context
   }
 
   getState() {
@@ -129,5 +130,37 @@ export class SubscriptionStateMachine {
 
   getHistory() {
     return this.history;
+  }
+
+  // Add transitionTo method for direct state transitions (bypasses event system)
+  transitionTo(newState, context = {}) {
+    const previousState = this.currentState;
+    this.currentState = newState;
+    
+    // Store error in context if provided
+    if (context.error) {
+      this.error = context.error;
+    }
+    
+    this.history.push({
+      state: this.currentState,
+      event: 'direct_transition',
+      context,
+      timestamp: Date.now(),
+    });
+
+    console.log(`[FSM] Direct transition: ${previousState} → ${newState}`);
+
+    // Notify listeners (but use onStateChange signature for compatibility)
+    this.notifyListeners(previousState, this.currentState, 'direct_transition', context);
+    return true;
+  }
+
+  // Add on method as alias for onStateChange
+  on(event, callback) {
+    if (event === 'stateChange') {
+      return this.onStateChange(callback);
+    }
+    console.warn(`[FSM] Unknown event: ${event}`);
   }
 }

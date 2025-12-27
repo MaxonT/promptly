@@ -65,7 +65,7 @@ import { track, EVENTS } from './lib/analytics.js';
     
     // Initialize State Machine
     stateMachine = new SubscriptionStateMachine();
-    stateMachine.on('stateChange', handleStateChange);
+    stateMachine.onStateChange(handleStateChange);
     
     if (authToken) {
       await loadBillingStatus();
@@ -95,20 +95,32 @@ import { track, EVENTS } from './lib/analytics.js';
       case SubscriptionState.CREATING_CHECKOUT:
         createCheckoutSession();
         break;
-      case SubscriptionState.ERROR:
-        const error = stateMachine.getState().error;
-        const errorMessage = error || 'An error occurred';
+      case SubscriptionState.CHECKOUT_FAILED:
+        const error = stateMachine.error || 'Failed to create checkout session';
+        const errorMessage = error || 'Failed to create checkout session';
         
         // Show detailed error toast with retry option
         showErrorToast(errorMessage, () => {
           // Retry callback
           if (selectedPlan) {
+            stateMachine.error = null;
             stateMachine.transitionTo(SubscriptionState.IDLE);
             subscribe(selectedPlan);
           }
         });
+        break;
+      case SubscriptionState.ERROR:
+        const errorMsg = stateMachine.error || 'An error occurred';
         
-        stateMachine.transitionTo(SubscriptionState.IDLE);
+        // Show detailed error toast with retry option
+        showErrorToast(errorMsg, () => {
+          // Retry callback
+          if (selectedPlan) {
+            stateMachine.error = null;
+            stateMachine.transitionTo(SubscriptionState.IDLE);
+            subscribe(selectedPlan);
+          }
+        });
         break;
     }
   }
@@ -124,7 +136,7 @@ import { track, EVENTS } from './lib/analytics.js';
     // Map states to stepper steps
     if ([SubscriptionState.CHECK_AUTH, SubscriptionState.AUTH_MODAL].includes(state)) {
       steps[0]?.classList.add('active');
-    } else if ([SubscriptionState.CREATING_CHECKOUT, SubscriptionState.CHECKOUT_REDIRECT].includes(state)) {
+    } else if ([SubscriptionState.CREATING_CHECKOUT, SubscriptionState.REDIRECTING_TO_STRIPE].includes(state)) {
       steps[0]?.classList.add('completed');
       steps[1]?.classList.add('active');
     } else if ([SubscriptionState.CONFIRMING_PAYMENT, SubscriptionState.ACTIVATED].includes(state)) {
@@ -375,13 +387,20 @@ import { track, EVENTS } from './lib/analytics.js';
   }
 
   async function createCheckoutSession() {
+    console.log('[subscription] createCheckoutSession() called for plan:', selectedPlan);
     showLoading(true);
-    track(EVENTS.CHECKOUT_SESSION_CREATING, { plan: selectedPlan });
+    
+    try {
+      track(EVENTS.CHECKOUT_SESSION_CREATING, { plan: selectedPlan });
+    } catch (err) {
+      console.warn('[subscription] Analytics tracking failed:', err);
+    }
     
     try {
       // Generate idempotency key
       idempotencyKey = `checkout_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
       
+      console.log('[subscription] Calling /api/billing/checkout-session with plan:', selectedPlan);
       const result = await apiCall('/api/billing/checkout-session', {
         method: 'POST',
         body: JSON.stringify({ 
@@ -389,6 +408,12 @@ import { track, EVENTS } from './lib/analytics.js';
           idempotencyKey,
         }),
       });
+      
+      console.log('[subscription] Checkout session created:', result);
+      
+      if (!result || !result.url) {
+        throw new Error('Invalid response from server: missing checkout URL');
+      }
       
       // Save pending state
       sessionStorage.setItem('subscription_pending', JSON.stringify({
@@ -398,23 +423,36 @@ import { track, EVENTS } from './lib/analytics.js';
         timestamp: Date.now(),
       }));
       
-      track(EVENTS.CHECKOUT_SESSION_CREATED, { 
-        plan: selectedPlan,
-        sessionId: result.sessionId,
-        reused: result.reused || false,
-      });
+      try {
+        track(EVENTS.CHECKOUT_SESSION_CREATED, { 
+          plan: selectedPlan,
+          sessionId: result.sessionId,
+          reused: result.reused || false,
+        });
+      } catch (err) {
+        console.warn('[subscription] Analytics tracking failed:', err);
+      }
       
       // Transition to redirect
-      stateMachine.transitionTo(SubscriptionState.CHECKOUT_REDIRECT);
+      stateMachine.transitionTo(SubscriptionState.REDIRECTING_TO_STRIPE);
       
       // Redirect to Stripe
+      console.log('[subscription] Redirecting to Stripe checkout:', result.url);
       window.location.href = result.url;
       
     } catch (err) {
-      console.error('Failed to create checkout session:', err);
-      showToast('error', err.message || 'Failed to start checkout');
-      track(EVENTS.CHECKOUT_SESSION_FAILED, { plan: selectedPlan, error: err.message });
-      stateMachine.transitionTo(SubscriptionState.ERROR, { error: err.message });
+      console.error('[subscription] Failed to create checkout session:', err);
+      const errorMessage = err.message || 'Failed to start checkout';
+      showToast('error', errorMessage);
+      
+      try {
+        track(EVENTS.CHECKOUT_SESSION_FAILED, { plan: selectedPlan, error: errorMessage });
+      } catch (trackErr) {
+        console.warn('[subscription] Analytics tracking failed:', trackErr);
+      }
+      
+      stateMachine.error = errorMessage;
+      stateMachine.transitionTo(SubscriptionState.CHECKOUT_FAILED);
     } finally {
       showLoading(false);
     }
@@ -529,14 +567,26 @@ import { track, EVENTS } from './lib/analytics.js';
 
   function setupSubscribeButtons() {
     subscribeButtons.forEach(btn => {
-      btn.addEventListener('click', () => {
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
         const plan = btn.dataset.plan;
+        console.log('[subscription] Subscribe button clicked, plan:', plan);
+        
         // Free plan doesn't need subscription flow
         if (plan === 'free') {
           const message = window.i18n ? window.i18n.t('subscription.already_free_plan') : 'You are already on the free plan';
           showToast('info', message);
           return;
         }
+        
+        // Ensure state machine is initialized
+        if (!stateMachine) {
+          console.error('[subscription] State machine not initialized');
+          showToast('error', 'Please refresh the page and try again');
+          return;
+        }
+        
         subscribe(plan);
       });
     });

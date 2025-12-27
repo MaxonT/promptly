@@ -171,21 +171,48 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
   async function loadSettings() {
     try {
       log("GET /api/settings ...");
-      const res = await fetch(`${API_BASE}/api/settings`);
+      
+      // Add timeout to prevent hanging
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+      
+      const res = await fetch(`${API_BASE}/api/settings`, {
+        signal: controller.signal
+      }).catch(err => {
+        if (err.name === 'AbortError') {
+          throw new Error('Request timeout - please check your connection');
+        }
+        throw err;
+      });
+      
+      clearTimeout(timeoutId);
       const data = await res.json().catch(() => ({}));
+      
       if (!res.ok || !data.ok) {
         log("Settings error: HTTP " + res.status + " " + JSON.stringify(data));
-        envSummaryEl.textContent =
-          "Failed to load settings. See log for details.";
+        // Show error state instead of skeleton
+        if (envSummaryEl) {
+          envSummaryEl.textContent = "Failed to load settings. See log for details.";
+        }
+        if (modelListEl) {
+          modelListEl.innerHTML = '<div class="settings-error">Failed to load environment & models. Please refresh the page.</div>';
+        }
+        if (featuresListEl) {
+          featuresListEl.innerHTML = '<li class="settings-error">Failed to load features. Please refresh the page.</li>';
+        }
         return;
       }
       const s = data.settings || {};
       const env = s.env || "unknown";
       const llmEnabled = s.llmEnabled ? "enabled" : "disabled";
 
-      envSummaryEl.textContent = `Environment: ${env} · LLM: ${llmEnabled}`;
+      if (envSummaryEl) {
+        envSummaryEl.textContent = `Environment: ${env} · LLM: ${llmEnabled}`;
+      }
 
-      modelListEl.innerHTML = "";
+      if (modelListEl) {
+        modelListEl.innerHTML = "";
+      }
       const modelDisplayName = "Promptly Refined LLM Model";
       const modelItems = [
         { icon: "🤖", label: "Default Model", value: modelDisplayName, badge: "Primary", desc: "Main generation model that produces the actual responses." },
@@ -233,10 +260,14 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
           div.appendChild(badgeSpan);
         }
         
-        modelListEl.appendChild(div);
+        if (modelListEl) {
+          modelListEl.appendChild(div);
+        }
       }
 
-      featuresListEl.innerHTML = "";
+      if (featuresListEl) {
+        featuresListEl.innerHTML = "";
+      }
       const features = s.features || {};
       const featureIcons = {
         questionWizard: "🧙",
@@ -289,14 +320,27 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
         li.appendChild(iconSpan);
         li.appendChild(contentDiv);
         li.appendChild(statusSpan);
-        featuresListEl.appendChild(li);
+        if (featuresListEl) {
+          featuresListEl.appendChild(li);
+        }
       });
 
-      rawSettingsEl.textContent = JSON.stringify(s, null, 2);
+      if (rawSettingsEl) {
+        rawSettingsEl.textContent = JSON.stringify(s, null, 2);
+      }
       log("Settings loaded.");
     } catch (err) {
       console.error(err);
-      envSummaryEl.textContent = "Error loading settings.";
+      // Ensure we replace skeleton with error message
+      if (envSummaryEl) {
+        envSummaryEl.textContent = "Error loading settings: " + (err.message || "Unknown error");
+      }
+      if (modelListEl) {
+        modelListEl.innerHTML = '<div class="settings-error">Error loading environment & models: ' + (err.message || "Unknown error") + '. Please refresh the page.</div>';
+      }
+      if (featuresListEl) {
+        featuresListEl.innerHTML = '<li class="settings-error">Error loading features: ' + (err.message || "Unknown error") + '. Please refresh the page.</li>';
+      }
       log("Settings error: " + err.message);
     }
   }

@@ -425,3 +425,15 @@ html[data-theme="light"] .account-form input{
   0%{opacity:0.5;}
   100%{opacity:1;}
 }
+
+/* Error message styles */
+.settings-error{
+  padding:1rem;
+  border-radius:0.5rem;
+  background:rgba(239,68,68,0.1);
+  border:1px solid rgba(239,68,68,0.3);
+  color:#f87171;
+  font-size:0.85rem;
+  line-height:1.5;
+  margin:0.5rem 0;
+}

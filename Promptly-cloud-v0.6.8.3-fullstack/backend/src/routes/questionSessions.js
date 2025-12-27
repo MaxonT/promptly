@@ -217,6 +217,9 @@ questionSessionRouter.post("/", async (req, res) => {
     return res.status(400).json({ ok: false, error: parsed.error.flatten() });
   }
   
+  // Extract data
+  const { initial_description, kind, mode = 'deep', model, language } = parsed.data;
+  
   // Check mode restrictions for free plan
   const { mode = 'deep' } = parsed.data;
   if (!canUseMode(userId, mode)) {
@@ -225,7 +228,6 @@ questionSessionRouter.post("/", async (req, res) => {
       error: 'Free plan only supports Standard and Fast modes. Please upgrade to use Deep or Ultra Thinking modes.'
     });
   }
-  const { initial_description, kind, mode, model, language } = parsed.data;
   const modeProfile = resolveModeProfile(mode);
   const modelChoice = resolveModelChoice(model);
   const userLanguage = language || 'en';

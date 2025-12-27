@@ -12,6 +12,7 @@ import { chatJson, LlmDisabledError } from "../lib/llmRouter.js";
 import { goBack, skipQuestion } from "../lib/questionNavigator.js";
 import { getModelIds, resolveModelName, isValidModel, getModelConfig } from "../lib/modelRegistry.js";
 import { INFERENCE_PROFILES } from "../lib/inferenceProfiles.js";
+import { checkQuestionWizardLimit, recordUsage, canUseMode } from "../lib/planLimits.js";
 
 export const questionSessionRouter = Router();
 
@@ -190,6 +191,19 @@ async function runWithTimeout(promise, timeoutMs, label = "task") {
 }
 
 questionSessionRouter.post("/", async (req, res) => {
+  const userId = getUserId(req);
+  
+  // Check plan limits for Question Wizard
+  const limitCheck = checkQuestionWizardLimit(userId);
+  if (!limitCheck.allowed) {
+    return res.status(403).json({
+      ok: false,
+      error: limitCheck.reason,
+      usage: limitCheck.usage,
+      limit: limitCheck.limit
+    });
+  }
+  
   const parsed = CreateSessionSchema.safeParse(req.body);
   if (!parsed.success) {
     const hasDescriptionIssue = parsed.error.issues.some(
@@ -201,6 +215,15 @@ questionSessionRouter.post("/", async (req, res) => {
         .json({ error: PROJECT_DESCRIPTION_REQUIRED_MESSAGE });
     }
     return res.status(400).json({ ok: false, error: parsed.error.flatten() });
+  }
+  
+  // Check mode restrictions for free plan
+  const { mode = 'deep' } = parsed.data;
+  if (!canUseMode(userId, mode)) {
+    return res.status(403).json({
+      ok: false,
+      error: 'Free plan only supports Standard and Fast modes. Please upgrade to use Deep or Ultra Thinking modes.'
+    });
   }
   const { initial_description, kind, mode, model, language } = parsed.data;
   const modeProfile = resolveModeProfile(mode);
@@ -276,6 +299,9 @@ questionSessionRouter.post("/", async (req, res) => {
       q.id = qid;
     });
 
+    // Record usage after successful session creation
+    recordUsage(userId, 'question_wizard');
+    
     // Return all generated questions (not just first 5)
     // Frontend will handle client-side pagination
     const allGeneratedQuestions = choiceQuestions.map((q) => ({

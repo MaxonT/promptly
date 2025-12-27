@@ -221,6 +221,18 @@ CREATE TABLE IF NOT EXISTS candidate_prompts (
   CONSTRAINT fk_cp_spec FOREIGN KEY (spec_id) REFERENCES specs(id),
   CONSTRAINT fk_cp_session FOREIGN KEY (session_id) REFERENCES question_sessions(id)
 );
+
+-- Plan usage tracking for enforcing daily limits
+CREATE TABLE IF NOT EXISTS plan_usage (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL,
+  feature_type TEXT NOT NULL,
+  date TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  CONSTRAINT fk_usage_user FOREIGN KEY (user_id) REFERENCES users(id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_plan_usage_user_date ON plan_usage(user_id, date, feature_type);
 `);
 
 function ensureColumn(table, column, definition) {

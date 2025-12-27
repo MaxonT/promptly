@@ -17,6 +17,7 @@ import { chatText, chatJson, LlmDisabledError } from "../lib/llmRouter.js";
 import { getModePolicy } from "../lib/modePolicies.js";
 import { spendTokensForRun, getTokenStatus } from "../lib/tokenUsage.js";
 import { FEATURES } from "../lib/subscriptionConfig.js";
+import { checkPromptOptimizationLimit, recordUsage, canUseMode } from "../lib/planLimits.js";
 
 export const pipelineRouter = Router();
 
@@ -134,7 +135,20 @@ pipelineRouter.post("/run", async (req, res) => {
   }
 
   const { idea, attachments = [], skipQuestions = false, model: modeInput = null } = parsed.data;
-  console.log(`[pipeline] Starting pipeline - idea length: ${idea.length}, skipQuestions: ${skipQuestions}, mode: ${modeInput || 'default (fast)'}`);
+  const mode = modeInput || 'fast';
+  
+  // Check plan limits
+  const limitCheck = checkPromptOptimizationLimit(userId, mode);
+  if (!limitCheck.allowed) {
+    return res.status(403).json({
+      ok: false,
+      error: limitCheck.reason,
+      usage: limitCheck.usage,
+      limit: limitCheck.limit
+    });
+  }
+  
+  console.log(`[pipeline] Starting pipeline - idea length: ${idea.length}, skipQuestions: ${skipQuestions}, mode: ${mode}`);
 
   // Generate a unique runId for this pipeline execution
   const runId = `run_${nanoid(16)}`;
@@ -149,6 +163,10 @@ pipelineRouter.post("/run", async (req, res) => {
 
   // Execute pipeline asynchronously and send events
   executePipelineWithEvents(runId, userId, { idea, attachments, skipQuestions, modeInput })
+    .then(() => {
+      // Record usage after successful pipeline execution
+      recordUsage(userId, 'prompt_optimization');
+    })
     .catch((err) => {
       console.error(`[pipeline] Pipeline execution failed for ${runId}:`, err);
       sendEvent(runId, "error", {
@@ -169,6 +187,17 @@ async function executePipelineWithEvents(runId, userId, { idea, attachments, ski
   
   // Resolve Policy based on mode (modeInput param holds the mode: fast, standard, premium)
   const mode = modeInput || 'fast';
+  
+  // Check mode restrictions for free plan (this is a backup check, main check is in /run endpoint)
+  if (!canUseMode(userId, mode)) {
+    sendEvent(runId, "error", {
+      stage: "pipeline",
+      message: 'Free plan only supports Standard and Fast modes. Please upgrade to use Deep or Ultra Thinking modes.'
+    });
+    sendEvent(runId, "complete", { success: false });
+    return;
+  }
+  
   const policy = getModePolicy(mode);
   console.log(`[pipeline] [${runId}] Executing with policy: ${policy.name} (${policy.id})`);
   console.log(`[pipeline] [${runId}] Policy Details: Spec=${policy.specBuilder.model}, QEngine=${policy.questionEngine.enabled}, Gen=${policy.generation.model}`);

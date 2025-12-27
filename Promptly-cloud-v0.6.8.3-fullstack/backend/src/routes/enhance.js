@@ -84,8 +84,15 @@
 
 import express from "express";
 import { chatJson, chatText, LlmDisabledError } from "../lib/llmRouter.js";
+import { checkPromptOptimizationLimit, recordUsage } from "../lib/planLimits.js";
 
 const enhanceRouter = express.Router();
+
+// Helper to get user ID from request
+function getUserId(req) {
+  if (req.user && req.user.sub) return req.user.sub;
+  return "demo-user";
+}
 
 /**
  * ATTACHMENT FEATURE - Helper Functions
@@ -269,6 +276,18 @@ enhanceRouter.post("/structure", async (req, res) => {
   try {
     console.log(`[promptly] 📝 /enhance/structure: Request received`);
     
+    // Check plan limits
+    const userId = getUserId(req);
+    const limitCheck = checkPromptOptimizationLimit(userId, 'standard'); // Structure enhancement uses standard mode
+    if (!limitCheck.allowed) {
+      return res.status(403).json({
+        ok: false,
+        error: limitCheck.reason,
+        usage: limitCheck.usage,
+        limit: limitCheck.limit
+      });
+    }
+    
     // 1) Input Layer: 结构化输入 - 收集原始 prompt 和附件
     const { prompt, attachments = [] } = req.body;
     const safeAttachments = coerceAttachments(attachments);
@@ -333,6 +352,9 @@ Required Format:
     // 4) Test Layer: 行为校验 - 记录模型使用情况
     logModelUsage("/enhance/structure", modelUsed, completionId);
 
+    // Record usage after successful enhancement
+    recordUsage(userId, 'prompt_optimization');
+    
     // 6) Outcome Layer: 结果交付 - 最终输出只包含增强后的 prompt 及处理的附件数量
     res.json({
       ok: true,
@@ -357,6 +379,18 @@ Required Format:
  */
 enhanceRouter.post("/style", async (req, res) => {
   try {
+    // Check plan limits
+    const userId = getUserId(req);
+    const limitCheck = checkPromptOptimizationLimit(userId, 'standard');
+    if (!limitCheck.allowed) {
+      return res.status(403).json({
+        ok: false,
+        error: limitCheck.reason,
+        usage: limitCheck.usage,
+        limit: limitCheck.limit
+      });
+    }
+    
     const { prompt, attachments = [] } = req.body;
     const safeAttachments = coerceAttachments(attachments);
 
@@ -390,6 +424,9 @@ Output: Enhanced prompt only.`;
       maxRetries: 1
     });
     logModelUsage("/enhance/style", modelUsed, completionId);
+    
+    // Record usage after successful enhancement
+    recordUsage(userId, 'prompt_optimization');
 
     res.json({
       ok: true,
@@ -410,6 +447,18 @@ Output: Enhanced prompt only.`;
  */
 enhanceRouter.post("/simplify", async (req, res) => {
   try {
+    // Check plan limits
+    const userId = getUserId(req);
+    const limitCheck = checkPromptOptimizationLimit(userId, 'standard');
+    if (!limitCheck.allowed) {
+      return res.status(403).json({
+        ok: false,
+        error: limitCheck.reason,
+        usage: limitCheck.usage,
+        limit: limitCheck.limit
+      });
+    }
+    
     const { prompt, attachments = [] } = req.body;
     const safeAttachments = coerceAttachments(attachments);
 
@@ -443,6 +492,9 @@ Output: Simplified prompt only.`;
       maxRetries: 1
     });
     logModelUsage("/enhance/simplify", modelUsed, completionId);
+    
+    // Record usage after successful enhancement
+    recordUsage(userId, 'prompt_optimization');
 
     res.json({
       ok: true,

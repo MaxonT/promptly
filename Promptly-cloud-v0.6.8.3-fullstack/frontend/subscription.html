@@ -24,7 +24,6 @@
       <nav class="nav-links">
         <a href="index.html" data-i18n="nav.home">Home</a>
         <a href="wizard.html" data-i18n="nav.wizard">Wizard</a>
-        <a href="specs.html" data-i18n="nav.specs">Specs</a>
         <a href="subscription.html" class="active" data-i18n="nav.subscription">Subscription</a>
         <a href="account.html" data-i18n="nav.account">Account</a>
       </nav>
@@ -91,6 +90,24 @@
       </div>
 
       <div class="pricing-cards">
+        <!-- Free Plan -->
+        <div class="pricing-card" data-plan="free">
+          <div class="card-header">
+            <h2 class="plan-name" data-i18n="subscription.plan_free">Free</h2>
+            <div class="plan-price">
+              <span class="amount" data-i18n="subscription.plan_free">Free</span>
+            </div>
+          </div>
+          <ul class="plan-features">
+            <li><span class="feature-icon">✓</span> <span data-i18n="subscription.feature_free_optimization">Prompt optimization 8 times/day</span></li>
+            <li><span class="feature-icon">✓</span> <span data-i18n="subscription.feature_free_optimization_mode">Standard/Fast modes only</span></li>
+            <li><span class="feature-icon">✓</span> <span data-i18n="subscription.feature_free_wizard">Question Wizard 5 times/day</span></li>
+          </ul>
+          <button class="btn btn-secondary btn-block subscribe-btn" data-plan="free" data-i18n="subscription.current_plan">
+            Current Plan
+          </button>
+        </div>
+
         <!-- Monthly Plan -->
         <div class="pricing-card" data-plan="monthly">
           <div class="card-header">

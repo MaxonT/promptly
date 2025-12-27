@@ -531,6 +531,12 @@ import { track, EVENTS } from './lib/analytics.js';
     subscribeButtons.forEach(btn => {
       btn.addEventListener('click', () => {
         const plan = btn.dataset.plan;
+        // Free plan doesn't need subscription flow
+        if (plan === 'free') {
+          const message = window.i18n ? window.i18n.t('subscription.already_free_plan') : 'You are already on the free plan';
+          showToast('info', message);
+          return;
+        }
         subscribe(plan);
       });
     });

@@ -46,6 +46,19 @@
   --warn: #fbbf24;
   --err: #f87171;
   
+  /* === Status Background/Text Colors === */
+  --success-bg: rgba(45, 212, 191, 0.15);
+  --success-color: #2dd4bf;
+  --error-bg: rgba(248, 113, 113, 0.15);
+  --error-color: #f87171;
+  --info-bg: rgba(34, 211, 238, 0.15);
+  --info-color: #22d3ee;
+  
+  /* === Legacy Aliases (for compatibility) === */
+  --bg-primary: var(--bg);
+  --bg-secondary: var(--bg-soft);
+  --border-color: var(--border);
+  
   /* === Input/Form Colors === */
   --input-bg: rgba(15, 23, 42, 0.9);
   --input-border: rgba(148, 163, 184, 0.7);
@@ -103,6 +116,19 @@
   --ok: #059669;
   --warn: #b45309;
   --err: #b91c1c;
+  
+  /* === Status Background/Text Colors === */
+  --success-bg: rgba(5, 150, 105, 0.1);
+  --success-color: #059669;
+  --error-bg: rgba(185, 28, 28, 0.1);
+  --error-color: #b91c1c;
+  --info-bg: rgba(14, 165, 183, 0.1);
+  --info-color: #0ea5b7;
+  
+  /* === Legacy Aliases (for compatibility) === */
+  --bg-primary: var(--bg);
+  --bg-secondary: var(--bg-soft);
+  --border-color: var(--border);
   
   /* === Input/Form Colors === */
   --input-bg: rgba(255, 255, 255, 1);

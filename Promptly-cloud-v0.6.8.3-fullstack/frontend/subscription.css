@@ -562,14 +562,14 @@ body.subscription-body::after {
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: var(--backdrop);
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: 1rem;
   z-index: 1000;
-  color: white;
+  color: var(--text);
 }
 
 .loading-overlay.hidden {
@@ -580,9 +580,15 @@ body.subscription-body::after {
   width: 48px;
   height: 48px;
   border: 4px solid rgba(255, 255, 255, 0.3);
-  border-top-color: white;
+  border-top-color: var(--text);
   border-radius: 50%;
   animation: spin 1s linear infinite;
+}
+
+/* Light mode adjustments for loading overlay */
+[data-theme="light"] .loading-spinner {
+  border-color: rgba(0, 0, 0, 0.1);
+  border-top-color: var(--primary);
 }
 
 @keyframes spin {
@@ -603,9 +609,9 @@ body.subscription-body::after {
 .toast {
   padding: 1rem 1.5rem;
   border-radius: 0.5rem;
-  background: var(--bg-primary);
-  border: 1px solid var(--border-color);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  background: var(--card);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
   animation: slideIn 0.3s ease;
 }
 

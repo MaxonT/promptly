@@ -221,7 +221,6 @@ questionSessionRouter.post("/", async (req, res) => {
   const { initial_description, kind, mode = 'deep', model, language } = parsed.data;
   
   // Check mode restrictions for free plan
-  const { mode = 'deep' } = parsed.data;
   if (!canUseMode(userId, mode)) {
     return res.status(403).json({
       ok: false,
@@ -231,7 +230,6 @@ questionSessionRouter.post("/", async (req, res) => {
   const modeProfile = resolveModeProfile(mode);
   const modelChoice = resolveModelChoice(model);
   const userLanguage = language || 'en';
-  const userId = getUserId(req);
   
   console.log(`[promptly] Creating session with language: ${userLanguage}`);
   

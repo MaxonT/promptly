@@ -222,8 +222,13 @@ import { track, EVENTS } from './lib/analytics.js';
 
   async function handleLogin(e) {
     e.preventDefault();
-    const email = document.getElementById('loginEmail').value;
+    const email = document.getElementById('loginEmail').value.trim();
     const password = document.getElementById('loginPassword').value;
+    
+    if (!email || !password) {
+      showToast('error', 'Please enter both email and password');
+      return;
+    }
     
     showLoading(true);
     track(EVENTS.AUTH_LOGIN_ATTEMPTED, { email });
@@ -238,15 +243,22 @@ import { track, EVENTS } from './lib/analytics.js';
       authToken = result.token;
       
       track(EVENTS.AUTH_LOGIN_SUCCESS, { email });
-      hideAuthModal();
+      showToast('success', 'Signed in successfully!');
       
-      // Continue with checkout
-      stateMachine.transitionTo(SubscriptionState.CREATING_CHECKOUT);
+      // Small delay to show success message before closing modal
+      setTimeout(() => {
+        hideAuthModal();
+        // Continue with checkout
+        if (stateMachine && selectedPlan) {
+          stateMachine.transitionTo(SubscriptionState.CREATING_CHECKOUT);
+        }
+      }, 500);
       
     } catch (err) {
       console.error('Login failed:', err);
-      showToast('error', err.message || 'Login failed');
-      track(EVENTS.AUTH_LOGIN_FAILED, { email, error: err.message });
+      const errorMessage = err.message || 'Login failed. Please check your credentials.';
+      showToast('error', errorMessage);
+      track(EVENTS.AUTH_LOGIN_FAILED, { email, error: errorMessage });
     } finally {
       showLoading(false);
     }
@@ -254,12 +266,22 @@ import { track, EVENTS } from './lib/analytics.js';
 
   async function handleRegister(e) {
     e.preventDefault();
-    const email = document.getElementById('registerEmail').value;
+    const email = document.getElementById('registerEmail').value.trim();
     const password = document.getElementById('registerPassword').value;
     const confirm = document.getElementById('registerConfirm').value;
     
+    if (!email || !password || !confirm) {
+      showToast('error', 'Please fill in all fields');
+      return;
+    }
+    
     if (password !== confirm) {
       showToast('error', 'Passwords do not match');
+      return;
+    }
+    
+    if (password.length < 6) {
+      showToast('error', 'Password must be at least 6 characters');
       return;
     }
     
@@ -276,15 +298,22 @@ import { track, EVENTS } from './lib/analytics.js';
       authToken = result.token;
       
       track(EVENTS.AUTH_REGISTER_SUCCESS, { email });
-      hideAuthModal();
+      showToast('success', 'Account created successfully!');
       
-      // Continue with checkout
-      stateMachine.transitionTo(SubscriptionState.CREATING_CHECKOUT);
+      // Small delay to show success message before closing modal
+      setTimeout(() => {
+        hideAuthModal();
+        // Continue with checkout
+        if (stateMachine && selectedPlan) {
+          stateMachine.transitionTo(SubscriptionState.CREATING_CHECKOUT);
+        }
+      }, 500);
       
     } catch (err) {
       console.error('Registration failed:', err);
-      showToast('error', err.message || 'Registration failed');
-      track(EVENTS.AUTH_REGISTER_FAILED, { email, error: err.message });
+      const errorMessage = err.message || 'Registration failed. Please try again.';
+      showToast('error', errorMessage);
+      track(EVENTS.AUTH_REGISTER_FAILED, { email, error: errorMessage });
     } finally {
       showLoading(false);
     }
@@ -635,13 +664,33 @@ import { track, EVENTS } from './lib/analytics.js';
   }
 
   function showToast(type, message) {
+    // Ensure toast container exists
+    let container = toastContainer;
+    if (!container) {
+      container = document.getElementById('toastContainer');
+      if (!container) {
+        // Create toast container if it doesn't exist
+        container = document.createElement('div');
+        container.id = 'toastContainer';
+        container.className = 'toast-container';
+        document.body.appendChild(container);
+      }
+    }
+    
     const toast = document.createElement('div');
     toast.className = `toast ${type}`;
     toast.textContent = message;
-    toastContainer.appendChild(toast);
+    container.appendChild(toast);
+    
+    // Force a reflow to ensure animation
+    toast.offsetHeight;
     
     setTimeout(() => {
-      toast.remove();
+      toast.style.opacity = '0';
+      toast.style.transform = 'translateX(100%)';
+      setTimeout(() => {
+        toast.remove();
+      }, 300);
     }, 5000);
   }
 

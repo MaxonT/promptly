@@ -226,7 +226,8 @@ body.subscription-body::after {
 
 /* Trial Banner */
 .trial-banner {
-  background: linear-gradient(135deg, var(--accent) 0%, var(--brand-2) 100%);
+  background: linear-gradient(135deg, rgba(124, 58, 237, 0.15) 0%, rgba(37, 99, 235, 0.1) 100%);
+  border: 1px solid var(--border-color);
   padding: 2rem;
   margin: 1.5rem;
   border-radius: 1rem;
@@ -255,27 +256,28 @@ body.subscription-body::after {
 }
 
 .trial-text h3 {
-  color: white;
+  color: var(--text-primary);
   font-size: 1.5rem;
   font-weight: 700;
   margin-bottom: 0.5rem;
 }
 
 .trial-text p {
-  color: rgba(255, 255, 255, 0.9);
+  color: var(--text-secondary);
   font-size: 1rem;
 }
 
 .trial-banner .btn-primary {
-  background: white;
-  color: var(--accent);
+  background: var(--accent);
+  color: white;
   font-weight: 700;
   padding: 0.875rem 2rem;
   white-space: nowrap;
+  border: none;
 }
 
 .trial-banner .btn-primary:hover {
-  background: rgba(255, 255, 255, 0.9);
+  background: var(--accent-hover, rgba(124, 58, 237, 0.9));
   transform: translateY(-2px);
 }
 
@@ -609,20 +611,32 @@ body.subscription-body::after {
 .toast {
   padding: 1rem 1.5rem;
   border-radius: 0.5rem;
-  background: var(--card);
-  border: 1px solid var(--border);
-  box-shadow: var(--shadow-sm);
+  background: var(--bg-primary, var(--card));
+  border: 1px solid var(--border-color, var(--border));
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  color: var(--text-primary);
+  min-width: 300px;
+  max-width: 500px;
+  transition: opacity 0.3s ease, transform 0.3s ease;
   animation: slideIn 0.3s ease;
 }
 
 .toast.success {
-  border-color: var(--success-color);
-  background: var(--success-bg);
+  border-color: var(--success-color, #10b981);
+  background: var(--success-bg, rgba(16, 185, 129, 0.1));
+  color: var(--success-color, #10b981);
 }
 
 .toast.error {
-  border-color: var(--error-color);
-  background: var(--error-bg);
+  border-color: var(--error-color, #ef4444);
+  background: var(--error-bg, rgba(239, 68, 68, 0.1));
+  color: var(--error-color, #ef4444);
+}
+
+.toast.info {
+  border-color: var(--info-color, #3b82f6);
+  background: var(--info-bg, rgba(59, 130, 246, 0.1));
+  color: var(--info-color, #3b82f6);
 }
 
 @keyframes slideIn {

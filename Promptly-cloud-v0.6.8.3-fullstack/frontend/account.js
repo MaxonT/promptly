@@ -62,8 +62,16 @@
     setupThemeToggle();
     setupEventListeners();
     
-    // Check authentication
-    authToken = localStorage.getItem('promptly.token');
+    // Check authentication - use unified authState if available
+    if (window.authState && window.authState.getToken) {
+      authToken = window.authState.getToken();
+      // Fetch user info if needed
+      if (authToken && !window.authState.getUser()) {
+        await window.authState.fetchUserInfo();
+      }
+    } else {
+      authToken = localStorage.getItem('promptly.token');
+    }
     
     if (!authToken) {
       showLoginRequired();

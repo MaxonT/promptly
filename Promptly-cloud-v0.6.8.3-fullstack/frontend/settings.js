@@ -15,7 +15,7 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
   const loginForm = document.getElementById("loginForm");
   const registerForm = document.getElementById("registerForm");
   const logoutBtn = document.getElementById("logoutBtn");
-  const TOKEN_KEY = "PROMPTLY_TOKEN";
+  const TOKEN_KEY = "promptly.token";
 
   function log(line) {
     const ts = new Date().toISOString().slice(11, 19);
@@ -30,15 +30,28 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
   }
 
   function getToken() {
+    // Use unified authState if available, otherwise fallback to direct access
+    if (window.authState && window.authState.getToken) {
+      return window.authState.getToken();
+    }
     return window.localStorage.getItem(TOKEN_KEY);
   }
 
   function saveToken(token) {
-    if (!token) {
-      window.localStorage.removeItem(TOKEN_KEY);
-      return;
+    // Use unified authState if available
+    if (window.authState && window.authState.setToken) {
+      window.authState.setToken(token);
+      // Trigger user info fetch
+      if (token) {
+        window.authState.fetchUserInfo();
+      }
+    } else {
+      if (!token) {
+        window.localStorage.removeItem(TOKEN_KEY);
+        return;
+      }
+      window.localStorage.setItem(TOKEN_KEY, token);
     }
-    window.localStorage.setItem(TOKEN_KEY, token);
   }
 
   function updateAuthView(user) {

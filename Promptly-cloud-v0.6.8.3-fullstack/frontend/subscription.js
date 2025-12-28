@@ -61,8 +61,16 @@ import { track, EVENTS } from './lib/analytics.js';
     setupTrialButton();
     setupAuthModal();
     
-    // Check authentication
-    authToken = localStorage.getItem('promptly.token');
+    // Check authentication - use unified authState if available
+    if (window.authState && window.authState.getToken) {
+      authToken = window.authState.getToken();
+      // Fetch user info if needed
+      if (authToken && !window.authState.getUser()) {
+        await window.authState.fetchUserInfo();
+      }
+    } else {
+      authToken = localStorage.getItem('promptly.token');
+    }
     
     // Initialize State Machine
     stateMachine = new SubscriptionStateMachine();
@@ -209,6 +217,32 @@ import { track, EVENTS } from './lib/analytics.js';
     // Form submissions
     loginForm?.addEventListener('submit', handleLogin);
     registerForm?.addEventListener('submit', handleRegister);
+    
+    // OAuth buttons
+    const googleSignInBtnAuth = document.getElementById('googleSignInBtnAuth');
+    const githubSignInBtnAuth = document.getElementById('githubSignInBtnAuth');
+    
+    if (googleSignInBtnAuth) {
+      googleSignInBtnAuth.addEventListener('click', () => {
+        if (window.oauth && window.oauth.signInWithGoogle) {
+          window.oauth.signInWithGoogle();
+        } else {
+          console.error('[subscription] OAuth module not loaded');
+          showToast('error', 'OAuth authentication is not available. Please refresh the page.');
+        }
+      });
+    }
+    
+    if (githubSignInBtnAuth) {
+      githubSignInBtnAuth.addEventListener('click', () => {
+        if (window.oauth && window.oauth.signInWithGitHub) {
+          window.oauth.signInWithGitHub();
+        } else {
+          console.error('[subscription] OAuth module not loaded');
+          showToast('error', 'OAuth authentication is not available. Please refresh the page.');
+        }
+      });
+    }
   }
 
   function showAuthModal() {
@@ -256,7 +290,13 @@ import { track, EVENTS } from './lib/analytics.js';
     
     try {
       const data = await submitAuthForm("/api/auth/login", payload);
-      localStorage.setItem('promptly.token', data.token);
+      // Use unified authState if available
+      if (window.authState && window.authState.setToken) {
+        window.authState.setToken(data.token);
+        await window.authState.fetchUserInfo();
+      } else {
+        localStorage.setItem('promptly.token', data.token);
+      }
       authToken = data.token;
       
       setAuthMessage("Signed in successfully!");
@@ -301,8 +341,17 @@ import { track, EVENTS } from './lib/analytics.js';
     
     try {
       const data = await submitAuthForm("/api/auth/register", payload);
-      localStorage.setItem('promptly.token', data.token);
+      // Use unified authState if available
+      if (window.authState && window.authState.setToken) {
+        window.authState.setToken(data.token);
+        await window.authState.fetchUserInfo();
+      } else {
+        localStorage.setItem('promptly.token', data.token);
+      }
       authToken = data.token;
+      
+      // Dispatch auth state change event
+      window.dispatchEvent(new CustomEvent('authStateChanged'));
       
       setAuthMessage("Account created and signed in.");
       e.target.reset();

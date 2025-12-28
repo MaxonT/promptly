@@ -280,15 +280,18 @@
           <button id="showRegisterBtn" class="auth-toggle-btn" data-i18n="subscription.create_account">Create Account</button>
         </div>
         
+        <!-- Auth Message -->
+        <div id="authMessage" class="auth-message"></div>
+        
         <!-- Login Form -->
         <form id="loginForm" class="auth-form">
           <div class="form-group">
             <label for="loginEmail" data-i18n="subscription.email">Email</label>
-            <input type="email" id="loginEmail" required autocomplete="email" />
+            <input type="email" id="loginEmail" name="loginEmail" required autocomplete="email" />
           </div>
           <div class="form-group">
             <label for="loginPassword" data-i18n="subscription.password">Password</label>
-            <input type="password" id="loginPassword" required autocomplete="current-password" />
+            <input type="password" id="loginPassword" name="loginPassword" required autocomplete="current-password" />
           </div>
           <button type="submit" class="btn btn-primary btn-block" data-i18n="subscription.sign_in">
             Sign In
@@ -299,15 +302,15 @@
         <form id="registerForm" class="auth-form hidden">
           <div class="form-group">
             <label for="registerEmail" data-i18n="subscription.email">Email</label>
-            <input type="email" id="registerEmail" required autocomplete="email" />
+            <input type="email" id="registerEmail" name="registerEmail" required autocomplete="email" />
           </div>
           <div class="form-group">
             <label for="registerPassword" data-i18n="subscription.password">Password</label>
-            <input type="password" id="registerPassword" required autocomplete="new-password" />
+            <input type="password" id="registerPassword" name="registerPassword" required autocomplete="new-password" />
           </div>
           <div class="form-group">
             <label for="registerConfirm" data-i18n="subscription.confirm_password">Confirm Password</label>
-            <input type="password" id="registerConfirm" required autocomplete="new-password" />
+            <input type="password" id="registerConfirm" name="registerConfirm" required autocomplete="new-password" />
           </div>
           <button type="submit" class="btn btn-primary btn-block" data-i18n="subscription.create_account">
             Create Account

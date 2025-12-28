@@ -938,6 +938,16 @@ body.subscription-body::after {
   display: none;
 }
 
+.auth-message {
+  font-size: 0.875rem;
+  min-height: 1.2rem;
+  color: var(--accent, #0ea5e9);
+  margin-bottom: 0.75rem;
+  padding: 0.5rem;
+  border-radius: 0.375rem;
+  text-align: center;
+}
+
 .form-group {
   margin-bottom: 1rem;
 }

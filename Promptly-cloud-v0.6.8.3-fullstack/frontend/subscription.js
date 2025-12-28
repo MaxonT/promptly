@@ -40,6 +40,7 @@ import { track, EVENTS } from './lib/analytics.js';
   const loginForm = document.getElementById('loginForm');
   const registerForm = document.getElementById('registerForm');
   const stepper = document.querySelector('.checkout-stepper');
+  const authMessageEl = document.getElementById('authMessage');
 
   // State
   let currentPlan = 'monthly';
@@ -217,33 +218,51 @@ import { track, EVENTS } from './lib/analytics.js';
 
   function hideAuthModal() {
     authModal?.classList.add('hidden');
+    setAuthMessage(''); // Clear message when closing
     track(EVENTS.AUTH_MODAL_CLOSED);
+  }
+
+  function setAuthMessage(message = "", isError = false) {
+    if (!authMessageEl) return;
+    authMessageEl.textContent = message;
+    authMessageEl.style.color = isError ? "#f87171" : "var(--accent, #0ea5e9)";
+  }
+
+  async function submitAuthForm(path, payload) {
+    const res = await fetch(`${API_BASE}${path}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || !data.ok) {
+      throw new Error(data.error || "Request failed");
+    }
+    return data;
   }
 
   async function handleLogin(e) {
     e.preventDefault();
-    const email = document.getElementById('loginEmail').value.trim();
-    const password = document.getElementById('loginPassword').value;
+    const formData = new FormData(e.target);
+    const payload = {
+      email: (formData.get("loginEmail") || "").toString().trim(),
+      password: formData.get("loginPassword")
+    };
     
-    if (!email || !password) {
-      showToast('error', 'Please enter both email and password');
+    if (!payload.email || !payload.password) {
+      setAuthMessage('Please enter both email and password', true);
       return;
     }
     
-    showLoading(true);
-    track(EVENTS.AUTH_LOGIN_ATTEMPTED, { email });
-    
     try {
-      const result = await apiCall('/api/auth/login', {
-        method: 'POST',
-        body: JSON.stringify({ email, password }),
-      });
+      const data = await submitAuthForm("/api/auth/login", payload);
+      localStorage.setItem('promptly.token', data.token);
+      authToken = data.token;
       
-      localStorage.setItem('promptly.token', result.token);
-      authToken = result.token;
+      setAuthMessage("Signed in successfully!");
+      e.target.reset();
       
-      track(EVENTS.AUTH_LOGIN_SUCCESS, { email });
-      showToast('success', 'Signed in successfully!');
+      track(EVENTS.AUTH_LOGIN_SUCCESS, { email: payload.email });
       
       // Small delay to show success message before closing modal
       setTimeout(() => {
@@ -252,53 +271,43 @@ import { track, EVENTS } from './lib/analytics.js';
         if (stateMachine && selectedPlan) {
           stateMachine.transitionTo(SubscriptionState.CREATING_CHECKOUT);
         }
-      }, 500);
+      }, 1000);
       
     } catch (err) {
       console.error('Login failed:', err);
-      const errorMessage = err.message || 'Login failed. Please check your credentials.';
-      showToast('error', errorMessage);
-      track(EVENTS.AUTH_LOGIN_FAILED, { email, error: errorMessage });
-    } finally {
-      showLoading(false);
+      setAuthMessage(err.message || 'Login failed. Please check your credentials.', true);
+      track(EVENTS.AUTH_LOGIN_FAILED, { email: payload.email, error: err.message });
     }
   }
 
   async function handleRegister(e) {
     e.preventDefault();
-    const email = document.getElementById('registerEmail').value.trim();
-    const password = document.getElementById('registerPassword').value;
-    const confirm = document.getElementById('registerConfirm').value;
+    const formData = new FormData(e.target);
+    const payload = {
+      email: (formData.get("registerEmail") || "").toString().trim(),
+      password: formData.get("registerPassword")
+    };
+    const confirm = formData.get("registerConfirm");
     
-    if (!email || !password || !confirm) {
-      showToast('error', 'Please fill in all fields');
+    if (!payload.email || !payload.password || !confirm) {
+      setAuthMessage('Please fill in all fields', true);
       return;
     }
     
-    if (password !== confirm) {
-      showToast('error', 'Passwords do not match');
+    if (payload.password !== confirm) {
+      setAuthMessage('Passwords do not match', true);
       return;
     }
-    
-    if (password.length < 6) {
-      showToast('error', 'Password must be at least 6 characters');
-      return;
-    }
-    
-    showLoading(true);
-    track(EVENTS.AUTH_REGISTER_ATTEMPTED, { email });
     
     try {
-      const result = await apiCall('/api/auth/register', {
-        method: 'POST',
-        body: JSON.stringify({ email, password }),
-      });
+      const data = await submitAuthForm("/api/auth/register", payload);
+      localStorage.setItem('promptly.token', data.token);
+      authToken = data.token;
       
-      localStorage.setItem('promptly.token', result.token);
-      authToken = result.token;
+      setAuthMessage("Account created and signed in.");
+      e.target.reset();
       
-      track(EVENTS.AUTH_REGISTER_SUCCESS, { email });
-      showToast('success', 'Account created successfully!');
+      track(EVENTS.AUTH_REGISTER_SUCCESS, { email: payload.email });
       
       // Small delay to show success message before closing modal
       setTimeout(() => {
@@ -307,15 +316,12 @@ import { track, EVENTS } from './lib/analytics.js';
         if (stateMachine && selectedPlan) {
           stateMachine.transitionTo(SubscriptionState.CREATING_CHECKOUT);
         }
-      }, 500);
+      }, 1000);
       
     } catch (err) {
       console.error('Registration failed:', err);
-      const errorMessage = err.message || 'Registration failed. Please try again.';
-      showToast('error', errorMessage);
-      track(EVENTS.AUTH_REGISTER_FAILED, { email, error: errorMessage });
-    } finally {
-      showLoading(false);
+      setAuthMessage(err.message || 'Registration failed. Please try again.', true);
+      track(EVENTS.AUTH_REGISTER_FAILED, { email: payload.email, error: err.message });
     }
   }
 

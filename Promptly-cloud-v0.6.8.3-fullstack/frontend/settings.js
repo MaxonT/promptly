@@ -181,6 +181,30 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
     setAuthMessage("Signed out.");
   });
 
+  // OAuth button handlers
+  const googleLoginBtn = document.getElementById('googleLoginBtn');
+  const githubLoginBtn = document.getElementById('githubLoginBtn');
+
+  googleLoginBtn?.addEventListener('click', () => {
+    if (window.oauth && window.oauth.signInWithGoogle) {
+      log("Initiating Google OAuth...");
+      window.oauth.signInWithGoogle();
+    } else {
+      console.error("OAuth library not loaded");
+      setAuthMessage("OAuth not available. Please refresh the page.", true);
+    }
+  });
+
+  githubLoginBtn?.addEventListener('click', () => {
+    if (window.oauth && window.oauth.signInWithGitHub) {
+      log("Initiating GitHub OAuth...");
+      window.oauth.signInWithGitHub();
+    } else {
+      console.error("OAuth library not loaded");
+      setAuthMessage("OAuth not available. Please refresh the page.", true);
+    }
+  });
+
   async function loadSettings() {
     try {
       log("GET /api/settings ...");

@@ -47,12 +47,16 @@
   // =============================================
 
   function handleOAuthCallback() {
+    console.log('[oauth] handleOAuthCallback called');
     const urlParams = new URLSearchParams(window.location.search);
     const token = urlParams.get('oauth_token');
     const success = urlParams.get('oauth_success');
     const error = urlParams.get('oauth_error');
 
+    console.log('[oauth] Callback params:', { token: token ? 'present' : 'missing', success, error });
+
     if (error) {
+      console.error('[oauth] OAuth error:', error);
       showError(decodeURIComponent(error));
       // Clean up URL
       window.history.replaceState({}, document.title, window.location.pathname);
@@ -60,6 +64,7 @@
     }
 
     if (success === 'true' && token) {
+      console.log('[oauth] OAuth success, saving token');
       // Save token
       localStorage.setItem(TOKEN_KEY, token);
       
@@ -74,8 +79,13 @@
       
       // Refresh auth status if available
       if (window.authStatus && window.authStatus.checkAuthStatus) {
+        console.log('[oauth] Refreshing auth status');
         window.authStatus.checkAuthStatus();
+      } else {
+        console.warn('[oauth] authStatus not available');
       }
+    } else {
+      console.warn('[oauth] Callback called but no success token found');
     }
   }
 
@@ -84,18 +94,18 @@
   // =============================================
 
   function showError(message) {
-    // Try to use toast if available
+    // Try to use toast if available (note: showToast signature is (message, type, duration))
     if (window.showToast) {
-      window.showToast('error', message);
+      window.showToast(message, 'error');
     } else {
       alert(message);
     }
   }
 
   function showSuccess(message) {
-    // Try to use toast if available
+    // Try to use toast if available (note: showToast signature is (message, type, duration))
     if (window.showToast) {
-      window.showToast('success', message);
+      window.showToast(message, 'success');
     } else {
       console.log('[oauth]', message);
     }

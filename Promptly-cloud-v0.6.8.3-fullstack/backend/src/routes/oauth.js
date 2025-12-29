@@ -221,7 +221,7 @@ oauthRouter.get("/callback", async (req, res) => {
   
   if (error) {
     const errorUrl = new URL(FRONTEND_URL);
-    errorUrl.pathname = '/';
+    errorUrl.pathname = '/index.html';
     errorUrl.searchParams.set('oauth_error', encodeURIComponent(error));
     console.log('[oauth] Redirecting to frontend with error:', errorUrl.toString());
     return res.redirect(errorUrl.toString());
@@ -229,7 +229,7 @@ oauthRouter.get("/callback", async (req, res) => {
   
   if (!code || !state) {
     const errorUrl = new URL(FRONTEND_URL);
-    errorUrl.pathname = '/';
+    errorUrl.pathname = '/index.html';
     errorUrl.searchParams.set('oauth_error', encodeURIComponent('Missing code or state'));
     console.log('[oauth] Redirecting to frontend with error: Missing code or state');
     return res.redirect(errorUrl.toString());
@@ -240,7 +240,7 @@ oauthRouter.get("/callback", async (req, res) => {
   if (!stored || stored.expiresAt < Date.now()) {
     codeVerifierStore.delete(state);
     const errorUrl = new URL(FRONTEND_URL);
-    errorUrl.pathname = '/';
+    errorUrl.pathname = '/index.html';
     errorUrl.searchParams.set('oauth_error', encodeURIComponent('Invalid or expired state'));
     console.log('[oauth] Redirecting to frontend with error: Invalid or expired state');
     return res.redirect(errorUrl.toString());
@@ -339,7 +339,7 @@ oauthRouter.get("/callback", async (req, res) => {
     
     // Redirect to frontend with token
     const frontendUrl = new URL(FRONTEND_URL);
-    frontendUrl.pathname = '/'; // Always redirect to root
+    frontendUrl.pathname = '/index.html'; // Explicitly use index.html for Vercel compatibility
     frontendUrl.searchParams.set('oauth_token', token);
     frontendUrl.searchParams.set('oauth_success', 'true');
     
@@ -348,7 +348,7 @@ oauthRouter.get("/callback", async (req, res) => {
   } catch (err) {
     console.error('[oauth] Callback error:', err);
     const errorUrl = new URL(FRONTEND_URL);
-    errorUrl.pathname = '/';
+    errorUrl.pathname = '/index.html';
     errorUrl.searchParams.set('oauth_error', encodeURIComponent(err.message || 'OAuth authentication failed'));
     console.log('[oauth] Redirecting to frontend with error:', errorUrl.toString());
     return res.redirect(errorUrl.toString());

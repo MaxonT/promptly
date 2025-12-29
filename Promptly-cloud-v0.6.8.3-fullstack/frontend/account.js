@@ -323,6 +323,28 @@
         window.location.href = 'index.html';
       }, 1000);
     });
+    
+    // OAuth buttons in login-required section
+    const googleLoginBtnAccount = document.getElementById('googleLoginBtnAccount');
+    const githubLoginBtnAccount = document.getElementById('githubLoginBtnAccount');
+    
+    googleLoginBtnAccount?.addEventListener('click', () => {
+      if (window.oauth && window.oauth.signInWithGoogle) {
+        window.oauth.signInWithGoogle();
+      } else {
+        console.error("OAuth library not loaded");
+        showToast('error', 'OAuth not available. Please refresh the page.');
+      }
+    });
+    
+    githubLoginBtnAccount?.addEventListener('click', () => {
+      if (window.oauth && window.oauth.signInWithGitHub) {
+        window.oauth.signInWithGitHub();
+      } else {
+        console.error("OAuth library not loaded");
+        showToast('error', 'OAuth not available. Please refresh the page.');
+      }
+    });
   }
 
   function setupThemeToggle() {

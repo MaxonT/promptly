@@ -20,8 +20,14 @@ const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
 const GITHUB_CLIENT_ID = process.env.GITHUB_CLIENT_ID;
 const GITHUB_CLIENT_SECRET = process.env.GITHUB_CLIENT_SECRET;
 
+// OAuth redirect URI should be the backend callback URL
+// If OAUTH_REDIRECT_URI is explicitly set, use it directly
+// Otherwise, construct it from CORS_ORIGIN
 const OAUTH_REDIRECT_URI = process.env.OAUTH_REDIRECT_URI || 
   `${process.env.CORS_ORIGIN || "http://localhost:8080"}/api/auth/oauth/callback`;
+
+// Frontend URL for redirecting after OAuth callback
+const FRONTEND_URL = process.env.FRONTEND_URL || process.env.CORS_ORIGIN || "http://localhost:5173";
 
 // In-memory store for code_verifier (in production, use Redis or database)
 const codeVerifierStore = new Map();
@@ -73,25 +79,39 @@ function normalizeEmail(email = "") {
   return email.trim().toLowerCase();
 }
 
-async function findOrCreateUser(email, provider, providerId) {
+function findOrCreateUser(email, provider, providerId) {
   const normalizedEmail = normalizeEmail(email);
   
   // First, try to find existing user by email
   let user = db.prepare("SELECT * FROM users WHERE email = ?").get(normalizedEmail);
   
   if (user) {
-    // Check if OAuth provider is already linked
-    const oauthLink = db.prepare(
-      "SELECT * FROM user_oauth WHERE user_id = ? AND provider = ?"
-    ).get(user.id, provider);
-    
-    if (!oauthLink) {
-      // Link OAuth provider to existing user
-      db.prepare(
-        "INSERT INTO user_oauth (user_id, provider, provider_id, created_at) VALUES (?, ?, ?, ?)"
-      ).run(user.id, provider, providerId, new Date().toISOString());
+    // Update OAuth provider info if not set or different
+    if (!user.oauth_provider || user.oauth_provider !== provider || user.oauth_id !== providerId) {
+      db.prepare(`
+        UPDATE users 
+        SET oauth_provider = ?, oauth_id = ?, updated_at = ?
+        WHERE id = ?
+      `).run(provider, providerId, new Date().toISOString(), user.id);
+      // Reload user to get updated data
+      user = db.prepare("SELECT * FROM users WHERE id = ?").get(user.id);
     }
     
+    return user;
+  }
+  
+  // Try to find user by OAuth provider and ID (in case email changed)
+  user = db.prepare("SELECT * FROM users WHERE oauth_provider = ? AND oauth_id = ?").get(provider, providerId);
+  if (user) {
+    // Update email if it changed
+    if (user.email !== normalizedEmail) {
+      db.prepare(`
+        UPDATE users 
+        SET email = ?, updated_at = ?
+        WHERE id = ?
+      `).run(normalizedEmail, new Date().toISOString(), user.id);
+      user = db.prepare("SELECT * FROM users WHERE id = ?").get(user.id);
+    }
     return user;
   }
   
@@ -100,14 +120,9 @@ async function findOrCreateUser(email, provider, providerId) {
   const now = new Date().toISOString();
   
   db.prepare(`
-    INSERT INTO users (id, email, subscription_tier, subscription_active, created_at, updated_at)
-    VALUES (?, ?, ?, ?, ?, ?)
-  `).run(userId, normalizedEmail, "free", 1, now, now);
-  
-  // Link OAuth provider
-  db.prepare(
-    "INSERT INTO user_oauth (user_id, provider, provider_id, created_at) VALUES (?, ?, ?, ?)"
-  ).run(userId, provider, providerId, now);
+    INSERT INTO users (id, email, oauth_provider, oauth_id, subscription_tier, subscription_active, created_at, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(userId, normalizedEmail, provider, providerId, "free", 1, now, now);
   
   return db.prepare("SELECT * FROM users WHERE id = ?").get(userId);
 }
@@ -148,6 +163,10 @@ oauthRouter.get("/:provider/authorize", (req, res) => {
 
   let authUrl;
   
+  console.log(`[oauth] Initiating ${provider} OAuth flow`);
+  console.log(`[oauth] OAUTH_REDIRECT_URI: ${OAUTH_REDIRECT_URI}`);
+  console.log(`[oauth] FRONTEND_URL: ${FRONTEND_URL}`);
+  
   if (provider === 'google') {
     if (!GOOGLE_CLIENT_ID) {
       return res.status(500).json({ ok: false, error: "Google OAuth not configured" });
@@ -164,6 +183,7 @@ oauthRouter.get("/:provider/authorize", (req, res) => {
     });
     
     authUrl = `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
+    console.log(`[oauth] Google auth URL generated`);
   } else if (provider === 'github') {
     if (!GITHUB_CLIENT_ID) {
       return res.status(500).json({ ok: false, error: "GitHub OAuth not configured" });
@@ -178,8 +198,10 @@ oauthRouter.get("/:provider/authorize", (req, res) => {
     });
     
     authUrl = `https://github.com/login/oauth/authorize?${params.toString()}`;
+    console.log(`[oauth] GitHub auth URL generated`);
   }
 
+  console.log(`[oauth] Returning auth URL to client`);
   res.json({
     ok: true,
     authUrl,
@@ -194,25 +216,22 @@ oauthRouter.get("/:provider/authorize", (req, res) => {
 oauthRouter.get("/callback", async (req, res) => {
   const { code, state, error } = req.query;
   
+  console.log(`[oauth] Callback received - code: ${code ? 'present' : 'missing'}, state: ${state ? 'present' : 'missing'}, error: ${error || 'none'}`);
+  console.log(`[oauth] FRONTEND_URL: ${FRONTEND_URL}`);
+  
   if (error) {
-    let baseUrl = OAUTH_REDIRECT_URI.replace('/api/auth/oauth/callback', '');
-    if (!baseUrl.endsWith('/')) {
-      baseUrl += '/';
-    }
-    const errorUrl = new URL(baseUrl);
+    const errorUrl = new URL(FRONTEND_URL);
     errorUrl.pathname = '/';
     errorUrl.searchParams.set('oauth_error', encodeURIComponent(error));
+    console.log('[oauth] Redirecting to frontend with error:', errorUrl.toString());
     return res.redirect(errorUrl.toString());
   }
   
   if (!code || !state) {
-    let baseUrl = OAUTH_REDIRECT_URI.replace('/api/auth/oauth/callback', '');
-    if (!baseUrl.endsWith('/')) {
-      baseUrl += '/';
-    }
-    const errorUrl = new URL(baseUrl);
+    const errorUrl = new URL(FRONTEND_URL);
     errorUrl.pathname = '/';
     errorUrl.searchParams.set('oauth_error', encodeURIComponent('Missing code or state'));
+    console.log('[oauth] Redirecting to frontend with error: Missing code or state');
     return res.redirect(errorUrl.toString());
   }
 
@@ -220,13 +239,10 @@ oauthRouter.get("/callback", async (req, res) => {
   const stored = codeVerifierStore.get(state);
   if (!stored || stored.expiresAt < Date.now()) {
     codeVerifierStore.delete(state);
-    let baseUrl = OAUTH_REDIRECT_URI.replace('/api/auth/oauth/callback', '');
-    if (!baseUrl.endsWith('/')) {
-      baseUrl += '/';
-    }
-    const errorUrl = new URL(baseUrl);
+    const errorUrl = new URL(FRONTEND_URL);
     errorUrl.pathname = '/';
     errorUrl.searchParams.set('oauth_error', encodeURIComponent('Invalid or expired state'));
+    console.log('[oauth] Redirecting to frontend with error: Invalid or expired state');
     return res.redirect(errorUrl.toString());
   }
   
@@ -317,17 +333,12 @@ oauthRouter.get("/callback", async (req, res) => {
     }
     
     // Find or create user
-    const userRow = await findOrCreateUser(userInfo.email, provider, userInfo.providerId);
+    const userRow = findOrCreateUser(userInfo.email, provider, userInfo.providerId);
     const user = buildUserPayload(userRow);
     const token = createAuthToken(user);
     
     // Redirect to frontend with token
-    let baseUrl = OAUTH_REDIRECT_URI.replace('/api/auth/oauth/callback', '');
-    // Ensure baseUrl ends with / if it's just the domain
-    if (!baseUrl.endsWith('/')) {
-      baseUrl += '/';
-    }
-    const frontendUrl = new URL(baseUrl);
+    const frontendUrl = new URL(FRONTEND_URL);
     frontendUrl.pathname = '/'; // Always redirect to root
     frontendUrl.searchParams.set('oauth_token', token);
     frontendUrl.searchParams.set('oauth_success', 'true');
@@ -336,13 +347,10 @@ oauthRouter.get("/callback", async (req, res) => {
     return res.redirect(frontendUrl.toString());
   } catch (err) {
     console.error('[oauth] Callback error:', err);
-    let baseUrl = OAUTH_REDIRECT_URI.replace('/api/auth/oauth/callback', '');
-    if (!baseUrl.endsWith('/')) {
-      baseUrl += '/';
-    }
-    const errorUrl = new URL(baseUrl);
+    const errorUrl = new URL(FRONTEND_URL);
     errorUrl.pathname = '/';
     errorUrl.searchParams.set('oauth_error', encodeURIComponent(err.message || 'OAuth authentication failed'));
+    console.log('[oauth] Redirecting to frontend with error:', errorUrl.toString());
     return res.redirect(errorUrl.toString());
   }
 });

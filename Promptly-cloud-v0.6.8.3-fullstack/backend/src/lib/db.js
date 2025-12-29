@@ -1,17 +1,49 @@
+/**
+ * Database Adapter - Supports both SQLite and PostgreSQL
+ * Automatically selects based on environment variables:
+ * - Use PostgreSQL if DATABASE_URL or DB_HOST is set
+ * - Otherwise use SQLite
+ */
+
 import Database from "better-sqlite3";
 import fs from "fs";
 import path from "path";
 
-const DB_PATH = process.env.SQLITE_PATH || "./data/app.db";
-fs.mkdirSync(path.dirname(DB_PATH), { recursive: true });
+const USE_POSTGRES = !!(process.env.DATABASE_URL || process.env.DB_HOST);
 
-export const db = new Database(DB_PATH);
+let dbModule;
 
-db.exec(`
+if (USE_POSTGRES) {
+  // Dynamic import PostgreSQL module (top-level await supported in Node.js 14.8+)
+  dbModule = await import('./db-pg.js');
+  console.log('[promptly] Using PostgreSQL database');
+} else {
+  // Use SQLite (default)
+  console.log('[promptly] Using SQLite database');
+  
+  const DB_PATH = process.env.SQLITE_PATH || "./data/app.db";
+  console.log(`[promptly] SQLite database path: ${DB_PATH}`);
+  fs.mkdirSync(path.dirname(DB_PATH), { recursive: true });
+  
+  const sqliteDb = new Database(DB_PATH);
+  
+  // Export SQLite Database directly (synchronous API)
+  // Routes use db.prepare(), db.exec(), etc. which are synchronous
+  dbModule = {
+    db: sqliteDb,  // Direct export of better-sqlite3 Database instance
+    ensureUser: null, // Will be defined below
+    ensureColumn: null,
+    columnExists: null
+  };
+  
+  // SQLite schema initialization
+  sqliteDb.exec(`
 CREATE TABLE IF NOT EXISTS users (
   id TEXT PRIMARY KEY,
   email TEXT UNIQUE NOT NULL,
   password_hash TEXT,
+  oauth_provider TEXT,
+  oauth_id TEXT,
   subscription_tier TEXT DEFAULT 'free',
   subscription_active INTEGER DEFAULT 1,
   created_at TEXT NOT NULL,
@@ -55,6 +87,8 @@ CREATE TABLE IF NOT EXISTS specs (
   spec_json TEXT NOT NULL,
   status TEXT DEFAULT 'draft',
   version INTEGER NOT NULL DEFAULT 1,
+  completeness_score REAL DEFAULT 0.0,
+  raw_idea TEXT,
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL,
   CONSTRAINT fk_specs_owner FOREIGN KEY (owner_id) REFERENCES users(id)
@@ -82,6 +116,9 @@ CREATE TABLE IF NOT EXISTS question_sessions (
   spec_json TEXT,
   compiled_prompt_json TEXT,
   explanation TEXT,
+  step INTEGER DEFAULT 0,
+  is_complete INTEGER DEFAULT 0,
+  spec_id TEXT,
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL,
   CONSTRAINT fk_qs_owner FOREIGN KEY (owner_id) REFERENCES users(id)
@@ -116,6 +153,8 @@ CREATE TABLE IF NOT EXISTS runs (
   status TEXT NOT NULL,
   input_blocks TEXT,
   raw_output TEXT,
+  completed_at TEXT,
+  metrics_json TEXT,
   created_at TEXT NOT NULL
 );
 
@@ -140,6 +179,7 @@ CREATE TABLE IF NOT EXISTS evaluations (
   verdict TEXT,
   summary TEXT,
   details TEXT,
+  metrics_json TEXT,
   created_at TEXT NOT NULL,
   CONSTRAINT fk_eval_spec FOREIGN KEY (spec_id) REFERENCES specs(id),
   CONSTRAINT fk_eval_cp FOREIGN KEY (compiled_prompt_id) REFERENCES compiled_prompts(id),
@@ -216,6 +256,7 @@ CREATE TABLE IF NOT EXISTS candidate_prompts (
   pass_rate REAL,
   f1_score REAL,
   composite_score REAL,
+  metrics_json TEXT,
   
   created_at TEXT NOT NULL,
   CONSTRAINT fk_cp_spec FOREIGN KEY (spec_id) REFERENCES specs(id),
@@ -235,95 +276,70 @@ CREATE TABLE IF NOT EXISTS plan_usage (
 CREATE INDEX IF NOT EXISTS idx_plan_usage_user_date ON plan_usage(user_id, date, feature_type);
 `);
 
-function ensureColumn(table, column, definition) {
-  const columns = db.prepare(`PRAGMA table_info(${table})`).all();
-  const exists = columns.some((col) => col.name === column);
-  if (!exists) {
-    db.prepare(`ALTER TABLE ${table} ADD COLUMN ${definition}`).run();
-  }
-}
-
-// Backfill newly added columns when upgrading existing databases
-ensureColumn("question_sessions", "mode", "mode TEXT DEFAULT 'deep'");
-ensureColumn("question_sessions", "model", "model TEXT DEFAULT 'promptly'");
-ensureColumn("question_sessions", "step", "step INTEGER DEFAULT 0");
-ensureColumn("question_sessions", "is_complete", "is_complete INTEGER DEFAULT 0");
-ensureColumn("question_sessions", "spec_id", "spec_id TEXT");
-ensureColumn("specs", "completeness_score", "completeness_score REAL DEFAULT 0.0");
-ensureColumn("specs", "raw_idea", "raw_idea TEXT");
-ensureColumn("candidate_prompts", "metrics_json", "metrics_json TEXT");
-
-// Whitelists for allowed table and column names
-const ALLOWED_TABLES = [
-  "runs",
-  "evaluations",
-  "users"
-];
-const ALLOWED_COLUMNS = {
-  runs: ["completed_at", "metrics_json"],
-  evaluations: ["metrics_json"],
-  users: ["password_hash", "subscription_tier", "subscription_active", "updated_at"]
-};
-
-function ensureColumnExists(table, column, definition) {
-  if (!ALLOWED_TABLES.includes(table)) {
-    throw new Error(`[promptly] Table name not allowed: ${table}`);
-  }
-  if (!ALLOWED_COLUMNS[table] || !ALLOWED_COLUMNS[table].includes(column)) {
-    throw new Error(`[promptly] Column name not allowed for table ${table}: ${column}`);
-  }
-  // Optionally, add further validation for definition if desired
-  try {
-    db.prepare(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`).run();
-  } catch (err) {
-    if (!/duplicate column name/i.test(err.message)) {
-      console.error(`[promptly] Failed to add column ${column} to ${table}:`, err);
-      throw err;
+  // SQLite helper functions
+  function ensureColumn(table, column, definition) {
+    const columns = sqliteDb.prepare(`PRAGMA table_info(${table})`).all();
+    const exists = columns.some((col) => col.name === column);
+    if (!exists) {
+      sqliteDb.prepare(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`).run();
     }
   }
-}
 
-ensureColumnExists("runs", "completed_at", "TEXT");
-ensureColumnExists("runs", "metrics_json", "TEXT");
-ensureColumnExists("evaluations", "metrics_json", "TEXT");
-ensureColumnExists("users", "password_hash", "TEXT");
-ensureColumnExists("users", "subscription_tier", "TEXT DEFAULT 'free'");
-ensureColumnExists("users", "subscription_active", "INTEGER DEFAULT 1");
-ensureColumnExists("users", "updated_at", "TEXT");
+  // Backfill newly added columns
+  ensureColumn("question_sessions", "mode", "TEXT DEFAULT 'deep'");
+  ensureColumn("question_sessions", "model", "TEXT DEFAULT 'promptly'");
+  ensureColumn("question_sessions", "step", "INTEGER DEFAULT 0");
+  ensureColumn("question_sessions", "is_complete", "INTEGER DEFAULT 0");
+  ensureColumn("question_sessions", "spec_id", "TEXT");
+  ensureColumn("specs", "completeness_score", "REAL DEFAULT 0.0");
+  ensureColumn("specs", "raw_idea", "TEXT");
+  ensureColumn("candidate_prompts", "metrics_json", "TEXT");
+  ensureColumn("users", "oauth_provider", "TEXT");
+  ensureColumn("users", "oauth_id", "TEXT");
+  ensureColumn("runs", "completed_at", "TEXT");
+  ensureColumn("runs", "metrics_json", "TEXT");
+  ensureColumn("evaluations", "metrics_json", "TEXT");
 
-// Ensure demo user exists (for question sessions without authentication)
-// This runs every time the server starts
-try {
-  db.prepare(`
-    INSERT OR IGNORE INTO users (id, email, created_at)
-    VALUES ('demo-user', 'demo@promptly.local', datetime('now'))
-  `).run();
-  console.log("[promptly] Demo user ensured");
-} catch (err) {
-  console.error("[promptly] Failed to ensure demo user:", err);
-}
-
-/**
- * Ensure a user exists in the database
- * @param {string} userId - The user ID to ensure exists
- * @param {string} email - The user's email (optional, defaults to userId@promptly.local)
- */
-export function ensureUser(userId, email = null) {
+  // Ensure demo user exists
   try {
-    const userEmail = email || `${userId}@promptly.local`;
-    db.prepare(`
-      INSERT OR IGNORE INTO users (
-        id,
-        email,
-        password_hash,
-        subscription_tier,
-        subscription_active,
-        created_at,
-        updated_at
-      )
-      VALUES (?, ?, NULL, 'free', 1, datetime('now'), datetime('now'))
-    `).run(userId, userEmail);
+    sqliteDb.prepare(`
+      INSERT OR IGNORE INTO users (id, email, created_at)
+      VALUES ('demo-user', 'demo@promptly.local', datetime('now'))
+    `).run();
+    console.log("[promptly] Demo user ensured");
   } catch (err) {
-    console.error(`[promptly] Failed to ensure user ${userId}:`, err);
+    console.error("[promptly] Failed to ensure demo user:", err);
   }
+
+  // SQLite ensureUser function
+  dbModule.ensureUser = function(userId, email = null) {
+    try {
+      const userEmail = email || `${userId}@promptly.local`;
+      sqliteDb.prepare(`
+        INSERT OR IGNORE INTO users (
+          id,
+          email,
+          password_hash,
+          subscription_tier,
+          subscription_active,
+          created_at,
+          updated_at
+        )
+        VALUES (?, ?, NULL, 'free', 1, datetime('now'), datetime('now'))
+      `).run(userId, userEmail);
+    } catch (err) {
+      console.error(`[promptly] Failed to ensure user ${userId}:`, err);
+    }
+  };
+
+  dbModule.ensureColumn = ensureColumn;
+  dbModule.columnExists = function(table, column) {
+    const columns = sqliteDb.prepare(`PRAGMA table_info(${table})`).all();
+    return columns.some((col) => col.name === column);
+  };
 }
+
+export const db = dbModule.db;
+export const ensureUser = dbModule.ensureUser;
+export const ensureColumn = dbModule.ensureColumn;
+export const columnExists = dbModule.columnExists;

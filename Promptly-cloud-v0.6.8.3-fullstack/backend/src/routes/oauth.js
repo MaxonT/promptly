@@ -195,18 +195,39 @@ oauthRouter.get("/callback", async (req, res) => {
   const { code, state, error } = req.query;
   
   if (error) {
-    return res.redirect(`/?oauth_error=${encodeURIComponent(error)}`);
+    let baseUrl = OAUTH_REDIRECT_URI.replace('/api/auth/oauth/callback', '');
+    if (!baseUrl.endsWith('/')) {
+      baseUrl += '/';
+    }
+    const errorUrl = new URL(baseUrl);
+    errorUrl.pathname = '/';
+    errorUrl.searchParams.set('oauth_error', encodeURIComponent(error));
+    return res.redirect(errorUrl.toString());
   }
   
   if (!code || !state) {
-    return res.redirect(`/?oauth_error=${encodeURIComponent('Missing code or state')}`);
+    let baseUrl = OAUTH_REDIRECT_URI.replace('/api/auth/oauth/callback', '');
+    if (!baseUrl.endsWith('/')) {
+      baseUrl += '/';
+    }
+    const errorUrl = new URL(baseUrl);
+    errorUrl.pathname = '/';
+    errorUrl.searchParams.set('oauth_error', encodeURIComponent('Missing code or state'));
+    return res.redirect(errorUrl.toString());
   }
 
   // Retrieve code_verifier from store
   const stored = codeVerifierStore.get(state);
   if (!stored || stored.expiresAt < Date.now()) {
     codeVerifierStore.delete(state);
-    return res.redirect(`/?oauth_error=${encodeURIComponent('Invalid or expired state')}`);
+    let baseUrl = OAUTH_REDIRECT_URI.replace('/api/auth/oauth/callback', '');
+    if (!baseUrl.endsWith('/')) {
+      baseUrl += '/';
+    }
+    const errorUrl = new URL(baseUrl);
+    errorUrl.pathname = '/';
+    errorUrl.searchParams.set('oauth_error', encodeURIComponent('Invalid or expired state'));
+    return res.redirect(errorUrl.toString());
   }
   
   const { codeVerifier, provider } = stored;
@@ -301,14 +322,28 @@ oauthRouter.get("/callback", async (req, res) => {
     const token = createAuthToken(user);
     
     // Redirect to frontend with token
-    const frontendUrl = new URL(OAUTH_REDIRECT_URI.replace('/api/auth/oauth/callback', ''));
+    let baseUrl = OAUTH_REDIRECT_URI.replace('/api/auth/oauth/callback', '');
+    // Ensure baseUrl ends with / if it's just the domain
+    if (!baseUrl.endsWith('/')) {
+      baseUrl += '/';
+    }
+    const frontendUrl = new URL(baseUrl);
+    frontendUrl.pathname = '/'; // Always redirect to root
     frontendUrl.searchParams.set('oauth_token', token);
     frontendUrl.searchParams.set('oauth_success', 'true');
     
+    console.log('[oauth] Redirecting to frontend:', frontendUrl.toString());
     return res.redirect(frontendUrl.toString());
   } catch (err) {
     console.error('[oauth] Callback error:', err);
-    return res.redirect(`/?oauth_error=${encodeURIComponent(err.message || 'OAuth authentication failed')}`);
+    let baseUrl = OAUTH_REDIRECT_URI.replace('/api/auth/oauth/callback', '');
+    if (!baseUrl.endsWith('/')) {
+      baseUrl += '/';
+    }
+    const errorUrl = new URL(baseUrl);
+    errorUrl.pathname = '/';
+    errorUrl.searchParams.set('oauth_error', encodeURIComponent(err.message || 'OAuth authentication failed'));
+    return res.redirect(errorUrl.toString());
   }
 });
 

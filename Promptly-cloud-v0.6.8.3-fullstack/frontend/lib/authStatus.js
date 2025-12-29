@@ -53,17 +53,29 @@
     const githubSignInBtn = document.getElementById('githubSignInBtn');
     
     if (googleSignInBtn) {
-      googleSignInBtn.addEventListener('click', () => {
+      googleSignInBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        console.log('[authStatus] Google sign in button clicked');
         if (window.oauth && window.oauth.signInWithGoogle) {
+          console.log('[authStatus] Calling window.oauth.signInWithGoogle()');
           window.oauth.signInWithGoogle();
+        } else {
+          console.error('[authStatus] window.oauth or signInWithGoogle not available');
+          console.log('[authStatus] window.oauth:', window.oauth);
         }
       });
     }
     
     if (githubSignInBtn) {
-      githubSignInBtn.addEventListener('click', () => {
+      githubSignInBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        console.log('[authStatus] GitHub sign in button clicked');
         if (window.oauth && window.oauth.signInWithGitHub) {
+          console.log('[authStatus] Calling window.oauth.signInWithGitHub()');
           window.oauth.signInWithGitHub();
+        } else {
+          console.error('[authStatus] window.oauth or signInWithGitHub not available');
+          console.log('[authStatus] window.oauth:', window.oauth);
         }
       });
     }

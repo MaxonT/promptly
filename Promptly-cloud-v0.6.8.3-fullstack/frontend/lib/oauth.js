@@ -17,8 +17,14 @@
 
   async function initiateOAuth(provider) {
     try {
+      console.log(`[oauth] Initiating ${provider} OAuth flow...`);
+      console.log(`[oauth] API_BASE: ${API_BASE}`);
+      
       const response = await fetch(`${API_BASE}/api/auth/oauth/${provider}/authorize`);
+      console.log(`[oauth] Response status: ${response.status}`);
+      
       const data = await response.json();
+      console.log(`[oauth] Response data:`, data);
 
       if (!response.ok || !data.ok) {
         throw new Error(data.error || 'Failed to initiate OAuth');
@@ -28,6 +34,7 @@
       sessionStorage.setItem(`oauth_state_${provider}`, data.state);
 
       // Redirect to OAuth provider
+      console.log(`[oauth] Redirecting to: ${data.authUrl}`);
       window.location.href = data.authUrl;
     } catch (err) {
       console.error(`[oauth] Failed to initiate ${provider} OAuth:`, err);

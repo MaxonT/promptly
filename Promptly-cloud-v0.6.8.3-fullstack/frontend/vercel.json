@@ -3,7 +3,7 @@
   "outputDirectory": ".",
   "installCommand": "npm install",
   "framework": null,
-  "cleanUrls": true,
+  "cleanUrls": false,
   "trailingSlash": false,
   "headers": [
     {
@@ -39,12 +39,8 @@
   ],
   "rewrites": [
     {
-      "source": "/",
+      "source": "/((?!.*\\.).*)$",
       "destination": "/index.html"
-    },
-    {
-      "source": "/(.*)",
-      "destination": "/$1"
     }
   ]
 }

@@ -338,8 +338,9 @@ oauthRouter.get("/callback", async (req, res) => {
     const token = createAuthToken(user);
     
     // Redirect to frontend with token
+    // Explicitly use /index.html for Vercel compatibility
     const frontendUrl = new URL(FRONTEND_URL);
-    frontendUrl.pathname = '/index.html'; // Explicitly use index.html for Vercel compatibility
+    frontendUrl.pathname = '/index.html';
     frontendUrl.searchParams.set('oauth_token', token);
     frontendUrl.searchParams.set('oauth_success', 'true');
     

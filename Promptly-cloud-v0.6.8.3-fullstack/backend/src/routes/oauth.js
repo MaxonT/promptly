@@ -216,20 +216,37 @@ oauthRouter.get("/:provider/authorize", (req, res) => {
 oauthRouter.get("/callback", async (req, res) => {
   const { code, state, error } = req.query;
   
+  // Determine frontend URL dynamically if not set
+  // PRIORITY 1: FRONTEND_URL env var (MUST be set for separate frontend/backend deployment)
+  // PRIORITY 2: CORS_ORIGIN env var (fallback)
+  // PRIORITY 3: Request host (only works if frontend/backend are same domain)
+  let frontendBase = process.env.FRONTEND_URL;
+
+  if (!frontendBase) {
+    if (process.env.CORS_ORIGIN && process.env.CORS_ORIGIN !== "*") {
+       frontendBase = process.env.CORS_ORIGIN;
+    } else {
+       frontendBase = `${req.protocol}://${req.get('host')}`;
+    }
+  }
+
+  // Remove trailing slash if present to avoid double slashes in constructed URLs
+  if (frontendBase.endsWith('/')) {
+    frontendBase = frontendBase.slice(0, -1);
+  }
+
   console.log(`[oauth] Callback received - code: ${code ? 'present' : 'missing'}, state: ${state ? 'present' : 'missing'}, error: ${error || 'none'}`);
-  console.log(`[oauth] FRONTEND_URL: ${FRONTEND_URL}`);
+  console.log(`[oauth] FRONTEND_URL (resolved): ${frontendBase}`);
   
   if (error) {
-    const errorUrl = new URL(FRONTEND_URL);
-    errorUrl.pathname = '/index.html';
+    const errorUrl = new URL(`${frontendBase}/index.html`);
     errorUrl.searchParams.set('oauth_error', encodeURIComponent(error));
     console.log('[oauth] Redirecting to frontend with error:', errorUrl.toString());
     return res.redirect(errorUrl.toString());
   }
   
   if (!code || !state) {
-    const errorUrl = new URL(FRONTEND_URL);
-    errorUrl.pathname = '/index.html';
+    const errorUrl = new URL(`${frontendBase}/index.html`);
     errorUrl.searchParams.set('oauth_error', encodeURIComponent('Missing code or state'));
     console.log('[oauth] Redirecting to frontend with error: Missing code or state');
     return res.redirect(errorUrl.toString());
@@ -239,8 +256,7 @@ oauthRouter.get("/callback", async (req, res) => {
   const stored = codeVerifierStore.get(state);
   if (!stored || stored.expiresAt < Date.now()) {
     codeVerifierStore.delete(state);
-    const errorUrl = new URL(FRONTEND_URL);
-    errorUrl.pathname = '/index.html';
+    const errorUrl = new URL(`${frontendBase}/index.html`);
     errorUrl.searchParams.set('oauth_error', encodeURIComponent('Invalid or expired state'));
     console.log('[oauth] Redirecting to frontend with error: Invalid or expired state');
     return res.redirect(errorUrl.toString());
@@ -339,8 +355,7 @@ oauthRouter.get("/callback", async (req, res) => {
     
     // Redirect to frontend with token
     // Explicitly use /index.html for Vercel compatibility
-    const frontendUrl = new URL(FRONTEND_URL);
-    frontendUrl.pathname = '/index.html';
+    const frontendUrl = new URL(`${frontendBase}/index.html`);
     frontendUrl.searchParams.set('oauth_token', token);
     frontendUrl.searchParams.set('oauth_success', 'true');
     
@@ -348,8 +363,7 @@ oauthRouter.get("/callback", async (req, res) => {
     return res.redirect(frontendUrl.toString());
   } catch (err) {
     console.error('[oauth] Callback error:', err);
-    const errorUrl = new URL(FRONTEND_URL);
-    errorUrl.pathname = '/index.html';
+    const errorUrl = new URL(`${frontendBase}/index.html`);
     errorUrl.searchParams.set('oauth_error', encodeURIComponent(err.message || 'OAuth authentication failed'));
     console.log('[oauth] Redirecting to frontend with error:', errorUrl.toString());
     return res.redirect(errorUrl.toString());

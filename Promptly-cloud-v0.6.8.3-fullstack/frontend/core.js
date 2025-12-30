@@ -1,6 +1,6 @@
 
 (function(){
-  const THEME_KEY="promptly.theme", LANG_KEY="promptly.lang", CONSENT_KEY="promptly.consent";
+  const THEME_KEY="promptly.theme", LANG_KEY="promptly.lang", CONSENT_KEY="promptly.consent", TOKEN_KEY="promptly.token";
   const prefersDark=window.matchMedia("(prefers-color-scheme: dark)");
   let lastMetrics = {}; // Store metrics for redraws
   
@@ -699,7 +699,6 @@
    * - Updates visibility of user menu
    */
   function updateAuthUI() {
-    const TOKEN_KEY = "promptly.token";
     const token = localStorage.getItem(TOKEN_KEY);
     
     const authButtons = document.getElementById('authButtons');

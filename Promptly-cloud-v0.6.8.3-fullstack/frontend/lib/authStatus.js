@@ -157,11 +157,6 @@
     if (signInBtn) signInBtn.classList.remove('hidden');
     if (signUpBtn) signUpBtn.classList.remove('hidden');
     if (userMenu) userMenu.classList.add('hidden');
-    
-    // Call global updateAuthUI if available
-    if (window.updateAuthUI) {
-      window.updateAuthUI();
-    }
   }
 
   function showAuthenticatedState(user) {
@@ -171,11 +166,6 @@
     if (userMenu) userMenu.classList.remove('hidden');
     if (userEmailEl) {
       userEmailEl.textContent = user.email || 'User';
-    }
-    
-    // Call global updateAuthUI if available
-    if (window.updateAuthUI) {
-      window.updateAuthUI();
     }
   }
 

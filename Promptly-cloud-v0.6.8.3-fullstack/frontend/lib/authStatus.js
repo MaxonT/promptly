@@ -13,6 +13,7 @@
 
   // DOM Elements
   const authStatusEl = document.getElementById('authStatus');
+  const authButtons = document.getElementById('authButtons');
   const signInBtn = document.getElementById('signInBtn');
   const signUpBtn = document.getElementById('signUpBtn');
   const userMenu = document.getElementById('userMenu');
@@ -152,12 +153,14 @@
 
   function showUnauthenticatedState() {
     currentUser = null;
+    if (authButtons) authButtons.classList.remove('hidden');
     if (signInBtn) signInBtn.classList.remove('hidden');
     if (signUpBtn) signUpBtn.classList.remove('hidden');
     if (userMenu) userMenu.classList.add('hidden');
   }
 
   function showAuthenticatedState(user) {
+    if (authButtons) authButtons.classList.add('hidden');
     if (signInBtn) signInBtn.classList.add('hidden');
     if (signUpBtn) signUpBtn.classList.add('hidden');
     if (userMenu) userMenu.classList.remove('hidden');

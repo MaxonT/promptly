@@ -234,5 +234,4 @@
     init();
   }
 })();
-// Force update check: v0.6.8.3 verified
 

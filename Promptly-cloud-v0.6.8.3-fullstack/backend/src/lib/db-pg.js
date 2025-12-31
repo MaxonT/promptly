@@ -211,6 +211,7 @@ export async function initializeSchema() {
       kind VARCHAR(50),
       mode VARCHAR(50) DEFAULT 'deep',
       model VARCHAR(100) DEFAULT 'promptly',
+      language VARCHAR(10) DEFAULT 'en',
       status VARCHAR(50) NOT NULL,
       intent_json TEXT,
       spec_json TEXT,
@@ -381,6 +382,7 @@ export async function initializeSchema() {
 
   try {
     await db.exec(schema);
+    await db.exec("ALTER TABLE question_sessions ADD COLUMN IF NOT EXISTS language VARCHAR(10) DEFAULT 'en';");
     console.log('[promptly] PostgreSQL schema initialized');
   } catch (err) {
     console.error('[promptly] Failed to initialize PostgreSQL schema:', err);

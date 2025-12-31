@@ -173,6 +173,18 @@ function resolveAndPersistModel(sessionId, sessionModel, incomingModel) {
   return resolved;
 }
 
+function resolveAndPersistLanguage(sessionId, sessionLanguage, incomingLanguage) {
+  const resolved = incomingLanguage || sessionLanguage || 'en';
+  if (sessionId && resolved !== sessionLanguage) {
+    db.prepare("UPDATE question_sessions SET language = ?, updated_at = ? WHERE id = ?").run(
+      resolved,
+      new Date().toISOString(),
+      sessionId
+    );
+  }
+  return resolved;
+}
+
 async function runWithTimeout(promise, timeoutMs, label = "task") {
   if (!timeoutMs) return promise;
   let timeoutId;
@@ -241,9 +253,20 @@ questionSessionRouter.post("/", async (req, res) => {
 
   db.prepare(
     `INSERT INTO question_sessions
-     (id, owner_id, initial_description, kind, mode, model, status, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
-  ).run(sessionId, userId, initial_description, kind || null, modeProfile.id, modelChoice.id, "active", now, now);
+     (id, owner_id, initial_description, kind, mode, model, language, status, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+  ).run(
+    sessionId,
+    userId,
+    initial_description,
+    kind || null,
+    modeProfile.id,
+    modelChoice.id,
+    userLanguage,
+    "active",
+    now,
+    now
+  );
 
   try {
     const broadQuestions = await runWithTimeout(
@@ -319,6 +342,7 @@ questionSessionRouter.post("/", async (req, res) => {
       session_id: sessionId,
       mode: modeProfile.id,
       model: modelChoice.id,
+      language: userLanguage,
       mode_profile: modeProfile,
       questions: allGeneratedQuestions
     });
@@ -365,7 +389,7 @@ questionSessionRouter.get("/status/active", (req, res) => {
   if (requestedSessionId) {
     session = db
       .prepare(
-        `SELECT id, owner_id, kind, status, mode, model, created_at, updated_at
+        `SELECT id, owner_id, kind, status, mode, model, language, created_at, updated_at
          FROM question_sessions
          WHERE id = ?`
       )
@@ -379,7 +403,7 @@ questionSessionRouter.get("/status/active", (req, res) => {
   if (!session) {
     session = db
       .prepare(
-        `SELECT id, owner_id, kind, status, mode, model, created_at, updated_at
+        `SELECT id, owner_id, kind, status, mode, model, language, created_at, updated_at
          FROM question_sessions
          WHERE owner_id = ?
          ORDER BY updated_at DESC
@@ -407,6 +431,7 @@ questionSessionRouter.get("/status/active", (req, res) => {
       status: session.status,
       mode: session.mode || "deep",
       model: session.model || "promptly",
+      language: session.language || 'en',
       kind: session.kind || null,
       created_at: session.created_at,
       updated_at: session.updated_at
@@ -422,7 +447,7 @@ questionSessionRouter.get("/:sessionId", (req, res) => {
   const { sessionId } = req.params;
   const session = db
     .prepare(
-      `SELECT id, owner_id, kind, status, initial_description, mode, model, created_at, updated_at
+      `SELECT id, owner_id, kind, status, initial_description, mode, model, language, created_at, updated_at
        FROM question_sessions
        WHERE id = ?`
     )
@@ -442,6 +467,7 @@ questionSessionRouter.get("/:sessionId", (req, res) => {
       mode_profile: resolveModeProfile(session.mode),
       kind: session.kind,
       status: session.status,
+      language: session.language || 'en',
       initial_description: session.initial_description,
       initialDescription: session.initial_description,
       created_at: session.created_at,
@@ -456,7 +482,7 @@ questionSessionRouter.get("/:sessionId/state", (req, res) => {
 
   const session = db
     .prepare(
-      `SELECT id, owner_id, kind, status, initial_description, mode, model, created_at, updated_at
+      `SELECT id, owner_id, kind, status, initial_description, mode, model, language, created_at, updated_at
        FROM question_sessions
        WHERE id = ?`
     )
@@ -497,6 +523,7 @@ questionSessionRouter.get("/:sessionId/state", (req, res) => {
       mode: session.mode || "deep",
       model: session.model || "promptly",
       kind: session.kind || null,
+      language: session.language || 'en',
       initial_description: session.initial_description || "",
       created_at: session.created_at,
       updated_at: session.updated_at
@@ -537,6 +564,7 @@ questionSessionRouter.post("/:sessionId/answer", (req, res) => {
 
   const { answers, control } = parsed.data;
   resolveAndPersistModel(sessionId, session.model, parsed.data.model);
+  resolveAndPersistLanguage(sessionId, session.language, parsed.data.language);
   
   // Handle control actions (back/skip)
   if (control === "back") {
@@ -644,8 +672,9 @@ questionSessionRouter.post("/:sessionId/finalize", async (req, res) => {
   }
 
   const modelChoice = resolveAndPersistModel(sessionId, session.model, parsedModel.data.model);
-  const userLanguage = parsedModel.data.language || session.language || 'en';
-  
+  const userLanguage = resolveAndPersistLanguage(sessionId, session.language, parsedModel.data.language);
+  const userLanguage = resolveAndPersistLanguage(sessionId, session.language, parsedModel.data.language);
+
   console.log(`[promptly] Finalizing session ${sessionId} with language: ${userLanguage}`);
 
   const questions = db
@@ -868,6 +897,7 @@ questionSessionRouter.post("/:sessionId/questions/:questionId/regenerate", async
   }
 
   const modelChoice = resolveAndPersistModel(sessionId, session.model, parsedModel.data.model);
+  const userLanguage = resolveAndPersistLanguage(sessionId, session.language, parsedModel.data.language);
 
   const oldQuestion = db
     .prepare("SELECT * FROM question_questions WHERE id = ? AND session_id = ?")
@@ -888,14 +918,16 @@ questionSessionRouter.post("/:sessionId/questions/:questionId/regenerate", async
       initialDescription: session.initial_description,
       kind: session.kind || null,
       model: modelChoice.targetModel,
-      inferenceConfig: inferenceProfile.stages.agentA
+      inferenceConfig: inferenceProfile.stages.agentA,
+      language: userLanguage
     });
     const choiceQuestions = await generateChoiceQuestions({
       initialDescription: session.initial_description,
       kind: session.kind || null,
       broadQuestions,
       model: modelChoice.targetModel,
-      inferenceConfig: inferenceProfile.stages.agentB
+      inferenceConfig: inferenceProfile.stages.agentB,
+      language: userLanguage
     });
 
     // Pick a new question that's similar in type

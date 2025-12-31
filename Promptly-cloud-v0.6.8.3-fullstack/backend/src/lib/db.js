@@ -111,6 +111,7 @@ CREATE TABLE IF NOT EXISTS question_sessions (
   kind TEXT,
   mode TEXT DEFAULT 'deep',
   model TEXT DEFAULT 'promptly',
+  language TEXT DEFAULT 'en',
   status TEXT NOT NULL,
   intent_json TEXT,
   spec_json TEXT,
@@ -288,6 +289,7 @@ CREATE INDEX IF NOT EXISTS idx_plan_usage_user_date ON plan_usage(user_id, date,
   // Backfill newly added columns
   ensureColumn("question_sessions", "mode", "TEXT DEFAULT 'deep'");
   ensureColumn("question_sessions", "model", "TEXT DEFAULT 'promptly'");
+  ensureColumn("question_sessions", "language", "TEXT DEFAULT 'en'");
   ensureColumn("question_sessions", "step", "INTEGER DEFAULT 0");
   ensureColumn("question_sessions", "is_complete", "INTEGER DEFAULT 0");
   ensureColumn("question_sessions", "spec_id", "TEXT");

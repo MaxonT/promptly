@@ -16,6 +16,8 @@
   const authButtons = document.getElementById('authButtons');
   const signInBtn = document.getElementById('signInBtn');
   const signUpBtn = document.getElementById('signUpBtn');
+  const googleSignInBtn = document.getElementById('googleSignInBtn');
+  const githubSignInBtn = document.getElementById('githubSignInBtn');
   const userMenu = document.getElementById('userMenu');
   const userMenuTrigger = document.getElementById('userMenuTrigger');
   const userMenuDropdown = document.getElementById('userMenuDropdown');
@@ -50,9 +52,6 @@
     }
 
     // Setup OAuth buttons
-    const googleSignInBtn = document.getElementById('googleSignInBtn');
-    const githubSignInBtn = document.getElementById('githubSignInBtn');
-    
     if (googleSignInBtn) {
       googleSignInBtn.addEventListener('click', (e) => {
         e.preventDefault();
@@ -153,18 +152,25 @@
 
   function showUnauthenticatedState() {
     currentUser = null;
+    // Show all buttons when not authenticated
     if (authButtons) authButtons.classList.remove('hidden');
     if (signInBtn) signInBtn.classList.remove('hidden');
     if (signUpBtn) signUpBtn.classList.remove('hidden');
+    if (googleSignInBtn) googleSignInBtn.classList.remove('hidden');
+    if (githubSignInBtn) githubSignInBtn.classList.remove('hidden');
     if (userMenu) userMenu.classList.add('hidden');
   }
 
   function showAuthenticatedState(user) {
-    // Hide Sign In and Create Account buttons
+    // Hide Sign In and Create Account buttons when authenticated
     if (signInBtn) signInBtn.classList.add('hidden');
     if (signUpBtn) signUpBtn.classList.add('hidden');
     
-    // Keep OAuth buttons (Google, GitHub) and show user menu
+    // Keep OAuth buttons (Google, GitHub) visible
+    if (googleSignInBtn) googleSignInBtn.classList.remove('hidden');
+    if (githubSignInBtn) githubSignInBtn.classList.remove('hidden');
+    
+    // Keep authButtons container visible and show user menu
     if (authButtons) authButtons.classList.remove('hidden');
     if (userMenu) userMenu.classList.remove('hidden');
     if (userEmailEl) {

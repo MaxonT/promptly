@@ -123,6 +123,15 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
   }
   sessionStorage.setItem(MODEL_STORAGE_KEY, currentModel);
 
+  // Use a single helper to resolve the active language from the i18n system
+  // so the backend always receives the same locale the user selected in the UI.
+  function getCurrentLanguage() {
+    const i18nLanguage =
+      (window.i18nManager && window.i18nManager.instance && window.i18nManager.instance.language) ||
+      (window.i18n && window.i18n.language);
+    return i18nLanguage || localStorage.getItem('locale') || 'en';
+  }
+
   function log(line) {
     const ts = new Date().toISOString().slice(11, 19);
     logOutput.textContent += `[${ts}] ${line}\n`;
@@ -1007,10 +1016,8 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
         }
       }, estimate.max * 1000); // Show warning only after exceeding mode's max time
 
-      // Get current language from i18n or localStorage
-      const currentLanguage = (window.i18nManager && window.i18nManager.currentLang) 
-        || localStorage.getItem('promptly-language') 
-        || 'en';
+      // Get current language from unified resolver
+      const currentLanguage = getCurrentLanguage();
       
       const res = await fetch(`${API_BASE}/api/question-sessions`, {
         method: "POST",
@@ -1201,9 +1208,7 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
     try {
       log("Submitting all answers...");
       // Get current language
-      const currentLanguage = (window.i18nManager && window.i18nManager.currentLang) 
-        || localStorage.getItem('promptly-language') 
-        || 'en';
+      const currentLanguage = getCurrentLanguage();
       
       const res = await fetch(`${API_BASE}/api/question-sessions/${encodeURIComponent(currentSessionId)}/answer`, {
         method: "POST",
@@ -1332,9 +1337,7 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
       setWizardStatus("Finalizing and generating your spec... This may take a moment.", "info", { showTicks: true });
       
       // Get current language
-      const currentLanguage = (window.i18nManager && window.i18nManager.currentLang) 
-        || localStorage.getItem('promptly-language') 
-        || 'en';
+      const currentLanguage = getCurrentLanguage();
       
       const res = await fetch(`${API_BASE}/api/question-sessions/${encodeURIComponent(currentSessionId)}/finalize`, {
         method: "POST",

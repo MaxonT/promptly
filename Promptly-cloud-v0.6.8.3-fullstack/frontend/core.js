@@ -1,6 +1,6 @@
 
 (function(){
-  const THEME_KEY="promptly.theme", LANG_KEY="promptly.lang", CONSENT_KEY="promptly.consent";
+  const THEME_KEY="promptly.theme", LANG_KEY="promptly.lang", CONSENT_KEY="promptly.consent", TOKEN_KEY="promptly.token";
   const prefersDark=window.matchMedia("(prefers-color-scheme: dark)");
   let lastMetrics = {}; // Store metrics for redraws
   
@@ -688,6 +688,42 @@
     return key; // Fallback if i18n not ready
   };
 
+  // =============================================
+  // Authentication UI Management
+  // =============================================
+  
+  /**
+   * Update authentication UI based on current auth state
+   * - Hides Sign In/Create Account buttons when logged in
+   * - Shows them when logged out
+   * - Updates visibility of user menu
+   */
+  function updateAuthUI() {
+    const token = localStorage.getItem(TOKEN_KEY);
+    
+    const authButtons = document.getElementById('authButtons');
+    const signInBtn = document.getElementById('signInBtn');
+    const signUpBtn = document.getElementById('signUpBtn');
+    const userMenu = document.getElementById('userMenu');
+    
+    if (token) {
+      // User is logged in - hide auth buttons
+      if (authButtons) authButtons.classList.add('hidden');
+      if (signInBtn) signInBtn.classList.add('hidden');
+      if (signUpBtn) signUpBtn.classList.add('hidden');
+      if (userMenu) userMenu.classList.remove('hidden');
+    } else {
+      // User is logged out - show auth buttons
+      if (authButtons) authButtons.classList.remove('hidden');
+      if (signInBtn) signInBtn.classList.remove('hidden');
+      if (signUpBtn) signUpBtn.classList.remove('hidden');
+      if (userMenu) userMenu.classList.add('hidden');
+    }
+  }
+  
+  // Expose updateAuthUI globally for use by auth modules
+  window.updateAuthUI = updateAuthUI;
+
   document.addEventListener("DOMContentLoaded", () => {
     const themeSel = document.getElementById("themeSelect");
     // Language selector is now handled by i18n.init.js
@@ -721,5 +757,8 @@
     setTimeout(() => {
       renderCharts();
     }, 200);
+    
+    // Update auth UI on page load
+    updateAuthUI();
   });
 })();

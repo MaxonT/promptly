@@ -160,9 +160,12 @@
   }
 
   function showAuthenticatedState(user) {
-    if (authButtons) authButtons.classList.remove('hidden');
+    // Hide Sign In and Create Account buttons
     if (signInBtn) signInBtn.classList.add('hidden');
     if (signUpBtn) signUpBtn.classList.add('hidden');
+    
+    // Keep OAuth buttons (Google, GitHub) and show user menu
+    if (authButtons) authButtons.classList.remove('hidden');
     if (userMenu) userMenu.classList.remove('hidden');
     if (userEmailEl) {
       userEmailEl.textContent = user.email || 'User';

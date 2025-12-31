@@ -673,7 +673,7 @@ questionSessionRouter.post("/:sessionId/finalize", async (req, res) => {
 
   const modelChoice = resolveAndPersistModel(sessionId, session.model, parsedModel.data.model);
   const userLanguage = resolveAndPersistLanguage(sessionId, session.language, parsedModel.data.language);
-  const userLanguage = resolveAndPersistLanguage(sessionId, session.language, parsedModel.data.language);
+
 
   console.log(`[promptly] Finalizing session ${sessionId} with language: ${userLanguage}`);
 

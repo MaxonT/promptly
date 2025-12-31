@@ -160,7 +160,7 @@
   }
 
   function showAuthenticatedState(user) {
-    if (authButtons) authButtons.classList.add('hidden');
+    if (authButtons) authButtons.classList.remove('hidden');
     if (signInBtn) signInBtn.classList.add('hidden');
     if (signUpBtn) signUpBtn.classList.add('hidden');
     if (userMenu) userMenu.classList.remove('hidden');

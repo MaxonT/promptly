@@ -672,10 +672,10 @@ questionSessionRouter.post("/:sessionId/finalize", async (req, res) => {
   }
 
   const modelChoice = resolveAndPersistModel(sessionId, session.model, parsedModel.data.model);
-  const userLanguage = resolveAndPersistLanguage(sessionId, session.language, parsedModel.data.language);
+  const finalUserLanguage = resolveAndPersistLanguage(sessionId, session.language, parsedModel.data.language);
 
 
-  console.log(`[promptly] Finalizing session ${sessionId} with language: ${userLanguage}`);
+  console.log(`[promptly] Finalizing session ${sessionId} with language: ${finalUserLanguage}`);
 
   const questions = db
     .prepare(
@@ -717,7 +717,7 @@ questionSessionRouter.post("/:sessionId/finalize", async (req, res) => {
       modeProfile,
       model: modelChoice.targetModel,
       provider: modelChoice.provider,
-      language: userLanguage
+      language: finalUserLanguage
     });
 
     const compiled = compileSpecToPrompt(result.spec);
@@ -800,7 +800,7 @@ questionSessionRouter.post("/:sessionId/finalize", async (req, res) => {
     if (err instanceof LlmDisabledError || err.code === "LLM_DISABLED") {
       return res.status(503).json({ ok: false, error: "LLM disabled" });
     }
-    return res.status(502).json({ ok: false, error: "Question engine failed" });
+    return res.status(502).json({ ok: false, error: `Question engine failed: ${err.message || "Unknown error"}` });
   }
 });
 

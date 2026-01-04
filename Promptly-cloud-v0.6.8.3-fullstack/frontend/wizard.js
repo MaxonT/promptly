@@ -107,7 +107,7 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
     }
   };
 
-  let currentMode = MODE_OPTIONS[sessionStorage.getItem(MODE_STORAGE_KEY)]?.id || "deep";
+  let currentMode = MODE_OPTIONS[sessionStorage.getItem(MODE_STORAGE_KEY)]?.id || "standard";
 
   // Model selection is managed on the landing hero; the wizard reads that shared choice.
   const MODEL_STORAGE_KEY = "promptly:model-selection";

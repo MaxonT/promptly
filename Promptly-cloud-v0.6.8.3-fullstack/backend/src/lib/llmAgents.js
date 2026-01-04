@@ -97,6 +97,44 @@ const AgentCOutputSchema = z.object({
   explanation: z.string()
 });
 
+/**
+ * Validate the quality of the generated spec
+ * @param {Object} parsed - The parsed output from Agent C
+ * @throws {Error} If validation fails
+ */
+function validateSpecQuality(parsed) {
+  if (!parsed.spec) {
+    throw new Error("Spec object is missing");
+  }
+
+  const spec = parsed.spec;
+
+  // Check for critical fields
+  // Note: The fixer logic inside generateRawSpec ensures these exist,
+  // but this serves as a final sanity check.
+  const criticalFields = ['project_goal', 'objectives', 'key_features'];
+  
+  for (const field of criticalFields) {
+    const value = spec[field];
+    if (!value) {
+      throw new Error(`Missing critical field: ${field}`);
+    }
+    
+    if (Array.isArray(value) && value.length === 0) {
+      throw new Error(`Empty array for field: ${field}`);
+    }
+    
+    if (typeof value === 'string' && value.trim().length === 0) {
+      throw new Error(`Empty string for field: ${field}`);
+    }
+  }
+
+  // Check explanation
+  if (!parsed.explanation || typeof parsed.explanation !== 'string' || parsed.explanation.trim().length < 5) {
+    throw new Error("Explanation is too short or missing");
+  }
+}
+
 export async function generateBroadQuestions({ initialDescription, kind, modeProfile = null, model = null, provider = 'openai', language = 'en' }) {
   const system = [
     "You are Agent A in Promptly's Question Engine.",

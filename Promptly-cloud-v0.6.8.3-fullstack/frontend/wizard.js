@@ -519,7 +519,7 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
       
       if (sessionLanguage !== currentUILanguage) {
         console.warn(`[wizard] Language mismatch detected! Session: ${sessionLanguage}, UI: ${currentUILanguage}`);
-        log(`⚠️ Note: Session was created in ${sessionLanguage}, but UI is set to ${currentUILanguage}. Questions will display in session's original language.`);
+        log(`⚠️ Note: Session was created in ${sessionLanguage}, but UI is set to ${currentUILanguage}. Questions will display in ${sessionLanguage}.`);
         // Optionally show user warning about language mismatch
         // The questions were generated in the session's language when the wizard started
       }

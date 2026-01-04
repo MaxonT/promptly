@@ -126,10 +126,30 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
   // Use a single helper to resolve the active language from the i18n system
   // so the backend always receives the same locale the user selected in the UI.
   function getCurrentLanguage() {
-    const i18nLanguage =
-      (window.i18nManager && window.i18nManager.instance && window.i18nManager.instance.language) ||
-      (window.i18n && window.i18n.language);
-    return i18nLanguage || localStorage.getItem('locale') || 'en';
+    let result = 'en';
+    let source = 'default';
+
+    // 1. Try to get from active i18n instance (most reliable source of truth for UI)
+    if (window.i18nManager && window.i18nManager.instance && window.i18nManager.instance.language) {
+       result = window.i18nManager.instance.language;
+       source = 'i18nManager';
+    }
+    // 2. Try global i18n object
+    else if (window.i18n && window.i18n.language) {
+       result = window.i18n.language;
+       source = 'window.i18n';
+    }
+    // 3. Fallback to localStorage
+    else {
+        const stored = localStorage.getItem('locale') || localStorage.getItem('promptly-language');
+        if (stored) {
+            result = stored;
+            source = 'localStorage';
+        }
+    }
+
+    console.log(`[Wizard] getCurrentLanguage: ${result} (source: ${source})`);
+    return result;
   }
 
   function log(line) {

@@ -136,6 +136,7 @@ function validateSpecQuality(parsed) {
 }
 
 export async function generateBroadQuestions({ initialDescription, kind, modeProfile = null, model = null, provider = 'openai', language = 'en' }) {
+  console.log(`[LLM] generateBroadQuestions called with language: ${language}`);
   const system = [
     "You are Agent A in Promptly's Question Engine.",
     "Goal: from a fuzzy project idea, propose 8-12 broad clarification axes.",
@@ -696,6 +697,7 @@ export async function generateChoiceQuestions({ initialDescription, kind, broadQ
 }
 
 export async function generateRawSpec({ initialDescription, kind, qaPairs, modeProfile = null, model = null, provider = 'openai', language = 'en' }) {
+  console.log(`[LLM] generateRawSpec called with language: ${language}`);
   const system = [
     "You are Agent C in Promptly's Question Engine.",
     "You receive all questions and answers from a wizard.",

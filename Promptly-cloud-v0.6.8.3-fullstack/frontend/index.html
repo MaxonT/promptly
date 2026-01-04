@@ -240,6 +240,74 @@ html[data-theme="light"] .glossary-def{ color:#1F2937; }
   flex-wrap:wrap;
   justify-content:flex-end;
 }
+
+/* Plan Banner Styles */
+.plan-banner {
+  background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+  border: 1px solid #475569;
+  border-radius: 12px;
+  padding: 12px 20px;
+  margin: 16px 0 24px 0;
+  animation: slideInDown 0.4s ease-out;
+}
+
+.plan-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.plan-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  background: rgba(34, 211, 238, 0.1);
+  border: 1px solid rgba(34, 211, 238, 0.3);
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #22d3ee;
+  white-space: nowrap;
+}
+
+.plan-details {
+  font-size: 13px;
+  color: #94a3b8;
+  flex: 1;
+  min-width: 200px;
+}
+
+.plan-upgrade-link {
+  margin-left: auto;
+  padding: 6px 12px;
+  background: linear-gradient(135deg, #f59e0b 0%, #f97316 100%);
+  color: white;
+  text-decoration: none;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.plan-upgrade-link:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.4);
+}
+
+@keyframes slideInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 .btn-auth{ padding:0.5rem 1rem; border-radius:8px; border:1px solid rgba(255,255,255,.15); background:var(--bg-primary,linear-gradient(#111,#0d1117)); color:var(--text-high,#e5e7eb); cursor:pointer; font-size:0.875rem; font-weight:500; transition:all 0.2s ease; }
 .btn-auth:hover{ border-color:rgba(6,182,212,.5); background:rgba(6,182,212,.1); transform:translateY(-1px); }
 .btn-signin{ border-color:rgba(124,58,237,.5); }
@@ -565,8 +633,14 @@ html[data-theme="light"] .grey-gradient-text{
       </div>
     </div>
 
-
-
+    <!-- Plan Limits Banner -->
+    <div class="plan-banner" id="planBanner" style="display: none;">
+      <div class="plan-info">
+        <span class="plan-badge" id="planBadge">🆓 Free Plan</span>
+        <span class="plan-details" id="planDetails">Loading plan info...</span>
+        <a href="subscription.html" class="plan-upgrade-link" id="planUpgradeLink">⬆️ Upgrade for unlimited</a>
+      </div>
+    </div>
 
     <section class="mode-selector" aria-labelledby="modeSelectorTitle">
       <div class="mode-selector__header">
@@ -1009,6 +1083,88 @@ temperature: 0.5</textarea>
   <script type="module" src="lib/authState.js"></script>
   <script type="module" src="lib/oauth.js"></script>
   <script type="module" src="lib/authStatus.js"></script>
+
+<script>
+// Initialize Plan Banner - Fetch and display user's plan limits
+(function initPlanBanner() {
+  const checkAuthAndShowBanner = async () => {
+    try {
+      const planBanner = document.getElementById('planBanner');
+      const planBadge = document.getElementById('planBadge');
+      const planDetails = document.getElementById('planDetails');
+      const planUpgradeLink = document.getElementById('planUpgradeLink');
+
+      if (!planBanner || !planBadge) {
+        console.log('[Plan Banner] Elements not found');
+        return;
+      }
+
+      console.log('[Plan Banner] Initializing...');
+
+      // Get API base from config or window variable
+      const API_BASE = window.PROMPTLY_API_BASE || 'https://promptly-v0-6-cloudtest-cursor-dev.onrender.com';
+      console.log('[Plan Banner] Using API base:', API_BASE);
+      
+      // Try to fetch plan status
+      const res = await fetch(`${API_BASE}/api/billing/status`, {
+        credentials: 'include',
+        headers: {
+          'Accept': 'application/json'
+        }
+      });
+      
+      console.log('[Plan Banner] Response status:', res.status);
+      
+      if (!res.ok) {
+        console.log('[Plan Banner] Not authenticated or error fetching status - not showing banner');
+        return; // Don't show banner if not authenticated
+      }
+      
+      const data = await res.json();
+      console.log('[Plan Banner] Data received:', data);
+      
+      if (!data.ok && data.ok !== undefined) {
+        console.log('[Plan Banner] API returned not ok - not showing banner');
+        return; // Don't show banner if API returned error
+      }
+      
+      const plan = data.plan || 'free';
+      console.log('[Plan Banner] User plan:', plan);
+      
+      // Show banner only if we have real data
+      planBanner.style.display = 'block';
+      
+      if (plan === 'free') {
+        planBadge.textContent = '🆓 Free Plan';
+        const usedPrompt = data.usage?.promptOptimization || 0;
+        const limitPrompt = data.limits?.promptOptimization?.daily || 8;
+        const usedWizard = data.usage?.questionWizard || 0;
+        const limitWizard = data.limits?.questionWizard?.daily || 5;
+        planDetails.textContent = `Prompt optimization: ${usedPrompt}/${limitPrompt} times/day | Question Wizard: ${usedWizard}/${limitWizard} times/day`;
+        planUpgradeLink.style.display = 'inline-block';
+      } else {
+        planBadge.textContent = '💎 Premium Plan';
+        planDetails.textContent = '✨ Unlimited access to all features';
+        planUpgradeLink.style.display = 'none';
+      }
+      
+      console.log('[Plan Banner] Banner displayed successfully');
+    } catch (err) {
+      console.error('[Plan Banner] Error:', err);
+      // Don't show banner on error - fail silently
+    }
+  };
+
+  // Wait for page load and auth initialization
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+      setTimeout(checkAuthAndShowBanner, 500);
+    });
+  } else {
+    setTimeout(checkAuthAndShowBanner, 500);
+  }
+})();
+</script>
 
 <script>
 (function(){

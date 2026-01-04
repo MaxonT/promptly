@@ -91,23 +91,26 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
       id: "fast",
       label: "Fast",
       hierarchy: "A+",
-      description: "Quick response, minimal reasoning"
+      description: "Quick response, minimal reasoning",
+      requiresPremium: false
     },
     deep: {
       id: "deep",
       label: "Deep Thinking",
       hierarchy: "S",
-      description: "Balanced depth and speed"
+      description: "Balanced depth and speed",
+      requiresPremium: true
     },
     ultra: {
       id: "ultra",
       label: "Ultra Thinking",
       hierarchy: "S+",
-      description: "Maximum depth, slowest response"
+      description: "Maximum depth, slowest response",
+      requiresPremium: true
     }
   };
 
-  let currentMode = MODE_OPTIONS[sessionStorage.getItem(MODE_STORAGE_KEY)]?.id || "standard";
+  let currentMode = MODE_OPTIONS[sessionStorage.getItem(MODE_STORAGE_KEY)]?.id || "fast";
 
   // Model selection is managed on the landing hero; the wizard reads that shared choice.
   const MODEL_STORAGE_KEY = "promptly:model-selection";
@@ -225,19 +228,105 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
 
   function initModeSelector() {
     if (!modeSelector || !modeCards.length) return;
-    modeCards.forEach((card) => {
-      card.setAttribute("role", "button");
-      card.setAttribute("aria-pressed", "false");
-      card.addEventListener("click", () => setMode(card.dataset.mode || "deep"));
-      card.addEventListener("keydown", (evt) => {
-        if (evt.key === "Enter" || evt.key === " ") {
-          evt.preventDefault();
-          setMode(card.dataset.mode || "deep");
+    
+    // Fetch user's plan info to determine access
+    fetchUserPlanInfo().then(planInfo => {
+      modeCards.forEach((card) => {
+        card.setAttribute("role", "button");
+        card.setAttribute("aria-pressed", "false");
+        
+        const requiresPremium = card.dataset.requiresPremium === "true";
+        const mode = card.dataset.mode;
+        
+        // Disable premium modes for free users
+        if (requiresPremium && !planInfo.isPremium) {
+          card.classList.add("is-disabled");
+          card.title = "Upgrade to Premium to use this mode";
         }
+        
+        card.addEventListener("click", () => {
+          if (!card.classList.contains("is-disabled")) {
+            setMode(mode || "fast");
+          } else {
+            // Show upgrade prompt
+            showUpgradePrompt(mode);
+          }
+        });
+        
+        card.addEventListener("keydown", (evt) => {
+          if (evt.key === "Enter" || evt.key === " ") {
+            evt.preventDefault();
+            if (!card.classList.contains("is-disabled")) {
+              setMode(mode || "fast");
+            } else {
+              showUpgradePrompt(mode);
+            }
+          }
+        });
       });
+      
+      // Display plan info banner
+      displayPlanInfo(planInfo);
     });
 
     setMode(currentMode, { silentLog: true });
+  }
+  
+  // Fetch user plan information from backend
+  async function fetchUserPlanInfo() {
+    try {
+      const res = await fetch(`${API_BASE}/api/billing/status`);
+      if (!res.ok) {
+        console.warn("Failed to fetch plan info, assuming free plan");
+        return { plan: 'free', isPremium: false, dailyLimit: 5, used: 0 };
+      }
+      const data = await res.json();
+      return {
+        plan: data.plan || 'free',
+        isPremium: data.plan !== 'free',
+        dailyLimit: data.limits?.questionWizard?.daily || 5,
+        used: data.usage?.questionWizard || 0
+      };
+    } catch (err) {
+      console.warn("Error fetching plan info:", err);
+      return { plan: 'free', isPremium: false, dailyLimit: 5, used: 0 };
+    }
+  }
+  
+  // Display plan information banner
+  function displayPlanInfo(planInfo) {
+    const planBanner = document.createElement("div");
+    planBanner.className = "wizard-plan-banner";
+    planBanner.innerHTML = `
+      <div class="wizard-plan-info">
+        <span class="wizard-plan-badge">${planInfo.plan === 'free' ? '🆓 Free Plan' : '💎 Premium Plan'}</span>
+        ${planInfo.plan === 'free' ? `
+          <span class="wizard-plan-limit">
+            Question Wizard: ${planInfo.used}/${planInfo.dailyLimit} used today
+          </span>
+          <a href="subscription.html" class="wizard-plan-upgrade">
+            ⬆️ Upgrade for unlimited access
+          </a>
+        ` : `
+          <span class="wizard-plan-limit">✨ Unlimited access to all modes</span>
+        `}
+      </div>
+    `;
+    
+    // Insert before the stepper
+    const stepper = document.querySelector(".wizard-stepper");
+    if (stepper && stepper.parentNode) {
+      stepper.parentNode.insertBefore(planBanner, stepper);
+    }
+  }
+  
+  // Show upgrade prompt when user clicks disabled mode
+  function showUpgradePrompt(mode) {
+    const modeLabel = MODE_OPTIONS[mode]?.label || mode;
+    setWizardStatus(
+      `🔒 ${modeLabel} mode requires Premium. <a href="subscription.html" style="color:#22d3ee;text-decoration:underline;">Upgrade now</a> for unlimited access to all modes.`,
+      "warn"
+    );
   }
 
   function syncStartButtonState() {

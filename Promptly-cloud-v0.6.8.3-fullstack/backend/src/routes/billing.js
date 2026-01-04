@@ -20,6 +20,7 @@ import { stripeService } from "../lib/stripeService.js";
 import { tokenLedger } from "../lib/tokenLedger.js";
 import { trialAntiAbuse } from "../lib/trialAntiAbuse.js";
 import { shouldInjectError, injectDelay, InjectedError } from "../lib/errorInjector.js";
+import { getUserPlan, getDailyUsage } from "../lib/planLimits.js";
 import {
   PLANS,
   FEATURES,
@@ -79,6 +80,11 @@ billingRouter.get("/status", requireAuth, (req, res) => {
     // Get token balances
     const balances = tokenLedger.getTokenBalances(userId);
     
+    // Get user plan and usage
+    const plan = getUserPlan(userId);
+    const promptUsage = getDailyUsage(userId, 'prompt_optimization');
+    const wizardUsage = getDailyUsage(userId, 'question_wizard');
+    
     // Get user info
     const user = db.prepare(`
       SELECT email, email_verified, trial_used, trial_started_at, created_at
@@ -95,6 +101,7 @@ billingRouter.get("/status", requireAuth, (req, res) => {
     
     res.json({
       ok: true,
+      plan: plan, // 'free', 'monthly', 'yearly', or 'trial'
       subscription: {
         status: subscription.status,
         plan: subscription.plan,
@@ -104,6 +111,18 @@ billingRouter.get("/status", requireAuth, (req, res) => {
         cancelAtPeriodEnd: subscription.cancelAtPeriodEnd,
         canStartTrial: !user?.trial_used && FEATURES.trialsEnabled,
         emailVerified: !!user?.email_verified,
+      },
+      limits: {
+        promptOptimization: {
+          daily: plan === 'free' ? 8 : null // null means unlimited
+        },
+        questionWizard: {
+          daily: plan === 'free' ? 5 : null // null means unlimited
+        }
+      },
+      usage: {
+        promptOptimization: promptUsage,
+        questionWizard: wizardUsage
       },
       tokens: {
         total: balances.total,

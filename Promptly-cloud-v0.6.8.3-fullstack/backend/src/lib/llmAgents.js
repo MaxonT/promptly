@@ -24,28 +24,34 @@ const LANGUAGE_MAP = {
  * @returns {string} - Language instruction for system prompt
  */
 function getLanguageInstruction(language) {
-  if (!language || language === 'en') {
-    return ""; // No special instruction for English (default)
-  }
+  const lang = language || 'en';
+  const languageName = LANGUAGE_MAP[lang] || 'English';
   
-  const languageName = LANGUAGE_MAP[language] || 'English';
+  // CRITICAL FIX: Always include explicit language instruction, even for English
+  // This prevents LLM from using other languages based on user input or context
   return `🌍 CRITICAL LANGUAGE REQUIREMENT - HIGHEST PRIORITY 🌍
 YOU MUST GENERATE ALL OUTPUT CONTENT IN ${languageName}.
 This is MANDATORY and OVERRIDES any examples shown below.
+DO NOT use any other language regardless of the user's input language.
 
-REQUIRED LANGUAGE FOR:
+REQUIRED LANGUAGE FOR ALL OUTPUT:
+- All questions and their text content
+- All option labels and descriptions
+- All axis names and rationales
 - All text fields in the spec (project_goal, objectives, requirements, target_users, etc.)
 - The explanation field
 - Any descriptions, labels, or user-facing text
 - ALL natural language content
 
-EXCEPTIONS (keep in English):
+EXCEPTIONS (keep in original form):
 - Technical terms: React, API, database, Node.js, PostgreSQL, JWT, etc.
 - Code syntax and technical stack names
 - Technical abbreviations: CRUD, HTTP, REST, etc.
+- Brand names and proper nouns
 
 ⚠️ IMPORTANT: The JSON format examples below are for STRUCTURE ONLY.
-DO NOT copy the language from the examples - use ${languageName} instead!`;
+DO NOT copy the language from the examples - use ${languageName} instead!
+If user input is in another language, TRANSLATE the concepts to ${languageName} in your output.`;
 }
 
 const BroadQuestionSchema = z.object({

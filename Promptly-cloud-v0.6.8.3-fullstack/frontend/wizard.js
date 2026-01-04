@@ -424,6 +424,17 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
       currentSessionId = data.session.id;
       window.promptlyWizardSession?.markRunning?.(currentSessionId);
 
+      // ⚠️ LANGUAGE CONSISTENCY CHECK: Compare session language with current UI language
+      const sessionLanguage = data.session.language || 'en';
+      const currentUILanguage = getCurrentLanguage();
+      
+      if (sessionLanguage !== currentUILanguage) {
+        console.warn(`[wizard] Language mismatch detected! Session: ${sessionLanguage}, UI: ${currentUILanguage}`);
+        log(`⚠️ Note: Session was created in ${sessionLanguage}, but UI is set to ${currentUILanguage}. Questions will display in session's original language.`);
+        // Optionally show user warning about language mismatch
+        // The questions were generated in the session's language when the wizard started
+      }
+
       if (ideaInput && data.session.initial_description) {
         ideaInput.value = data.session.initial_description;
       }
@@ -1638,12 +1649,15 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
         cardElement.appendChild(loadingOverlay);
       }
       
+      // Get current language from unified resolver for regeneration
+      const currentLanguage = getCurrentLanguage();
+      
       const res = await fetch(
         `${API_BASE}/api/question-sessions/${encodeURIComponent(currentSessionId)}/questions/${encodeURIComponent(questionId)}/regenerate`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ model: currentModel })
+          body: JSON.stringify({ model: currentModel, language: currentLanguage })
         }
       );
       if (!res.ok) {

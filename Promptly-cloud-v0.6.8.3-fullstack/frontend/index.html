@@ -1105,28 +1105,36 @@ temperature: 0.5</textarea>
       const API_BASE = window.PROMPTLY_API_BASE || 'https://promptly-v0-6-cloudtest-cursor-dev.onrender.com';
       console.log('[Plan Banner] Using API base:', API_BASE);
       
-      // Try to fetch plan status
+      // Check if user is authenticated by looking at authState or user menu
+      const userEmail = document.querySelector('.user-email')?.textContent || null;
+      const isAuthenticated = userEmail && userEmail !== 'user@example.com';
+      console.log('[Plan Banner] User email:', userEmail, '| Authenticated:', isAuthenticated);
+      
+      if (!isAuthenticated && retryCount < 3) {
+        console.log('[Plan Banner] Not authenticated yet, retrying in 1 second...');
+        setTimeout(() => checkAuthAndShowBanner(retryCount + 1), 1000);
+        return;
+      }
+      
+      // Try to fetch plan status with explicit credentials
       const res = await fetch(`${API_BASE}/api/billing/status`, {
+        method: 'GET',
         credentials: 'include',
+        mode: 'cors',
         headers: {
           'Accept': 'application/json',
           'Content-Type': 'application/json'
         }
       });
       
-      console.log('[Plan Banner] Response status:', res.status);
+      console.log('[Plan Banner] Fetch response status:', res.status);
       
       if (!res.ok) {
-        console.log('[Plan Banner] Not authenticated (status ' + res.status + ')');
+        console.log('[Plan Banner] API returned status ' + res.status);
+        const responseText = await res.text();
+        console.log('[Plan Banner] Response text:', responseText);
         
-        // Retry a few times in case auth is initializing
-        if (retryCount < 3) {
-          console.log('[Plan Banner] Retrying in 1 second...');
-          setTimeout(() => checkAuthAndShowBanner(retryCount + 1), 1000);
-          return;
-        }
-        
-        // After retries, show sign in prompt
+        // If not authenticated, show sign in prompt
         planBanner.style.display = 'block';
         planBadge.textContent = '🔑 Sign In Required';
         planDetails.textContent = 'Sign in to see your plan and usage limits';
@@ -1148,17 +1156,10 @@ temperature: 0.5</textarea>
       }
       
       const data = await res.json();
-      console.log('[Plan Banner] Data received:', data);
+      console.log('[Plan Banner] Response data:', data);
       
-      if (!data.ok && data.ok !== undefined) {
-        console.log('[Plan Banner] API returned not ok');
-        
-        if (retryCount < 3) {
-          console.log('[Plan Banner] Retrying in 1 second...');
-          setTimeout(() => checkAuthAndShowBanner(retryCount + 1), 1000);
-          return;
-        }
-        
+      if (!data || (data.ok === false)) {
+        console.log('[Plan Banner] API returned error or no data');
         planBanner.style.display = 'block';
         planBadge.textContent = '🔑 Sign In Required';
         planDetails.textContent = 'Sign in to see your plan and usage limits';
@@ -1166,9 +1167,9 @@ temperature: 0.5</textarea>
       }
       
       const plan = data.plan || 'free';
-      console.log('[Plan Banner] User plan:', plan, '| Data:', data);
+      console.log('[Plan Banner] Successfully fetched plan:', plan);
       
-      // Show banner only if we have real authenticated data
+      // Show banner with authenticated user data
       planBanner.style.display = 'block';
       
       if (plan === 'free') {
@@ -1187,44 +1188,29 @@ temperature: 0.5</textarea>
         planUpgradeLink.style.display = 'none';
       }
       
-      console.log('[Plan Banner] Banner displayed successfully');
+      console.log('[Plan Banner] ✅ Banner displayed successfully');
     } catch (err) {
       console.error('[Plan Banner] Error:', err);
       
-      // Retry on error
-      if (retryCount < 3) {
-        console.log('[Plan Banner] Retrying in 1 second...');
-        setTimeout(() => checkAuthAndShowBanner(retryCount + 1), 1000);
-        return;
-      }
-      
-      // On network error, show sign in prompt
+      // Show error state
       const planBanner = document.getElementById('planBanner');
       if (planBanner) {
         planBanner.style.display = 'block';
-        document.getElementById('planBadge').textContent = '🔑 Sign In Required';
-        document.getElementById('planDetails').textContent = 'Sign in to see your plan and usage limits';
-        const planUpgradeLink = document.getElementById('planUpgradeLink');
-        planUpgradeLink.textContent = 'Sign In';
-        planUpgradeLink.href = '#';
-        planUpgradeLink.addEventListener('click', (e) => {
-          e.preventDefault();
-          const signInBtn = document.getElementById('signInBtn');
-          if (signInBtn) signInBtn.click();
-        });
+        document.getElementById('planBadge').textContent = '⚠️ Error';
+        document.getElementById('planDetails').textContent = 'Failed to load plan info. Please refresh the page.';
       }
     }
   };
 
-  // Wait for page load and auth initialization
+  // Wait for page and auth modules to fully load
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {
-      // Wait 2 seconds for auth to fully initialize
-      setTimeout(checkAuthAndShowBanner, 2000);
+      // Wait for authStatus.js to initialize
+      setTimeout(checkAuthAndShowBanner, 1500);
     });
   } else {
-    // Wait 2 seconds for auth to fully initialize
-    setTimeout(checkAuthAndShowBanner, 2000);
+    // Page already loaded, check immediately
+    setTimeout(checkAuthAndShowBanner, 1500);
   }
 })();
 </script>

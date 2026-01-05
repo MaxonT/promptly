@@ -1085,152 +1085,112 @@ temperature: 0.5</textarea>
   <script type="module" src="lib/authStatus.js"></script>
 
 <script>
-// Initialize Plan Banner - Fetch and display user's plan limits
+// Initialize Plan Banner - Show real plan data after signin
 (function initPlanBanner() {
-  const checkAuthAndShowBanner = async (retryCount = 0) => {
+  const showBanner = async () => {
     try {
       const planBanner = document.getElementById('planBanner');
       const planBadge = document.getElementById('planBadge');
       const planDetails = document.getElementById('planDetails');
       const planUpgradeLink = document.getElementById('planUpgradeLink');
 
-      if (!planBanner || !planBadge) {
-        console.log('[Plan Banner] Elements not found');
-        return;
-      }
+      if (!planBanner) return;
 
-      console.log('[Plan Banner] Initializing... (attempt ' + (retryCount + 1) + ')');
-
-      // Get API base from config or window variable
-      const API_BASE = window.PROMPTLY_API_BASE || 'https://promptly-v0-6-cloudtest-cursor-dev.onrender.com';
-      console.log('[Plan Banner] Using API base:', API_BASE);
+      // Check if user is signed in by checking token
+      const token = localStorage.getItem('promptly.token');
       
-      // Get authentication token from localStorage
-      const token = localStorage.getItem('auth_token') || sessionStorage.getItem('auth_token');
       console.log('[Plan Banner] Token found:', !!token);
-      
-      // Check if user is authenticated
-      const userEmail = document.querySelector('.user-email')?.textContent || null;
-      const isAuthenticated = userEmail && userEmail !== 'user@example.com';
-      console.log('[Plan Banner] User email:', userEmail, '| Authenticated:', isAuthenticated);
-      
-      if (!isAuthenticated && !token && retryCount < 3) {
-        console.log('[Plan Banner] Not authenticated yet, retrying in 1 second...');
-        setTimeout(() => checkAuthAndShowBanner(retryCount + 1), 1000);
+
+      // If not signed in, don't show banner
+      if (!token) {
+        console.log('[Plan Banner] No token, hiding banner');
+        planBanner.style.display = 'none';
         return;
       }
+
+      // User is signed in, fetch their plan info
+      const API_BASE = window.PROMPTLY_API_BASE || 'https://promptly-v0-6-cloudtest-cursor-dev.onrender.com';
       
-      // Build headers
-      const headers = {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json'
-      };
-      
-      // Add authorization header if token exists
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-        console.log('[Plan Banner] Adding Authorization header with token');
-      }
-      
-      // Try to fetch plan status
       const res = await fetch(`${API_BASE}/api/billing/status`, {
-        method: 'GET',
         credentials: 'include',
-        mode: 'cors',
-        headers: headers
-      });
-      
-      console.log('[Plan Banner] Fetch response status:', res.status);
-      
-      if (!res.ok) {
-        const responseText = await res.text();
-        console.log('[Plan Banner] API returned status ' + res.status + ', response:', responseText);
-        
-        // If 401 or 403, user not properly authenticated
-        if ((res.status === 401 || res.status === 403) && retryCount < 3) {
-          console.log('[Plan Banner] Auth failed, retrying in 1 second...');
-          setTimeout(() => checkAuthAndShowBanner(retryCount + 1), 1000);
-          return;
+        headers: {
+          'Accept': 'application/json',
+          'Authorization': `Bearer ${token}`
         }
+      });
+
+      console.log('[Plan Banner] API response status:', res.status);
+
+      if (!res.ok) {
+        console.log('[Plan Banner] API call failed with status', res.status);
+        const errText = await res.text();
+        console.log('[Plan Banner] Error response:', errText);
         
-        // Show sign in prompt
-        planBanner.style.display = 'block';
-        planBadge.textContent = '🔑 Sign In Required';
-        planDetails.textContent = 'Sign in to see your plan and usage limits';
-        planUpgradeLink.textContent = 'Sign In';
-        planUpgradeLink.href = '#';
-        planUpgradeLink.style.display = 'inline-block';
-        planUpgradeLink.style.cursor = 'pointer';
-        
-        // Click handler to trigger sign in
-        planUpgradeLink.addEventListener('click', (e) => {
-          e.preventDefault();
-          const signInBtn = document.getElementById('signInBtn');
-          if (signInBtn) {
-            console.log('[Plan Banner] Clicking page sign in button');
-            signInBtn.click();
-          }
-        });
+        // User token might be invalid
+        planBanner.style.display = 'none';
         return;
       }
-      
+
       const data = await res.json();
-      console.log('[Plan Banner] Response data:', data);
-      
-      if (!data || (data.ok === false)) {
-        console.log('[Plan Banner] API returned error or no data');
-        planBanner.style.display = 'block';
-        planBadge.textContent = '🔑 Sign In Required';
-        planDetails.textContent = 'Sign in to see your plan and usage limits';
+      console.log('[Plan Banner] API response data:', data);
+
+      if (!data || !data.plan) {
+        console.log('[Plan Banner] No plan data in response');
         return;
       }
-      
-      const plan = data.plan || 'free';
-      console.log('[Plan Banner] ✅ Successfully fetched plan:', plan);
-      
-      // Show banner with authenticated user data
+
+      // Success! Show the user's plan information
+      const plan = data.plan;
       planBanner.style.display = 'block';
-      
+
       if (plan === 'free') {
+        // Free plan - show limits
         planBadge.textContent = '🆓 Free Plan';
         const usedPrompt = data.usage?.promptOptimization || 0;
         const limitPrompt = data.limits?.promptOptimization?.daily || 8;
         const usedWizard = data.usage?.questionWizard || 0;
         const limitWizard = data.limits?.questionWizard?.daily || 5;
-        planDetails.textContent = `Prompt optimization: ${usedPrompt}/${limitPrompt} times/day | Question Wizard: ${usedWizard}/${limitWizard} times/day`;
+        const tokensFormatted = data.tokens?.totalFormatted || '0';
+        
+        planDetails.textContent = `🎯 ${usedPrompt}/${limitPrompt} prompts/day | 🧙 ${usedWizard}/${limitWizard} wizards/day | 🪙 ${tokensFormatted} tokens (50K daily free)`;
         planUpgradeLink.textContent = '⬆️ Upgrade for unlimited';
         planUpgradeLink.href = 'subscription.html';
         planUpgradeLink.style.display = 'inline-block';
+        
+        console.log('[Plan Banner] ✅ Showing FREE plan info:', usedPrompt + '/' + limitPrompt, 'prompts,', usedWizard + '/' + limitWizard, 'wizards, tokens:', tokensFormatted);
       } else {
+        // Premium plan - show token limit
         planBadge.textContent = '💎 Premium Plan';
-        planDetails.textContent = '✨ Unlimited access to all features';
+        const tokensFormatted = data.tokens?.totalFormatted || '0';
+        const monthlyTokens = data.tokens?.monthly || 0;
+        
+        // Premium shows: unlimited features + token balance out of 1M/month
+        planDetails.textContent = `✨ Unlimited prompts & wizards | 🪙 ${tokensFormatted} tokens available (1M/month + 50K daily free)`;
         planUpgradeLink.style.display = 'none';
+        
+        console.log('[Plan Banner] ✅ Showing PREMIUM plan info, tokens:', tokensFormatted, 'monthly balance:', monthlyTokens);
       }
-      
-      console.log('[Plan Banner] ✅ Banner displayed successfully with user plan data');
     } catch (err) {
-      console.error('[Plan Banner] Error:', err);
-      
-      // Show error state
-      const planBanner = document.getElementById('planBanner');
-      if (planBanner) {
-        planBanner.style.display = 'block';
-        document.getElementById('planBadge').textContent = '⚠️ Error';
-        document.getElementById('planDetails').textContent = 'Failed to load plan info. Please refresh the page.';
-      }
+      console.error('[Plan Banner] Exception:', err);
     }
   };
 
-  // Wait for page and auth modules to fully load, then check auth
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => {
-      // Give authStatus.js time to set up token and user menu
-      setTimeout(checkAuthAndShowBanner, 2000);
-    });
-  } else {
-    // Page already loaded
-    setTimeout(checkAuthAndShowBanner, 2000);
-  }
+  // Initial check after a short delay to let auth initialize
+  setTimeout(showBanner, 2000);
+  
+  // CRITICAL: Listen for auth state changes to refresh banner
+  window.addEventListener('authStateChanged', () => {
+    console.log('[Plan Banner] 🔄 Auth state changed, refreshing banner...');
+    setTimeout(showBanner, 500);
+  });
+  
+  // Also listen for storage changes (cross-tab)
+  window.addEventListener('storage', (e) => {
+    if (e.key === 'promptly.token') {
+      console.log('[Plan Banner] 🔄 Token changed in storage, refreshing banner...');
+      setTimeout(showBanner, 500);
+    }
+  });
 })();
 </script>
 

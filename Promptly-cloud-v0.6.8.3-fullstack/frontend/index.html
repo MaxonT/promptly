@@ -1105,36 +1105,55 @@ temperature: 0.5</textarea>
       const API_BASE = window.PROMPTLY_API_BASE || 'https://promptly-v0-6-cloudtest-cursor-dev.onrender.com';
       console.log('[Plan Banner] Using API base:', API_BASE);
       
-      // Check if user is authenticated by looking at authState or user menu
+      // Get authentication token from localStorage
+      const token = localStorage.getItem('auth_token') || sessionStorage.getItem('auth_token');
+      console.log('[Plan Banner] Token found:', !!token);
+      
+      // Check if user is authenticated
       const userEmail = document.querySelector('.user-email')?.textContent || null;
       const isAuthenticated = userEmail && userEmail !== 'user@example.com';
       console.log('[Plan Banner] User email:', userEmail, '| Authenticated:', isAuthenticated);
       
-      if (!isAuthenticated && retryCount < 3) {
+      if (!isAuthenticated && !token && retryCount < 3) {
         console.log('[Plan Banner] Not authenticated yet, retrying in 1 second...');
         setTimeout(() => checkAuthAndShowBanner(retryCount + 1), 1000);
         return;
       }
       
-      // Try to fetch plan status with explicit credentials
+      // Build headers
+      const headers = {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json'
+      };
+      
+      // Add authorization header if token exists
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+        console.log('[Plan Banner] Adding Authorization header with token');
+      }
+      
+      // Try to fetch plan status
       const res = await fetch(`${API_BASE}/api/billing/status`, {
         method: 'GET',
         credentials: 'include',
         mode: 'cors',
-        headers: {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json'
-        }
+        headers: headers
       });
       
       console.log('[Plan Banner] Fetch response status:', res.status);
       
       if (!res.ok) {
-        console.log('[Plan Banner] API returned status ' + res.status);
         const responseText = await res.text();
-        console.log('[Plan Banner] Response text:', responseText);
+        console.log('[Plan Banner] API returned status ' + res.status + ', response:', responseText);
         
-        // If not authenticated, show sign in prompt
+        // If 401 or 403, user not properly authenticated
+        if ((res.status === 401 || res.status === 403) && retryCount < 3) {
+          console.log('[Plan Banner] Auth failed, retrying in 1 second...');
+          setTimeout(() => checkAuthAndShowBanner(retryCount + 1), 1000);
+          return;
+        }
+        
+        // Show sign in prompt
         planBanner.style.display = 'block';
         planBadge.textContent = '🔑 Sign In Required';
         planDetails.textContent = 'Sign in to see your plan and usage limits';
@@ -1167,7 +1186,7 @@ temperature: 0.5</textarea>
       }
       
       const plan = data.plan || 'free';
-      console.log('[Plan Banner] Successfully fetched plan:', plan);
+      console.log('[Plan Banner] ✅ Successfully fetched plan:', plan);
       
       // Show banner with authenticated user data
       planBanner.style.display = 'block';
@@ -1188,7 +1207,7 @@ temperature: 0.5</textarea>
         planUpgradeLink.style.display = 'none';
       }
       
-      console.log('[Plan Banner] ✅ Banner displayed successfully');
+      console.log('[Plan Banner] ✅ Banner displayed successfully with user plan data');
     } catch (err) {
       console.error('[Plan Banner] Error:', err);
       
@@ -1202,15 +1221,15 @@ temperature: 0.5</textarea>
     }
   };
 
-  // Wait for page and auth modules to fully load
+  // Wait for page and auth modules to fully load, then check auth
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {
-      // Wait for authStatus.js to initialize
-      setTimeout(checkAuthAndShowBanner, 1500);
+      // Give authStatus.js time to set up token and user menu
+      setTimeout(checkAuthAndShowBanner, 2000);
     });
   } else {
-    // Page already loaded, check immediately
-    setTimeout(checkAuthAndShowBanner, 1500);
+    // Page already loaded
+    setTimeout(checkAuthAndShowBanner, 2000);
   }
 })();
 </script>

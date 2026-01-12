@@ -150,7 +150,7 @@ html[data-theme="light"] .glossary-def{ color:#1F2937; }
 
 </style>
 <style>
-/* === v0.5.5 UI+ Patch: KPI borders, sparklines, badges, states, drawer, tokens === */
+/* === v0.6.8.3 UI+ Patch: KPI borders, sparklines, badges, states, drawer, tokens === */
 :root{
   --surface:#0b0f14;
   --surface-2:#0f141b;
@@ -361,7 +361,7 @@ html[data-theme="light"] .glossary-def{ color:#1F2937; }
 .help{ color:var(--text-low); font-size:.85rem; }
 </style>
 <style>
-/* === v0.5.5 Hotfix: badge position, light theme, glossary guard, hide Instances === */
+/* === v0.6.8.3 Hotfix: badge position, light theme, glossary guard, hide Instances === */
 .badge-updated{
   right:12px; left:auto; top:10px; pointer-events:none;
 }
@@ -1427,7 +1427,7 @@ temperature: 0.5</textarea>
 })();
 </script>
 <script>
-// === v0.5.5 UI+ Patch ===
+// === v0.6.8.3 UI+ Patch ===
 (function(){
   // Helpers
   const $ = s => document.querySelector(s);
@@ -1661,9 +1661,9 @@ temperature: 0.5</textarea>
   }
 
   function updateFooterVersion(){
-    // Upgrade version display to v0.5.5
+    // Upgrade version display to v0.6.8.3
     $$('footer, .footer, #footer, [role="contentinfo"]').forEach(f=>{
-      f.innerHTML = f.innerHTML.replace(/v0\.5\.3/gi,'v0.5.5');
+      f.innerHTML = f.innerHTML.replace(/v0\.5\.3/gi,'v0.6.8.3');
       const brand = f.querySelector('#promptly-brand'); if(brand) brand.textContent = 'Promptly';
     });
   }
@@ -1682,7 +1682,7 @@ temperature: 0.5</textarea>
 })();
 </script>
 <script>
-// === v0.5.5 Hotfix JS ===
+// === v0.6.8.3 Hotfix JS ===
 (function(){
   const $$ = s => Array.from(document.querySelectorAll(s));
 
@@ -1691,7 +1691,7 @@ temperature: 0.5</textarea>
   guardCss.textContent = '#user-guide [data-i18n-key]{ pointer-events:auto }';
   document.head.appendChild(guardCss);
 
-  // Monkey-patch enhanceKpiCards if present on window scope (defined in v0.5.5 script)
+  // Monkey-patch enhanceKpiCards if present on window scope (defined in v0.6.8.3 script)
   // Since it's encapsulated, we instead add a mutation filter: remove sparks/badges added under #user-guide
   function cleanGuideArtifacts(){
     const guide = document.querySelector('#user-guide'); if(!guide) return;

@@ -5,10 +5,10 @@
   "type": "module",
   "main": "src/server.js",
   "scripts": {
-    "dev": "node --watch src/server.js",
-    "start": "node src/server.js",
+    "dev": "node scripts/run_migrations.js && node --watch src/server.js",
+    "start": "node scripts/run_migrations.js && node src/server.js",
     "health": "node scripts/healthcheck.js",
-    "migrate": "node migrations/000_init.js",
+    "migrate": "node scripts/run_migrations.js",
     "test": "node scripts/selftest.js"
   },
   "dependencies": {

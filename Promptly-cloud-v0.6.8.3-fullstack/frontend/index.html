@@ -1092,114 +1092,114 @@ temperature: 0.5</textarea>
 
 <script>
 // Initialize Plan Banner - Show real plan data after signin
-(function initPlanBanner() {
-  const showBanner = async () => {
-    try {
-      const planBanner = document.getElementById('planBanner');
-      const planBadge = document.getElementById('planBadge');
-      const planDetails = document.getElementById('planDetails');
-      const planUpgradeLink = document.getElementById('planUpgradeLink');
+window.refreshPlanBanner = async function() {
+  try {
+    const planBanner = document.getElementById('planBanner');
+    const planBadge = document.getElementById('planBadge');
+    const planDetails = document.getElementById('planDetails');
+    const planUpgradeLink = document.getElementById('planUpgradeLink');
 
-      if (!planBanner) return;
+    if (!planBanner) return;
 
-      // Check if user is signed in by checking token
-      const token = localStorage.getItem('promptly.token');
-      
-      console.log('[Plan Banner] Token found:', !!token);
+    // Check if user is signed in by checking token
+    const token = localStorage.getItem('promptly.token');
+    
+    console.log('[Plan Banner] Token found:', !!token);
 
-      // If not signed in, show sign in prompt
-      if (!token) {
-        console.log('[Plan Banner] No token, showing sign in prompt');
-        planBanner.style.display = 'block';
-        planBadge.textContent = '🔑 Sign In to See Your Plan';
-        planDetails.textContent = 'Sign in to view your usage limits and available features';
-        planUpgradeLink.textContent = 'Sign In';
-        planUpgradeLink.href = 'settings.html#accountPanel';
-        planUpgradeLink.style.display = 'inline-block';
-        return;
-      }
-
-      // User is signed in, fetch their plan info
-      const API_BASE = window.PROMPTLY_API_BASE || 'https://promptly-v0-6-cloudtest-cursor-dev.onrender.com';
-      
-      const res = await fetch(`${API_BASE}/api/billing/status`, {
-        credentials: 'include',
-        headers: {
-          'Accept': 'application/json',
-          'Authorization': `Bearer ${token}`
-        }
-      });
-
-      console.log('[Plan Banner] API response status:', res.status);
-
-      if (!res.ok) {
-        console.log('[Plan Banner] API call failed with status', res.status);
-        const errText = await res.text();
-        console.log('[Plan Banner] Error response:', errText);
-        
-        // User token might be invalid
-        planBanner.style.display = 'none';
-        return;
-      }
-
-      const data = await res.json();
-      console.log('[Plan Banner] API response data:', data);
-
-      if (!data || !data.plan) {
-        console.log('[Plan Banner] No plan data in response');
-        return;
-      }
-
-      // Success! Show the user's plan information
-      const plan = data.plan;
+    // If not signed in, show sign in prompt
+    if (!token) {
+      console.log('[Plan Banner] No token, showing sign in prompt');
       planBanner.style.display = 'block';
-
-      if (plan === 'free') {
-        // Free plan - show limits
-        planBadge.textContent = '🆓 Free Plan';
-        const usedPrompt = data.usage?.promptOptimization || 0;
-        const limitPrompt = data.limits?.promptOptimization?.daily || 8;
-        const usedWizard = data.usage?.questionWizard || 0;
-        const limitWizard = data.limits?.questionWizard?.daily || 5;
-        const tokensFormatted = data.tokens?.totalFormatted || '0';
-        
-        planDetails.textContent = `🎯 ${usedPrompt}/${limitPrompt} prompts/day | 🧙 ${usedWizard}/${limitWizard} wizards/day | 🪙 ${tokensFormatted} tokens (50K daily free)`;
-        planUpgradeLink.textContent = '⬆️ Upgrade for unlimited';
-        planUpgradeLink.href = 'subscription.html';
-        planUpgradeLink.style.display = 'inline-block';
-        
-        console.log('[Plan Banner] ✅ Showing FREE plan info:', usedPrompt + '/' + limitPrompt, 'prompts,', usedWizard + '/' + limitWizard, 'wizards, tokens:', tokensFormatted);
-      } else {
-        // Premium plan - show token limit
-        planBadge.textContent = '💎 Premium Plan';
-        const tokensFormatted = data.tokens?.totalFormatted || '0';
-        const monthlyTokens = data.tokens?.monthly || 0;
-        
-        // Premium shows: unlimited features + token balance out of 1M/month
-        planDetails.textContent = `✨ Unlimited prompts & wizards | 🪙 ${tokensFormatted} tokens available (1M/month + 50K daily free)`;
-        planUpgradeLink.style.display = 'none';
-        
-        console.log('[Plan Banner] ✅ Showing PREMIUM plan info, tokens:', tokensFormatted, 'monthly balance:', monthlyTokens);
-      }
-    } catch (err) {
-      console.error('[Plan Banner] Exception:', err);
+      planBadge.textContent = '🔑 Sign In to See Your Plan';
+      planDetails.textContent = 'Sign in to view your usage limits and available features';
+      planUpgradeLink.textContent = 'Sign In';
+      planUpgradeLink.href = 'settings.html#accountPanel';
+      planUpgradeLink.style.display = 'inline-block';
+      return;
     }
-  };
 
+    // User is signed in, fetch their plan info
+    const API_BASE = window.PROMPTLY_API_BASE || 'https://promptly-v0-6-cloudtest-cursor-dev.onrender.com';
+    
+    const res = await fetch(`${API_BASE}/api/billing/status`, {
+      credentials: 'include',
+      headers: {
+        'Accept': 'application/json',
+        'Authorization': `Bearer ${token}`
+      }
+    });
+
+    console.log('[Plan Banner] API response status:', res.status);
+
+    if (!res.ok) {
+      console.log('[Plan Banner] API call failed with status', res.status);
+      const errText = await res.text();
+      console.log('[Plan Banner] Error response:', errText);
+      
+      // User token might be invalid
+      planBanner.style.display = 'none';
+      return;
+    }
+
+    const data = await res.json();
+    console.log('[Plan Banner] API response data:', data);
+
+    if (!data || !data.plan) {
+      console.log('[Plan Banner] No plan data in response');
+      return;
+    }
+
+    // Success! Show the user's plan information
+    const plan = data.plan;
+    planBanner.style.display = 'block';
+
+    if (plan === 'free') {
+      // Free plan - show limits
+      planBadge.textContent = '🆓 Free Plan';
+      const usedPrompt = data.usage?.promptOptimization || 0;
+      const limitPrompt = data.limits?.promptOptimization?.daily || 8;
+      const usedWizard = data.usage?.questionWizard || 0;
+      const limitWizard = data.limits?.questionWizard?.daily || 5;
+      const tokensFormatted = data.tokens?.totalFormatted || '0';
+      
+      planDetails.textContent = `🎯 ${usedPrompt}/${limitPrompt} prompts/day | 🧙 ${usedWizard}/${limitWizard} wizards/day | 🪙 ${tokensFormatted} tokens (50K daily free)`;
+      planUpgradeLink.textContent = '⬆️ Upgrade for unlimited';
+      planUpgradeLink.href = 'subscription.html';
+      planUpgradeLink.style.display = 'inline-block';
+      
+      console.log('[Plan Banner] ✅ Showing FREE plan info:', usedPrompt + '/' + limitPrompt, 'prompts,', usedWizard + '/' + limitWizard, 'wizards, tokens:', tokensFormatted);
+    } else {
+      // Premium plan - show token limit
+      planBadge.textContent = '💎 Premium Plan';
+      const tokensFormatted = data.tokens?.totalFormatted || '0';
+      const monthlyTokens = data.tokens?.monthly || 0;
+      
+      // Premium shows: unlimited features + token balance out of 1M/month
+      planDetails.textContent = `✨ Unlimited prompts & wizards | 🪙 ${tokensFormatted} tokens available (1M/month + 50K daily free)`;
+      planUpgradeLink.style.display = 'none';
+      
+      console.log('[Plan Banner] ✅ Showing PREMIUM plan info, tokens:', tokensFormatted, 'monthly balance:', monthlyTokens);
+    }
+  } catch (err) {
+    console.error('[Plan Banner] Exception:', err);
+  }
+};
+
+(function initPlanBanner() {
   // Initial check after a short delay to let auth initialize
-  setTimeout(showBanner, 2000);
+  setTimeout(window.refreshPlanBanner, 2000);
   
   // CRITICAL: Listen for auth state changes to refresh banner
   window.addEventListener('authStateChanged', () => {
     console.log('[Plan Banner] 🔄 Auth state changed, refreshing banner...');
-    setTimeout(showBanner, 500);
+    setTimeout(window.refreshPlanBanner, 500);
   });
   
   // Also listen for storage changes (cross-tab)
   window.addEventListener('storage', (e) => {
     if (e.key === 'promptly.token') {
       console.log('[Plan Banner] 🔄 Token changed in storage, refreshing banner...');
-      setTimeout(showBanner, 500);
+      setTimeout(window.refreshPlanBanner, 500);
     }
   });
 })();
@@ -2907,6 +2907,11 @@ document.addEventListener('DOMContentLoaded', () => {
           }
           
           showToast('✓ Best Prompt generated successfully!', 'success');
+          
+          // Refresh plan banner to show updated usage count
+          if (window.refreshPlanBanner) {
+            setTimeout(window.refreshPlanBanner, 500);
+          }
             } else {
           updateBestPromptLiveTrace('⚠️ Pipeline completed with errors');
           stopPipelineTimeline('Pipeline completed with errors');

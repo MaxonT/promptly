@@ -1550,6 +1550,11 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
       
       // Update status to show completion
       setWizardStatus("Spec finalized successfully! You can now view the compiled prompt below.", "info");
+      
+      // Refresh plan banner to show updated usage count
+      if (window.refreshPlanBanner) {
+        setTimeout(window.refreshPlanBanner, 500);
+      }
 
       if (resultPageLink && data.spec_id) {
         currentSpecId = data.spec_id;

@@ -135,3 +135,4 @@ OAUTH_REDIRECT_URI=https://your-domain.com/api/auth/oauth/callback
 
 如果您的应用需要额外的 OAuth 权限（如访问用户的其他信息），可以在 OAuth 应用中添加相应的 Scopes。记得同时更新后端代码以处理这些额外的权限。
 
+

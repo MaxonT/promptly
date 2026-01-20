@@ -2,6 +2,7 @@ import express from "express";
 import cors from "cors";
 import helmet from "helmet";
 import cookieParser from "cookie-parser";
+import rateLimit from "express-rate-limit";
 import dotenv from "dotenv";
 import { db } from "./lib/db.js";
 import { getResolvedDefaultModel, isLlmEnabled } from "./lib/llmRouter.js";
@@ -36,6 +37,34 @@ app.use("/api/stripe", stripeWebhookRouter);
 
 app.use(express.json({ limit: "2mb" }));
 app.use(cookieParser());
+
+// Rate limiting for API endpoints (防止暴力攻击和滥用)
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 分钟
+  max: 200, // 每个 IP 最多 200 个请求
+  message: { ok: false, error: "Too many requests, please try again later." },
+  standardHeaders: true, // 返回 RateLimit-* headers
+  legacyHeaders: false, // 禁用 X-RateLimit-* headers
+  skip: (req) => {
+    // 健康检查和 webhook 不限制
+    return req.path === '/api/health' || req.path.startsWith('/api/stripe/webhook');
+  }
+});
+
+// 更严格的限制用于认证端点 (防止暴力破解)
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 分钟
+  max: 10, // 每个 IP 最多 10 次认证尝试
+  message: { ok: false, error: "Too many authentication attempts, please try again later." },
+  standardHeaders: true,
+  legacyHeaders: false,
+  skipSuccessfulRequests: true // 成功的请求不计数
+});
+
+// 应用 rate limiting
+app.use('/api/auth/login', authLimiter);
+app.use('/api/auth/register', authLimiter);
+app.use('/api/', apiLimiter);
 
 // Request logging middleware for debugging
 app.use((req, res, next) => {

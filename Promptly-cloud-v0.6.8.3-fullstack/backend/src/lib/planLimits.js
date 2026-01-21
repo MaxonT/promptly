@@ -96,7 +96,7 @@ export function canUseMode(userId, mode) {
  * @param {string} featureType - 'prompt_optimization' or 'question_wizard'
  * @param {string} date - Date in YYYY-MM-DD format (defaults to today)
  */
-export function getDailyUsage(userId, featureType, date = null) {
+export async function getDailyUsage(userId, featureType, date = null) {
   if (!userId || userId === 'demo-user') {
     return 0;
   }
@@ -106,15 +106,20 @@ export function getDailyUsage(userId, featureType, date = null) {
     date = today.toISOString().split('T')[0]; // YYYY-MM-DD
   }
   
-  const result = db.prepare(`
-    SELECT COUNT(*) as count
-    FROM plan_usage
-    WHERE user_id = ? 
-      AND feature_type = ? 
-      AND date = ?
-  `).get(userId, featureType, date);
-  
-  return result?.count || 0;
+  try {
+    const result = await db.prepare(`
+      SELECT COUNT(*) as count
+      FROM plan_usage
+      WHERE user_id = ? 
+        AND feature_type = ? 
+        AND date = ?
+    `).get(userId, featureType, date);
+    
+    return result?.count || 0;
+  } catch (err) {
+    console.error('[planLimits] Error getting daily usage:', err);
+    return 0;
+  }
 }
 
 /**
@@ -122,7 +127,7 @@ export function getDailyUsage(userId, featureType, date = null) {
  * @param {string} userId - User ID
  * @param {string} featureType - 'prompt_optimization' or 'question_wizard'
  */
-export function recordUsage(userId, featureType) {
+export async function recordUsage(userId, featureType) {
   if (!userId || userId === 'demo-user') {
     return; // Don't record demo usage
   }
@@ -130,24 +135,29 @@ export function recordUsage(userId, featureType) {
   const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
   const now = new Date().toISOString();
   
-  db.prepare(`
-    INSERT INTO plan_usage (id, user_id, feature_type, date, created_at)
-    VALUES (?, ?, ?, ?, ?)
-  `).run(
-    `usage_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-    userId,
-    featureType,
-    today,
-    now
-  );
+  try {
+    const result = await db.prepare(`
+      INSERT INTO plan_usage (id, user_id, feature_type, date, created_at)
+      VALUES (?, ?, ?, ?, ?)
+    `).run(
+      `usage_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      userId,
+      featureType,
+      today,
+      now
+    );
+    console.log(`[planLimits] Recorded usage for ${userId}, type=${featureType}, date=${today}. Changes: ${result.changes}`);
+  } catch (err) {
+    console.error('[planLimits] Failed to record usage:', err);
+  }
 }
 
 /**
  * Check if user can use prompt optimization
  * @param {string} userId - User ID
- * @returns {object} { allowed: boolean, reason?: string, usage?: number, limit?: number }
+ * @returns {Promise<object>} { allowed: boolean, reason?: string, usage?: number, limit?: number }
  */
-export function canUsePromptOptimization(userId) {
+export async function canUsePromptOptimization(userId) {
   const plan = getUserPlan(userId);
   const limits = PLAN_LIMITS[plan];
   
@@ -156,7 +166,7 @@ export function canUsePromptOptimization(userId) {
     return { allowed: true };
   }
   
-  const dailyUsage = getDailyUsage(userId, 'prompt_optimization');
+  const dailyUsage = await getDailyUsage(userId, 'prompt_optimization');
   const limit = limits.promptOptimization.daily;
   
   if (dailyUsage >= limit) {
@@ -178,9 +188,9 @@ export function canUsePromptOptimization(userId) {
 /**
  * Check if user can use question wizard
  * @param {string} userId - User ID
- * @returns {object} { allowed: boolean, reason?: string, usage?: number, limit?: number }
+ * @returns {Promise<object>} { allowed: boolean, reason?: string, usage?: number, limit?: number }
  */
-export function canUseQuestionWizard(userId) {
+export async function canUseQuestionWizard(userId) {
   const plan = getUserPlan(userId);
   const limits = PLAN_LIMITS[plan];
   
@@ -189,7 +199,7 @@ export function canUseQuestionWizard(userId) {
     return { allowed: true };
   }
   
-  const dailyUsage = getDailyUsage(userId, 'question_wizard');
+  const dailyUsage = await getDailyUsage(userId, 'question_wizard');
   const limit = limits.questionWizard.daily;
   
   if (dailyUsage >= limit) {
@@ -213,9 +223,9 @@ export function canUseQuestionWizard(userId) {
  * This should be called before processing the request
  * @param {string} userId - User ID
  * @param {string} mode - The mode being used (for free plan validation)
- * @returns {object} { allowed: boolean, reason?: string }
+ * @returns {Promise<object>} { allowed: boolean, reason?: string }
  */
-export function checkPromptOptimizationLimit(userId, mode = null) {
+export async function checkPromptOptimizationLimit(userId, mode = null) {
   // Check mode restrictions first (for free plan)
   if (mode && !canUseMode(userId, mode)) {
     return {
@@ -225,17 +235,17 @@ export function checkPromptOptimizationLimit(userId, mode = null) {
   }
   
   // Check usage limits
-  return canUsePromptOptimization(userId);
+  return await canUsePromptOptimization(userId);
 }
 
 /**
  * Check and enforce question wizard limits
  * This should be called before processing the request
  * @param {string} userId - User ID
- * @returns {object} { allowed: boolean, reason?: string }
+ * @returns {Promise<object>} { allowed: boolean, reason?: string }
  */
-export function checkQuestionWizardLimit(userId) {
-  return canUseQuestionWizard(userId);
+export async function checkQuestionWizardLimit(userId) {
+  return await canUseQuestionWizard(userId);
 }
 
 console.log("[promptly] Plan limits module loaded");

@@ -150,6 +150,12 @@
       // Clear attachments after successful request
       clearAttachments();
       
+      // Refresh plan usage banner
+      if (window.refreshPlanBanner) {
+        log("Refreshing plan usage...");
+        window.refreshPlanBanner();
+      }
+      
       return data.result;
     } catch (err) {
       console.error(err);

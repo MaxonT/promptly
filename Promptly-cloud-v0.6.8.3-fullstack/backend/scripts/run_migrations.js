@@ -10,7 +10,8 @@ const migrations = [
   'migrations/000_init.js',
   'migrations/001_subscriptions.js',
   'migrations/002_checkout_sessions.js',
-  'migrations/003_stripe_events.js'
+  'migrations/003_stripe_events.js',
+  'migrations/004_plan_usage.js'
 ];
 
 console.log('[Promptly] Starting database migrations...');

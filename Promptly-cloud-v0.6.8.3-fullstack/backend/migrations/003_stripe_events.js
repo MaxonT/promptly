@@ -9,7 +9,7 @@
  * - Payload retention for debugging
  */
 
-import sqlite3 from "sqlite3";
+import Database from "better-sqlite3";
 import path from "path";
 import { fileURLToPath } from "url";
 
@@ -17,41 +17,10 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const dbPath = process.env.SQLITE_PATH || path.join(__dirname, "../data/promptly.db");
 
-// Helper to promisify exec
-function exec(db, sql) {
-  return new Promise((resolve, reject) => {
-    db.exec(sql, (err) => {
-      if (err) reject(err);
-      else resolve();
-    });
-  });
-}
-
-// Helper to promisify get
-function get(db, sql) {
-  return new Promise((resolve, reject) => {
-    db.get(sql, (err, row) => {
-      if (err) reject(err);
-      else resolve(row);
-    });
-  });
-}
-
-export async function up(db) {
+export function up(db) {
   console.log("[migration 003] Creating stripe_events table...");
-
-  // FIX: Check for legacy schema from Migration 001 and upgrade if needed
-  try {
-    const tableInfo = await get(db, "SELECT sql FROM sqlite_master WHERE type='table' AND name='stripe_events'");
-    if (tableInfo && tableInfo.sql && !tableInfo.sql.includes('status')) {
-      console.log("[migration 003] ⚠️ Detected legacy stripe_events table (missing 'status'). Dropping to recreate...");
-      await exec(db, "DROP TABLE stripe_events");
-    }
-  } catch (err) {
-    console.warn("[migration 003] Schema check warning:", err);
-  }
   
-  await exec(db, `
+  db.exec(`
     CREATE TABLE IF NOT EXISTS stripe_events (
       event_id TEXT PRIMARY KEY,
       event_type TEXT NOT NULL,
@@ -71,10 +40,10 @@ export async function up(db) {
   console.log("[migration 003] ✅ Migration completed successfully");
 }
 
-export async function down(db) {
+export function down(db) {
   console.log("[migration 003] Rolling back...");
   
-  await exec(db, `
+  db.exec(`
     DROP TABLE IF EXISTS stripe_events;
   `);
   
@@ -90,20 +59,18 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     process.exit(1);
   }
   
-  const db = new sqlite3.Database(dbPath);
+  const db = new Database(dbPath);
   
-  (async () => {
-    try {
-      if (command === "up") {
-        await up(db);
-      } else {
-        await down(db);
-      }
-    } catch (err) {
-      console.error("Migration failed:", err);
-      process.exit(1);
-    } finally {
-      db.close();
+  try {
+    if (command === "up") {
+      up(db);
+    } else {
+      down(db);
     }
-  })();
+  } catch (err) {
+    console.error("Migration failed:", err);
+    process.exit(1);
+  } finally {
+    db.close();
+  }
 }

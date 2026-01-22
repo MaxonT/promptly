@@ -6,42 +6,12 @@
  * - analytics_events: Track subscription funnel events
  */
 
-import sqlite3 from "sqlite3";
+import Database from "better-sqlite3";
 
-// Helper to promisify exec
-function exec(db, sql) {
-  return new Promise((resolve, reject) => {
-    db.exec(sql, (err) => {
-      if (err) reject(err);
-      else resolve();
-    });
-  });
-}
-
-// Helper to promisify get
-function get(db, sql, params = []) {
-  return new Promise((resolve, reject) => {
-    db.get(sql, params, (err, row) => {
-      if (err) reject(err);
-      else resolve(row);
-    });
-  });
-}
-
-// Helper to promisify all
-function all(db, sql, params = []) {
-  return new Promise((resolve, reject) => {
-    db.all(sql, params, (err, rows) => {
-      if (err) reject(err);
-      else resolve(rows);
-    });
-  });
-}
-
-export async function up(db) {
+export function up(db) {
   console.log("[migration 002] Creating checkout_sessions table...");
   
-  await exec(db, `
+  db.exec(`
     CREATE TABLE IF NOT EXISTS checkout_sessions (
       id TEXT PRIMARY KEY,
       user_id TEXT NOT NULL,
@@ -63,7 +33,7 @@ export async function up(db) {
   
   console.log("[migration 002] Creating analytics_events table...");
   
-  await exec(db, `
+  db.exec(`
     CREATE TABLE IF NOT EXISTS analytics_events (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       event TEXT NOT NULL,
@@ -81,23 +51,23 @@ export async function up(db) {
   console.log("[migration 002] Enhancing stripe_events table...");
   
   // Check if stripe_events table exists
-  const tableExists = await get(db, `
+  const tableExists = db.prepare(`
     SELECT name FROM sqlite_master 
     WHERE type='table' AND name='stripe_events'
-  `);
+  `).get();
   
   if (tableExists) {
     // Check if columns already exist before adding
-    const columns = await all(db, "PRAGMA table_info(stripe_events)");
+    const columns = db.prepare("PRAGMA table_info(stripe_events)").all();
     const hasStatus = columns.some(col => col.name === 'status');
     const hasError = columns.some(col => col.name === 'error');
     
     if (!hasStatus) {
-      await exec(db, `ALTER TABLE stripe_events ADD COLUMN status TEXT DEFAULT 'completed';`);
+      db.exec(`ALTER TABLE stripe_events ADD COLUMN status TEXT DEFAULT 'completed';`);
     }
     
     if (!hasError) {
-      await exec(db, `ALTER TABLE stripe_events ADD COLUMN error TEXT;`);
+      db.exec(`ALTER TABLE stripe_events ADD COLUMN error TEXT;`);
     }
   } else {
     console.log("[migration 002] stripe_events table does not exist, skipping enhancement...");
@@ -106,10 +76,10 @@ export async function up(db) {
   console.log("[migration 002] ✅ Migration completed successfully");
 }
 
-export async function down(db) {
+export function down(db) {
   console.log("[migration 002] Rolling back...");
   
-  await exec(db, `
+  db.exec(`
     DROP TABLE IF EXISTS checkout_sessions;
     DROP TABLE IF EXISTS analytics_events;
   `);
@@ -123,25 +93,17 @@ export async function down(db) {
 // CLI runner
 if (import.meta.url === `file://${process.argv[1]}`) {
   const dbPath = process.env.SQLITE_PATH || "./data/promptly.db";
-  const db = new sqlite3.Database(dbPath);
+  const db = new Database(dbPath);
   
   const command = process.argv[2];
+  if (command === 'up') {
+    up(db);
+  } else if (command === 'down') {
+    down(db);
+  } else {
+    console.log('Usage: node 002_checkout_sessions.js [up|down]');
+    process.exit(1);
+  }
   
-  (async () => {
-    try {
-      if (command === 'up') {
-        await up(db);
-      } else if (command === 'down') {
-        await down(db);
-      } else {
-        console.log('Usage: node 002_checkout_sessions.js [up|down]');
-        process.exit(1);
-      }
-    } catch (err) {
-      console.error(err);
-      process.exit(1);
-    } finally {
-      db.close();
-    }
-  })();
+  db.close();
 }

@@ -31,7 +31,7 @@ import {
  * Get user's token balances from ledger
  * Groups by bucket type and sums non-expired tokens
  */
-export async function getTokenBalances(userId) {
+export function getTokenBalances(userId) {
   const now = new Date().toISOString();
   
   // Get balance for each bucket type
@@ -43,7 +43,7 @@ export async function getTokenBalances(userId) {
   };
   
   // Sum all non-expired tokens per bucket
-  const rows = await db.prepare(`
+  const rows = db.prepare(`
     SELECT bucket, SUM(tokens_change) as balance
     FROM token_ledger
     WHERE user_id = ?
@@ -66,8 +66,8 @@ export async function getTokenBalances(userId) {
  * Get cached token balances (fast read)
  * Falls back to ledger calculation if cache miss
  */
-export async function getCachedBalances(userId) {
-  const cached = await db.prepare(`
+export function getCachedBalances(userId) {
+  const cached = db.prepare(`
     SELECT * FROM token_balances_cache WHERE user_id = ?
   `).get(userId);
   
@@ -82,18 +82,18 @@ export async function getCachedBalances(userId) {
   }
   
   // Cache miss - calculate from ledger and cache
-  const balances = await getTokenBalances(userId);
-  await updateBalanceCache(userId, balances);
+  const balances = getTokenBalances(userId);
+  updateBalanceCache(userId, balances);
   return balances;
 }
 
 /**
  * Update the balance cache for a user
  */
-export async function updateBalanceCache(userId, balances) {
+export function updateBalanceCache(userId, balances) {
   const now = new Date().toISOString();
   
-  await db.prepare(`
+  db.prepare(`
     INSERT INTO token_balances_cache 
       (user_id, daily_free_remaining, monthly_remaining, trial_base_remaining, total_remaining, updated_at)
     VALUES (?, ?, ?, ?, ?, ?)
@@ -114,178 +114,400 @@ export async function updateBalanceCache(userId, balances) {
 }
 
 // =============================================
-// Ledger Operations (Write)
+// Token Grants
 // =============================================
 
 /**
- * Add tokens to user's ledger
+ * Grant tokens to a user
  */
-export async function addTokens(userId, amount, bucket, source, description, expiryDays = null) {
-  const now = new Date();
-  const expiresAt = expiryDays 
-    ? new Date(now.getTime() + expiryDays * 24 * 60 * 60 * 1000).toISOString()
-    : null;
-    
-  await db.prepare(`
-    INSERT INTO token_ledger (user_id, tokens_change, bucket, source, description, expires_at, created_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?)
+export function grantTokens({
+  userId,
+  bucket,
+  tokens,
+  source,
+  reason,
+  expiresAt = null,
+  runId = null,
+  subscriptionId = null,
+  stripeEventId = null,
+  adminActor = null,
+}) {
+  const now = new Date().toISOString();
+  
+  // Get current balance for this bucket
+  const currentBalance = getTokenBalances(userId)[bucket] || 0;
+  const newBalance = currentBalance + tokens;
+  
+  // Insert ledger entry
+  const result = db.prepare(`
+    INSERT INTO token_ledger (
+      user_id, bucket, tokens_change, balance_after,
+      expires_at, source, reason, run_id, subscription_id,
+      stripe_event_id, admin_actor, created_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     userId,
-    amount,
     bucket,
-    source,
-    description,
+    tokens,
+    newBalance,
     expiresAt,
-    now.toISOString()
+    source,
+    reason,
+    runId,
+    subscriptionId,
+    stripeEventId,
+    adminActor,
+    now
   );
   
-  // Invalidate cache
-  const balances = await getTokenBalances(userId);
-  await updateBalanceCache(userId, balances);
+  // Update cache
+  const balances = getTokenBalances(userId);
+  updateBalanceCache(userId, balances);
   
-  return balances;
+  console.log(`[tokenLedger] Granted ${tokens} tokens to user ${userId} (bucket: ${bucket}, reason: ${reason})`);
+  
+  return {
+    ledgerId: result.lastInsertRowid,
+    newBalance,
+    totalBalance: balances.total,
+  };
 }
 
 /**
- * Spend tokens (deduct from ledger)
- * Follows waterfall logic: Daily -> Monthly -> Trial Base
+ * Grant trial tokens to a new trial user
  */
-export async function spendTokens(userId, amount, description) {
-  const balances = await getTokenBalances(userId);
+export function grantTrialTokens(userId, stripeEventId = null) {
+  const trialEnd = new Date();
+  trialEnd.setDate(trialEnd.getDate() + TRIAL_DAYS);
+  const expiresAt = trialEnd.toISOString();
   
-  if (balances.total < amount) {
-    throw new Error("Insufficient tokens");
+  // Grant base trial tokens
+  grantTokens({
+    userId,
+    bucket: BUCKET_TYPES.TRIAL_BASE,
+    tokens: TRIAL_BASE_TOKENS,
+    source: TOKEN_SOURCES.TRIAL_START,
+    reason: `Trial started - ${TRIAL_BASE_TOKENS} base tokens`,
+    expiresAt,
+    stripeEventId,
+  });
+  
+  // Grant initial daily tokens
+  grantTokens({
+    userId,
+    bucket: BUCKET_TYPES.DAILY_FREE,
+    tokens: TRIAL_DAILY_TOKENS,
+    source: TOKEN_SOURCES.TRIAL_START,
+    reason: 'Trial daily tokens - initial grant',
+    expiresAt,
+    stripeEventId,
+  });
+  
+  console.log(`[tokenLedger] Trial tokens granted to user ${userId}`);
+  
+  return getTokenBalances(userId);
+}
+
+/**
+ * Grant subscription tokens for a new billing period
+ */
+export function grantSubscriptionTokens(userId, plan, stripeEventId = null, subscriptionId = null) {
+  const tokens = plan === 'yearly' ? YEARLY_PLAN_TOKENS : MONTHLY_PLAN_TOKENS;
+  
+  grantTokens({
+    userId,
+    bucket: BUCKET_TYPES.MONTHLY,
+    tokens,
+    source: TOKEN_SOURCES.WEBHOOK,
+    reason: `${plan} subscription renewal`,
+    subscriptionId,
+    stripeEventId,
+  });
+  
+  // Also grant daily tokens
+  grantTokens({
+    userId,
+    bucket: BUCKET_TYPES.DAILY_FREE,
+    tokens: PAID_DAILY_TOKENS,
+    source: TOKEN_SOURCES.WEBHOOK,
+    reason: `${plan} subscription daily tokens`,
+    subscriptionId,
+    stripeEventId,
+  });
+  
+  console.log(`[tokenLedger] Subscription tokens granted to user ${userId} (plan: ${plan})`);
+  
+  return getTokenBalances(userId);
+}
+
+/**
+ * Daily token refresh - top up to carry cap
+ * Called by daily cron job
+ */
+export function refreshDailyTokens(userId, isPaid = false) {
+  const balances = getTokenBalances(userId);
+  const currentDaily = balances.daily_free;
+  const dailyAllowance = isPaid ? PAID_DAILY_TOKENS : TRIAL_DAILY_TOKENS;
+  
+  // Calculate how much to grant (top up to cap, not exceed)
+  const tokensToGrant = Math.max(0, Math.min(
+    dailyAllowance,
+    DAILY_CARRY_CAP_TOKENS - currentDaily
+  ));
+  
+  if (tokensToGrant <= 0) {
+    console.log(`[tokenLedger] User ${userId} already at daily cap, no refresh needed`);
+    return balances;
   }
   
-  let remaining = amount;
+  grantTokens({
+    userId,
+    bucket: BUCKET_TYPES.DAILY_FREE,
+    tokens: tokensToGrant,
+    source: TOKEN_SOURCES.CRON,
+    reason: `Daily refresh - topped up ${tokensToGrant} tokens`,
+  });
+  
+  console.log(`[tokenLedger] Daily tokens refreshed for user ${userId}: +${tokensToGrant}`);
+  
+  return getTokenBalances(userId);
+}
+
+/**
+ * Admin adjustment (with audit trail)
+ */
+export function adminAdjustment(userId, tokens, reason, adminActor) {
+  if (!adminActor) {
+    throw new Error('Admin actor is required for adjustments');
+  }
+  
+  return grantTokens({
+    userId,
+    bucket: BUCKET_TYPES.ADJUSTMENT,
+    tokens,
+    source: TOKEN_SOURCES.ADMIN,
+    reason: `Admin adjustment: ${reason}`,
+    adminActor,
+  });
+}
+
+// =============================================
+// Token Spending
+// =============================================
+
+/**
+ * Check if user has enough tokens (pre-check before run)
+ */
+export function hasEnoughTokens(userId, estimatedTokens) {
+  const balances = getTokenBalances(userId);
+  return balances.total >= estimatedTokens;
+}
+
+/**
+ * Spend tokens - atomic operation with deterministic bucket order
+ * Order: daily_free → monthly/trial_base
+ * 
+ * Returns: { success, creditsSpent, balances, error }
+ */
+export function spendTokens({
+  userId,
+  creditsToSpend,
+  runId,
+  reason = 'API usage',
+}) {
   const now = new Date().toISOString();
+  const balances = getTokenBalances(userId);
   
-  // Waterfall order: daily_free -> monthly -> trial_base
-  const buckets = ['daily_free', 'monthly', 'trial_base'];
+  // Check total available
+  if (balances.total < creditsToSpend) {
+    return {
+      success: false,
+      error: 'INSUFFICIENT_TOKENS',
+      message: `Insufficient tokens. Required: ${creditsToSpend}, Available: ${balances.total}`,
+      balances,
+    };
+  }
   
-  for (const bucket of buckets) {
+  // Spend in order: daily_free → monthly → trial_base
+  let remaining = creditsToSpend;
+  const spendOrder = [
+    { bucket: BUCKET_TYPES.DAILY_FREE, available: balances.daily_free },
+    { bucket: BUCKET_TYPES.MONTHLY, available: balances.monthly },
+    { bucket: BUCKET_TYPES.TRIAL_BASE, available: balances.trial_base },
+  ];
+  
+  const spendRecords = [];
+  
+  for (const { bucket, available } of spendOrder) {
     if (remaining <= 0) break;
+    if (available <= 0) continue;
     
-    const available = balances[bucket];
-    if (available > 0) {
-      const deduct = Math.min(remaining, available);
+    const toSpend = Math.min(remaining, available);
+    remaining -= toSpend;
+    
+    spendRecords.push({
+      bucket,
+      tokens: -toSpend,
+    });
+  }
+  
+  // Use transaction for atomicity
+  const transaction = db.transaction(() => {
+    for (const record of spendRecords) {
+      const currentBalance = getTokenBalances(userId)[record.bucket] || 0;
       
-      await db.prepare(`
-        INSERT INTO token_ledger (user_id, tokens_change, bucket, source, description, created_at)
-        VALUES (?, ?, ?, ?, ?, ?)
+      db.prepare(`
+        INSERT INTO token_ledger (
+          user_id, bucket, tokens_change, balance_after,
+          source, reason, run_id, created_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
       `).run(
         userId,
-        -deduct,
-        bucket,
-        TOKEN_SOURCES.USAGE,
-        description,
+        record.bucket,
+        record.tokens,
+        currentBalance + record.tokens,
+        TOKEN_SOURCES.API_USAGE,
+        reason,
+        runId,
         now
       );
-      
-      remaining -= deduct;
     }
+  });
+  
+  try {
+    transaction();
+  } catch (err) {
+    console.error(`[tokenLedger] Error spending tokens for user ${userId}:`, err);
+    return {
+      success: false,
+      error: 'TRANSACTION_FAILED',
+      message: 'Failed to process token spend',
+      balances,
+    };
   }
   
   // Update cache
-  const newBalances = await getTokenBalances(userId);
-  await updateBalanceCache(userId, newBalances);
+  const newBalances = getTokenBalances(userId);
+  updateBalanceCache(userId, newBalances);
   
-  return newBalances;
+  console.log(`[tokenLedger] Spent ${creditsToSpend} tokens for user ${userId} (run: ${runId})`);
+  
+  return {
+    success: true,
+    creditsSpent: creditsToSpend,
+    balances: newBalances,
+    breakdown: spendRecords.map(r => ({
+      bucket: r.bucket,
+      spent: Math.abs(r.tokens),
+    })),
+  };
 }
 
 // =============================================
-// Lifecycle Events
+// Period End / Cleanup
 // =============================================
 
 /**
- * Initialize tokens for new trial user
+ * Clear monthly tokens at period end (no rollover)
  */
-export async function initializeTrial(userId) {
-  // Grant base tokens (never expire during trial)
-  await addTokens(
-    userId,
-    TRIAL_BASE_TOKENS,
-    BUCKET_TYPES.TRIAL_BASE,
-    TOKEN_SOURCES.TRIAL_START,
-    "Trial base allowance",
-    TRIAL_DAYS
-  );
+export function clearMonthlyTokens(userId, reason = 'Period end - no rollover') {
+  const balances = getTokenBalances(userId);
   
-  // Grant first day's daily tokens
-  await addTokens(
-    userId,
-    TRIAL_DAILY_TOKENS,
-    BUCKET_TYPES.DAILY_FREE,
-    TOKEN_SOURCES.DAILY_REFRESH,
-    "Daily trial refresh",
-    1 // Expires in 24h
-  );
+  if (balances.monthly > 0) {
+    grantTokens({
+      userId,
+      bucket: BUCKET_TYPES.MONTHLY,
+      tokens: -balances.monthly,
+      source: TOKEN_SOURCES.CRON,
+      reason,
+    });
+  }
+  
+  console.log(`[tokenLedger] Cleared monthly tokens for user ${userId}`);
+  
+  return getTokenBalances(userId);
 }
 
 /**
- * Process daily token refresh (cron job)
- * - Expires old daily tokens (implicitly via expiry date)
- * - Grants new daily tokens
- * - Applies caps
+ * Expire trial tokens
  */
-export async function refreshDailyTokens(userId, plan) {
-  // 1. Calculate carry-over (if any logic needed, but expiration handles it)
-  // For simplicity, we just grant new daily tokens. 
-  // If we wanted to enforce a "hard cap" regardless of expiration, we'd check balance first.
+export function expireTrialTokens(userId) {
+  const balances = getTokenBalances(userId);
   
-  // Get current daily balance
-  const balances = await getTokenBalances(userId);
-  const currentDaily = balances.daily_free;
-  
-  // Calculate grant amount
-  // If user has 15k and cap is 20k, we grant 20k? No, usually refresh resets or adds up to cap.
-  // PRD says: "Daily Refresh: 20k (Trial) / 50k (Pro) - Use it or lose it"
-  // This implies we grant X amount with 24h expiry.
-  
-  let dailyAmount = 0;
-  if (plan === 'trial') dailyAmount = TRIAL_DAILY_TOKENS;
-  else if (['monthly', 'yearly'].includes(plan)) dailyAmount = PAID_DAILY_TOKENS;
-  else return; // Free tier (no trial) gets nothing? Or maybe a small amount? PRD says 0 for free.
-  
-  if (dailyAmount > 0) {
-    await addTokens(
+  if (balances.trial_base > 0) {
+    grantTokens({
       userId,
-      dailyAmount,
-      BUCKET_TYPES.DAILY_FREE,
-      TOKEN_SOURCES.DAILY_REFRESH,
-      "Daily refresh",
-      1 // Expires in 1 day
-    );
+      bucket: BUCKET_TYPES.TRIAL_BASE,
+      tokens: -balances.trial_base,
+      source: TOKEN_SOURCES.CRON,
+      reason: 'Trial expired',
+    });
   }
+  
+  console.log(`[tokenLedger] Expired trial tokens for user ${userId}`);
+  
+  return getTokenBalances(userId);
+}
+
+// =============================================
+// Audit & History
+// =============================================
+
+/**
+ * Get token history for a user
+ */
+export function getTokenHistory(userId, limit = 50, offset = 0) {
+  const rows = db.prepare(`
+    SELECT *
+    FROM token_ledger
+    WHERE user_id = ?
+    ORDER BY created_at DESC
+    LIMIT ? OFFSET ?
+  `).all(userId, limit, offset);
+  
+  return rows;
 }
 
 /**
- * Grant monthly/yearly plan tokens
+ * Get usage summary for a period
  */
-export async function grantSubscriptionTokens(userId, plan) {
-  let amount = 0;
-  if (plan === 'monthly') amount = MONTHLY_PLAN_TOKENS;
-  if (plan === 'yearly') amount = YEARLY_PLAN_TOKENS;
+export function getUsageSummary(userId, startDate, endDate) {
+  const row = db.prepare(`
+    SELECT 
+      SUM(CASE WHEN tokens_change < 0 THEN ABS(tokens_change) ELSE 0 END) as total_spent,
+      SUM(CASE WHEN tokens_change > 0 THEN tokens_change ELSE 0 END) as total_granted,
+      COUNT(CASE WHEN source = 'api_usage' THEN 1 END) as api_calls
+    FROM token_ledger
+    WHERE user_id = ?
+      AND created_at >= ?
+      AND created_at <= ?
+  `).get(userId, startDate, endDate);
   
-  if (amount > 0) {
-    await addTokens(
-      userId,
-      amount,
-      BUCKET_TYPES.MONTHLY,
-      TOKEN_SOURCES.SUBSCRIPTION_GRANT,
-      `${plan} plan credits`,
-      plan === 'monthly' ? 30 : 365
-    );
-  }
+  return {
+    totalSpent: row?.total_spent || 0,
+    totalGranted: row?.total_granted || 0,
+    apiCalls: row?.api_calls || 0,
+  };
 }
+
+// =============================================
+// Exports
+// =============================================
 
 export const tokenLedger = {
   getTokenBalances,
   getCachedBalances,
-  updateBalanceCache,
-  addTokens,
-  spendTokens,
-  initializeTrial,
+  grantTokens,
+  grantTrialTokens,
+  grantSubscriptionTokens,
   refreshDailyTokens,
-  grantSubscriptionTokens
+  adminAdjustment,
+  hasEnoughTokens,
+  spendTokens,
+  clearMonthlyTokens,
+  expireTrialTokens,
+  getTokenHistory,
+  getUsageSummary,
 };
+
+export default tokenLedger;

@@ -56,7 +56,7 @@ export async function getOrCreateCustomer(userId, email) {
   if (!stripe) throw new Error("Stripe not configured");
   
   // Check if customer already exists
-  const existing = await db.prepare(`
+  const existing = db.prepare(`
     SELECT stripe_customer_id FROM stripe_customers WHERE user_id = ?
   `).get(userId);
   
@@ -75,7 +75,7 @@ export async function getOrCreateCustomer(userId, email) {
   
   // Store mapping
   const now = new Date().toISOString();
-  await db.prepare(`
+  db.prepare(`
     INSERT INTO stripe_customers (user_id, stripe_customer_id, email, created_at, updated_at)
     VALUES (?, ?, ?, ?, ?)
   `).run(userId, customer.id, email, now, now);
@@ -88,8 +88,8 @@ export async function getOrCreateCustomer(userId, email) {
 /**
  * Get user ID from Stripe customer ID
  */
-export async function getUserIdFromCustomer(stripeCustomerId) {
-  const row = await db.prepare(`
+export function getUserIdFromCustomer(stripeCustomerId) {
+  const row = db.prepare(`
     SELECT user_id FROM stripe_customers WHERE stripe_customer_id = ?
   `).get(stripeCustomerId);
   
@@ -101,20 +101,23 @@ export async function getUserIdFromCustomer(stripeCustomerId) {
 // =============================================
 
 /**
- * Create checkout session for subscription
+ * Create a Stripe Checkout session for subscription
  */
-export async function createCheckoutSession({ userId, email, plan }) {
+export async function createCheckoutSession({
+  userId,
+  email,
+  plan,
+  successUrl = SUCCESS_URL,
+  cancelUrl = CANCEL_URL,
+}) {
   if (!stripe) throw new Error("Stripe not configured");
   
   const customerId = await getOrCreateCustomer(userId, email);
   
   const priceId = plan === "yearly" ? STRIPE_PRICE_YEARLY : STRIPE_PRICE_MONTHLY;
   
-  if (!priceId) throw new Error(`Price ID for plan ${plan} not configured`);
-  
   const session = await stripe.checkout.sessions.create({
     customer: customerId,
-    mode: "subscription",
     payment_method_types: ["card"],
     line_items: [
       {
@@ -122,9 +125,11 @@ export async function createCheckoutSession({ userId, email, plan }) {
         quantity: 1,
       },
     ],
-    success_url: `${SUCCESS_URL}?session_id={CHECKOUT_SESSION_ID}`,
-    cancel_url: CANCEL_URL,
+    mode: "subscription",
+    success_url: `${successUrl}?session_id={CHECKOUT_SESSION_ID}`,
+    cancel_url: cancelUrl,
     subscription_data: {
+      trial_period_days: TRIAL_DAYS,
       metadata: {
         userId,
         plan,
@@ -136,6 +141,8 @@ export async function createCheckoutSession({ userId, email, plan }) {
     },
   });
   
+  console.log(`[stripe] Created checkout session ${session.id} for user ${userId}`);
+  
   return {
     sessionId: session.id,
     url: session.url,
@@ -143,11 +150,54 @@ export async function createCheckoutSession({ userId, email, plan }) {
 }
 
 /**
- * Create checkout session for immediate paid subscription (no trial)
- * Used when user has already used their trial
+ * Create checkout session without trial (for users who used trial)
  */
-export async function createCheckoutSessionNoTrial({ userId, email, plan }) {
-  return createCheckoutSession({ userId, email, plan });
+export async function createCheckoutSessionNoTrial({
+  userId,
+  email,
+  plan,
+  successUrl = SUCCESS_URL,
+  cancelUrl = CANCEL_URL,
+}) {
+  if (!stripe) throw new Error("Stripe not configured");
+  
+  const customerId = await getOrCreateCustomer(userId, email);
+  const priceId = plan === "yearly" ? STRIPE_PRICE_YEARLY : STRIPE_PRICE_MONTHLY;
+  
+  const session = await stripe.checkout.sessions.create({
+    customer: customerId,
+    payment_method_types: ["card"],
+    line_items: [
+      {
+        price: priceId,
+        quantity: 1,
+      },
+    ],
+    mode: "subscription",
+    success_url: `${successUrl}?session_id={CHECKOUT_SESSION_ID}`,
+    cancel_url: cancelUrl,
+    metadata: {
+      userId,
+      plan,
+    },
+  });
+  
+  console.log(`[stripe] Created checkout session (no trial) ${session.id} for user ${userId}`);
+  
+  return {
+    sessionId: session.id,
+    url: session.url,
+  };
+}
+
+/**
+ * Retrieve a Stripe Checkout Session by ID
+ */
+export async function getCheckoutSession(sessionId) {
+  if (!stripe) throw new Error("Stripe not configured");
+  
+  const session = await stripe.checkout.sessions.retrieve(sessionId);
+  return session;
 }
 
 // =============================================
@@ -155,24 +205,150 @@ export async function createCheckoutSessionNoTrial({ userId, email, plan }) {
 // =============================================
 
 /**
- * Create billing portal session
+ * Create a Stripe Billing Portal session
  */
-export async function createPortalSession(userId) {
+export async function createPortalSession(userId, returnUrl = ACCOUNT_URL) {
   if (!stripe) throw new Error("Stripe not configured");
   
-  // Get customer ID
-  const row = await db.prepare(`
+  const customer = db.prepare(`
     SELECT stripe_customer_id FROM stripe_customers WHERE user_id = ?
   `).get(userId);
   
-  if (!row) throw new Error("No billing account found");
+  if (!customer) {
+    throw new Error("No Stripe customer found for user");
+  }
   
   const session = await stripe.billingPortal.sessions.create({
-    customer: row.stripe_customer_id,
-    return_url: ACCOUNT_URL,
+    customer: customer.stripe_customer_id,
+    return_url: returnUrl,
   });
   
-  return session.url;
+  console.log(`[stripe] Created portal session for user ${userId}`);
+  
+  return {
+    url: session.url,
+  };
+}
+
+// =============================================
+// Subscription Management
+// =============================================
+
+/**
+ * Get subscription status for a user
+ */
+export function getSubscriptionStatus(userId) {
+  const sub = db.prepare(`
+    SELECT * FROM subscriptions 
+    WHERE user_id = ? 
+    ORDER BY created_at DESC 
+    LIMIT 1
+  `).get(userId);
+  
+  if (!sub) {
+    return {
+      status: SUBSCRIPTION_STATUS.NONE,
+      plan: null,
+      periodEnd: null,
+      cancelAtPeriodEnd: false,
+    };
+  }
+  
+  return {
+    status: sub.status,
+    plan: sub.plan,
+    priceId: sub.price_id,
+    periodStart: sub.period_start,
+    periodEnd: sub.period_end,
+    trialStart: sub.trial_start,
+    trialEnd: sub.trial_end,
+    cancelAtPeriodEnd: !!sub.cancel_at_period_end,
+    canceledAt: sub.canceled_at,
+    stripeSubscriptionId: sub.stripe_subscription_id,
+  };
+}
+
+/**
+ * Update subscription in database
+ */
+export function updateSubscription({
+  userId,
+  stripeSubscriptionId,
+  stripeCustomerId,
+  status,
+  plan,
+  priceId,
+  periodStart,
+  periodEnd,
+  trialStart,
+  trialEnd,
+  cancelAtPeriodEnd,
+  canceledAt,
+}) {
+  const now = new Date().toISOString();
+  
+  // Check if subscription exists
+  const existing = db.prepare(`
+    SELECT id FROM subscriptions WHERE stripe_subscription_id = ?
+  `).get(stripeSubscriptionId);
+  
+  if (existing) {
+    // Update existing
+    db.prepare(`
+      UPDATE subscriptions SET
+        status = ?,
+        plan = ?,
+        price_id = ?,
+        period_start = ?,
+        period_end = ?,
+        trial_start = ?,
+        trial_end = ?,
+        cancel_at_period_end = ?,
+        canceled_at = ?,
+        updated_at = ?
+      WHERE stripe_subscription_id = ?
+    `).run(
+      status,
+      plan,
+      priceId,
+      periodStart,
+      periodEnd,
+      trialStart,
+      trialEnd,
+      cancelAtPeriodEnd ? 1 : 0,
+      canceledAt,
+      now,
+      stripeSubscriptionId
+    );
+  } else {
+    // Create new
+    db.prepare(`
+      INSERT INTO subscriptions (
+        user_id, stripe_subscription_id, stripe_customer_id,
+        status, plan, price_id,
+        period_start, period_end, trial_start, trial_end,
+        cancel_at_period_end, canceled_at,
+        created_at, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      userId,
+      stripeSubscriptionId,
+      stripeCustomerId,
+      status,
+      plan,
+      priceId,
+      periodStart,
+      periodEnd,
+      trialStart,
+      trialEnd,
+      cancelAtPeriodEnd ? 1 : 0,
+      canceledAt,
+      now,
+      now
+    );
+  }
+  
+  console.log(`[stripe] Updated subscription ${stripeSubscriptionId} for user ${userId} (status: ${status})`);
 }
 
 // =============================================
@@ -182,189 +358,333 @@ export async function createPortalSession(userId) {
 /**
  * Verify webhook signature
  */
-export function verifyWebhook(payload, signature) {
-  if (!stripe) throw new Error("Stripe not configured");
+export function verifyWebhookSignature(payload, signature) {
+  if (!stripe || !STRIPE_WEBHOOK_SECRET) {
+    throw new Error("Stripe webhook not configured");
+  }
+  
   return stripe.webhooks.constructEvent(payload, signature, STRIPE_WEBHOOK_SECRET);
 }
 
 /**
- * Process webhook event (Idempotent)
+ * Check if event has already been processed (idempotency)
  */
-export async function processWebhookEvent(event) {
-  const eventId = event.id;
-  const type = event.type;
-  
-  // Check if already processed
-  const existing = await db.prepare(`
-    SELECT status FROM stripe_events WHERE id = ?
+export function isEventProcessed(eventId) {
+  const existing = db.prepare(`
+    SELECT status FROM stripe_events WHERE event_id = ?
   `).get(eventId);
   
-  if (existing && existing.status === 'processed') {
-    console.log(`[stripe] Event ${eventId} already processed`);
+  return existing?.status === "processed";
+}
+
+/**
+ * Record event as processed
+ */
+export function recordEvent(eventId, eventType, status = "processed", error = null, payload = null) {
+  const now = new Date().toISOString();
+  
+  // Check if event exists
+  const existing = db.prepare(`
+    SELECT retry_count FROM stripe_events WHERE event_id = ?
+  `).get(eventId);
+  
+  if (existing) {
+    // Update existing event
+    db.prepare(`
+      UPDATE stripe_events SET
+        status = ?,
+        error = ?,
+        processed_at = ?,
+        retry_count = retry_count + 1
+      WHERE event_id = ?
+    `).run(
+      status,
+      error,
+      status === "processed" ? now : null,
+      eventId
+    );
+  } else {
+    // Insert new event
+    db.prepare(`
+      INSERT INTO stripe_events (event_id, event_type, status, error, payload, created_at, processed_at, retry_count)
+      VALUES (?, ?, ?, ?, ?, ?, ?, 0)
+    `).run(
+      eventId,
+      eventType,
+      status,
+      error,
+      payload ? JSON.stringify(payload) : null,
+      now,
+      status === "processed" ? now : null
+    );
+  }
+}
+
+/**
+ * Handle checkout.session.completed event
+ */
+async function handleCheckoutCompleted(event) {
+  const session = event.data.object;
+  const userId = session.metadata?.userId;
+  const customerId = session.customer;
+  const sessionId = session.id;
+  
+  if (!userId) {
+    console.error("[stripe] No userId in checkout session metadata");
+    throw new Error("Missing userId in checkout session metadata");
+  }
+  
+  // Ensure customer mapping exists
+  const existingCustomer = db.prepare(`
+    SELECT id FROM stripe_customers WHERE stripe_customer_id = ?
+  `).get(customerId);
+  
+  if (!existingCustomer) {
+    const now = new Date().toISOString();
+    db.prepare(`
+      INSERT INTO stripe_customers (user_id, stripe_customer_id, email, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?)
+    `).run(userId, customerId, session.customer_email, now, now);
+  }
+  
+  // Update checkout_sessions table status
+  const updated = db.prepare(`
+    UPDATE checkout_sessions 
+    SET status = 'completed', completed_at = datetime('now')
+    WHERE stripe_session_id = ? AND user_id = ?
+  `).run(sessionId, userId);
+  
+  if (updated.changes > 0) {
+    console.log(`[stripe] Checkout session ${sessionId} marked as completed`);
+  }
+  
+  console.log(`[stripe] Checkout completed for user ${userId}`);
+}
+
+/**
+ * Handle customer.subscription.created/updated event
+ */
+async function handleSubscriptionChange(event) {
+  const subscription = event.data.object;
+  const customerId = subscription.customer;
+  
+  // Get user ID from customer
+  const userId = getUserIdFromCustomer(customerId);
+  if (!userId) {
+    console.error(`[stripe] No user found for customer ${customerId}`);
     return;
   }
   
-  // Record event
-  if (!existing) {
-    await db.prepare(`
-      INSERT INTO stripe_events (id, type, created_at)
-      VALUES (?, ?, ?)
-    `).run(eventId, type, new Date().toISOString());
+  // Determine plan from price ID
+  const priceId = subscription.items.data[0]?.price?.id;
+  const plan = getPlanByPriceId(priceId);
+  const planName = plan?.id || "unknown";
+  
+  // Map Stripe status to our status
+  let status = subscription.status;
+  if (status === "active" && subscription.trial_end && new Date(subscription.trial_end * 1000) > new Date()) {
+    status = SUBSCRIPTION_STATUS.TRIALING;
   }
   
+  // Update subscription
+  updateSubscription({
+    userId,
+    stripeSubscriptionId: subscription.id,
+    stripeCustomerId: customerId,
+    status,
+    plan: planName,
+    priceId,
+    periodStart: subscription.current_period_start 
+      ? new Date(subscription.current_period_start * 1000).toISOString() 
+      : null,
+    periodEnd: subscription.current_period_end 
+      ? new Date(subscription.current_period_end * 1000).toISOString() 
+      : null,
+    trialStart: subscription.trial_start 
+      ? new Date(subscription.trial_start * 1000).toISOString() 
+      : null,
+    trialEnd: subscription.trial_end 
+      ? new Date(subscription.trial_end * 1000).toISOString() 
+      : null,
+    cancelAtPeriodEnd: subscription.cancel_at_period_end,
+    canceledAt: subscription.canceled_at 
+      ? new Date(subscription.canceled_at * 1000).toISOString() 
+      : null,
+  });
+  
+  // If this is a new trial, grant trial tokens
+  if (status === SUBSCRIPTION_STATUS.TRIALING && event.type === "customer.subscription.created") {
+    tokenLedger.grantTrialTokens(userId, event.id);
+    
+    // Mark trial as used
+    db.prepare(`
+      UPDATE users SET trial_used = 1, trial_started_at = datetime('now') WHERE id = ?
+    `).run(userId);
+  }
+  
+  console.log(`[stripe] Subscription ${event.type.split('.')[2]} for user ${userId} (status: ${status})`);
+}
+
+/**
+ * Handle customer.subscription.deleted event
+ */
+async function handleSubscriptionDeleted(event) {
+  const subscription = event.data.object;
+  const customerId = subscription.customer;
+  
+  const userId = getUserIdFromCustomer(customerId);
+  if (!userId) {
+    console.error(`[stripe] No user found for customer ${customerId}`);
+    return;
+  }
+  
+  // Update subscription status to canceled
+  updateSubscription({
+    userId,
+    stripeSubscriptionId: subscription.id,
+    stripeCustomerId: customerId,
+    status: SUBSCRIPTION_STATUS.CANCELED,
+    plan: null,
+    priceId: null,
+    periodStart: null,
+    periodEnd: null,
+    trialStart: null,
+    trialEnd: null,
+    cancelAtPeriodEnd: false,
+    canceledAt: new Date().toISOString(),
+  });
+  
+  // Clear any remaining tokens (optional - could let them expire naturally)
+  tokenLedger.clearMonthlyTokens(userId, "Subscription canceled");
+  
+  console.log(`[stripe] Subscription deleted for user ${userId}`);
+}
+
+/**
+ * Handle invoice.payment_succeeded event
+ */
+async function handlePaymentSucceeded(event) {
+  const invoice = event.data.object;
+  const customerId = invoice.customer;
+  const subscriptionId = invoice.subscription;
+  
+  const userId = getUserIdFromCustomer(customerId);
+  if (!userId) {
+    console.error(`[stripe] No user found for customer ${customerId}`);
+    return;
+  }
+  
+  // Only grant tokens for subscription invoices (not one-time)
+  if (!subscriptionId) {
+    console.log(`[stripe] Invoice ${invoice.id} is not a subscription invoice`);
+    return;
+  }
+  
+  // Skip if this is the first invoice (trial period - tokens already granted)
+  if (invoice.billing_reason === "subscription_create") {
+    console.log(`[stripe] Skipping initial invoice for subscription ${subscriptionId}`);
+    return;
+  }
+  
+  // Get subscription to determine plan
+  const sub = getSubscriptionStatus(userId);
+  if (!sub.plan) {
+    console.error(`[stripe] No plan found for user ${userId}`);
+    return;
+  }
+  
+  // Clear old tokens and grant new ones for the new period
+  tokenLedger.clearMonthlyTokens(userId, "New billing period");
+  tokenLedger.grantSubscriptionTokens(userId, sub.plan, event.id, subscriptionId);
+  
+  console.log(`[stripe] Payment succeeded for user ${userId}, tokens granted for ${sub.plan}`);
+}
+
+/**
+ * Handle invoice.payment_failed event
+ */
+async function handlePaymentFailed(event) {
+  const invoice = event.data.object;
+  const customerId = invoice.customer;
+  
+  const userId = getUserIdFromCustomer(customerId);
+  if (!userId) {
+    console.error(`[stripe] No user found for customer ${customerId}`);
+    return;
+  }
+  
+  // Update subscription status to past_due
+  const sub = db.prepare(`
+    SELECT * FROM subscriptions WHERE user_id = ? ORDER BY created_at DESC LIMIT 1
+  `).get(userId);
+  
+  if (sub) {
+    db.prepare(`
+      UPDATE subscriptions SET status = ?, updated_at = datetime('now')
+      WHERE stripe_subscription_id = ?
+    `).run(SUBSCRIPTION_STATUS.PAST_DUE, sub.stripe_subscription_id);
+  }
+  
+  console.log(`[stripe] Payment failed for user ${userId}`);
+}
+
+/**
+ * Process webhook event
+ */
+export async function processWebhookEvent(event) {
+  const eventId = event.id;
+  const eventType = event.type;
+  
+  // Idempotency check
+  if (isEventProcessed(eventId)) {
+    console.log(`[stripe] Event ${eventId} already processed, skipping`);
+    return { skipped: true };
+  }
+  
+  // Record event as pending
+  recordEvent(eventId, eventType, "pending", null, event.data.object);
+  
   try {
-    // Handle event types
-    switch (type) {
-      case 'checkout.session.completed':
-        await handleCheckoutCompleted(event.data.object);
+    switch (eventType) {
+      case "checkout.session.completed":
+        await handleCheckoutCompleted(event);
         break;
-      case 'customer.subscription.created':
-      case 'customer.subscription.updated':
-      case 'customer.subscription.deleted':
-        await handleSubscriptionUpdate(event.data.object);
+      
+      case "customer.subscription.created":
+      case "customer.subscription.updated":
+        await handleSubscriptionChange(event);
         break;
-      case 'invoice.payment_succeeded':
-        await handleInvoicePaymentSucceeded(event.data.object);
+      
+      case "customer.subscription.deleted":
+        await handleSubscriptionDeleted(event);
         break;
+      
+      case "invoice.payment_succeeded":
+        await handlePaymentSucceeded(event);
+        break;
+      
+      case "invoice.payment_failed":
+        await handlePaymentFailed(event);
+        break;
+      
       default:
-        // Ignore other events
-        break;
+        console.log(`[stripe] Unhandled event type: ${eventType}`);
     }
     
-    // Mark processed
-    await db.prepare(`
-      UPDATE stripe_events SET status = 'processed' WHERE id = ?
-    `).run(eventId);
+    // Mark as processed
+    recordEvent(eventId, eventType, "processed", null, event.data.object);
+    return { processed: true };
     
   } catch (err) {
-    console.error(`[stripe] Failed to process event ${eventId}:`, err);
+    console.error(`[stripe] Error processing event ${eventId}:`, err);
+    recordEvent(eventId, eventType, "failed", err.message, event.data.object);
     throw err;
   }
 }
 
-/**
- * Handle checkout.session.completed
- */
-async function handleCheckoutCompleted(session) {
-  const userId = session.metadata.userId;
-  const plan = session.metadata.plan;
-  const subscriptionId = session.subscription;
-  
-  console.log(`[stripe] Checkout completed for user ${userId}, plan ${plan}`);
-  
-  // Update checkout_sessions table if we tracked it
-  await db.prepare(`
-    UPDATE checkout_sessions 
-    SET status = 'completed', stripe_subscription_id = ?, completed_at = datetime('now')
-    WHERE stripe_session_id = ?
-  `).run(subscriptionId, session.id);
-}
-
-/**
- * Handle subscription updates
- */
-async function handleSubscriptionUpdate(subscription) {
-  const customerId = subscription.customer;
-  const userId = await getUserIdFromCustomer(customerId);
-  
-  if (!userId) {
-    console.warn(`[stripe] Unknown customer ${customerId} in subscription update`);
-    return;
-  }
-  
-  const status = subscription.status;
-  const planId = subscription.items.data[0].price.id;
-  const plan = getPlanByPriceId(planId);
-  
-  const currentPeriodStart = new Date(subscription.current_period_start * 1000).toISOString();
-  const currentPeriodEnd = new Date(subscription.current_period_end * 1000).toISOString();
-  
-  console.log(`[stripe] Subscription update for user ${userId}: ${status} (${plan})`);
-  
-  // Update local subscription state
-  await db.prepare(`
-    INSERT INTO subscriptions (
-      user_id, stripe_subscription_id, status, plan_id, 
-      current_period_start, current_period_end, cancel_at_period_end, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'))
-    ON CONFLICT(stripe_subscription_id) DO UPDATE SET
-      status = excluded.status,
-      plan_id = excluded.plan_id,
-      current_period_start = excluded.current_period_start,
-      current_period_end = excluded.current_period_end,
-      cancel_at_period_end = excluded.cancel_at_period_end,
-      updated_at = excluded.updated_at
-  `).run(
-    userId,
-    subscription.id,
-    status,
-    planId,
-    currentPeriodStart,
-    currentPeriodEnd,
-    subscription.cancel_at_period_end ? 1 : 0
-  );
-  
-  // Update user tier in users table
-  let tier = 'free';
-  if (status === 'active' || status === 'trialing') {
-    tier = plan; // 'monthly' or 'yearly'
-  }
-  
-  await db.prepare(`
-    UPDATE users 
-    SET subscription_tier = ?, subscription_active = ?
-    WHERE id = ?
-  `).run(tier, (status === 'active' || status === 'trialing') ? 1 : 0, userId);
-}
-
-/**
- * Handle invoice payment succeeded (Renewals)
- */
-async function handleInvoicePaymentSucceeded(invoice) {
-  const customerId = invoice.customer;
-  const userId = await getUserIdFromCustomer(customerId);
-  
-  if (!userId || !invoice.subscription) return;
-  
-  const subscriptionId = invoice.subscription;
-  
-  if (!stripe) return;
-  
-  const subscription = await stripe.subscriptions.retrieve(subscriptionId);
-  const planId = subscription.items.data[0].price.id;
-  const plan = getPlanByPriceId(planId);
-  
-  if (invoice.billing_reason === 'subscription_create' || 
-      invoice.billing_reason === 'subscription_cycle' ||
-      invoice.billing_reason === 'subscription_update') {
-        
-    console.log(`[stripe] Invoice paid for user ${userId}, granting ${plan} tokens`);
-    await tokenLedger.grantSubscriptionTokens(userId, plan);
-  }
-}
-
-/**
- * Get subscription status from DB
- */
-export async function getSubscriptionStatus(userId) {
-  const sub = await db.prepare(`
-    SELECT * FROM subscriptions 
-    WHERE user_id = ? 
-    ORDER BY created_at DESC LIMIT 1
-  `).get(userId);
-  
-  if (!sub) {
-    return { status: 'none', plan: 'free' };
-  }
-  
-  return {
-    status: sub.status,
-    plan: getPlanByPriceId(sub.plan_id) || 'free',
-    periodEnd: sub.current_period_end,
-    trialEnd: null,
-    cancelAtPeriodEnd: !!sub.cancel_at_period_end
-  };
-}
+// =============================================
+// Exports
+// =============================================
 
 export const stripeService = {
   isStripeEnabled,
@@ -373,7 +693,12 @@ export const stripeService = {
   createCheckoutSession,
   createCheckoutSessionNoTrial,
   createPortalSession,
-  verifyWebhook,
+  getSubscriptionStatus,
+  updateSubscription,
+  verifyWebhookSignature,
+  isEventProcessed,
+  recordEvent,
   processWebhookEvent,
-  getSubscriptionStatus
 };
+
+export default stripeService;

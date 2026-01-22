@@ -70,7 +70,7 @@ billingRouter.get("/plans", (req, res) => {
  * GET /api/billing/status
  * Returns current subscription and token status for logged-in user
  */
-billingRouter.get("/status", requireAuth, async (req, res) => {
+billingRouter.get("/status", requireAuth, (req, res) => {
   try {
     const userId = req.user.sub;
     
@@ -82,8 +82,8 @@ billingRouter.get("/status", requireAuth, async (req, res) => {
     
     // Get user plan and usage
     const plan = getUserPlan(userId);
-    const promptUsage = await getDailyUsage(userId, 'prompt_optimization');
-    const wizardUsage = await getDailyUsage(userId, 'question_wizard');
+    const promptUsage = getDailyUsage(userId, 'prompt_optimization');
+    const wizardUsage = getDailyUsage(userId, 'question_wizard');
     
     // Get user info
     const user = db.prepare(`

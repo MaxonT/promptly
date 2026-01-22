@@ -278,7 +278,7 @@ enhanceRouter.post("/structure", async (req, res) => {
     
     // Check plan limits
     const userId = getUserId(req);
-    const limitCheck = await checkPromptOptimizationLimit(userId, 'standard'); // Structure enhancement uses standard mode
+    const limitCheck = checkPromptOptimizationLimit(userId, 'standard'); // Structure enhancement uses standard mode
     if (!limitCheck.allowed) {
       return res.status(403).json({
         ok: false,
@@ -353,7 +353,7 @@ Required Format:
     logModelUsage("/enhance/structure", modelUsed, completionId);
 
     // Record usage after successful enhancement
-    await recordUsage(userId, 'prompt_optimization');
+    recordUsage(userId, 'prompt_optimization');
     
     // 6) Outcome Layer: 结果交付 - 最终输出只包含增强后的 prompt 及处理的附件数量
     res.json({
@@ -381,7 +381,7 @@ enhanceRouter.post("/style", async (req, res) => {
   try {
     // Check plan limits
     const userId = getUserId(req);
-    const limitCheck = await checkPromptOptimizationLimit(userId, 'standard');
+    const limitCheck = checkPromptOptimizationLimit(userId, 'standard');
     if (!limitCheck.allowed) {
       return res.status(403).json({
         ok: false,
@@ -426,7 +426,7 @@ Output: Enhanced prompt only.`;
     logModelUsage("/enhance/style", modelUsed, completionId);
     
     // Record usage after successful enhancement
-    await recordUsage(userId, 'prompt_optimization');
+    recordUsage(userId, 'prompt_optimization');
 
     res.json({
       ok: true,
@@ -449,7 +449,7 @@ enhanceRouter.post("/simplify", async (req, res) => {
   try {
     // Check plan limits
     const userId = getUserId(req);
-    const limitCheck = await checkPromptOptimizationLimit(userId, 'standard');
+    const limitCheck = checkPromptOptimizationLimit(userId, 'standard');
     if (!limitCheck.allowed) {
       return res.status(403).json({
         ok: false,
@@ -494,7 +494,7 @@ Output: Simplified prompt only.`;
     logModelUsage("/enhance/simplify", modelUsed, completionId);
     
     // Record usage after successful enhancement
-    await recordUsage(userId, 'prompt_optimization');
+    recordUsage(userId, 'prompt_optimization');
 
     res.json({
       ok: true,

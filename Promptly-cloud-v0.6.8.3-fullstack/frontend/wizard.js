@@ -272,16 +272,6 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
     setMode(currentMode, { silentLog: true });
   }
   
-  // Refresh plan info
-  async function refreshPlanInfo() {
-    const planInfo = await fetchUserPlanInfo();
-    displayPlanInfo(planInfo);
-    // Also refresh global banner if available
-    if (window.refreshPlanBanner) {
-      window.refreshPlanBanner();
-    }
-  }
-  
   // Fetch user plan information from backend
   async function fetchUserPlanInfo() {
     try {
@@ -305,12 +295,6 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
   
   // Display plan information banner
   function displayPlanInfo(planInfo) {
-    // Remove existing banner if any
-    const existingBanner = document.querySelector(".wizard-plan-banner");
-    if (existingBanner) {
-      existingBanner.remove();
-    }
-    
     const planBanner = document.createElement("div");
     planBanner.className = "wizard-plan-banner";
     planBanner.innerHTML = `

@@ -82,8 +82,8 @@ billingRouter.get("/status", requireAuth, (req, res) => {
     
     // Get user plan and usage
     const plan = getUserPlan(userId);
-    const promptUsage = getDailyUsage(userId, 'prompt_optimization');
-    const wizardUsage = getDailyUsage(userId, 'question_wizard');
+    const promptUsage = await getDailyUsage(userId, 'prompt_optimization');
+    const wizardUsage = await getDailyUsage(userId, 'question_wizard');
     
     // Get user info
     const user = db.prepare(`

@@ -145,9 +145,9 @@ export function recordUsage(userId, featureType) {
 /**
  * Check if user can use prompt optimization
  * @param {string} userId - User ID
- * @returns {object} { allowed: boolean, reason?: string, usage?: number, limit?: number }
+ * @returns {Promise<object>} { allowed: boolean, reason?: string, usage?: number, limit?: number }
  */
-export function canUsePromptOptimization(userId) {
+export async function canUsePromptOptimization(userId) {
   const plan = getUserPlan(userId);
   const limits = PLAN_LIMITS[plan];
   
@@ -156,7 +156,7 @@ export function canUsePromptOptimization(userId) {
     return { allowed: true };
   }
   
-  const dailyUsage = getDailyUsage(userId, 'prompt_optimization');
+  const dailyUsage = await getDailyUsage(userId, 'prompt_optimization');
   const limit = limits.promptOptimization.daily;
   
   if (dailyUsage >= limit) {
@@ -178,9 +178,9 @@ export function canUsePromptOptimization(userId) {
 /**
  * Check if user can use question wizard
  * @param {string} userId - User ID
- * @returns {object} { allowed: boolean, reason?: string, usage?: number, limit?: number }
+ * @returns {Promise<object>} { allowed: boolean, reason?: string, usage?: number, limit?: number }
  */
-export function canUseQuestionWizard(userId) {
+export async function canUseQuestionWizard(userId) {
   const plan = getUserPlan(userId);
   const limits = PLAN_LIMITS[plan];
   
@@ -189,7 +189,7 @@ export function canUseQuestionWizard(userId) {
     return { allowed: true };
   }
   
-  const dailyUsage = getDailyUsage(userId, 'question_wizard');
+  const dailyUsage = await getDailyUsage(userId, 'question_wizard');
   const limit = limits.questionWizard.daily;
   
   if (dailyUsage >= limit) {
@@ -213,9 +213,9 @@ export function canUseQuestionWizard(userId) {
  * This should be called before processing the request
  * @param {string} userId - User ID
  * @param {string} mode - The mode being used (for free plan validation)
- * @returns {object} { allowed: boolean, reason?: string }
+ * @returns {Promise<object>} { allowed: boolean, reason?: string }
  */
-export function checkPromptOptimizationLimit(userId, mode = null) {
+export async function checkPromptOptimizationLimit(userId, mode = null) {
   // Check mode restrictions first (for free plan)
   if (mode && !canUseMode(userId, mode)) {
     return {
@@ -225,17 +225,17 @@ export function checkPromptOptimizationLimit(userId, mode = null) {
   }
   
   // Check usage limits
-  return canUsePromptOptimization(userId);
+  return await canUsePromptOptimization(userId);
 }
 
 /**
  * Check and enforce question wizard limits
  * This should be called before processing the request
  * @param {string} userId - User ID
- * @returns {object} { allowed: boolean, reason?: string }
+ * @returns {Promise<object>} { allowed: boolean, reason?: string }
  */
-export function checkQuestionWizardLimit(userId) {
-  return canUseQuestionWizard(userId);
+export async function checkQuestionWizardLimit(userId) {
+  return await canUseQuestionWizard(userId);
 }
 
 console.log("[promptly] Plan limits module loaded");

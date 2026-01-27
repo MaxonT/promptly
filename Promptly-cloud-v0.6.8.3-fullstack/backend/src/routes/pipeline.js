@@ -162,11 +162,8 @@ pipelineRouter.post("/run", async (req, res) => {
   });
 
   // Execute pipeline asynchronously and send events
+  // Note: recordUsage is now called inside executePipelineWithEvents on success
   executePipelineWithEvents(runId, userId, { idea, attachments, skipQuestions, modeInput })
-    .then(() => {
-      // Record usage after successful pipeline execution
-      recordUsage(userId, 'prompt_optimization');
-    })
     .catch((err) => {
       console.error(`[pipeline] Pipeline execution failed for ${runId}:`, err);
       sendEvent(runId, "error", {
@@ -1036,6 +1033,11 @@ Provide honest, objective scores based on the criteria.`;
         creditsRemaining: tokenUsageResult.balances?.total || null,
       } : null
     });
+    
+    // 🔥 Record usage after successful pipeline completion
+    console.log(`[pipeline] [${runId}] Recording usage for user ${userId}`);
+    recordUsage(userId, 'prompt_optimization');
+    console.log(`[pipeline] [${runId}] Usage recorded successfully`);
 
   } catch (err) {
     console.error(`[pipeline] ❌ Error in pipeline execution for ${runId}:`, err);

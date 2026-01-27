@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Promptly - 系统维护中</title>
+  <title>Promptly - Under Maintenance</title>
   <style>
     * {
       margin: 0;
@@ -170,68 +170,46 @@
       </svg>
     </div>
 
-    <div class="status-badge">🔧 系统维护中</div>
+    <div class="status-badge">🔧 Under Maintenance</div>
 
-    <h1>我们正在进行系统升级</h1>
+    <h1>We're Upgrading Our Systems</h1>
     <p class="subtitle">
-      为了给您提供更好的服务体验，我们正在进行必要的系统维护和优化。<br>
-      感谢您的耐心等待。
+      To provide you with a better experience, we're performing necessary system maintenance and optimization.<br>
+      Thank you for your patience.
     </p>
 
     <div class="info-box">
       <div class="info-item">
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-          <path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/>
-        </svg>
-        <span>预计恢复时间：<strong id="estimatedTime">约 2 小时后</strong></span>
-      </div>
-      <div class="info-item">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
           <path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/>
         </svg>
-        <span>有问题？联系我们：<strong>support@promptly.com</strong></span>
+        <span>Questions? Contact us: <strong>support@promptly.com</strong></span>
       </div>
     </div>
 
     <div class="footer">
-      <p>维护期间，您的数据是安全的。</p>
+      <p>Your data is safe during maintenance.</p>
       <p style="margin-top: 8px;">
-        访问 <a href="https://status.promptly.com" target="_blank">系统状态页面</a> 获取实时更新
+        Visit <a href="https://status.promptly.com" target="_blank">Status Page</a> for real-time updates
       </p>
     </div>
   </div>
 
   <script>
-    // 可选：自动刷新检测维护是否结束
-    // 每隔 60 秒检查一次后端状态
+    // Auto-refresh when maintenance is complete
+    // Check backend status every 60 seconds
     setInterval(() => {
       fetch('/api/health')
         .then(res => {
           if (res.ok) {
-            // 后端恢复了，刷新页面
+            // Backend is back online, reload the page
             window.location.reload();
           }
         })
         .catch(() => {
-          // 仍在维护中，继续等待
+          // Still under maintenance, keep waiting
         });
-    }, 60000); // 60秒检查一次
-
-    // 显示当前时间
-    function updateTime() {
-      const now = new Date();
-      const options = { 
-        year: 'numeric', 
-        month: 'long', 
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
-      };
-      document.getElementById('currentTime').textContent = now.toLocaleString('zh-CN', options);
-    }
-    
-    // 每秒更新一次时间（如果需要的话）
-    // setInterval(updateTime, 1000);
+    }, 60000); // Check every 60 seconds
   </script>
 </body>
 </html>

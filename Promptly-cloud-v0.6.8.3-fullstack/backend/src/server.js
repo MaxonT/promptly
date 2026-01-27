@@ -26,6 +26,12 @@ import { FEATURES } from "./lib/subscriptionConfig.js";
 dotenv.config();
 const app = express();
 
+// Trust proxy when running behind Render/Heroku reverse proxy
+// This is needed to get correct client IP from X-Forwarded-For header
+if (process.env.NODE_ENV === 'production') {
+  app.set('trust proxy', true);
+}
+
 const CORS_ORIGIN = process.env.CORS_ORIGIN || "*";
 app.use(cors({ origin: CORS_ORIGIN, credentials: true }));
 app.use(helmet());

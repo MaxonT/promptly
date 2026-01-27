@@ -173,7 +173,7 @@
     }
 
     .container {
-      background: rgba(15, 23, 42, 0.6); /* 深色磨砂 */
+      background: rgba(15, 23, 42, 0.6);
       backdrop-filter: blur(16px);
       -webkit-backdrop-filter: blur(16px);
       border-radius: 24px;
@@ -182,13 +182,22 @@
         0 25px 50px -12px rgba(0, 0, 0, 0.5),
         0 0 0 1px rgba(255, 255, 255, 0.1),
         inset 0 1px 0 0 rgba(255, 255, 255, 0.1);
-      max-width: 600px;
-      width: 100%;
-      padding: 60px 40px;
+      max-width: 420px; /* 进一步缩小卡片宽度 */
+      width: 90%;
+      padding: 40px 30px;
       text-align: center;
       position: relative;
       z-index: 10;
       animation: slideUpFade 0.8s cubic-bezier(0.2, 0.8, 0.2, 1);
+      font-style: italic; /* 全局斜体 */
+      
+      /* 花纹纹路边框效果 */
+      border: 2px solid transparent;
+      background-clip: padding-box, border-box;
+      background-origin: padding-box, border-box;
+      background-image: 
+        linear-gradient(rgba(15, 23, 42, 0.8), rgba(15, 23, 42, 0.8)),
+        repeating-linear-gradient(45deg, #667eea 0, #667eea 10px, #764ba2 10px, #764ba2 20px);
     }
 
     @keyframes slideUpFade {
@@ -268,14 +277,21 @@
       text-transform: uppercase;
     }
 
+    /* 标题流光渐变动画 */
     h1 {
-      font-size: 36px;
+      font-size: 32px; /* 稍微调小字体适配小卡片 */
       margin-bottom: 16px;
       font-weight: 800;
-      background: var(--primary-gradient);
+      background: linear-gradient(to right, #667eea, #764ba2, #f472b6, #667eea);
+      background-size: 300% auto;
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
       letter-spacing: -0.5px;
+      animation: textShine 5s linear infinite;
+    }
+
+    @keyframes textShine {
+      to { background-position: 200% center; }
     }
 
     .subtitle {
@@ -286,11 +302,11 @@
     }
 
     .info-box {
-      background: #f8fafc;
+      background: rgba(255, 255, 255, 0.05); /* 改为深色透明 */
       border-radius: 16px;
-      padding: 24px;
-      margin: 32px 0;
-      border: 1px solid #e2e8f0;
+      padding: 20px;
+      margin: 24px 0;
+      border: 1px solid rgba(255, 255, 255, 0.1);
       position: relative;
       overflow: hidden;
       transition: transform 0.3s ease;
@@ -298,7 +314,8 @@
     
     .info-box:hover {
       transform: translateY(-2px);
-      box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+      background: rgba(255, 255, 255, 0.08);
     }
 
     .info-box::before {
@@ -313,25 +330,30 @@
 
     .info-item {
       display: flex;
+      flex-direction: column;
       align-items: center;
       justify-content: center;
-      margin: 8px 0;
-      color: var(--text-main);
-      font-size: 16px;
+      gap: 8px;
+      margin: 0;
+      color: #e2e8f0; /* 文字改为浅色 */
+      font-size: 15px;
     }
 
     .info-item svg {
-      width: 20px;
-      height: 20px;
-      margin-right: 12px;
+      width: 24px;
+      height: 24px;
+      margin-right: 0;
       fill: #667eea;
+      margin-bottom: 4px;
     }
     
     .info-item a {
-      color: #667eea;
+      color: #93c5fd; /* 链接颜色调亮 */
       text-decoration: none;
       font-weight: 700;
       transition: color 0.2s;
+      font-family: 'Consolas', monospace; /* 邮箱用等宽字体 */
+      font-style: normal; /* 邮箱不斜体，易读 */
     }
     
     .info-item a:hover {
@@ -339,44 +361,31 @@
     }
 
     .footer {
-      margin-top: 40px;
-      padding-top: 24px;
-      border-top: 1px solid rgba(226, 232, 240, 0.8);
-      color: #a0aec0;
-      font-size: 14px;
+      margin-top: 30px;
+      padding-top: 20px;
+      border-top: 1px solid rgba(226, 232, 240, 0.1);
+      color: #94a3b8;
+      font-size: 13px;
     }
 
-    .footer a {
-      color: #667eea;
-      text-decoration: none;
-      font-weight: 600;
-      position: relative;
+    /* 呼吸边框特效 */
+    @keyframes borderBreathe {
+      0%, 100% { border-color: rgba(102, 126, 234, 0.3); box-shadow: 0 0 15px rgba(102, 126, 234, 0.1), inset 0 0 10px rgba(102, 126, 234, 0.05); }
+      50% { border-color: rgba(244, 114, 182, 0.5); box-shadow: 0 0 25px rgba(244, 114, 182, 0.2), inset 0 0 20px rgba(244, 114, 182, 0.1); }
     }
-
-    .footer a::after {
-      content: '';
-      position: absolute;
-      width: 100%;
-      height: 2px;
-      bottom: -2px;
-      left: 0;
-      background-color: #667eea;
-      transform: scaleX(0);
-      transform-origin: bottom right;
-      transition: transform 0.3s ease-out;
-    }
-
-    .footer a:hover::after {
-      transform: scaleX(1);
-      transform-origin: bottom left;
+    
+    .status-badge {
+      animation: borderBreathe 4s infinite ease-in-out;
+      background: rgba(15, 23, 42, 0.4); /* 更深的背景适配深色主题 */
+      backdrop-filter: blur(4px);
     }
 
     @media (max-width: 768px) {
       .container {
-        padding: 40px 24px;
+        padding: 30px 20px;
       }
-      h1 { font-size: 28px; }
-      .subtitle { font-size: 16px; }
+      h1 { font-size: 24px; }
+      .subtitle { font-size: 14px; }
     }
   </style>
 </head>
@@ -498,9 +507,6 @@ ORDER BY uptime DESC;</div>
 
     <div class="footer">
       <p>Your data is safe during maintenance.</p>
-      <p style="margin-top: 8px;">
-        Visit <a href="https://status.promptly.com" target="_blank">Status Page</a> for real-time updates
-      </p>
     </div>
   </div>
 

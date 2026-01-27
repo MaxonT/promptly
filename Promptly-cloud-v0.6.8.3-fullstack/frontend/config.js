@@ -21,7 +21,7 @@ window.PROMPTLY_API_BASE = "https://promptly-v0-6-cloudtest-cursor-dev.onrender.
 // 维护模式开关
 // 设置为 true 时，所有访问都会重定向到维护页面
 // 部署时可以通过修改这个值来启用/禁用维护模式
-window.PROMPTLY_MAINTENANCE_MODE = false;
+window.PROMPTLY_MAINTENANCE_MODE = true;
 
 console.log("[Promptly] API Base configured:", window.PROMPTLY_API_BASE);
 console.log("[Promptly] Maintenance Mode:", window.PROMPTLY_MAINTENANCE_MODE ? "🔧 ENABLED" : "✅ Disabled");

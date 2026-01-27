@@ -13,7 +13,12 @@ import { Router } from "express";
 import { nanoid } from "nanoid";
 import { z } from "zod";
 import { db, ensureUser } from "../lib/db.js";
-import { chatText, chatJson, LlmDisabledError } from "../lib/openaiClient.js";
+import { chatText, chatJson, LlmDisabledError } from "../lib/llmRouter.js";
+import { getModePolicy } from "../lib/modePolicies.js";
+import { spendTokensForRun, getTokenStatus } from "../lib/tokenUsage.js";
+import { FEATURES } from "../lib/subscriptionConfig.js";
+import { checkPromptOptimizationLimit, recordUsage, canUseMode } from "../lib/planLimits.js";
+import { optionalAuth } from "./auth.js";
 
 export const pipelineRouter = Router();
 
@@ -43,6 +48,11 @@ pipelineRouter.get("/health", (req, res) => {
 function getUserId(req) {
   if (req.user && req.user.sub) return req.user.sub;
   return "demo-user";
+}
+
+function stripThinkBlocks(text) {
+  if (!text || typeof text !== "string") return text;
+  return text.replace(/<think>[\s\S]*?<\/think>\s*/gi, "").trim();
 }
 
 /**
@@ -81,9 +91,19 @@ pipelineRouter.get("/stream/:runId", (req, res) => {
   res.write(`event: connected\n`);
   res.write(`data: ${JSON.stringify({ runId, timestamp: new Date().toISOString() })}\n\n`);
 
+  // Heartbeat to keep connection alive
+  const pingInterval = setInterval(() => {
+    if (activeStreams.has(runId)) {
+      sendEvent(runId, "ping", { timestamp: new Date().toISOString() });
+    } else {
+      clearInterval(pingInterval);
+    }
+  }, 5000); // 每 5 秒发送一次 ping (必须)
+
   // Handle client disconnect
   req.on("close", () => {
     console.log(`[pipeline] Client disconnected from stream ${runId}`);
+    clearInterval(pingInterval);
     activeStreams.delete(runId);
     res.end();
   });
@@ -104,7 +124,7 @@ const PipelineRunRequestSchema = z.object({
   model: z.string().optional()
 });
 
-pipelineRouter.post("/run", async (req, res) => {
+pipelineRouter.post("/run", optionalAuth, async (req, res) => {
   console.log(`[pipeline] POST /run received`);
   const userId = getUserId(req);
   ensureUser(userId);
@@ -115,8 +135,21 @@ pipelineRouter.post("/run", async (req, res) => {
     return res.status(400).json({ ok: false, error: parsed.error.flatten() });
   }
 
-  const { idea, attachments = [], skipQuestions = false, model = null } = parsed.data;
-  console.log(`[pipeline] Starting pipeline - idea length: ${idea.length}, skipQuestions: ${skipQuestions}, model: ${model || 'default'}`);
+  const { idea, attachments = [], skipQuestions = false, model: modeInput = null } = parsed.data;
+  const mode = modeInput || 'fast';
+  
+  // Check plan limits
+  const limitCheck = checkPromptOptimizationLimit(userId, mode);
+  if (!limitCheck.allowed) {
+    return res.status(403).json({
+      ok: false,
+      error: limitCheck.reason,
+      usage: limitCheck.usage,
+      limit: limitCheck.limit
+    });
+  }
+  
+  console.log(`[pipeline] Starting pipeline - idea length: ${idea.length}, skipQuestions: ${skipQuestions}, mode: ${mode}`);
 
   // Generate a unique runId for this pipeline execution
   const runId = `run_${nanoid(16)}`;
@@ -130,7 +163,8 @@ pipelineRouter.post("/run", async (req, res) => {
   });
 
   // Execute pipeline asynchronously and send events
-  executePipelineWithEvents(runId, userId, { idea, attachments, skipQuestions, model })
+  // Note: recordUsage is now called inside executePipelineWithEvents on success
+  executePipelineWithEvents(runId, userId, { idea, attachments, skipQuestions, modeInput })
     .catch((err) => {
       console.error(`[pipeline] Pipeline execution failed for ${runId}:`, err);
       sendEvent(runId, "error", {
@@ -145,9 +179,57 @@ pipelineRouter.post("/run", async (req, res) => {
  * Execute full pipeline and send SSE events
  * With timeout protection (default: 5 minutes)
  */
-async function executePipelineWithEvents(runId, userId, { idea, attachments, skipQuestions, model }) {
+async function executePipelineWithEvents(runId, userId, { idea, attachments, skipQuestions, modeInput }) {
   const PIPELINE_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
   const startTime = Date.now();
+  
+  // Resolve Policy based on mode (modeInput param holds the mode: fast, standard, premium)
+  const mode = modeInput || 'fast';
+  
+  // Check mode restrictions for free plan (this is a backup check, main check is in /run endpoint)
+  if (!canUseMode(userId, mode)) {
+    sendEvent(runId, "error", {
+      stage: "pipeline",
+      message: 'Free plan only supports Standard and Fast modes. Please upgrade to use Deep or Ultra Thinking modes.'
+    });
+    sendEvent(runId, "complete", { success: false });
+    return;
+  }
+  
+  const policy = getModePolicy(mode);
+  console.log(`[pipeline] [${runId}] Executing with policy: ${policy.name} (${policy.id})`);
+  console.log(`[pipeline] [${runId}] Policy Details: Spec=${policy.specBuilder.model}, QEngine=${policy.questionEngine.enabled}, Gen=${policy.generation.model}`);
+  
+  // 1. Wait for client to connect (max 10 seconds)
+  // This prevents the race condition where events are sent before the client connects
+  const MAX_WAIT_ATTEMPTS = 20;
+  const WAIT_INTERVAL_MS = 500;
+  
+  let clientConnected = false;
+  for (let i = 0; i < MAX_WAIT_ATTEMPTS; i++) {
+    if (activeStreams.has(runId)) {
+      clientConnected = true;
+      break;
+    }
+    await new Promise(resolve => setTimeout(resolve, WAIT_INTERVAL_MS));
+  }
+
+  if (!clientConnected) {
+    console.warn(`[pipeline] [${runId}] Client did not connect within timeout, aborting execution.`);
+    // Clean up if somehow it was added but not detected, though unlikely
+    activeStreams.delete(runId);
+    return;
+  }
+
+  // 2. Setup Keep-Alive Heartbeat
+  // Prevents load balancers or browsers from dropping idle connections during long LLM calls
+  const pingInterval = setInterval(() => {
+    if (activeStreams.has(runId)) {
+      sendEvent(runId, 'ping', { timestamp: new Date().toISOString() });
+    } else {
+      clearInterval(pingInterval);
+    }
+  }, 5000); // Send ping every 5 seconds (Critical for stability)
   
   const checkTimeout = () => {
     const elapsed = Date.now() - startTime;
@@ -160,6 +242,25 @@ async function executePipelineWithEvents(runId, userId, { idea, attachments, ski
   let specId = null;
   let sessionId = null;
   let candidateIds = [];
+  
+  // Token usage tracking
+  let totalInputTokens = 0;
+  let totalOutputTokens = 0;
+  
+  // Token Hardening: Metrics tracking for observability
+  const pipelineMetrics = {
+    calls_total: {
+      spec_builder: 0,
+      question_engine: 0,
+      generation: 0,
+      scoring: 0,
+      outcome_runner: 0
+    },
+    retries_total: 0,
+    qe_rounds: 0,
+    generation_retries: 0, // Track generation similarity retries separately
+    score_calls: 0
+  };
 
   try {
     // ============================================
@@ -206,15 +307,27 @@ ${idea}${attachmentContext}`;
       stage: "spec",
       step: "llm-call",
       message: "Calling LLM to generate structured spec...",
-      details: { model: model || "default", ideaLength: idea.length }
+      details: { model: policy.specBuilder.model, provider: policy.specBuilder.provider, ideaLength: idea.length }
     });
 
     checkTimeout(); // Check timeout before LLM call
-    console.log(`[pipeline] [${runId}] Stage 1: Calling Spec Builder LLM...`);
-    const { data: rawSpecData } = await chatJson({
+    console.log(`[pipeline] [${runId}] Stage 1: Calling Spec Builder LLM (${policy.specBuilder.provider}/${policy.specBuilder.model})...`);
+    const { data: rawSpecData, usage: specUsage } = await chatJson({
       system: specSystem,
-      user: specUserPrompt
+      user: specUserPrompt,
+      model: policy.specBuilder.model,
+      provider: policy.specBuilder.provider
     });
+    
+    // Track token usage for spec builder
+    if (specUsage) {
+      totalInputTokens += specUsage.prompt_tokens || 0;
+      totalOutputTokens += specUsage.completion_tokens || 0;
+    }
+    
+    // Token Hardening: Track spec builder call
+    pipelineMetrics.calls_total.spec_builder = 1;
+    
     const specData = rawSpecData || {};
     console.log(`[pipeline] [${runId}] Stage 1: Spec Builder completed, extracted ${Object.keys(specData).length} fields`);
 
@@ -266,7 +379,10 @@ ${idea}${attachmentContext}`;
     // ============================================
     // Stage 2: Question Engine (Q1-Q3 Loop)
     // ============================================
-    if (!skipQuestions) {
+    // Check policy enablement AND user skip preference
+    const shouldRunQuestions = !skipQuestions && policy.questionEngine.enabled;
+    
+    if (shouldRunQuestions) {
       sendEvent(runId, "stage-start", {
         stage: "question",
         message: "Starting Question Engine (Q1-Q3)...",
@@ -294,8 +410,17 @@ CRITICAL: Question must be specific and valuable. If too generic, append "> need
       let shouldStop = false;
       let finalCompletenessScore = 0.0;
 
-      // Q1-Q3 Loop: Ask up to 3 questions sequentially
-      while (currentStep < 3 && !shouldStop) {
+      // Token Hardening: Use policy.max_rounds instead of hardcoded 3
+      // Feature Flag: QE_STRICT_MAX_ROUNDS (default: true, can disable via env)
+      const useStrictQERounds = process.env.QE_STRICT_MAX_ROUNDS !== 'false';
+      const maxQERounds = useStrictQERounds 
+        ? (policy.questionEngine?.max_rounds ?? 3)  // Use policy config (Standard=2, Premium=3)
+        : 3; // Fallback to 3 if feature flag disabled (old behavior)
+      
+      console.log(`[pipeline] [${runId}] QE Loop: max_rounds=${maxQERounds} (from policy: ${policy.questionEngine?.max_rounds ?? 'not set'}, feature flag: ${useStrictQERounds})`);
+
+      // Q1-Q3 Loop: Ask questions sequentially (up to max_rounds)
+      while (currentStep < maxQERounds && !shouldStop) {
         checkTimeout(); // Check timeout before each question
         
         currentStep++;
@@ -320,10 +445,23 @@ CRITICAL: Question must be specific and valuable. If too generic, append "> need
 
         // Generate next question
         console.log(`[pipeline] [${runId}] Stage 2: Generating Q${currentStep}...`);
-        const { data: qData } = await chatJson({
+        const { data: qData, usage: qUsage } = await chatJson({
           system: questionSystem,
-          user: `Generate Q${currentStep} for:\n${qaContext}`
+          user: `Generate Q${currentStep} for:\n${qaContext}`,
+          model: policy.questionEngine.model,
+          provider: policy.questionEngine.provider
         });
+        
+        // Track token usage for question engine
+        if (qUsage) {
+          totalInputTokens += qUsage.prompt_tokens || 0;
+          totalOutputTokens += qUsage.completion_tokens || 0;
+        }
+        
+        // Token Hardening: Track QE call
+        pipelineMetrics.calls_total.question_engine++;
+        pipelineMetrics.qe_rounds = currentStep;
+        
         console.log(`[pipeline] [${runId}] Stage 2: Q${currentStep} generated, shouldStop: ${qData?.shouldStop || false}`);
 
         if (!qData || qData.shouldStop) {
@@ -457,61 +595,93 @@ CRITICAL: If output lacks safety improvements, append "> needs more change" to s
     const baseContext = `Specification:
 ${JSON.stringify(specData, null, 2)}`;
 
+    // Serial execution to guarantee stability
+    console.log(`[pipeline] [${runId}] Stage 3: Generating candidates with ${agents.length} agents sequentially...`);
+    const failures = [];
+
     for (let i = 0; i < agents.length; i++) {
       const agent = agents[i];
-      
-      checkTimeout(); // Check timeout before each agent
-      
-      sendEvent(runId, "stage-progress", {
-        stage: "agents",
-        step: `generating-${agent.name}`,
-        message: `Generating candidate with ${agent.name} agent...`,
-        details: { agent: agent.name, progress: `${i + 1}/${agents.length}` }
-      });
+      try {
+        checkTimeout();
 
-      console.log(`[pipeline] [${runId}] Stage 3: Generating candidate with ${agent.name} agent...`);
-      // Enable similarity check with retry (lowered threshold for better change detection)
-      const { text: content, similarity } = await chatText({
-        system: agent.systemPrompt,
-        user: `Generate optimized prompt. The output MUST be substantially different from the spec. Transform and enhance it:\n\n${baseContext}`,
-        minSimilarity: 0.75,  // Retry if similarity >= 0.75 (lowered from 0.85)
-        maxRetries: 2  // Increased from 1 to 2 retries
-      });
-      
-      // Log similarity for debugging
-      console.log(`[pipeline] [${runId}] Stage 3: ${agent.name} completed - similarity: ${similarity.toFixed(3)}, length: ${content.length}`);
-      if (similarity > 0.7) {
-        console.warn(`[pipeline] [${runId}] ⚠️ ${agent.name} output similarity is high: ${similarity.toFixed(3)}`);
+        sendEvent(runId, "stage-progress", {
+          stage: "agents",
+          step: `generating-${agent.name}`,
+          message: `Generating candidate with ${agent.name} agent...`,
+          details: { agent: agent.name, progress: `${i + 1}/${agents.length}` }
+        });
+
+        console.log(`[pipeline] [${runId}] Stage 3: Generating candidate with ${agent.name} agent...`);
+        // Enable similarity check with retry (lowered threshold for better change detection)
+        const { text: contentRaw, similarity, usage: agentUsage } = await chatText({
+          system: agent.systemPrompt,
+          user: `Generate optimized prompt. The output MUST be substantially different from the spec. Transform and enhance it:\n\n${baseContext}`,
+          model: policy.generation.model, // Pass the policy model
+          provider: policy.generation.provider, // Pass the policy provider
+          minSimilarity: 0.75,
+          maxRetries: 2
+        });
+        
+        // Track token usage for agent generation
+        if (agentUsage) {
+          totalInputTokens += agentUsage.prompt_tokens || 0;
+          totalOutputTokens += agentUsage.completion_tokens || 0;
+        }
+        
+        // Token Hardening: Track generation call
+        pipelineMetrics.calls_total.generation++;
+        // Note: similarity retries are tracked in chatText/openaiClient (will add later if needed)
+
+        const content = stripThinkBlocks(contentRaw);
+
+        // Log similarity for debugging
+        console.log(`[pipeline] [${runId}] Stage 3: ${agent.name} completed - similarity: ${similarity.toFixed(3)}, length: ${content.length}`);
+        if (similarity > 0.7) {
+          console.warn(`[pipeline] [${runId}] ⚠️ ${agent.name} output similarity is high: ${similarity.toFixed(3)}`);
+        }
+
+        const candidateId = `candidate_${nanoid(12)}`;
+
+        db.prepare(`
+          INSERT INTO candidate_prompts (id, spec_id, session_id, agent, model, content, created_at)
+          VALUES (?, ?, ?, ?, ?, ?, ?)
+        `).run(
+          candidateId,
+          specId,
+          sessionId,
+          agent.name,
+          policy.generation.model, // Log correct model from policy
+          content,
+          now
+        );
+
+        sendEvent(runId, "stage-progress", {
+          stage: "agents",
+          step: `completed-${agent.name}`,
+          message: `${agent.name} agent completed`,
+          details: { candidateId, agent: agent.name, contentLength: content.length }
+        });
+
+        candidateIds.push(candidateId);
+        
+        // Small delay between agents to ensure system stability
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+      } catch (err) {
+        console.error(`[pipeline] [${runId}] Agent ${agent.name} failed:`, err);
+        failures.push({ agent: agent.name, error: err.message });
+        // Continue to next agent even if one fails
       }
+    }
 
-      const candidateId = `candidate_${nanoid(12)}`;
-      candidateIds.push(candidateId);
-
-      db.prepare(`
-        INSERT INTO candidate_prompts (id, spec_id, session_id, agent, model, content, created_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
-      `).run(
-        candidateId,
-        specId,
-        sessionId,
-        agent.name,
-        model || "gpt-4o-mini",
-        content,
-        now
-      );
-
-      sendEvent(runId, "stage-progress", {
-        stage: "agents",
-        step: `completed-${agent.name}`,
-        message: `${agent.name} agent completed`,
-        details: { candidateId, agent: agent.name, contentLength: content.length }
-      });
+    if (candidateIds.length === 0) {
+      throw new Error(`All ${agents.length} agents failed to generate candidates. Check logs for details.`);
     }
 
     sendEvent(runId, "stage-complete", {
       stage: "agents",
-      message: `Generated ${candidateIds.length} candidate prompts`,
-      result: { candidateIds, count: candidateIds.length }
+      message: `Generated ${candidateIds.length} candidate prompts (${failures.length} failed)`,
+      result: { candidateIds, count: candidateIds.length, failures: failures.length }
     });
 
     // ============================================
@@ -519,26 +689,42 @@ ${JSON.stringify(specData, null, 2)}`;
     // ============================================
     sendEvent(runId, "stage-start", {
       stage: "metrics",
-      message: "Starting Metrics & Scoring...",
+      message: "Starting Metrics & Scoring in parallel...",
       timestamp: new Date().toISOString()
     });
 
-    for (let i = 0; i < candidateIds.length; i++) {
-      const candidateId = candidateIds[i];
-      
-      checkTimeout(); // Check timeout before each scoring
-      
-      sendEvent(runId, "stage-progress", {
-        stage: "metrics",
-        step: `scoring-${candidateId}`,
-        message: `Scoring candidate ${i + 1}/${candidateIds.length}...`,
-        details: { candidateId, progress: `${i + 1}/${candidateIds.length}` }
-      });
+    const scoringPromises = candidateIds.map(async (candidateId, i) => {
+      try {
+        checkTimeout();
+        
+        sendEvent(runId, "stage-progress", {
+          stage: "metrics",
+          step: `scoring-${candidateId}`,
+          message: `Scoring candidate ${i + 1}/${candidateIds.length}...`,
+          details: { candidateId, progress: `${i + 1}/${candidateIds.length}` }
+        });
 
-      const candidate = db.prepare("SELECT * FROM candidate_prompts WHERE id = ?").get(candidateId);
-      
-      // Enhanced: Metrics evaluator prompt with detailed criteria
-      const metricsSystem = `Evaluate the candidate prompt and provide scores (0-1 scale).
+        const candidate = db.prepare("SELECT * FROM candidate_prompts WHERE id = ?").get(candidateId);
+        
+        // Token Hardening: Spec minification for scoring (feature flag controlled)
+        const useSpecMinify = process.env.SCORING_SPEC_MINIFY === 'true';
+        let scoringSpec;
+        if (useSpecMinify) {
+          // Only include fields needed for scoring evaluation
+          scoringSpec = {
+            userGoal: specData.userGoal,
+            tone: specData.tone,
+            format: specData.format,
+            audience: specData.audience
+            // Omit: examples, constraints (details), domain (if not needed for scoring)
+          };
+          console.log(`[pipeline] [${runId}] Scoring spec minified: ${JSON.stringify(specData).length} -> ${JSON.stringify(scoringSpec).length} chars`);
+        } else {
+          scoringSpec = specData;
+        }
+        
+        // Enhanced: Metrics evaluator prompt with detailed criteria
+        const metricsSystem = `Evaluate the candidate prompt and provide scores (0-1 scale).
 
 SCORING CRITERIA:
 - clarity: How clear and understandable is the prompt? (0-1)
@@ -552,47 +738,66 @@ OUTPUT FORMAT (JSON only):
 
 Provide honest, objective scores based on the criteria.`;
 
-      const { data: metricsData } = await chatJson({
-        system: metricsSystem,
-        user: `Evaluate this candidate prompt:\n\n${candidate.content}\n\nSpec:\n${JSON.stringify(specData, null, 2)}`
-      });
+        const { data: metricsData, usage: metricsUsage } = await chatJson({
+          system: metricsSystem,
+          user: `Evaluate this candidate prompt:\n\n${candidate.content}\n\nSpec:\n${JSON.stringify(scoringSpec, null, 2)}`,
+          model: policy.scoring.model,
+          provider: policy.scoring.provider,
+          temperature: policy.scoring.temperature
+        });
+        
+        // Track token usage for metrics evaluation
+        if (metricsUsage) {
+          totalInputTokens += metricsUsage.prompt_tokens || 0;
+          totalOutputTokens += metricsUsage.completion_tokens || 0;
+        }
+        
+        // Token Hardening: Track scoring call
+        pipelineMetrics.calls_total.scoring++;
+        pipelineMetrics.score_calls++;
 
-      // Estimate token cost (simplified)
-      const tokenCost = Math.ceil(candidate.content.length / 4);
-      const normalizedToken = Math.min(1, 1000 / tokenCost);
-      
-      const compositeScore = (
-        metricsData.clarity +
-        metricsData.coherence +
-        metricsData.styleMatch +
-        metricsData.safety +
-        (1 - metricsData.risk) +
-        normalizedToken
-      ) / 6;
+        // Estimate token cost (simplified)
+        const tokenCost = Math.ceil(candidate.content.length / 4);
+        const normalizedToken = Math.min(1, 1000 / tokenCost);
+        
+        const compositeScore = (
+          metricsData.clarity +
+          metricsData.coherence +
+          metricsData.styleMatch +
+          metricsData.safety +
+          (1 - metricsData.risk) +
+          normalizedToken
+        ) / 6;
 
-      const metricsJson = JSON.stringify({
-        ...metricsData,
-        tokenCost,
-        compositeScore
-      });
+        const metricsJson = JSON.stringify({
+          ...metricsData,
+          tokenCost,
+          compositeScore
+        });
 
-      db.prepare(`
-        UPDATE candidate_prompts
-        SET metrics_json = ?
-        WHERE id = ?
-      `).run(metricsJson, candidateId);
+        db.prepare(`
+          UPDATE candidate_prompts
+          SET metrics_json = ?
+          WHERE id = ?
+        `).run(metricsJson, candidateId);
 
-      sendEvent(runId, "stage-progress", {
-        stage: "metrics",
-        step: `scored-${candidateId}`,
-        message: `Candidate ${i + 1} scored`,
-        details: { candidateId, compositeScore: compositeScore.toFixed(3), metrics: metricsData }
-      });
-    }
+        sendEvent(runId, "stage-progress", {
+          stage: "metrics",
+          step: `scored-${candidateId}`,
+          message: `Candidate ${i + 1} scored`,
+          details: { candidateId, compositeScore: compositeScore.toFixed(3), metrics: metricsData }
+        });
+      } catch (err) {
+        console.error(`[pipeline] [${runId}] Failed to score candidate ${candidateId}:`, err);
+        // Don't throw, just let this candidate be unscored (will be filtered out in selection)
+      }
+    });
+
+    await Promise.all(scoringPromises);
 
     sendEvent(runId, "stage-complete", {
       stage: "metrics",
-      message: `Scored ${candidateIds.length} candidates`,
+      message: `Scoring completed`,
       result: { candidateIds, count: candidateIds.length }
     });
 
@@ -637,7 +842,32 @@ Provide honest, objective scores based on the criteria.`;
         return scoreB - scoreA;
       });
 
-    const bestCandidate = sortedCandidates[0];
+    const bestCandidate = sortedCandidates[0] || (candidates.length > 0 ? {
+      ...candidates[0],
+      metrics: {
+        compositeScore: 0.1, // Low score to indicate fallback
+        clarity: 0.5,
+        coherence: 0.5,
+        styleMatch: 0.5,
+        safety: 0.5,
+        risk: 0.5,
+        tokenCost: 0
+      }
+    } : null);
+
+    if (!bestCandidate) {
+      throw new Error("No candidates available for selection (all agents failed or no output generated).");
+    }
+
+    // Optional: Add Fast Mode specific flags
+    if (mode === 'fast') {
+      bestCandidate.metrics = {
+        ...bestCandidate.metrics,
+        assumptions_used: true,
+        confidence: "low"
+      };
+    }
+
     const outcomeId = `outcome_${nanoid(12)}`;
 
     // Store outcome in outcome_runs table (matching actual schema)
@@ -649,7 +879,7 @@ Provide honest, objective scores based on the criteria.`;
       specId,
       idea.substring(0, 500), // Use first 500 chars of idea as task
       candidateIds.length,
-      model || "gpt-4o-mini",
+      policy.outcomeRunner.model || "sorting-only", // No LLM call, only sorting by composite score
       "completed",
       bestCandidate.id,
       JSON.stringify({
@@ -732,7 +962,56 @@ Provide honest, objective scores based on the criteria.`;
       contributions.unshift(0);
     }
     
-    // Final completion event with historical data
+    // ============================================
+    // Token Usage Tracking and Spending
+    // ============================================
+    let tokenUsageResult = null;
+    if (FEATURES.trackTokenUsage && totalInputTokens + totalOutputTokens > 0) {
+      console.log(`[pipeline] [${runId}] Recording token usage: input=${totalInputTokens}, output=${totalOutputTokens}`);
+      
+      try {
+        tokenUsageResult = spendTokensForRun({
+          userId,
+          runId,
+          inputTokens: totalInputTokens,
+          outputTokens: totalOutputTokens,
+          options: {
+            isPremium: mode === 'premium',
+            isPipeline: true,
+          },
+        });
+        
+        console.log(`[pipeline] [${runId}] Token spend result: success=${tokenUsageResult.success}, credits=${tokenUsageResult.creditsSpent}`);
+      } catch (tokenErr) {
+        console.error(`[pipeline] [${runId}] Failed to record token usage:`, tokenErr);
+      }
+    }
+    
+    // ============================================
+    // Token Hardening: Pipeline Metrics Summary
+    // ============================================
+    pipelineMetrics.calls_total.outcome_runner = 0; // No LLM call
+    const metricsSummary = {
+      runId,
+      mode,
+      calls_total: pipelineMetrics.calls_total,
+      retries_total: pipelineMetrics.retries_total,
+      qe_rounds: pipelineMetrics.qe_rounds,
+      generation_retries: pipelineMetrics.generation_retries,
+      score_calls: pipelineMetrics.score_calls,
+      tokens_estimated: {
+        input: totalInputTokens,
+        output: totalOutputTokens,
+        total: totalInputTokens + totalOutputTokens
+      },
+      feature_flags: {
+        QE_STRICT_MAX_ROUNDS: process.env.QE_STRICT_MAX_ROUNDS !== 'false',
+        SCORING_SPEC_MINIFY: process.env.SCORING_SPEC_MINIFY === 'true'
+      }
+    };
+    console.log(`[pipeline] [${runId}] 🔍 Token Hardening Metrics Summary:`, JSON.stringify(metricsSummary, null, 2));
+    
+    // Final completion event with historical data and token usage
     sendEvent(runId, "complete", {
       success: true,
       specId,
@@ -746,8 +1025,20 @@ Provide honest, objective scores based on the criteria.`;
           history: history,           // Historical progress values
           contributions: contributions // Change contributions per run
         }
-      }
+      },
+      tokenUsage: tokenUsageResult ? {
+        inputTokens: totalInputTokens,
+        outputTokens: totalOutputTokens,
+        totalTokens: totalInputTokens + totalOutputTokens,
+        creditsSpent: tokenUsageResult.creditsSpent,
+        creditsRemaining: tokenUsageResult.balances?.total || null,
+      } : null
     });
+    
+    // 🔥 Record usage after successful pipeline completion
+    console.log(`[pipeline] [${runId}] Recording usage for user ${userId}`);
+    recordUsage(userId, 'prompt_optimization');
+    console.log(`[pipeline] [${runId}] Usage recorded successfully`);
 
   } catch (err) {
     console.error(`[pipeline] ❌ Error in pipeline execution for ${runId}:`, err);
@@ -773,6 +1064,17 @@ Provide honest, objective scores based on the criteria.`;
     
     // Clean up stream connection
     activeStreams.delete(runId);
+  } finally {
+    // 3. Ensure Cleanup
+    if (pingInterval) clearInterval(pingInterval);
+    
+    // Close the stream gracefully if it's still open
+    const stream = activeStreams.get(runId);
+    if (stream) {
+      console.log(`[pipeline] [${runId}] Closing stream connection.`);
+      stream.end();
+      activeStreams.delete(runId);
+    }
   }
 }
 

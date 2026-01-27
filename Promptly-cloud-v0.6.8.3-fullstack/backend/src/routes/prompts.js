@@ -14,7 +14,7 @@ import { Router } from "express";
 import { nanoid } from "nanoid";
 import { z } from "zod";
 import { db, ensureUser } from "../lib/db.js";
-import { chatText, chatJson, LlmDisabledError } from "../lib/openaiClient.js";
+import { chatText, chatJson, LlmDisabledError } from "../lib/llmRouter.js";
 import { getModelConfig, resolveModelName, isValidModel } from "../lib/modelRegistry.js";
 
 export const promptsRouter = Router();
@@ -62,8 +62,9 @@ promptsRouter.post("/generate-candidates", async (req, res) => {
     const resolvedModel = model && isValidModel(model) ? model : 'promptly-mini';
     const modelConfig = getModelConfig(resolvedModel);
     const usedModel = resolveModelName(resolvedModel);
+    const provider = modelConfig?.provider || 'openai';
 
-    console.log(`[promptly] Using model: ${resolvedModel} -> ${usedModel}`);
+    console.log(`[promptly] Using model: ${resolvedModel} -> ${usedModel} (${provider})`);
 
     // Load Q&A history if sessionId provided
     let qaHistory = "";
@@ -143,10 +144,12 @@ Output: Enhanced prompt text only. If output mirrors input, append "> needs more
         // Concise user prompt - key instruction right before the content
         // Enable similarity check with retry (default: similarity >= 0.85 triggers retry)
         const { text: content, completionId, similarity } = await chatText({
+          provider,
           system: agent.systemPrompt,
           user: `Transform this spec into a complete prompt. Output MUST differ significantly:
 
 ${baseContext}`,
+          model: usedModel,
           minSimilarity: 0.85,  // Retry if similarity >= 0.85
           maxRetries: 1
         });
@@ -277,7 +280,8 @@ Please evaluate this candidate prompt and return the scores as JSON.`;
       try {
         const { data: scores } = await chatJson({
           system: systemPrompt,
-          user: userPrompt
+          user: userPrompt,
+          provider: 'openai' // STRICT CONTRACT: Explicitly set provider
         });
 
         const clarity = Math.max(0, Math.min(1, scores.clarity || 0.5));

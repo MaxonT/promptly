@@ -8,11 +8,15 @@ import {
   generateRawSpec
 } from "../lib/llmAgents.js";
 import { compileSpecToPrompt } from "../lib/specCompiler.js";
-import { chatJson, LlmDisabledError } from "../lib/openaiClient.js";
+import { chatJson, LlmDisabledError } from "../lib/llmRouter.js";
 import { goBack, skipQuestion } from "../lib/questionNavigator.js";
-import { getModelIds, resolveModelName, isValidModel } from "../lib/modelRegistry.js";
+import { getModelIds, resolveModelName, isValidModel, getModelConfig } from "../lib/modelRegistry.js";
+import { INFERENCE_PROFILES } from "../lib/inferenceProfiles.js";
+import { checkQuestionWizardLimit, recordUsage, canUseMode } from "../lib/planLimits.js";
+import { optionalAuth } from "./auth.js";
 
 export const questionSessionRouter = Router();
+questionSessionRouter.use(optionalAuth);
 
 const PROJECT_DESCRIPTION_REQUIRED_MESSAGE = "Project description is required.";
 
@@ -143,18 +147,20 @@ function resolveModeProfile(mode) {
  * @returns {{id: string, targetModel: string}} - Resolved model ID and target OpenAI model
  */
 function resolveModelChoice(modelId) {
-  const fallback = process.env.OPENAI_MODEL || "gpt-4o-mini";
+  const fallback = process.env.OPENAI_MODEL;
   // Use model registry to validate and resolve model
   const selected = isValidModel(modelId) ? modelId : "promptly";
-  const targetModel = resolveModelName(selected) || fallback;
+  const targetModel = resolveModelName(selected) || fallback || null;
+  const config = getModelConfig(selected);
+  const provider = config?.provider || 'openai';
   
   // Log model resolution for debugging
   if (selected !== modelId) {
     console.log(`[promptly] Model ${modelId} not found, using default: ${selected}`);
   }
-  console.log(`[promptly] Resolved model: ${selected} -> ${targetModel}`);
+  console.log(`[promptly] Resolved model: ${selected} -> ${targetModel} (${provider})`);
   
-  return { id: selected, targetModel };
+  return { id: selected, targetModel, provider };
 }
 
 function resolveAndPersistModel(sessionId, sessionModel, incomingModel) {
@@ -162,6 +168,18 @@ function resolveAndPersistModel(sessionId, sessionModel, incomingModel) {
   if (sessionId && resolved.id !== sessionModel) {
     db.prepare("UPDATE question_sessions SET model = ?, updated_at = ? WHERE id = ?").run(
       resolved.id,
+      new Date().toISOString(),
+      sessionId
+    );
+  }
+  return resolved;
+}
+
+function resolveAndPersistLanguage(sessionId, sessionLanguage, incomingLanguage) {
+  const resolved = incomingLanguage || sessionLanguage || 'en';
+  if (sessionId && resolved !== sessionLanguage) {
+    db.prepare("UPDATE question_sessions SET language = ?, updated_at = ? WHERE id = ?").run(
+      resolved,
       new Date().toISOString(),
       sessionId
     );
@@ -187,6 +205,19 @@ async function runWithTimeout(promise, timeoutMs, label = "task") {
 }
 
 questionSessionRouter.post("/", async (req, res) => {
+  const userId = getUserId(req);
+  
+  // Check plan limits for Question Wizard
+  const limitCheck = checkQuestionWizardLimit(userId);
+  if (!limitCheck.allowed) {
+    return res.status(403).json({
+      ok: false,
+      error: limitCheck.reason,
+      usage: limitCheck.usage,
+      limit: limitCheck.limit
+    });
+  }
+  
   const parsed = CreateSessionSchema.safeParse(req.body);
   if (!parsed.success) {
     const hasDescriptionIssue = parsed.error.issues.some(
@@ -199,11 +230,20 @@ questionSessionRouter.post("/", async (req, res) => {
     }
     return res.status(400).json({ ok: false, error: parsed.error.flatten() });
   }
-  const { initial_description, kind, mode, model, language } = parsed.data;
+  
+  // Extract data
+  const { initial_description, kind, mode = 'deep', model, language } = parsed.data;
+  
+  // Check mode restrictions for free plan
+  if (!canUseMode(userId, mode)) {
+    return res.status(403).json({
+      ok: false,
+      error: 'Free plan only supports Standard and Fast modes. Please upgrade to use Deep or Ultra Thinking modes.'
+    });
+  }
   const modeProfile = resolveModeProfile(mode);
   const modelChoice = resolveModelChoice(model);
   const userLanguage = language || 'en';
-  const userId = getUserId(req);
   
   console.log(`[promptly] Creating session with language: ${userLanguage}`);
   
@@ -215,9 +255,20 @@ questionSessionRouter.post("/", async (req, res) => {
 
   db.prepare(
     `INSERT INTO question_sessions
-     (id, owner_id, initial_description, kind, mode, model, status, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
-  ).run(sessionId, userId, initial_description, kind || null, modeProfile.id, modelChoice.id, "active", now, now);
+     (id, owner_id, initial_description, kind, mode, model, language, status, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+  ).run(
+    sessionId,
+    userId,
+    initial_description,
+    kind || null,
+    modeProfile.id,
+    modelChoice.id,
+    userLanguage,
+    "active",
+    now,
+    now
+  );
 
   try {
     const broadQuestions = await runWithTimeout(
@@ -226,6 +277,7 @@ questionSessionRouter.post("/", async (req, res) => {
         kind: kind || null,
         modeProfile,
         model: modelChoice.targetModel,
+        provider: modelChoice.provider,
         language: userLanguage
       }),
       modeProfile.timeoutMs,
@@ -238,6 +290,7 @@ questionSessionRouter.post("/", async (req, res) => {
         broadQuestions,
         modeProfile,
         model: modelChoice.targetModel,
+        provider: modelChoice.provider,
         language: userLanguage
       }),
       modeProfile.timeoutMs,
@@ -271,6 +324,9 @@ questionSessionRouter.post("/", async (req, res) => {
       q.id = qid;
     });
 
+    // Record usage after successful session creation
+    recordUsage(userId, 'question_wizard');
+    
     // Return all generated questions (not just first 5)
     // Frontend will handle client-side pagination
     const allGeneratedQuestions = choiceQuestions.map((q) => ({
@@ -288,6 +344,7 @@ questionSessionRouter.post("/", async (req, res) => {
       session_id: sessionId,
       mode: modeProfile.id,
       model: modelChoice.id,
+      language: userLanguage,
       mode_profile: modeProfile,
       questions: allGeneratedQuestions
     });
@@ -334,7 +391,7 @@ questionSessionRouter.get("/status/active", (req, res) => {
   if (requestedSessionId) {
     session = db
       .prepare(
-        `SELECT id, owner_id, kind, status, mode, model, created_at, updated_at
+        `SELECT id, owner_id, kind, status, mode, model, language, created_at, updated_at
          FROM question_sessions
          WHERE id = ?`
       )
@@ -348,7 +405,7 @@ questionSessionRouter.get("/status/active", (req, res) => {
   if (!session) {
     session = db
       .prepare(
-        `SELECT id, owner_id, kind, status, mode, model, created_at, updated_at
+        `SELECT id, owner_id, kind, status, mode, model, language, created_at, updated_at
          FROM question_sessions
          WHERE owner_id = ?
          ORDER BY updated_at DESC
@@ -376,6 +433,7 @@ questionSessionRouter.get("/status/active", (req, res) => {
       status: session.status,
       mode: session.mode || "deep",
       model: session.model || "promptly",
+      language: session.language || 'en',
       kind: session.kind || null,
       created_at: session.created_at,
       updated_at: session.updated_at
@@ -391,7 +449,7 @@ questionSessionRouter.get("/:sessionId", (req, res) => {
   const { sessionId } = req.params;
   const session = db
     .prepare(
-      `SELECT id, owner_id, kind, status, initial_description, mode, model, created_at, updated_at
+      `SELECT id, owner_id, kind, status, initial_description, mode, model, language, created_at, updated_at
        FROM question_sessions
        WHERE id = ?`
     )
@@ -411,6 +469,7 @@ questionSessionRouter.get("/:sessionId", (req, res) => {
       mode_profile: resolveModeProfile(session.mode),
       kind: session.kind,
       status: session.status,
+      language: session.language || 'en',
       initial_description: session.initial_description,
       initialDescription: session.initial_description,
       created_at: session.created_at,
@@ -425,7 +484,7 @@ questionSessionRouter.get("/:sessionId/state", (req, res) => {
 
   const session = db
     .prepare(
-      `SELECT id, owner_id, kind, status, initial_description, mode, model, created_at, updated_at
+      `SELECT id, owner_id, kind, status, initial_description, mode, model, language, created_at, updated_at
        FROM question_sessions
        WHERE id = ?`
     )
@@ -466,6 +525,7 @@ questionSessionRouter.get("/:sessionId/state", (req, res) => {
       mode: session.mode || "deep",
       model: session.model || "promptly",
       kind: session.kind || null,
+      language: session.language || 'en',
       initial_description: session.initial_description || "",
       created_at: session.created_at,
       updated_at: session.updated_at
@@ -506,6 +566,7 @@ questionSessionRouter.post("/:sessionId/answer", (req, res) => {
 
   const { answers, control } = parsed.data;
   resolveAndPersistModel(sessionId, session.model, parsed.data.model);
+  resolveAndPersistLanguage(sessionId, session.language, parsed.data.language);
   
   // Handle control actions (back/skip)
   if (control === "back") {
@@ -613,9 +674,10 @@ questionSessionRouter.post("/:sessionId/finalize", async (req, res) => {
   }
 
   const modelChoice = resolveAndPersistModel(sessionId, session.model, parsedModel.data.model);
-  const userLanguage = parsedModel.data.language || session.language || 'en';
-  
-  console.log(`[promptly] Finalizing session ${sessionId} with language: ${userLanguage}`);
+  const finalUserLanguage = resolveAndPersistLanguage(sessionId, session.language, parsedModel.data.language);
+
+
+  console.log(`[promptly] Finalizing session ${sessionId} with language: ${finalUserLanguage}`);
 
   const questions = db
     .prepare(
@@ -656,7 +718,8 @@ questionSessionRouter.post("/:sessionId/finalize", async (req, res) => {
       qaPairs,
       modeProfile,
       model: modelChoice.targetModel,
-      language: userLanguage
+      provider: modelChoice.provider,
+      language: finalUserLanguage
     });
 
     const compiled = compileSpecToPrompt(result.spec);
@@ -739,7 +802,7 @@ questionSessionRouter.post("/:sessionId/finalize", async (req, res) => {
     if (err instanceof LlmDisabledError || err.code === "LLM_DISABLED") {
       return res.status(503).json({ ok: false, error: "LLM disabled" });
     }
-    return res.status(502).json({ ok: false, error: "Question engine failed" });
+    return res.status(502).json({ ok: false, error: `Question engine failed: ${err.message || "Unknown error"}` });
   }
 });
 
@@ -836,6 +899,7 @@ questionSessionRouter.post("/:sessionId/questions/:questionId/regenerate", async
   }
 
   const modelChoice = resolveAndPersistModel(sessionId, session.model, parsedModel.data.model);
+  const userLanguage = resolveAndPersistLanguage(sessionId, session.language, parsedModel.data.language);
 
   const oldQuestion = db
     .prepare("SELECT * FROM question_questions WHERE id = ? AND session_id = ?")
@@ -846,16 +910,26 @@ questionSessionRouter.post("/:sessionId/questions/:questionId/regenerate", async
 
   try {
     // Use LLM to generate a new variation of this question
+    // REGENERATION STRATEGY: Use the same inference profile as the session mode
+    // For regeneration, we re-run Agent A (broad) and Agent B (choice) to get context
+    // Ideally we should have a specialized regeneration agent, but for now we reuse A/B
+    const modeProfile = resolveModeProfile(session.mode);
+    const inferenceProfile = INFERENCE_PROFILES[modeProfile.id] || INFERENCE_PROFILES.fast;
+
     const broadQuestions = await generateBroadQuestions({
       initialDescription: session.initial_description,
       kind: session.kind || null,
-      model: modelChoice.targetModel
+      model: modelChoice.targetModel,
+      inferenceConfig: inferenceProfile.stages.agentA,
+      language: userLanguage
     });
     const choiceQuestions = await generateChoiceQuestions({
       initialDescription: session.initial_description,
       kind: session.kind || null,
       broadQuestions,
-      model: modelChoice.targetModel
+      model: modelChoice.targetModel,
+      inferenceConfig: inferenceProfile.stages.agentB,
+      language: userLanguage
     });
 
     // Pick a new question that's similar in type
@@ -1191,6 +1265,7 @@ Based on this specification and Q&A history, generate the next clarifying questi
 
     // 6. Call LLM to generate next question
     const { data: llmResponse } = await chatJson({
+      provider: 'openai',
       system: systemPrompt,
       user: userPrompt
     });

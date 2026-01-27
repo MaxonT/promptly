@@ -7,7 +7,11 @@
     "account": "账户",
     "questionWizard": "问题向导",
     "system": "系统",
-    "tryIt": "开始向导"
+    "tryIt": "开始向导",
+    "home": "首页",
+    "subscription": "订阅",
+    "specs": "规格",
+    "wizard": "向导"
   },
   "language": {
     "label": "语言",
@@ -110,7 +114,9 @@
   "run_btn": "生成优化后的提示",
   "footer": {
     "rights": "无追踪；仅在同意后保存偏好。",
-    "contact": "支持"
+    "contact": "支持",
+    "terms": "条款",
+    "privacy": "隐私"
   },
   "kpi_accuracy": "准确率",
   "kpi_f1": "F1",
@@ -222,7 +228,8 @@
     "success": "成功",
     "connectionFailed": "连接失败。",
     "connectionFailedDesc": "请检查您的网络连接并重试。如果问题仍然存在，请在设置中验证您的 API 密钥。",
-    "retry": "重试"
+    "retry": "重试",
+    "loading": "加载中..."
   },
   "layer1": {
     "badge": "第 1 层 · 魔法模式",
@@ -307,5 +314,64 @@
   "examples": {
     "title": "在实际工作流中看 Promptly",
     "subtitle": "将混乱的业务需求转化为可执行的提示词规格、测试和报告。"
+  },
+  "subscription": {
+    "title": "选择您的计划",
+    "subtitle": "释放 AI 驱动的提示词工程的完整力量",
+    "current_status": "当前状态：",
+    "tokens_remaining": "剩余 Token：",
+    "trial_title": "开始您的 14 天免费试用",
+    "trial_description": "无需信用卡。获得所有功能的完整访问权限，包含 200K 基础 Token + 20K 每日 Token。",
+    "start_trial": "开始免费试用",
+    "monthly": "月度",
+    "yearly": "年度",
+    "save_badge": "节省 22%",
+    "per_month": "/月",
+    "per_year": "/年",
+    "equivalent_to": "相当于",
+    "plan_free": "免费",
+    "plan_monthly": "月度",
+    "plan_yearly": "年度",
+    "feature_full_access": "所有功能的完整访问权限",
+    "feature_monthly_tokens": "每月 1M Token",
+    "feature_yearly_tokens": "每年 12M Token",
+    "feature_daily_tokens": "每日 50K 免费 Token",
+    "feature_priority_support": "优先支持",
+    "feature_cancel_anytime": "随时取消",
+    "feature_save": "每年节省 $24",
+    "feature_free_optimization": "提示词优化 8 次/天",
+    "feature_free_optimization_mode": "仅限标准/快速模式",
+    "feature_free_wizard": "问题向导 5 次/天",
+    "subscribe": "订阅",
+    "current_plan": "当前计划",
+    "best_value": "最超值",
+    "token_title": "了解 Token 积分",
+    "token_what_title": "什么是 Token？",
+    "token_what_desc": "Token 是 AI 模型用于处理文本的单位。每个单词通常使用 1-4 个 Token。您的使用量基于输入和输出 Token 进行计量。",
+    "token_usage_title": "透明计费",
+    "token_usage_desc": "每次运行后，您将看到详细明细：输入 Token、输出 Token、使用的总 Token 数以及您的剩余余额。无隐藏费用。",
+    "token_daily_title": "每日刷新",
+    "token_daily_desc": "获得每日免费 Token，在 UTC 午夜刷新。这些 Token 会在您的月度分配之前优先使用，最大化您的价值。",
+    "faq_title": "常见问题",
+    "faq_cancel_q": "我可以随时取消吗？",
+    "faq_cancel_a": "可以！您可以随时取消订阅。您的访问权限将持续到当前计费周期结束。",
+    "faq_trial_q": "试用期结束后会怎样？",
+    "faq_trial_a": "在您的 14 天试用期结束后，您可以订阅以继续使用 Promptly。未使用的 Token 将过期，但您不会被自动收费。",
+    "faq_rollover_q": "未使用的 Token 会结转吗？",
+    "faq_rollover_a": "月度 Token 不会结转到下一个周期。每日免费 Token 最多可累积 2 天的量（最多 40K）。",
+    "faq_payment_q": "您接受哪些支付方式？",
+    "faq_payment_a": "我们通过 Stripe 安全支付平台接受所有主要信用卡。我们从不存储您的卡片详情。",
+    "auth_required": "需要登录",
+    "auth_message": "请登录或创建账户以继续订阅。",
+    "step_auth": "登录",
+    "step_checkout": "结账",
+    "step_confirm": "确认",
+    "sign_in": "登录",
+    "create_account": "创建账户",
+    "email": "邮箱",
+    "password": "密码",
+    "confirm_password": "确认密码",
+    "manage": "管理",
+    "already_free_plan": "您已经在使用免费计划"
   }
 }

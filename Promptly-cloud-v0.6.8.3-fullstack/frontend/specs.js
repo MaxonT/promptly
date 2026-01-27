@@ -219,7 +219,7 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
     window.addEventListener('i18nReady', () => {
       log(t("specs.logLoaded") || "Specs Manager loaded. Fetching specs ...");
     });
-  log("Specs Manager loaded. Fetching specs ...");
   }
+  log("Specs Manager loaded. Fetching specs ...");
   loadSpecs();
 })();

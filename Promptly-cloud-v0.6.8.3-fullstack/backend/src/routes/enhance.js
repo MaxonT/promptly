@@ -83,9 +83,16 @@
  */
 
 import express from "express";
-import { chatJson, chatText, LlmDisabledError } from "../lib/openaiClient.js";
+import { chatJson, chatText, LlmDisabledError } from "../lib/llmRouter.js";
+import { checkPromptOptimizationLimit, recordUsage } from "../lib/planLimits.js";
 
 const enhanceRouter = express.Router();
+
+// Helper to get user ID from request
+function getUserId(req) {
+  if (req.user && req.user.sub) return req.user.sub;
+  return "demo-user";
+}
 
 /**
  * ATTACHMENT FEATURE - Helper Functions
@@ -269,6 +276,18 @@ enhanceRouter.post("/structure", async (req, res) => {
   try {
     console.log(`[promptly] 📝 /enhance/structure: Request received`);
     
+    // Check plan limits
+    const userId = getUserId(req);
+    const limitCheck = checkPromptOptimizationLimit(userId, 'standard'); // Structure enhancement uses standard mode
+    if (!limitCheck.allowed) {
+      return res.status(403).json({
+        ok: false,
+        error: limitCheck.reason,
+        usage: limitCheck.usage,
+        limit: limitCheck.limit
+      });
+    }
+    
     // 1) Input Layer: 结构化输入 - 收集原始 prompt 和附件
     const { prompt, attachments = [] } = req.body;
     const safeAttachments = coerceAttachments(attachments);
@@ -293,23 +312,39 @@ enhanceRouter.post("/structure", async (req, res) => {
 
     console.log(`[promptly] Full prompt length (with attachments): ${fullPrompt.length} chars`);
 
-    // Optimized: Concise system prompt to reduce token usage
-    const system = `Restructure prompt with clear sections, headings, and formatting.
+    // Optimized: Ultra-concise system prompt for Structured Prompt Card (Token Efficient)
+    const system = `Rewrite input into a plain-text Structured Prompt Card. NO MARKDOWN.
+Required Format:
 
-CRITICAL: Output MUST differ from input. Add structure, headings (#, ##), bullet points, and explicit instructions.
+[ SYSTEM PROMPT ]
+────────────────
+<concise instructions>
 
-Output: Enhanced prompt only. If unchanged, append "> needs more change".`;
+[ USER PROMPT ]
+────────────────
+<user content>
+
+[ CONSTRAINTS ]
+────────────────
+• <constraint 1>
+
+[ OUTPUT FORMAT ]
+────────────────
+<format specs>`;
 
     console.log(`[promptly] 🔄 About to call LLM (chatText) for structure enhancement...`);
 
-    // 4) Test Layer: 稳定性验证 - LLM 调用，温度为默认低随机度配置（在 openaiClient.js 中配置为 0.2）
-    // 4) Test Layer: 格式自检 - chatText 确保返回纯文本，避免 JSON 解析错误
-    // Enable similarity check with retry (default: similarity >= 0.85 triggers retry)
+    // 4) Test Layer: 稳定性验证 - LLM 调用
+    // Optimization: Use temp 0.5 to encourage divergence in the first shot, reducing the need for retries.
+    // We KEEP the retry mechanism (maxRetries: 1) as a safety net, but it should trigger less often.
     const { text: enhanced, model: modelUsed, completionId, similarity } = await chatText({ 
+      provider: 'openai',
       system, 
       user: fullPrompt,
-      minSimilarity: 0.85,  // Retry if similarity >= 0.85
-      maxRetries: 1
+      provider: 'openai', // STRICT CONTRACT: Explicitly set provider
+      temperature: 0.5,     // Increased from default 0.2 to reduce retry probability
+      minSimilarity: 0.85,  // Keep quality check
+      maxRetries: 1         // Keep safety net
     });
     
     console.log(`[promptly] ✅ Received enhanced prompt from LLM, length: ${enhanced?.length || 0} chars`);
@@ -317,6 +352,9 @@ Output: Enhanced prompt only. If unchanged, append "> needs more change".`;
     // 4) Test Layer: 行为校验 - 记录模型使用情况
     logModelUsage("/enhance/structure", modelUsed, completionId);
 
+    // Record usage after successful enhancement
+    recordUsage(userId, 'prompt_optimization');
+    
     // 6) Outcome Layer: 结果交付 - 最终输出只包含增强后的 prompt 及处理的附件数量
     res.json({
       ok: true,
@@ -341,6 +379,18 @@ Output: Enhanced prompt only. If unchanged, append "> needs more change".`;
  */
 enhanceRouter.post("/style", async (req, res) => {
   try {
+    // Check plan limits
+    const userId = getUserId(req);
+    const limitCheck = checkPromptOptimizationLimit(userId, 'standard');
+    if (!limitCheck.allowed) {
+      return res.status(403).json({
+        ok: false,
+        error: limitCheck.reason,
+        usage: limitCheck.usage,
+        limit: limitCheck.limit
+      });
+    }
+    
     const { prompt, attachments = [] } = req.body;
     const safeAttachments = coerceAttachments(attachments);
 
@@ -361,16 +411,22 @@ enhanceRouter.post("/style", async (req, res) => {
 
 CRITICAL: Output MUST differ from input. Refine language, sentence structure, and flow.
 
-Output: Enhanced prompt only. If unchanged, append "> needs more change".`;
+Output: Enhanced prompt only.`;
 
-    // Enable similarity check with retry (default: similarity >= 0.85 triggers retry)
+    // Optimization: Use temp 0.5 to encourage divergence in the first shot
     const { text: enhanced, model: modelUsed, completionId, similarity } = await chatText({ 
+      provider: 'openai',
       system, 
       user: fullPrompt,
-      minSimilarity: 0.85,  // Retry if similarity >= 0.85
+      provider: 'openai', // STRICT CONTRACT: Explicitly set provider
+      temperature: 0.5,     // Increased from default 0.2
+      minSimilarity: 0.85,
       maxRetries: 1
     });
     logModelUsage("/enhance/style", modelUsed, completionId);
+    
+    // Record usage after successful enhancement
+    recordUsage(userId, 'prompt_optimization');
 
     res.json({
       ok: true,
@@ -391,6 +447,18 @@ Output: Enhanced prompt only. If unchanged, append "> needs more change".`;
  */
 enhanceRouter.post("/simplify", async (req, res) => {
   try {
+    // Check plan limits
+    const userId = getUserId(req);
+    const limitCheck = checkPromptOptimizationLimit(userId, 'standard');
+    if (!limitCheck.allowed) {
+      return res.status(403).json({
+        ok: false,
+        error: limitCheck.reason,
+        usage: limitCheck.usage,
+        limit: limitCheck.limit
+      });
+    }
+    
     const { prompt, attachments = [] } = req.body;
     const safeAttachments = coerceAttachments(attachments);
 
@@ -411,16 +479,22 @@ enhanceRouter.post("/simplify", async (req, res) => {
 
 CRITICAL: Output MUST differ from input. Remove complexity, use plain language, active voice.
 
-Output: Simplified prompt only. If unchanged, append "> needs more change".`;
+Output: Simplified prompt only.`;
 
-    // Enable similarity check with retry (default: similarity >= 0.85 triggers retry)
+    // Optimization: Use temp 0.5 to encourage divergence in the first shot
     const { text: enhanced, model: modelUsed, completionId, similarity } = await chatText({ 
+      provider: 'openai',
       system, 
       user: fullPrompt,
-      minSimilarity: 0.85,  // Retry if similarity >= 0.85
+      provider: 'openai', // STRICT CONTRACT: Explicitly set provider
+      temperature: 0.5,     // Increased from default 0.2
+      minSimilarity: 0.85,
       maxRetries: 1
     });
     logModelUsage("/enhance/simplify", modelUsed, completionId);
+    
+    // Record usage after successful enhancement
+    recordUsage(userId, 'prompt_optimization');
 
     res.json({
       ok: true,
@@ -476,7 +550,11 @@ Return ONLY a JSON object in this exact format:
   ]
 }`;
 
-    const { data: result, model: modelUsed, completionId } = await chatJson({ system, user: fullPrompt });
+    const { data: result, model: modelUsed, completionId } = await chatJson({ 
+      system, 
+      user: fullPrompt,
+      provider: 'openai' // STRICT CONTRACT: Explicitly set provider
+    });
     logModelUsage("/enhance/score", modelUsed, completionId);
 
     res.json({
@@ -532,7 +610,11 @@ Return ONLY a JSON object in this exact format:
 
 If no issues found, return {"issues": []}`;
 
-    const { data: result, model: modelUsed, completionId } = await chatJson({ system, user: fullPrompt });
+    const { data: result, model: modelUsed, completionId } = await chatJson({ 
+      system, 
+      user: fullPrompt,
+      provider: 'openai' // STRICT CONTRACT: Explicitly set provider
+    });
     logModelUsage("/enhance/validate", modelUsed, completionId);
 
     res.json({

@@ -5,10 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Promptly Wizard — Question Engine Demo</title>
   <link rel="icon" href="assets/promptly-icon.svg" type="image/svg+xml"/>
+  <link rel="stylesheet" href="theme.css" />
   <link rel="stylesheet" href="style.css" />
   <link rel="stylesheet" href="wizard.css" />
   <script src="config.js"></script>
   <script src="core.js"></script>
+  <script src="lib/particles.js"></script>
   <script src="lib/i18next.min.js"></script>
   <script type="module" src="i18n/index.js"></script>
   <style>
@@ -19,19 +21,31 @@
       left: 0;
       right: 0;
       z-index: 2000;
-      background: rgba(15, 23, 42, 0.95);
+      background: var(--surface);
       backdrop-filter: blur(12px);
-      border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+      border-bottom: 1px solid var(--border-light);
       padding: 0.75rem 1.5rem;
       display: flex;
       justify-content: space-between;
       align-items: center;
       gap: 1rem;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      box-shadow: var(--shadow-sm);
     }
     html[data-theme="light"] .global-topbar {
       background: rgba(255, 255, 255, 0.95);
       border-bottom-color: rgba(203, 213, 225, 0.5);
+    }
+    html[data-theme="light"] .global-topbar .brand {
+      color: var(--text-secondary);
+    }
+    html[data-theme="light"] .global-topbar .navlinks a {
+      color: var(--muted);
+    }
+    html[data-theme="light"] .global-topbar .navlinks a:hover {
+      color: var(--brand-b, #06B6D4);
+    }
+    html[data-theme="light"] .global-topbar .navlinks a.active {
+      color: var(--brand-a, #7C3AED);
     }
     .global-topbar .brand {
       display: flex;
@@ -110,6 +124,8 @@
     </a>
     <nav class="navlinks">
       <a href="index.html" data-i18n="nav.dashboard">← Dashboard</a>
+      <a href="subscription.html" data-i18n="nav.subscription">Subscription</a>
+      <a href="account.html" data-i18n="nav.my_account">My Account</a>
       <a href="privacy.html" data-i18n="nav.privacy">Privacy</a>
       <a href="cookies.html" data-i18n="nav.cookies">Cookies</a>
       <a href="terms.html" data-i18n="nav.terms">Terms</a>
@@ -176,21 +192,23 @@
         <p class="wizard-mode-desc" data-i18n="wizard.modeFastDesc">Quick response, minimal reasoning</p>
         <span class="wizard-mode-time" data-time="fast">🕐 10–60s</span>
       </div>
-      <div class="wizard-mode-option" data-mode="deep" tabindex="0">
+      <div class="wizard-mode-option" data-mode="deep" tabindex="0" data-requires-premium="true">
         <div class="wizard-mode-option-header">
           <span class="wizard-mode-label" data-i18n="wizard.modeDeep">Deep Thinking</span>
           <span class="wizard-mode-tier">S</span>
         </div>
         <p class="wizard-mode-desc" data-i18n="wizard.modeDeepDesc">Balanced depth and speed</p>
         <span class="wizard-mode-time" data-time="deep">🕐 30–120s</span>
+        <span class="wizard-mode-premium-badge">💎 Premium</span>
       </div>
-      <div class="wizard-mode-option" data-mode="ultra" tabindex="0">
+      <div class="wizard-mode-option" data-mode="ultra" tabindex="0" data-requires-premium="true">
         <div class="wizard-mode-option-header">
           <span class="wizard-mode-label" data-i18n="wizard.modeUltra">Ultra Thinking</span>
           <span class="wizard-mode-tier">S+</span>
         </div>
         <p class="wizard-mode-desc" data-i18n="wizard.modeUltraDesc">Maximum depth, slowest response</p>
         <span class="wizard-mode-time" data-time="ultra">🕐 90–180s</span>
+        <span class="wizard-mode-premium-badge">💎 Premium</span>
       </div>
     </section>
   </div>
@@ -213,7 +231,7 @@
       </p>
       <label class="wizard-label">
         <span data-i18n="wizard.projectIdea">Project idea</span>
-        <textarea id="ideaInput" rows="4" aria-describedby="ideaHint" data-i18n="[placeholder]wizard.projectIdeaPlaceholder"></textarea>
+        <textarea id="ideaInput" rows="4" aria-describedby="ideaHint"></textarea>
       </label>
       <p id="ideaHint" class="wizard-inline-hint" data-i18n="wizard.projectIdeaHint">Minimum 10 characters. The Start button will enable automatically once this requirement is met.</p>
       <label class="wizard-label">
@@ -239,17 +257,17 @@
           The engine will ask 3–5 questions at a time. Your answers will be stored in the backend and
           used to assemble a high-level spec.
         </p>
-        <div class="wizard-user-guidance" style="margin-top: 1rem; padding: 1rem; background: rgba(124, 58, 237, 0.1); border-radius: 8px; border-left: 3px solid #7C3AED;">
-          <p style="margin: 0 0 0.5rem 0; font-weight: 600; color: var(--text-high, #E7EAF0);" data-i18n="wizard.answerTipsTitle">💡 Answering Tips:</p>
-          <ul style="margin: 0; padding-left: 1.5rem; color: var(--text-med, #A0A8B5); font-size: 0.9rem; line-height: 1.6;">
+        <div class="wizard-user-guidance">
+          <p data-i18n="wizard.answerTipsTitle">💡 Answering Tips:</p>
+          <ul>
             <li data-i18n="[html]wizard.answerTip1">You <strong>do NOT need to answer all questions</strong> — answering at least one is okay</li>
             <li data-i18n="wizard.answerTip2">The more questions you answer, the more accurate and tailored your final prompt will be</li>
             <li data-i18n="[html]wizard.answerTip3">Your answers are <strong>automatically saved</strong> as you type — no need to click Save</li>
             <li data-i18n="wizard.answerTip4">You can skip questions or go back to previous pages anytime</li>
           </ul>
         </div>
-        <div class="wizard-timing-info" id="wizardTimingInfo" style="margin-top: 0.75rem; padding: 0.75rem; background: rgba(6, 182, 212, 0.1); border-radius: 8px; border-left: 3px solid #06B6D4; display: none;">
-          <p style="margin: 0; font-size: 0.85rem; color: var(--text-med, #A0A8B5);">
+        <div class="wizard-timing-info" id="wizardTimingInfo">
+          <p>
             <strong>Expected processing time:</strong> <span id="wizardTimingText"></span>
           </p>
         </div>
@@ -413,7 +431,7 @@
   <!-- Global Footer (consistent with dashboard) -->
   <footer class="global-footer">
     <p>
-      © Promptly v0.6.5 · No trackers. Preferences saved only after consent. · 
+      © Promptly v0.6.8.3 · No trackers. Preferences saved only after consent. · 
       <a href="privacy.html">Privacy</a> · 
       <a href="cookies.html">Cookies</a> · 
       <a href="terms.html">Terms</a> · 

@@ -2,7 +2,7 @@ import { Router } from "express";
 import { nanoid } from "nanoid";
 import { z } from "zod";
 import { db } from "../lib/db.js";
-import { chatJson, LlmDisabledError } from "../lib/openaiClient.js";
+import { chatJson, LlmDisabledError } from "../lib/llmRouter.js";
 import { buildEvaluationMetrics } from "../lib/metricsEngine.js";
 import { isValidModel, getModelConfig, MODEL_REGISTRY } from "../lib/modelRegistry.js";
 
@@ -133,10 +133,13 @@ outcomeRunsRouter.post("/", async (req, res) => {
   const outcomeRunId = `outcome_run_${nanoid(12)}`;
 
   // Validate and resolve model
-  const resolvedModel = model && isValidModel(model) ? model : 'promptly-mini';
+  const resolvedModel = model && isValidModel(model) ? model : 'fast';
   const modelConfig = getModelConfig(resolvedModel);
   
-  console.log(`[outcomeRunner] Using model: ${resolvedModel} -> ${modelConfig?.model || 'gpt-4o-mini'}`);
+  const targetModel = modelConfig?.model || process.env.OPENAI_MODEL;
+  const targetProvider = modelConfig?.provider || (process.env.GROQ_API_KEY ? 'groq' : null);
+
+  console.log(`[outcomeRunner] Using model: ${resolvedModel} -> ${targetModel} (${targetProvider})`);
   if (model && !isValidModel(model)) {
     console.log(`[outcomeRunner] Warning: Invalid model "${model}", using default "${resolvedModel}"`);
   }
@@ -259,10 +262,11 @@ outcomeRunsRouter.post("/", async (req, res) => {
       .join("\n");
 
     const { data, usage } = await chatJson({
+      provider: targetProvider,
       system: systemPrompt,
       user: userPrompt,
-      model: resolvedModel,
-      promptlyModelId: model || resolvedModel
+      model: targetModel,
+      promptlyModelId: resolvedModel
     });
 
     llmUsage = usage || null;

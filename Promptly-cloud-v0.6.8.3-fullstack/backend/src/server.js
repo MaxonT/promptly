@@ -2,9 +2,10 @@ import express from "express";
 import cors from "cors";
 import helmet from "helmet";
 import cookieParser from "cookie-parser";
+import rateLimit from "express-rate-limit";
 import dotenv from "dotenv";
 import { db } from "./lib/db.js";
-import { getResolvedDefaultModel, isLlmEnabled } from "./lib/openaiClient.js";
+import { getResolvedDefaultModel, isLlmEnabled } from "./lib/llmRouter.js";
 import { authRouter } from "./routes/auth.js";
 import { docRouter } from "./routes/doc.js";
 import { shareRouter } from "./routes/share.js";
@@ -15,15 +16,62 @@ import { outcomeRunsRouter } from "./routes/outcomeRuns.js";
 import { enhanceRouter } from "./routes/enhance.js";
 import { promptsRouter } from "./routes/prompts.js";
 import { pipelineRouter } from "./routes/pipeline.js";
+import { billingRouter, stripeWebhookRouter } from "./routes/billing.js";
+import { analyticsRouter } from "./routes/analytics.js";
+import { oauthRouter } from "./routes/oauth.js";
+import { dailyRefreshJob } from "./lib/dailyRefreshJob.js";
+import dailyCompensationJob from "./lib/dailyCompensationJob.js";
+import { FEATURES } from "./lib/subscriptionConfig.js";
+import { maintenanceMode, getMaintenanceStatus } from "./middleware/maintenance.js";
 
 dotenv.config();
 const app = express();
 
+// Trust proxy when running behind Render/Heroku reverse proxy
+// This is needed to get correct client IP from X-Forwarded-For header
+if (process.env.NODE_ENV === 'production') {
+  app.set('trust proxy', true);
+}
+
 const CORS_ORIGIN = process.env.CORS_ORIGIN || "*";
 app.use(cors({ origin: CORS_ORIGIN, credentials: true }));
 app.use(helmet());
+
+// Stripe webhook needs raw body for signature verification
+// Must be before express.json() middleware
+app.use("/api/stripe/webhook", express.raw({ type: "application/json" }));
+app.use("/api/stripe", stripeWebhookRouter);
+
 app.use(express.json({ limit: "2mb" }));
 app.use(cookieParser());
+
+// Rate limiting for API endpoints (防止暴力攻击和滥用)
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 分钟
+  max: 200, // 每个 IP 最多 200 个请求
+  message: { ok: false, error: "Too many requests, please try again later." },
+  standardHeaders: true, // 返回 RateLimit-* headers
+  legacyHeaders: false, // 禁用 X-RateLimit-* headers
+  skip: (req) => {
+    // 健康检查和 webhook 不限制
+    return req.path === '/api/health' || req.path.startsWith('/api/stripe/webhook');
+  }
+});
+
+// 更严格的限制用于认证端点 (防止暴力破解)
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 分钟
+  max: 10, // 每个 IP 最多 10 次认证尝试
+  message: { ok: false, error: "Too many authentication attempts, please try again later." },
+  standardHeaders: true,
+  legacyHeaders: false,
+  skipSuccessfulRequests: true // 成功的请求不计数
+});
+
+// 应用 rate limiting
+app.use('/api/auth/login', authLimiter);
+app.use('/api/auth/register', authLimiter);
+app.use('/api/', apiLimiter);
 
 // Request logging middleware for debugging
 app.use((req, res, next) => {
@@ -38,9 +86,23 @@ app.use((req, res, next) => {
   next();
 });
 
+// Maintenance mode middleware (optional - can be enabled via env var)
+// This will return 503 for all requests except whitelisted paths
+// Enable by setting: MAINTENANCE_MODE=true in environment variables
+app.use(maintenanceMode);
+
+// Maintenance status endpoint (always accessible)
+app.get("/api/maintenance/status", getMaintenanceStatus);
+
 // basic health check
 app.get("/api/health", (req, res) => {
-  res.json({ ok: true, status: "healthy", time: new Date().toISOString() });
+  const maintenanceMode = process.env.MAINTENANCE_MODE === 'true';
+  res.json({ 
+    ok: !maintenanceMode, 
+    status: maintenanceMode ? "maintenance" : "healthy", 
+    time: new Date().toISOString(),
+    maintenance: maintenanceMode
+  });
 });
 
 // settings endpoint used by settings.html
@@ -98,6 +160,16 @@ console.log(`[promptly]   ✓ /api/enhance`);
 app.use("/api/prompts", promptsRouter);
 console.log(`[promptly]   ✓ /api/prompts`);
 
+app.use("/api/billing", billingRouter);
+console.log(`[promptly]   ✓ /api/billing`);
+console.log(`[promptly]   ✓ /api/stripe/webhook`);
+
+app.use("/api/analytics", analyticsRouter);
+console.log(`[promptly]   ✓ /api/analytics`);
+
+app.use("/api/auth/oauth", oauthRouter);
+console.log(`[promptly]   ✓ /api/auth/oauth`);
+
 app.use("/api/pipeline", pipelineRouter);
 console.log(`[promptly]   ✓ /api/pipeline (health, run, stream)`);
 
@@ -106,13 +178,30 @@ console.log(`[promptly] 📋 Pipeline routes:`);
 console.log(`[promptly]    GET  /api/pipeline/health`);
 console.log(`[promptly]    POST /api/pipeline/run`);
 console.log(`[promptly]    GET  /api/pipeline/stream/:runId`);
+console.log(`[promptly] 💳 Billing routes:`);
+console.log(`[promptly]    GET  /api/billing/plans`);
+console.log(`[promptly]    GET  /api/billing/status`);
+console.log(`[promptly]    POST /api/billing/checkout-session`);
+console.log(`[promptly]    POST /api/billing/portal-session`);
+console.log(`[promptly]    POST /api/billing/start-trial`);
+console.log(`[promptly]    POST /api/stripe/webhook`);
+
+// Start daily refresh scheduler if subscriptions are enabled
+if (FEATURES.subscriptionsEnabled) {
+  dailyRefreshJob.startScheduler();
+  console.log(`[promptly] 🔄 Daily token refresh scheduler started`);
+  
+  // Start daily compensation job (runs at 2:00 AM)
+  dailyCompensationJob.scheduleDailyJob("02:00");
+  console.log(`[promptly] 🔧 Daily compensation job scheduled`);
+}
 
 // Root path handler - useful for checking if backend is alive
 app.get("/", (req, res) => {
   res.json({
     ok: true,
     service: "Promptly Backend API",
-    version: "0.6.8.3",
+    version: "0.6.9.0",
     status: "running",
     timestamp: new Date().toISOString(),
     environment: process.env.NODE_ENV || "production",
@@ -131,6 +220,14 @@ app.get("/", (req, res) => {
         health: "/api/pipeline/health",
         run: "POST /api/pipeline/run",
         stream: "GET /api/pipeline/stream/:runId"
+      },
+      billing: {
+        plans: "GET /api/billing/plans",
+        status: "GET /api/billing/status",
+        checkoutSession: "POST /api/billing/checkout-session",
+        portalSession: "POST /api/billing/portal-session",
+        startTrial: "POST /api/billing/start-trial",
+        webhook: "POST /api/stripe/webhook"
       },
       specs: "/api/specs",
       questionSessions: "/api/question-sessions",

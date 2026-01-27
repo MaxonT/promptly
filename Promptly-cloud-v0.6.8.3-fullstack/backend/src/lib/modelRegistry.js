@@ -2,7 +2,7 @@
  * Model Registry - Centralized Model Configuration
  * 
  * Provides a single source of truth for all model configurations.
- * Maps frontend model names to actual OpenAI model identifiers.
+ * Maps frontend model names to provider model identifiers (OpenAI-compatible).
  * 
  * Features:
  * - Full metadata for each model (tier, category, cost, speed)
@@ -38,6 +38,7 @@ export const MODEL_CATEGORIES = {
  */
 export const MODEL_PROVIDERS = {
   OPENAI: 'openai',
+  GROQ: 'groq',
   ANTHROPIC: 'anthropic' // Future support
 };
 
@@ -45,47 +46,16 @@ export const MODEL_PROVIDERS = {
  * Complete model registry with all configurations
  */
 export const MODEL_REGISTRY = {
-  'promptly-mini': {
-    id: 'promptly-mini',
-    provider: MODEL_PROVIDERS.OPENAI,
-    model: 'gpt-4o-mini',
-    _futureModel: 'gpt-4o-mini',
-    tier: MODEL_TIERS.MINI,
-    category: MODEL_CATEGORIES.GENERAL,
-    label: 'Promptly Mini',
-    description: 'Fast and efficient for simple tasks',
-    costMultiplier: 1,
-    speedMultiplier: 1.5,
-    maxTokens: 4096,
-    supportsJson: true,
-    systemPromptSuffix: null
-  },
-
-  'promptly-v0-mini': {
-    id: 'promptly-v0-mini',
-    provider: MODEL_PROVIDERS.OPENAI,
-    model: 'gpt-4o-mini',
-    _futureModel: 'gpt-4o-mini',
-    tier: MODEL_TIERS.MINI,
-    category: MODEL_CATEGORIES.GENERAL,
-    label: 'Promptly v0 mini',
-    description: 'Fast and efficient for simple tasks',
-    costMultiplier: 1,
-    speedMultiplier: 1.5,
-    maxTokens: 4096,
-    supportsJson: true,
-    systemPromptSuffix: null
-  },
-
+  // --- Default Alias (Points to standard) ---
   'promptly': {
-    id: 'promptly',
-    provider: MODEL_PROVIDERS.OPENAI,
-    model: 'gpt-4o',
-    _futureModel: 'gpt-4o',
+    id: 'standard',
+    provider: MODEL_PROVIDERS.GROQ,
+    model: 'llama-3.3-70b-versatile',
+    _futureModel: 'llama-3.3-70b-versatile',
     tier: MODEL_TIERS.STANDARD,
     category: MODEL_CATEGORIES.GENERAL,
-    label: 'Promptly',
-    description: 'Balanced performance for most tasks',
+    label: 'Standard',
+    description: 'Balanced quality & depth',
     costMultiplier: 3,
     speedMultiplier: 1,
     maxTokens: 8192,
@@ -93,164 +63,52 @@ export const MODEL_REGISTRY = {
     systemPromptSuffix: null
   },
 
-  'promptly-v0': {
-    id: 'promptly-v0',
-    provider: MODEL_PROVIDERS.OPENAI,
-    model: 'gpt-4o',
-    _futureModel: 'gpt-4o',
-    tier: MODEL_TIERS.STANDARD,
-    category: MODEL_CATEGORIES.GENERAL,
-    label: 'Promptly v0',
-    description: 'Balanced performance for most tasks',
-    costMultiplier: 3,
-    speedMultiplier: 1,
-    maxTokens: 8192,
-    supportsJson: true,
-    systemPromptSuffix: null
-  },
-
-  'promptly-v0-max': {
-    id: 'promptly-v0-max',
-    provider: MODEL_PROVIDERS.OPENAI,
-    model: 'o1-mini',
-    _futureModel: 'o1-mini',
-    tier: MODEL_TIERS.PRO_MAX,
-    category: MODEL_CATEGORIES.GENERAL,
-    label: 'Promptly v0 Max',
-    description: 'Advanced reasoning for complex tasks',
-    costMultiplier: 5,
-    speedMultiplier: 0.7,
-    maxTokens: 65536,
-    supportsJson: false,
-    systemPromptSuffix: null
-  },
-
-  'promptly-plus': {
-    id: 'promptly-plus',
-    provider: MODEL_PROVIDERS.OPENAI,
-    model: 'gpt-4o',
-    _futureModel: 'gpt-4-turbo',
-    tier: MODEL_TIERS.PLUS,
-    category: MODEL_CATEGORIES.GENERAL,
-    label: 'Promptly Plus',
-    description: 'Enhanced reasoning and creativity',
-    costMultiplier: 5,
-    speedMultiplier: 0.8,
-    maxTokens: 8192,
-    supportsJson: true,
-    systemPromptSuffix: null
-  },
-
-  'promptly-pro': {
-    id: 'promptly-pro',
-    provider: MODEL_PROVIDERS.OPENAI,
-    model: 'gpt-4o',
-    _futureModel: 'gpt-4-turbo',
-    tier: MODEL_TIERS.PRO,
-    category: MODEL_CATEGORIES.GENERAL,
-    label: 'Promptly Pro',
-    description: 'Advanced capabilities for complex tasks',
-    costMultiplier: 8,
-    speedMultiplier: 0.7,
-    maxTokens: 16384,
-    supportsJson: true,
-    systemPromptSuffix: null
-  },
-
-  'promptly-pro-max': {
-    id: 'promptly-pro-max',
-    provider: MODEL_PROVIDERS.OPENAI,
-    model: 'gpt-4o',
-    _futureModel: 'gpt-4-turbo',
-    tier: MODEL_TIERS.PRO_MAX,
-    category: MODEL_CATEGORIES.GENERAL,
-    label: 'Promptly Pro Max',
-    description: 'Maximum capability for the most demanding tasks',
-    costMultiplier: 10,
-    speedMultiplier: 0.6,
-    maxTokens: 32768,
-    supportsJson: true,
-    systemPromptSuffix: null
-  },
-
-  'promptly-code-mini': {
-    id: 'promptly-code-mini',
-    provider: MODEL_PROVIDERS.OPENAI,
-    model: 'gpt-4o-mini',
-    _futureModel: 'gpt-4o-mini',
+  // --- Optimization Modes ---
+  'fast': {
+    id: 'fast',
+    provider: MODEL_PROVIDERS.GROQ,
+    model: 'llama-3.1-8b-instant',
+    _futureModel: 'llama-3.1-8b-instant',
     tier: MODEL_TIERS.MINI,
-    category: MODEL_CATEGORIES.CODE,
-    label: 'Promptly Code Mini',
-    description: 'Quick code assistance and snippets',
+    category: MODEL_CATEGORIES.GENERAL,
+    label: 'Fast',
+    description: 'Quick, low-cost, instant results',
     costMultiplier: 1,
     speedMultiplier: 1.5,
     maxTokens: 4096,
     supportsJson: true,
-    systemPromptSuffix: 'You are an expert code-focused AI assistant. Prioritize code quality, best practices, and clear explanations.'
+    systemPromptSuffix: null
   },
 
-  'promptly-code': {
-    id: 'promptly-code',
-    provider: MODEL_PROVIDERS.OPENAI,
-    model: 'gpt-4o-mini',
-    _futureModel: 'gpt-4o',
+  'standard': {
+    id: 'standard',
+    provider: MODEL_PROVIDERS.GROQ,
+    model: 'llama-3.3-70b-versatile',
+    _futureModel: 'llama-3.3-70b-versatile',
     tier: MODEL_TIERS.STANDARD,
-    category: MODEL_CATEGORIES.CODE,
-    label: 'Promptly Code',
-    description: 'Reliable code generation and review',
-    costMultiplier: 2,
-    speedMultiplier: 1.2,
+    category: MODEL_CATEGORIES.GENERAL,
+    label: 'Standard',
+    description: 'Balanced quality & depth',
+    costMultiplier: 3,
+    speedMultiplier: 1,
     maxTokens: 8192,
     supportsJson: true,
-    systemPromptSuffix: 'You are an expert code-focused AI assistant. Prioritize code quality, best practices, and clear explanations.'
+    systemPromptSuffix: null
   },
-
-  'promptly-code-plus': {
-    id: 'promptly-code-plus',
+  'premium': {
+    id: 'premium',
     provider: MODEL_PROVIDERS.OPENAI,
     model: 'gpt-4o',
-    _futureModel: 'gpt-4-turbo',
-    tier: MODEL_TIERS.PLUS,
-    category: MODEL_CATEGORIES.CODE,
-    label: 'Promptly Code Plus',
-    description: 'Enhanced code understanding and architecture',
-    costMultiplier: 5,
-    speedMultiplier: 0.9,
-    maxTokens: 16384,
-    supportsJson: true,
-    systemPromptSuffix: 'You are an expert code-focused AI assistant. Prioritize code quality, best practices, architecture patterns, and maintainability.'
-  },
-
-  'promptly-code-pro': {
-    id: 'promptly-code-pro',
-    provider: MODEL_PROVIDERS.OPENAI,
-    model: 'gpt-4o',
-    _futureModel: 'gpt-4-turbo',
-    tier: MODEL_TIERS.PRO,
-    category: MODEL_CATEGORIES.CODE,
-    label: 'Promptly Code Pro',
-    description: 'Professional-grade code assistance',
-    costMultiplier: 8,
-    speedMultiplier: 0.7,
-    maxTokens: 32768,
-    supportsJson: true,
-    systemPromptSuffix: 'You are an expert senior software engineer AI assistant. Prioritize production-ready code, security, performance, and comprehensive documentation.'
-  },
-
-  'promptly-code-pro-max': {
-    id: 'promptly-code-pro-max',
-    provider: MODEL_PROVIDERS.OPENAI,
-    model: 'gpt-4o',
-    _futureModel: 'gpt-4-turbo',
+    _futureModel: 'gpt-4o',
     tier: MODEL_TIERS.PRO_MAX,
-    category: MODEL_CATEGORIES.CODE,
-    label: 'Promptly Code Pro Max',
-    description: 'Ultimate code generation for enterprise applications',
-    costMultiplier: 10,
-    speedMultiplier: 0.6,
-    maxTokens: 32768,
+    category: MODEL_CATEGORIES.GENERAL,
+    label: 'Premium',
+    description: 'Maximum quality, slower, best result',
+    costMultiplier: 5,
+    speedMultiplier: 0.7,
+    maxTokens: 8192,
     supportsJson: true,
-    systemPromptSuffix: 'You are an expert principal engineer AI assistant. Prioritize enterprise-grade code, scalability, security, comprehensive testing, and architectural excellence.'
+    systemPromptSuffix: null
   }
 };
 
@@ -279,7 +137,7 @@ export function getModelConfig(modelId) {
 export function resolveModelName(modelId) {
   const config = MODEL_REGISTRY[modelId];
   if (!config) {
-    return process.env.OPENAI_MODEL || 'gpt-4o-mini';
+    return process.env.OPENAI_MODEL || null;
   }
   return config.model;
 }

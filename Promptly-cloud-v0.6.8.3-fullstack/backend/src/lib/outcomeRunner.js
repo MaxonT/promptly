@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { nanoid } from "nanoid";
 import { db } from "./db.js";
-import { chatJson, LlmDisabledError } from "./openaiClient.js";
+import { chatJson, LlmDisabledError } from "./llmRouter.js";
 import { createRun, completeRunSuccess, completeRunFailure } from "./runLogger.js";
 import { buildOutcomeMetrics, buildRunMetrics } from "./metricsEngine.js";
 
@@ -159,8 +159,7 @@ export async function runOutcomeCheck({ runId, outcomeSpecId, modelOverride }) {
   // 3. Determine model to use
   const model = modelOverride 
     || process.env.OUTCOME_MODEL 
-    || process.env.OPENAI_MODEL 
-    || "gpt-4o-mini";
+    || process.env.OPENAI_MODEL;
 
   // 4. Create a run log for this outcome check
   const judgeRunId = createRun({

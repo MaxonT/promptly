@@ -179,7 +179,7 @@ class I18nManager {
       } catch (e) {
         console.error('[i18n] Re-initialization failed', e);
         alert("语言系统初始化失败。请刷新页面。\nLanguage system failed to initialize. Please refresh the page.");
-        return;
+      return;
       }
     }
 
@@ -220,8 +220,17 @@ class I18nManager {
     let failed = 0;
 
     document.querySelectorAll('[data-i18n]').forEach(el => {
-      const key = el.dataset.i18n;
+      let key = el.dataset.i18n;
       if (!key) return;
+
+      let mode = 'text'; // default
+      if (key.startsWith('[placeholder]')) {
+        mode = 'placeholder';
+        key = key.substring(13);
+      } else if (key.startsWith('[html]')) {
+        mode = 'html';
+        key = key.substring(6);
+      }
 
       const translation = this.instance.t(key);
       
@@ -232,12 +241,21 @@ class I18nManager {
         return;
       }
 
-      if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') {
-        el.placeholder = translation;
-      } else if (el.tagName === 'OPTION') {
-        el.textContent = translation;
+      if (mode === 'placeholder') {
+        el.setAttribute('placeholder', translation);
+        if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') {
+            el.placeholder = translation;
+        }
+      } else if (mode === 'html') {
+        el.innerHTML = translation;
       } else {
-        el.textContent = translation;
+        if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') {
+          el.placeholder = translation;
+        } else if (el.tagName === 'OPTION') {
+          el.textContent = translation;
+        } else {
+          el.textContent = translation;
+        }
       }
       translated++;
     });

@@ -91,37 +91,33 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
       id: "fast",
       label: "Fast",
       hierarchy: "A+",
-      description: "Quick response, minimal reasoning"
+      description: "Quick response, minimal reasoning",
+      requiresPremium: false
     },
     deep: {
       id: "deep",
       label: "Deep Thinking",
       hierarchy: "S",
-      description: "Balanced depth and speed"
+      description: "Balanced depth and speed",
+      requiresPremium: true
     },
     ultra: {
       id: "ultra",
       label: "Ultra Thinking",
       hierarchy: "S+",
-      description: "Maximum depth, slowest response"
+      description: "Maximum depth, slowest response",
+      requiresPremium: true
     }
   };
 
-  let currentMode = MODE_OPTIONS[sessionStorage.getItem(MODE_STORAGE_KEY)]?.id || "deep";
+  let currentMode = MODE_OPTIONS[sessionStorage.getItem(MODE_STORAGE_KEY)]?.id || "fast";
 
   // Model selection is managed on the landing hero; the wizard reads that shared choice.
   const MODEL_STORAGE_KEY = "promptly:model-selection";
   const AVAILABLE_MODELS = [
-    "promptly-mini",
-    "promptly",
-    "promptly-plus",
-    "promptly-pro",
-    "promptly-pro-max",
-    "promptly-code-mini",
-    "promptly-code",
-    "promptly-code-plus",
-    "promptly-code-pro",
-    "promptly-code-pro-max"
+    "fast",
+    "standard",
+    "premium"
   ];
 
   let currentModel = sessionStorage.getItem(MODEL_STORAGE_KEY) || AVAILABLE_MODELS[0];
@@ -129,6 +125,35 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
     currentModel = AVAILABLE_MODELS[0];
   }
   sessionStorage.setItem(MODEL_STORAGE_KEY, currentModel);
+
+  // Use a single helper to resolve the active language from the i18n system
+  // so the backend always receives the same locale the user selected in the UI.
+  function getCurrentLanguage() {
+    let result = 'en';
+    let source = 'default';
+
+    // 1. Try to get from active i18n instance (most reliable source of truth for UI)
+    if (window.i18nManager && window.i18nManager.instance && window.i18nManager.instance.language) {
+       result = window.i18nManager.instance.language;
+       source = 'i18nManager';
+    }
+    // 2. Try global i18n object
+    else if (window.i18n && window.i18n.language) {
+       result = window.i18n.language;
+       source = 'window.i18n';
+    }
+    // 3. Fallback to localStorage
+    else {
+        const stored = localStorage.getItem('locale') || localStorage.getItem('promptly-language');
+        if (stored) {
+            result = stored;
+            source = 'localStorage';
+        }
+    }
+
+    console.log(`[Wizard] getCurrentLanguage: ${result} (source: ${source})`);
+    return result;
+  }
 
   function log(line) {
     const ts = new Date().toISOString().slice(11, 19);
@@ -203,19 +228,105 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
 
   function initModeSelector() {
     if (!modeSelector || !modeCards.length) return;
-    modeCards.forEach((card) => {
-      card.setAttribute("role", "button");
-      card.setAttribute("aria-pressed", "false");
-      card.addEventListener("click", () => setMode(card.dataset.mode || "deep"));
-      card.addEventListener("keydown", (evt) => {
-        if (evt.key === "Enter" || evt.key === " ") {
-          evt.preventDefault();
-          setMode(card.dataset.mode || "deep");
+    
+    // Fetch user's plan info to determine access
+    fetchUserPlanInfo().then(planInfo => {
+      modeCards.forEach((card) => {
+        card.setAttribute("role", "button");
+        card.setAttribute("aria-pressed", "false");
+        
+        const requiresPremium = card.dataset.requiresPremium === "true";
+        const mode = card.dataset.mode;
+        
+        // Disable premium modes for free users
+        if (requiresPremium && !planInfo.isPremium) {
+          card.classList.add("is-disabled");
+          card.title = "Upgrade to Premium to use this mode";
         }
+        
+        card.addEventListener("click", () => {
+          if (!card.classList.contains("is-disabled")) {
+            setMode(mode || "fast");
+          } else {
+            // Show upgrade prompt
+            showUpgradePrompt(mode);
+          }
+        });
+        
+        card.addEventListener("keydown", (evt) => {
+          if (evt.key === "Enter" || evt.key === " ") {
+            evt.preventDefault();
+            if (!card.classList.contains("is-disabled")) {
+              setMode(mode || "fast");
+            } else {
+              showUpgradePrompt(mode);
+            }
+          }
+        });
       });
+      
+      // Display plan info banner
+      displayPlanInfo(planInfo);
     });
 
     setMode(currentMode, { silentLog: true });
+  }
+  
+  // Fetch user plan information from backend
+  async function fetchUserPlanInfo() {
+    try {
+      const res = await fetch(`${API_BASE}/api/billing/status`);
+      if (!res.ok) {
+        console.warn("Failed to fetch plan info, assuming free plan");
+        return { plan: 'free', isPremium: false, dailyLimit: 5, used: 0 };
+      }
+      const data = await res.json();
+      return {
+        plan: data.plan || 'free',
+        isPremium: data.plan !== 'free',
+        dailyLimit: data.limits?.questionWizard?.daily || 5,
+        used: data.usage?.questionWizard || 0
+      };
+    } catch (err) {
+      console.warn("Error fetching plan info:", err);
+      return { plan: 'free', isPremium: false, dailyLimit: 5, used: 0 };
+    }
+  }
+  
+  // Display plan information banner
+  function displayPlanInfo(planInfo) {
+    const planBanner = document.createElement("div");
+    planBanner.className = "wizard-plan-banner";
+    planBanner.innerHTML = `
+      <div class="wizard-plan-info">
+        <span class="wizard-plan-badge">${planInfo.plan === 'free' ? '🆓 Free Plan' : '💎 Premium Plan'}</span>
+        ${planInfo.plan === 'free' ? `
+          <span class="wizard-plan-limit">
+            Question Wizard: ${planInfo.used}/${planInfo.dailyLimit} used today
+          </span>
+          <a href="subscription.html" class="wizard-plan-upgrade">
+            ⬆️ Upgrade for unlimited access
+          </a>
+        ` : `
+          <span class="wizard-plan-limit">✨ Unlimited access to all modes</span>
+        `}
+      </div>
+    `;
+    
+    // Insert before the stepper
+    const stepper = document.querySelector(".wizard-stepper");
+    if (stepper && stepper.parentNode) {
+      stepper.parentNode.insertBefore(planBanner, stepper);
+    }
+  }
+  
+  // Show upgrade prompt when user clicks disabled mode
+  function showUpgradePrompt(mode) {
+    const modeLabel = MODE_OPTIONS[mode]?.label || mode;
+    setWizardStatus(
+      `🔒 ${modeLabel} mode requires Premium. <a href="subscription.html" style="color:#22d3ee;text-decoration:underline;">Upgrade now</a> for unlimited access to all modes.`,
+      "warn"
+    );
   }
 
   function syncStartButtonState() {
@@ -401,6 +512,16 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
 
       currentSessionId = data.session.id;
       window.promptlyWizardSession?.markRunning?.(currentSessionId);
+
+      // ⚠️ LANGUAGE CONSISTENCY CHECK: Compare session language with current UI language
+      const sessionLanguage = data.session.language || 'en';
+      const currentUILanguage = getCurrentLanguage();
+      
+      if (sessionLanguage !== currentUILanguage) {
+        console.warn(`[wizard] Language mismatch detected! Session: ${sessionLanguage}, UI: ${currentUILanguage}`);
+        log(`⚠️ Note: Session was created in ${sessionLanguage}, but UI is set to ${currentUILanguage}. Questions will display in ${currentUILanguage}.`);
+        // Questions will be regenerated/displayed in the current UI language
+      }
 
       if (ideaInput && data.session.initial_description) {
         ideaInput.value = data.session.initial_description;
@@ -1014,14 +1135,19 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
         }
       }, estimate.max * 1000); // Show warning only after exceeding mode's max time
 
-      // Get current language from i18n or localStorage
-      const currentLanguage = (window.i18nManager && window.i18nManager.currentLang) 
-        || localStorage.getItem('promptly-language') 
-        || 'en';
+      // Get current language from unified resolver
+      const currentLanguage = getCurrentLanguage();
+      
+      // Prepare headers with optional authentication
+      const token = localStorage.getItem('promptly.token');
+      const headers = { "Content-Type": "application/json" };
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
       
       const res = await fetch(`${API_BASE}/api/question-sessions`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: headers,
         body: JSON.stringify({
           initial_description: idea,
           kind,
@@ -1208,13 +1334,18 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
     try {
       log("Submitting all answers...");
       // Get current language
-      const currentLanguage = (window.i18nManager && window.i18nManager.currentLang) 
-        || localStorage.getItem('promptly-language') 
-        || 'en';
+      const currentLanguage = getCurrentLanguage();
+      
+      // Prepare headers with optional authentication
+      const token = localStorage.getItem('promptly.token');
+      const headers = { "Content-Type": "application/json" };
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
       
       const res = await fetch(`${API_BASE}/api/question-sessions/${encodeURIComponent(currentSessionId)}/answer`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: headers,
         body: JSON.stringify({ 
           answers: answersPayload, 
           model: currentModel,
@@ -1339,13 +1470,18 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
       setWizardStatus("Finalizing and generating your spec... This may take a moment.", "info", { showTicks: true });
       
       // Get current language
-      const currentLanguage = (window.i18nManager && window.i18nManager.currentLang) 
-        || localStorage.getItem('promptly-language') 
-        || 'en';
+      const currentLanguage = getCurrentLanguage();
+      
+      // Prepare headers with optional authentication
+      const token = localStorage.getItem('promptly.token');
+      const headers = { "Content-Type": "application/json" };
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
       
       const res = await fetch(`${API_BASE}/api/question-sessions/${encodeURIComponent(currentSessionId)}/finalize`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: headers,
         body: JSON.stringify({ 
           model: currentModel,
           language: currentLanguage  // Pass user's language for prompt generation
@@ -1391,10 +1527,31 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
       };
       specOutput.textContent = JSON.stringify(specDisplay, null, 2);
       
+      // Remove markdown formatting helper
+      function removeMarkdown(text) {
+        if (!text || typeof text !== "string") return text;
+        return text
+          .replace(/\*\*([^*]+)\*\*/g, '$1')
+          .replace(/\*([^*]+)\*/g, '$1')
+          .replace(/__([^_]+)__/g, '$1')
+          .replace(/_([^_]+)_/g, '$1')
+          .replace(/^#{1,6}\s+/gm, '')
+          .replace(/```[\s\S]*?```/g, '')
+          .replace(/`([^`]+)`/g, '$1')
+          .replace(/\[([^\]]+)\]\([^\)]+\)/g, '$1')
+          .replace(/!\[([^\]]*)\]\([^\)]+\)/g, '$1')
+          .replace(/~~([^~]+)~~/g, '$1')
+          .replace(/\n{3,}/g, '\n\n')
+          .trim();
+      }
+      
       // Display the compiled prompt blocks (final merged result)
       if (data.compiled_prompt && data.compiled_prompt.blocks) {
         const blocksText = data.compiled_prompt.blocks
-          .map((b, idx) => `[Block ${idx + 1}: ${b.role} · ${b.label || ""}]\n${b.content}\n`)
+          .map((b, idx) => {
+            const cleanContent = removeMarkdown(b.content || "");
+            return `[Block ${idx + 1}: ${b.role} · ${b.label || ""}]\n${cleanContent}\n`;
+          })
           .join("\n\n");
         promptOutput.textContent = blocksText;
         
@@ -1406,13 +1563,19 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
       }
       
       // Display explanation
-      explanationOutput.textContent = data.explanation || data.compiled_prompt?.explanation || "(no explanation provided)";
+      const explanation = data.explanation || data.compiled_prompt?.explanation || "(no explanation provided)";
+      explanationOutput.textContent = removeMarkdown(explanation);
 
       // Clear wizard status indicator when finalization completes
       window.promptlyWizardSession?.clear?.();
       
       // Update status to show completion
       setWizardStatus("Spec finalized successfully! You can now view the compiled prompt below.", "info");
+      
+      // Refresh plan banner to show updated usage count
+      if (window.refreshPlanBanner) {
+        setTimeout(window.refreshPlanBanner, 500);
+      }
 
       if (resultPageLink && data.spec_id) {
         currentSpecId = data.spec_id;
@@ -1600,12 +1763,15 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
         cardElement.appendChild(loadingOverlay);
       }
       
+      // Get current language from unified resolver for regeneration
+      const currentLanguage = getCurrentLanguage();
+      
       const res = await fetch(
         `${API_BASE}/api/question-sessions/${encodeURIComponent(currentSessionId)}/questions/${encodeURIComponent(questionId)}/regenerate`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ model: currentModel })
+          body: JSON.stringify({ model: currentModel, language: currentLanguage })
         }
       );
       if (!res.ok) {

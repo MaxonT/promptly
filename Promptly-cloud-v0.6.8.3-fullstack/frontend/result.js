@@ -126,6 +126,24 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
     });
   }
 
+  // Remove markdown formatting helper
+  function removeMarkdown(text) {
+    if (!text || typeof text !== "string") return text;
+    return text
+      .replace(/\*\*([^*]+)\*\*/g, '$1')
+      .replace(/\*([^*]+)\*/g, '$1')
+      .replace(/__([^_]+)__/g, '$1')
+      .replace(/_([^_]+)_/g, '$1')
+      .replace(/^#{1,6}\s+/gm, '')
+      .replace(/```[\s\S]*?```/g, '')
+      .replace(/`([^`]+)`/g, '$1')
+      .replace(/\[([^\]]+)\]\([^\)]+\)/g, '$1')
+      .replace(/!\[([^\]]*)\]\([^\)]+\)/g, '$1')
+      .replace(/~~([^~]+)~~/g, '$1')
+      .replace(/\n{3,}/g, '\n\n')
+      .trim();
+  }
+
   function renderPromptBlocks() {
     promptBlocksContainer.innerHTML = "";
     
@@ -168,6 +186,7 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
       copyBtn.title = "Copy block";
       copyBtn.onclick = (e) => {
         e.stopPropagation();
+        // Copy original content (with markdown) to clipboard, but display cleaned version
         copyToClipboard(block.content, blockEl);
       };
 
@@ -183,7 +202,8 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
 
       const body = document.createElement("div");
       body.className = "result-prompt-block-body";
-      body.textContent = block.content || "";
+      // Remove markdown formatting for display
+      body.textContent = removeMarkdown(block.content || "");
 
       blockEl.appendChild(header);
       blockEl.appendChild(body);
@@ -265,12 +285,16 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
     element.innerHTML = html;
   }
 
-  function copyToClipboard(text, flashElement) {
+  function copyToClipboard(text, flashElement, buttonElement) {
     navigator.clipboard.writeText(text).then(() => {
       showCopyNotification();
       if (flashElement) {
         flashElement.classList.add("copy-flash");
         setTimeout(() => flashElement.classList.remove("copy-flash"), 400);
+      }
+      if (buttonElement) {
+        buttonElement.classList.add("btn--success");
+        setTimeout(() => buttonElement.classList.remove("btn--success"), 2000);
       }
     }).catch(err => {
       console.error("Failed to copy:", err);
@@ -390,21 +414,31 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
   });
 
   // Copy spec
-  document.getElementById("copySpecBtn").addEventListener("click", (e) => {
+  const copySpecBtn = document.getElementById("copySpecBtn");
+  copySpecBtn.addEventListener("click", (e) => {
     e.stopPropagation();
     const jsonStr = JSON.stringify(currentSpec, null, 2);
-    copyToClipboard(jsonStr, document.querySelector(".result-card[data-card-index='0']"));
+    copyToClipboard(jsonStr, document.querySelector(".result-card[data-card-index='0']"), copySpecBtn);
+  });
+
+  // Toggle spec view (header icon)
+  document.getElementById("toggleSpecView")?.addEventListener("click", (e) => {
+    e.stopPropagation();
+    const activeTab = document.querySelector(".result-view-tab--active");
+    const nextTab = activeTab.nextElementSibling || document.querySelector(".result-view-tab");
+    nextTab.click();
   });
 
   // Copy all prompts
-  document.getElementById("copyAllPromptsBtn").addEventListener("click", (e) => {
+  const copyAllPromptsBtn = document.getElementById("copyAllPromptsBtn");
+  copyAllPromptsBtn.addEventListener("click", (e) => {
     e.stopPropagation();
     if (!currentPrompt || !currentPrompt.blocks) return;
     
     const allText = currentPrompt.blocks
       .map(b => `[${b.role} · ${b.label || ""}]\n${b.content}`)
       .join("\n\n");
-    copyToClipboard(allText, document.querySelector(".result-card[data-card-index='1']"));
+    copyToClipboard(allText, document.querySelector(".result-card[data-card-index='1']"), copyAllPromptsBtn);
   });
 
   // Toggle prompt block
@@ -418,7 +452,7 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
 
   // Toggle explanation detail
   let explanationExpanded = false;
-  document.getElementById("toggleExplanationBtn").addEventListener("click", () => {
+  const toggleExp = () => {
     explanationExpanded = !explanationExpanded;
     
     if (explanationExpanded) {
@@ -430,6 +464,12 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
       explanationFull.classList.add("hidden");
       document.getElementById("toggleExplanationBtn").textContent = "Show more details";
     }
+  };
+
+  document.getElementById("toggleExplanationBtn").addEventListener("click", toggleExp);
+  document.getElementById("toggleExplanationDetail")?.addEventListener("click", (e) => {
+    e.stopPropagation();
+    toggleExp();
   });
 
   // Download button

@@ -1,18 +1,60 @@
-v0.6.10.8
+v0.6.12.0
 
-Release Date: 2025-12-17
-Type: FEATURE - Add o1-mini Model Support
+Release Date: 2025-12-27
+Type: MAJOR - Subscription V2 MVP Complete (Days 5-8)
 
-新增o1-mini模型支持：
-- Promptly v0 mini → gpt-4o-mini
-- Promptly v0 → gpt-4o
-- Promptly v0 Max → o1-mini (新！高级推理)
+生产级订阅系统韧性功能：
+✅ Webhook 幂等性 (stripe_events 表，status tracking)
+✅ 每日补偿任务 (自动修复 stuck sessions，webhook retry)
+✅ 错误恢复 UI (用户重试按钮，enhanced error handling)
+✅ 自动化测试套件 (14 tests, 100% pass rate)
 
-Modified:
-- modelRegistry.js: 添加promptly-v0-mini, promptly-v0, promptly-v0-max
-- dataAggregator.js: 更新模型映射
+Technical Highlights:
+- Daily job at 2:00 AM reconciles pending sessions with Stripe
+- Webhook retry logic: max 3 attempts within 7 days
+- User-initiated retry buttons in checkout-success.html & subscription.js
+- Comprehensive test coverage for all MVP features (Days 1-8)
 
-Previous Version: v0.6.10.7
+Files: 6 new files, 4 modified files
+Database: 1 new table (stripe_events)
+Tests: 14/14 passed
+
+---
+
+Previous Releases:
+
+v0.6.11.0
+
+Release Date: 2025-12-20
+Type: MAJOR - 全局主题系统重构
+
+完整的深浅色模式支持：
+✅ 建立全局语义token系统 (theme.css)
+✅ 所有CSS文件使用语义token替代硬编码颜色
+✅ 表单控件完整主题支持 (input/textarea/select)
+✅ 浏览器autofill主题适配
+✅ 滚动条主题适配
+✅ 所有HTML文件引入theme.css
+
+修改的文件：
+- frontend/theme.css (新建，完整语义token系统)
+- frontend/index.html (example-card语义化)
+- frontend/wizard.html (添加theme.css)
+- frontend/wizard.css (136处硬编码→语义token)
+- frontend/specs.css (硬编码→语义token)
+- frontend/outcome.css (硬编码→语义token)
+- frontend/enhancer.css (硬编码→语义token)
+- frontend/settings.css (硬编码→语义token)
+- frontend/specs.html, outcome.html, enhancer.html, settings.html, result.html (添加theme.css)
+
+设计原则：
+1. 深浅色是两套完整的视觉状态
+2. 用语义token，不用硬编码色值
+3. 对比度是第一原则
+4. 组件身份唯一
+5. 全局优先于局部
+
+Previous Version: v0.6.10.8
 
 Changes in v0.6.10.7:
 Type: FIX - Compiled Spec Field Mapping

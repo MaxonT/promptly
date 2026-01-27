@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { chatJson } from "./openaiClient.js";
+import { chatJson } from "./llmRouter.js";
 import { createRun, completeRunSuccess, completeRunFailure } from "./runLogger.js";
 import { buildRunMetrics } from "./metricsEngine.js";
 
@@ -24,28 +24,34 @@ const LANGUAGE_MAP = {
  * @returns {string} - Language instruction for system prompt
  */
 function getLanguageInstruction(language) {
-  if (!language || language === 'en') {
-    return ""; // No special instruction for English (default)
-  }
+  const lang = language || 'en';
+  const languageName = LANGUAGE_MAP[lang] || 'English';
   
-  const languageName = LANGUAGE_MAP[language] || 'English';
+  // CRITICAL FIX: Always include explicit language instruction, even for English
+  // This prevents LLM from using other languages based on user input or context
   return `🌍 CRITICAL LANGUAGE REQUIREMENT - HIGHEST PRIORITY 🌍
 YOU MUST GENERATE ALL OUTPUT CONTENT IN ${languageName}.
 This is MANDATORY and OVERRIDES any examples shown below.
+DO NOT use any other language regardless of the user's input language.
 
-REQUIRED LANGUAGE FOR:
+REQUIRED LANGUAGE FOR ALL OUTPUT:
+- All questions and their text content
+- All option labels and descriptions
+- All axis names and rationales
 - All text fields in the spec (project_goal, objectives, requirements, target_users, etc.)
 - The explanation field
 - Any descriptions, labels, or user-facing text
 - ALL natural language content
 
-EXCEPTIONS (keep in English):
+EXCEPTIONS (keep in original form):
 - Technical terms: React, API, database, Node.js, PostgreSQL, JWT, etc.
 - Code syntax and technical stack names
 - Technical abbreviations: CRUD, HTTP, REST, etc.
+- Brand names and proper nouns
 
 ⚠️ IMPORTANT: The JSON format examples below are for STRUCTURE ONLY.
-DO NOT copy the language from the examples - use ${languageName} instead!`;
+DO NOT copy the language from the examples - use ${languageName} instead!
+If user input is in another language, TRANSLATE the concepts to ${languageName} in your output.`;
 }
 
 const BroadQuestionSchema = z.object({
@@ -97,7 +103,46 @@ const AgentCOutputSchema = z.object({
   explanation: z.string()
 });
 
-export async function generateBroadQuestions({ initialDescription, kind, modeProfile = null, model = null, language = 'en' }) {
+/**
+ * Validate the quality of the generated spec
+ * @param {Object} parsed - The parsed output from Agent C
+ * @throws {Error} If validation fails
+ */
+function validateSpecQuality(parsed) {
+  if (!parsed.spec) {
+    throw new Error("Spec object is missing");
+  }
+
+  const spec = parsed.spec;
+
+  // Check for critical fields
+  // Note: The fixer logic inside generateRawSpec ensures these exist,
+  // but this serves as a final sanity check.
+  const criticalFields = ['project_goal', 'objectives', 'key_features'];
+  
+  for (const field of criticalFields) {
+    const value = spec[field];
+    if (!value) {
+      throw new Error(`Missing critical field: ${field}`);
+    }
+    
+    if (Array.isArray(value) && value.length === 0) {
+      throw new Error(`Empty array for field: ${field}`);
+    }
+    
+    if (typeof value === 'string' && value.trim().length === 0) {
+      throw new Error(`Empty string for field: ${field}`);
+    }
+  }
+
+  // Check explanation
+  if (!parsed.explanation || typeof parsed.explanation !== 'string' || parsed.explanation.trim().length < 5) {
+    throw new Error("Explanation is too short or missing");
+  }
+}
+
+export async function generateBroadQuestions({ initialDescription, kind, modeProfile = null, model = null, provider = 'openai', language = 'en' }) {
+  console.log(`[LLM] generateBroadQuestions called with language: ${language}`);
   const system = [
     "You are Agent A in Promptly's Question Engine.",
     "Goal: from a fuzzy project idea, propose 8-12 broad clarification axes.",
@@ -144,7 +189,7 @@ export async function generateBroadQuestions({ initialDescription, kind, modePro
     mode_profile: modeProfile
   });
 
-  const usedModel = model || process.env.OPENAI_MODEL || "gpt-4o-mini";
+  const usedModel = model || process.env.OPENAI_MODEL;
   const runId = createRun({
     model: usedModel,
     inputBlocks: { agent: "A", initial_description: initialDescription, kind, mode: modeProfile?.id }
@@ -159,7 +204,7 @@ export async function generateBroadQuestions({ initialDescription, kind, modePro
   while (retryCount <= MAX_RETRIES) {
     try {
       const start = Date.now();
-      const response = await chatJson({ system, user, model: usedModel });
+      const response = await chatJson({ provider, system, user, model: usedModel });
       raw = response.data;
       const runMetrics = buildRunMetrics({
         latencyMs: Date.now() - start,
@@ -253,7 +298,7 @@ function cleanOptionsArray(options) {
   return cleaned;
 }
 
-export async function generateChoiceQuestions({ initialDescription, kind, broadQuestions, modeProfile = null, model = null, language = 'en' }) {
+export async function generateChoiceQuestions({ initialDescription, kind, broadQuestions, modeProfile = null, model = null, provider = 'openai', language = 'en', inferenceConfig = null }) {
   const system = [
     "You are Agent B in Promptly's Question Engine.",
     "Goal: convert broad axes into concrete, user-friendly questions with depth levels.",
@@ -380,7 +425,25 @@ export async function generateChoiceQuestions({ initialDescription, kind, broadQ
     mode_profile: modeProfile
   });
 
-  const usedModel = model || process.env.OPENAI_MODEL || "gpt-4o-mini";
+  // Strict Inference Policy Application
+  let usedModel = model || process.env.OPENAI_MODEL;
+  let usedProvider = provider;
+  let apiKey = undefined;
+  let maxTokens = undefined;
+  let temperature = undefined;
+
+  if (inferenceConfig) {
+    usedModel = inferenceConfig.model;
+    usedProvider = inferenceConfig.provider;
+    // Inject API Key based on policy
+    if (inferenceConfig.envKey && process.env[inferenceConfig.envKey]) {
+      apiKey = process.env[inferenceConfig.envKey];
+    }
+    maxTokens = inferenceConfig.maxTokens;
+    temperature = inferenceConfig.temperature;
+    console.log(`[promptly] 🔒 Applied Strict Inference Config for Agent B: ${usedProvider}/${usedModel}`);
+  }
+
   const runId = createRun({
     model: usedModel,
     inputBlocks: { agent: "B", initial_description: initialDescription, kind, broad_questions: broadQuestions, mode: modeProfile?.id }
@@ -395,7 +458,15 @@ export async function generateChoiceQuestions({ initialDescription, kind, broadQ
   while (retryCount <= MAX_RETRIES) {
     try {
       const start = Date.now();
-      const response = await chatJson({ system, user, model: usedModel });
+      const response = await chatJson({ 
+        system, 
+        user, 
+        model: usedModel,
+        provider: usedProvider,
+        apiKey,
+        maxTokens,
+        temperature
+      });
       raw = response.data;
       const runMetrics = buildRunMetrics({
         latencyMs: Date.now() - start,
@@ -631,7 +702,8 @@ export async function generateChoiceQuestions({ initialDescription, kind, broadQ
   }
 }
 
-export async function generateRawSpec({ initialDescription, kind, qaPairs, modeProfile = null, model = null, language = 'en' }) {
+export async function generateRawSpec({ initialDescription, kind, qaPairs, modeProfile = null, model = null, provider = 'openai', language = 'en' }) {
+  console.log(`[LLM] generateRawSpec called with language: ${language}`);
   const system = [
     "You are Agent C in Promptly's Question Engine.",
     "You receive all questions and answers from a wizard.",
@@ -693,7 +765,7 @@ export async function generateRawSpec({ initialDescription, kind, qaPairs, modeP
   
   const user = JSON.stringify(userInput);
 
-  const usedModel = model || process.env.OPENAI_MODEL || "gpt-4o-mini";
+  const usedModel = model || process.env.OPENAI_MODEL;
   const runId = createRun({
     model: usedModel,
     inputBlocks: { agent: "C", initial_description: initialDescription, kind, qa_pairs: qaPairs, mode: modeProfile?.id }
@@ -708,7 +780,7 @@ export async function generateRawSpec({ initialDescription, kind, qaPairs, modeP
   while (retryCount <= MAX_RETRIES) {
     try {
       const start = Date.now();
-      const response = await chatJson({ system, user, model: usedModel });
+      const response = await chatJson({ provider, system, user, model: usedModel });
       raw = response.data;
       const runMetrics = buildRunMetrics({
         latencyMs: Date.now() - start,
@@ -806,6 +878,15 @@ export async function generateRawSpec({ initialDescription, kind, qaPairs, modeP
       
       completeRunSuccess(runId, raw, { metrics: runMetrics });
       parsed = AgentCOutputSchema.parse(raw);
+      
+      // QUALITY SENTINEL: Fail fast if spec is low quality
+      try {
+        validateSpecQuality(parsed);
+      } catch (qualityErr) {
+        console.warn(`[promptly] ⚠️ Spec quality check failed: ${qualityErr.message}`);
+        throw qualityErr; // Re-throw to trigger retry or failure
+      }
+
       break; // Success, exit retry loop
     } catch (err) {
       retryCount++;

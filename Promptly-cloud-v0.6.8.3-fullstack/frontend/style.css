@@ -755,6 +755,43 @@ html[data-theme="light"] .model-select__option.is-active{
 
 .launch-shell{position:relative;}
 .hero{display:flex;flex-direction:column;align-items:flex-start;justify-content:flex-start;gap:10px;margin-bottom:16px;text-align:left;}
+
+/* Light Mode Contrast Fixes for Layer Components */
+html[data-theme="light"] .layer-badge {
+  background: rgba(109, 40, 217, 0.1);
+  color: var(--primary);
+  font-weight: 600;
+}
+
+html[data-theme="light"] .layer-toggle {
+  background: #ffffff;
+  border: 1px solid var(--border);
+  color: var(--text);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+}
+
+html[data-theme="light"] .layer-panel {
+  background: #f8fafc; /* Lighter background for panel in light mode */
+  border: 1px solid var(--border);
+  color: var(--text);
+}
+
+html[data-theme="light"] .layer-note--accent {
+  color: var(--muted);
+  border-left-color: var(--primary);
+  background: rgba(109, 40, 217, 0.05);
+  padding: 8px 12px;
+  border-radius: 0 6px 6px 0;
+}
+
+html[data-theme="light"] .layer-chip {
+  text-shadow: none;
+  opacity: 1;
+}
+
+html[data-theme="light"] .layer-card {
+  box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+}
 .title{font-size:32px;font-weight:1000;letter-spacing:0.2px;}
 .hero-title{letter-spacing:0.2px;text-shadow:0 10px 32px rgba(34,211,238,0.25),0 10px 38px rgba(139,92,246,0.35);}
 .title-pill{display:inline-flex;align-items:center;gap:6px;padding:2px 10px;border-radius:12px;background:linear-gradient(120deg,rgba(124,58,237,0.92),rgba(34,211,238,0.85));color:#0b0f14;box-shadow:0 10px 28px rgba(34,211,238,0.32);}
@@ -1362,9 +1399,66 @@ html[data-theme="light"] .topbar .navlinks a:visited{
 .topbar .navlinks a:hover,
 .topbar .navlinks a[aria-current="page"]{
   background-position: 100% 50%;
-  text-shadow: 0 0 10px rgba(255,255,255,.18), 0 0 18px rgba(0,229,255,.20);
+  text-shadow: 0 0 10px rgba(255,255,255,.20), 0 0 16px rgba(109,40,217,.22);
 }
 
+/* === Particles Animation === */
+.particles-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  z-index: 0;
+  pointer-events: none;
+}
+
+/* Ensure content sits above particles */
+main, header, footer, .container, .card, .grid, .layer-card, .mode-selector {
+  position: relative;
+  z-index: 1;
+}
+
+.particle {
+  position: absolute;
+  background: var(--particle-color, rgba(139, 92, 246, 0.25));
+  border-radius: 50%;
+  opacity: 0;
+  animation: floatUp linear infinite;
+}
+
+@keyframes floatUp {
+  0% {
+    transform: translateY(0) translateX(0);
+    opacity: 0;
+  }
+  20% {
+    opacity: var(--particle-opacity, 0.5);
+  }
+  50% {
+    transform: translateY(-40vh) translateX(20px);
+    opacity: var(--particle-opacity, 0.3);
+  }
+  80% {
+    opacity: var(--particle-opacity, 0.5);
+  }
+  100% {
+    transform: translateY(-80vh) translateX(-20px);
+    opacity: 0;
+  }
+}
+
+/* Theme variables for particles */
+:root {
+  --particle-color: rgba(139, 92, 246, 0.25);
+  --particle-opacity: 0.4;
+}
+
+html[data-theme="light"] {
+  --particle-color: rgba(99, 102, 241, 0.4);
+  --particle-opacity: 0.6;
+}
 /* Labels (System / English) */
 .topbar label.control span{
   display:inline-block;
@@ -2039,6 +2133,17 @@ html[data-theme="light"] .error-state {
 /* Processing animation enhanced */
 .processing-animation {
   animation: pulse-border 1.5s ease-in-out infinite;
+}
+
+/* Global copy flash feedback */
+.copy-flash {
+  animation: copy-flash-anim 0.4s ease-out;
+}
+
+@keyframes copy-flash-anim {
+  0% { background-color: transparent; }
+  50% { background-color: rgba(34, 197, 94, 0.2); }
+  100% { background-color: transparent; }
 }
 
 @keyframes pulse-border {
@@ -3505,6 +3610,29 @@ html[data-theme="light"] .text-keyword {
   color: var(--text) !important;
 }
 
+/* Light mode fixes for metrics cards visibility */
+html[data-theme="light"] .card.kpi .value,
+html[data-theme="light"] .kpi .value {
+  background: none !important;
+  -webkit-background-clip: border-box !important;
+  background-clip: border-box !important;
+  color: #111827 !important;
+  -webkit-text-fill-color: #111827 !important;
+}
+
+html[data-theme="light"] .kpi .label,
+html[data-theme="light"] .card.kpi .label {
+  color: #1F2937 !important;
+}
+
+html[data-theme="light"] .text-highlight {
+  background: none !important;
+  -webkit-background-clip: border-box !important;
+  background-clip: border-box !important;
+  color: #111827 !important;
+  -webkit-text-fill-color: #111827 !important;
+}
+
 [data-theme="light"] .chart-growth-percentage {
   color: rgba(34, 197, 94, 1) !important;
 }
@@ -3596,3 +3724,128 @@ html[data-theme="light"] .text-keyword {
   background: linear-gradient(90deg, rgba(124, 58, 237, 0.7), rgba(34, 211, 238, 0.7)) !important;
 }
 
+
+/* ==========================================================================
+   PARTICLE ANIMATION (Enhanced Visibility - 2x)
+   ========================================================================== */
+.particles-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.particle {
+  position: absolute;
+  background: var(--particle-color);
+  border-radius: 50%;
+  opacity: 0; /* Start hidden, animate in */
+  animation: floatUp linear infinite;
+  box-shadow: 0 0 4px var(--particle-color); /* Glow for extra visibility */
+}
+
+@keyframes floatUp {
+  0% {
+    transform: translateY(0) translateX(0);
+    opacity: 0;
+  }
+  10% {
+    opacity: var(--particle-opacity);
+  }
+  90% {
+    opacity: var(--particle-opacity);
+  }
+  100% {
+    transform: translateY(-100vh) translateX(20px);
+    opacity: 0;
+  }
+}
+
+:root {
+  /* Dark Mode: Vivid Violet */
+  --particle-color: rgba(139, 92, 246, 0.6);
+  --particle-opacity: 0.7;
+}
+
+html[data-theme="light"] {
+  /* Light Mode: Deep Indigo - "Directional" color, high visibility */
+  --particle-color: rgba(79, 70, 229, 0.5); 
+  --particle-opacity: 0.85; /* Increased opacity (2x more visible) */
+}
+
+/* ==========================================================================
+   LIGHT MODE REDESIGN (Directionality & Contrast Philosophy)
+   ========================================================================== */
+
+html[data-theme="light"] body {
+  /* Subtle gradient from top -> bottom: "Light comes from above" */
+  background: linear-gradient(to bottom, #f1f5f9 0%, #ffffff 30%, #ffffff 100%);
+}
+
+/* 1. LAYER CARDS: Crispness > Flatness */
+html[data-theme="light"] .layer-card {
+  background: #ffffff;
+  /* Crisp, directional border (heavier bottom often helps, but uniform is cleaner here) */
+  border: 1px solid #cbd5e1; 
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 10px 15px -3px rgba(0, 0, 0, 0.03); /* Lifted */
+}
+
+/* 2. LAYER TOGGLE (Header): "Anchor" / Signpost */
+html[data-theme="light"] .layer-toggle {
+  background: #f8fafc; /* Distinct from card body */
+  border: 1px solid #e2e8f0;
+  border-bottom: 2px solid #e2e8f0; /* "Weight" */
+  color: #0f172a; /* Slate-900: High Contrast */
+  box-shadow: none;
+}
+
+html[data-theme="light"] .layer-toggle:hover {
+  background: #f1f5f9;
+  border-color: #94a3b8; /* Interaction Feedback */
+}
+
+/* 3. ADVANCED PANELS: "Active" not "Disabled" */
+html[data-theme="light"] .layer-panel {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  /* Directional Indicator: Left Border */
+  border-left: 4px solid #cbd5e1; 
+  box-shadow: inset 0 2px 4px 0 rgba(0, 0, 0, 0.02);
+}
+
+/* Focus States: Brand Color as "Direction" */
+html[data-theme="light"] .layer-field textarea:focus,
+html[data-theme="light"] .layer-field input:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.1);
+  border-left-width: 4px; /* Directional focus */
+}
+
+/* 4. BADGES & CHIPS: High Contrast Wayfinding */
+html[data-theme="light"] .layer-badge {
+  background: #ede9fe; /* Violet-100 */
+  color: #5b21b6;    /* Violet-800 (Very High Contrast) */
+  border: 1px solid #ddd6fe;
+  font-weight: 700;
+}
+
+/* 5. TEXT HIERARCHY */
+html[data-theme="light"] .layer-note {
+  color: #475569; /* Slate-600 */
+}
+
+html[data-theme="light"] .keyword {
+  color: #0f172a;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  font-weight: 600;
+}
+
+/* Ensure particles stay behind everything */
+.particles-container {
+  z-index: -1;
+}

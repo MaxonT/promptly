@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { chatJson } from "./openaiClient.js";
+import { chatJson } from "./llmRouter.js";
 import { createRun, completeRunSuccess, completeRunFailure } from "./runLogger.js";
 import { buildEvaluationMetrics, buildRunMetrics } from "./metricsEngine.js";
 
@@ -90,7 +90,7 @@ export async function evaluatePrompt({ spec, compiledPrompt, model }) {
     }
   });
 
-  const evalModel = model || process.env.OPENAI_MODEL || "gpt-4o-mini";
+  const evalModel = model || process.env.OPENAI_MODEL;
   const runId = createRun({
     model: evalModel,
     inputBlocks: {
@@ -102,7 +102,7 @@ export async function evaluatePrompt({ spec, compiledPrompt, model }) {
 
   try {
     const start = Date.now();
-    const { data: raw, usage } = await chatJson({ system, user, model: evalModel });
+    const { data: raw, usage } = await chatJson({ provider: 'openai', system, user, model: evalModel });
     const runMetrics = buildRunMetrics({ latencyMs: Date.now() - start, usage });
     completeRunSuccess(runId, raw, { metrics: runMetrics });
 

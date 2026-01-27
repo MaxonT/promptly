@@ -253,7 +253,16 @@
     const txt = enhancedPromptEl.textContent || "";
     if (!txt.trim()) return;
     navigator.clipboard?.writeText(txt).then(
-      () => log("Enhanced prompt copied to clipboard."),
+      () => {
+        log("Enhanced prompt copied to clipboard.");
+        const originalText = copyEnhancedBtn.textContent;
+        copyEnhancedBtn.textContent = t("enhancer.copied", { defaultValue: "Copied!" });
+        copyEnhancedBtn.classList.add("copied");
+        setTimeout(() => {
+          copyEnhancedBtn.textContent = originalText;
+          copyEnhancedBtn.classList.remove("copied");
+        }, 2000);
+      },
       () => log("Failed to copy to clipboard.")
     );
   }

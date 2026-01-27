@@ -4,7 +4,7 @@ import { z } from "zod";
 import { db, ensureUser } from "../lib/db.js";
 import { compileSpecToPrompt } from "../lib/specCompiler.js";
 import { evaluatePrompt } from "../lib/evaluationEngine.js";
-import { chatJson, LlmDisabledError } from "../lib/openaiClient.js";
+import { chatJson, LlmDisabledError } from "../lib/llmRouter.js";
 
 export const specsRouter = Router();
 
@@ -328,7 +328,7 @@ specsRouter.post("/:id/evaluate", async (req, res) => {
     }
 
     // Evaluate the prompt
-    const model = req.body.model || process.env.OPENAI_MODEL || "gpt-4o-mini";
+    const model = req.body.model || process.env.OPENAI_MODEL;
     const evaluation = await evaluatePrompt({ spec, compiledPrompt, model });
 
     // Store evaluation
@@ -398,7 +398,7 @@ specsRouter.post("/:id/compile-and-evaluate", async (req, res) => {
     `).run(cpId, row.id, JSON.stringify(compiled.blocks), compiled.explanation, now);
 
     // Evaluate the compiled prompt
-    const model = req.body.model || process.env.OPENAI_MODEL || "gpt-4o-mini";
+    const model = req.body.model || process.env.OPENAI_MODEL;
     const evaluation = await evaluatePrompt({ spec, compiledPrompt: compiled, model });
 
     // Store evaluation
@@ -559,8 +559,10 @@ ${idea}${attachmentContext}`;
 
     // Call LLM to generate structured spec
     const { data, model: modelUsed, completionId } = await chatJson({
+      provider: 'openai',
       system,
-      user: userPrompt
+      user: userPrompt,
+      provider: 'openai' // STRICT CONTRACT: Explicitly set provider
     });
 
     console.log(`[promptly] ✅ Received spec from LLM`);

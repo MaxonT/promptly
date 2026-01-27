@@ -51,17 +51,12 @@ class PromptlyDataAggregator {
 
     // Model selection - check for model-select__name element first
     const modelNameEl = document.querySelector('.model-select__name');
-    let model = 'promptly-mini'; // Default
+    let model = 'fast'; // Default
 
     if (modelNameEl) {
-      const modelLabel = modelNameEl.textContent?.trim() || '';
-      // Map label to model slug
-      const modelMap = {
-        'Promptly v0 mini': 'promptly-v0-mini',
-        'Promptly v0': 'promptly-v0',
-        'Promptly v0 Max': 'promptly-v0-max'
-      };
-      model = modelMap[modelLabel] || 'promptly-v0-mini';
+      // Direct reading from data attribute would be safer, but current UI structure 
+      // puts the value in sessionStorage or state.
+      // We'll trust the sessionStorage as primary source of truth for the 'slug'
     }
 
     // Also check sessionStorage for model selection

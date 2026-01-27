@@ -38,21 +38,26 @@
     const getText = (key) => {
       if (window.i18n) return window.i18n.t(key);
       // Fallback translations for consent banner
-      const fallback = { consent_text: "We use cookies to improve your experience and remember preferences.", consent_btn: "Accept" };
+      const fallback = { consent_text: "We use cookies to improve your experience and remember preferences.", consent_btn: "Accept", deny_btn: "Deny" };
       return fallback[key] || key;
     };
-    b.innerHTML=`<span data-i18n="common.consent_text">${getText("common.consent_text")}</span><button class="btn" id="consentBtn" data-i18n="common.consent_btn">${getText("common.consent_btn")}</button>`;
+    b.innerHTML=`<span data-i18n="common.consent_text">${getText("common.consent_text")}</span>
+    <div style="display:flex;gap:8px">
+      <button class="btn" id="consentDenyBtn" data-i18n="common.deny_btn">${getText("common.deny_btn")}</button>
+      <button class="btn" id="consentBtn" data-i18n="common.consent_btn">${getText("common.consent_btn")}</button>
+    </div>`;
     document.body.appendChild(b); 
-    // Re-translate after i18n is ready
+    // Re-translate after i18n is ready - SCOPED TO BANNER ONLY
     if (window.i18n) {
       setTimeout(() => {
-        document.querySelectorAll('[data-i18n]').forEach(el => {
+        b.querySelectorAll('[data-i18n]').forEach(el => {
           const key = el.getAttribute('data-i18n');
           if (key) el.textContent = window.i18n.t(key);
         });
       }, 100);
     }
-    document.getElementById("consentBtn").addEventListener("click",()=>{localStorage.setItem("promptly.consent","1"); b.remove();});}
+    document.getElementById("consentBtn").addEventListener("click",()=>{localStorage.setItem("promptly.consent","1"); b.remove();});
+    document.getElementById("consentDenyBtn").addEventListener("click",()=>{localStorage.setItem("promptly.consent","0"); b.remove();});}
   // ============================================
   // Enhanced Professional Data Visualization
   // ============================================
@@ -609,14 +614,45 @@
     showGlobal: updateGlobalStatus,
     hideGlobal: hideGlobalStatus
   };
+  // Remove markdown formatting for cleaner display
+  function removeMarkdown(text) {
+    if (!text || typeof text !== "string") return text;
+    return text
+      // Remove bold/italic: **text** or *text* or __text__ or _text_
+      .replace(/\*\*([^*]+)\*\*/g, '$1')
+      .replace(/\*([^*]+)\*/g, '$1')
+      .replace(/__([^_]+)__/g, '$1')
+      .replace(/_([^_]+)_/g, '$1')
+      // Remove headers: # Header, ## Header, etc.
+      .replace(/^#{1,6}\s+/gm, '')
+      // Remove code blocks: ```code``` or `code`
+      .replace(/```[\s\S]*?```/g, '')
+      .replace(/`([^`]+)`/g, '$1')
+      // Remove links: [text](url)
+      .replace(/\[([^\]]+)\]\([^\)]+\)/g, '$1')
+      // Remove images: ![alt](url)
+      .replace(/!\[([^\]]*)\]\([^\)]+\)/g, '$1')
+      // Remove strikethrough: ~~text~~
+      .replace(/~~([^~]+)~~/g, '$1')
+      // Clean up extra whitespace
+      .replace(/\n{3,}/g, '\n\n')
+      .trim();
+  }
+
   function formatBestPrompt(rawOutput) {
     if (!rawOutput) return "";
-    if (typeof rawOutput === "string") return rawOutput;
-    try {
-      return JSON.stringify(rawOutput, null, 2);
-    } catch {
-      return String(rawOutput);
+    let text = "";
+    if (typeof rawOutput === "string") {
+      text = rawOutput;
+    } else {
+      try {
+        text = JSON.stringify(rawOutput, null, 2);
+      } catch {
+        text = String(rawOutput);
+      }
     }
+    // Remove markdown formatting for cleaner display
+    return removeMarkdown(text);
   }
 
   async function refreshMetrics() {

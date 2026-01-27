@@ -1138,9 +1138,16 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
       // Get current language from unified resolver
       const currentLanguage = getCurrentLanguage();
       
+      // Prepare headers with optional authentication
+      const token = localStorage.getItem('promptly.token');
+      const headers = { "Content-Type": "application/json" };
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+      
       const res = await fetch(`${API_BASE}/api/question-sessions`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: headers,
         body: JSON.stringify({
           initial_description: idea,
           kind,
@@ -1329,9 +1336,16 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
       // Get current language
       const currentLanguage = getCurrentLanguage();
       
+      // Prepare headers with optional authentication
+      const token = localStorage.getItem('promptly.token');
+      const headers = { "Content-Type": "application/json" };
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+      
       const res = await fetch(`${API_BASE}/api/question-sessions/${encodeURIComponent(currentSessionId)}/answer`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: headers,
         body: JSON.stringify({ 
           answers: answersPayload, 
           model: currentModel,
@@ -1458,9 +1472,16 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
       // Get current language
       const currentLanguage = getCurrentLanguage();
       
+      // Prepare headers with optional authentication
+      const token = localStorage.getItem('promptly.token');
+      const headers = { "Content-Type": "application/json" };
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+      
       const res = await fetch(`${API_BASE}/api/question-sessions/${encodeURIComponent(currentSessionId)}/finalize`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: headers,
         body: JSON.stringify({ 
           model: currentModel,
           language: currentLanguage  // Pass user's language for prompt generation

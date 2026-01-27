@@ -22,6 +22,7 @@ import { oauthRouter } from "./routes/oauth.js";
 import { dailyRefreshJob } from "./lib/dailyRefreshJob.js";
 import dailyCompensationJob from "./lib/dailyCompensationJob.js";
 import { FEATURES } from "./lib/subscriptionConfig.js";
+import { maintenanceMode, getMaintenanceStatus } from "./middleware/maintenance.js";
 
 dotenv.config();
 const app = express();
@@ -85,9 +86,23 @@ app.use((req, res, next) => {
   next();
 });
 
+// Maintenance mode middleware (optional - can be enabled via env var)
+// This will return 503 for all requests except whitelisted paths
+// Enable by setting: MAINTENANCE_MODE=true in environment variables
+app.use(maintenanceMode);
+
+// Maintenance status endpoint (always accessible)
+app.get("/api/maintenance/status", getMaintenanceStatus);
+
 // basic health check
 app.get("/api/health", (req, res) => {
-  res.json({ ok: true, status: "healthy", time: new Date().toISOString() });
+  const maintenanceMode = process.env.MAINTENANCE_MODE === 'true';
+  res.json({ 
+    ok: !maintenanceMode, 
+    status: maintenanceMode ? "maintenance" : "healthy", 
+    time: new Date().toISOString(),
+    maintenance: maintenanceMode
+  });
 });
 
 // settings endpoint used by settings.html

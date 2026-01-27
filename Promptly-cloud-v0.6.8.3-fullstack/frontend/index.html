@@ -14,9 +14,26 @@
   <link rel="apple-touch-icon" href="assets/promptly-icon.svg"/>
 
 
-<link rel="stylesheet" href="theme.css" />
+  <link rel="stylesheet" href="theme.css" />
   <link rel="stylesheet" href="style.css" />
   <script src="config.js"></script>
+  
+  <!-- Maintenance Mode Check -->
+  <script>
+    (function() {
+      // Check if maintenance mode is enabled
+      const MAINTENANCE_MODE = window.PROMPTLY_MAINTENANCE_MODE || false;
+      
+      // Skip maintenance check if already on maintenance page
+      if (window.location.pathname.includes('maintenance.html')) {
+        return;
+      }
+      
+      if (MAINTENANCE_MODE) {
+        window.location.replace('/maintenance.html');
+      }
+    })();
+  </script>
   <script src="lib/dataAggregator.js"></script>
   <script src="lib/particles.js"></script>
   <script src="lib/i18next.min.js"></script>

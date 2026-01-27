@@ -68,6 +68,63 @@
       50% { transform: translate(30px, 30px); }
     }
 
+    .code-bg-layer {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    .code-chunk {
+      position: absolute;
+      font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+      font-size: 14px;
+      line-height: 1.5;
+      color: rgba(255, 255, 255, 0.08);
+      white-space: pre;
+      user-select: none;
+      animation: floatCode 20s infinite linear;
+      filter: blur(0.5px);
+      transition: all 0.5s ease;
+    }
+
+    .code-chunk:nth-child(1) { top: 10%; left: 5%; animation-duration: 25s; font-size: 16px; color: rgba(255, 255, 255, 0.12); }
+    .code-chunk:nth-child(2) { top: 20%; right: 10%; animation-duration: 30s; animation-delay: -5s; }
+    .code-chunk:nth-child(3) { bottom: 15%; left: 15%; animation-duration: 22s; animation-delay: -10s; }
+    .code-chunk:nth-child(4) { bottom: 25%; right: 5%; animation-duration: 28s; animation-delay: -2s; color: rgba(255, 255, 255, 0.1); }
+    .code-chunk:nth-child(5) { top: 40%; left: -5%; animation-duration: 35s; animation-delay: -8s; opacity: 0.6; }
+    
+    /* 增加更多代码块的样式 */
+    .code-chunk:nth-child(6) { top: 5%; left: 40%; animation-duration: 40s; animation-delay: -15s; font-size: 12px; opacity: 0.5; }
+    .code-chunk:nth-child(7) { bottom: 5%; right: 30%; animation-duration: 32s; animation-delay: -3s; }
+    .code-chunk:nth-child(8) { top: 50%; right: -2%; animation-duration: 26s; animation-delay: -12s; opacity: 0.7; }
+    .code-chunk:nth-child(9) { bottom: 40%; left: 2%; animation-duration: 29s; animation-delay: -7s; }
+    .code-chunk:nth-child(10) { top: 15%; left: 70%; animation-duration: 36s; animation-delay: -20s; font-size: 13px; }
+    .code-chunk:nth-child(11) { bottom: 10%; left: 60%; animation-duration: 24s; animation-delay: -6s; opacity: 0.4; }
+    .code-chunk:nth-child(12) { top: 60%; right: 15%; animation-duration: 31s; animation-delay: -18s; }
+
+    .code-keyword { color: rgba(255, 100, 200, 0.4); font-weight: bold; }
+    .code-func { color: rgba(100, 200, 255, 0.4); }
+    .code-string { color: rgba(100, 255, 150, 0.4); }
+    .code-comment { color: rgba(255, 255, 255, 0.2); font-style: italic; }
+
+    @keyframes floatCode {
+      0% { transform: translateY(0) rotate(0deg); opacity: 0; }
+      20% { opacity: 1; }
+      50% { transform: translateY(-40px) rotate(1deg); }
+      80% { opacity: 1; }
+      100% { transform: translateY(-80px) rotate(-1deg); opacity: 0; }
+    }
+
+    /* 光晕特效 */
+    .glow-effect {
+      text-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
+    }
+
     .container {
       background: var(--glass-bg);
       backdrop-filter: blur(8px);
@@ -275,6 +332,86 @@
   </style>
 </head>
 <body>
+  <div class="code-bg-layer">
+    <div class="code-chunk glow-effect">
+<span class="code-keyword">async function</span> <span class="code-func">initSystem</span>() {
+  <span class="code-keyword">const</span> core = <span class="code-keyword">await</span> loadKernel();
+  <span class="code-comment">// Optimizing neural pathways...</span>
+  core.<span class="code-func">connect</span>(<span class="code-string">'wss://promptly.io'</span>);
+  <span class="code-keyword">return</span> true;
+}</div>
+    <div class="code-chunk">
+<span class="code-keyword">const</span> config = {
+  mode: <span class="code-string">'maintenance'</span>,
+  theme: <span class="code-string">'neon-dream'</span>,
+  retry: <span class="code-keyword">true</span>,
+  <span class="code-comment">// Applying magic dust</span>
+  opacity: 0.95
+};</div>
+    <div class="code-chunk glow-effect">
+<span class="code-keyword">class</span> <span class="code-func">PromptEngine</span> {
+  <span class="code-func">constructor</span>() {
+    <span class="code-keyword">this</span>.state = <span class="code-string">'upgrading'</span>;
+    <span class="code-keyword">this</span>.power = 9000;
+  }
+}</div>
+    <div class="code-chunk">
+<span class="code-keyword">export default</span> {
+  status: <span class="code-keyword">null</span>,
+  check: () => {
+    <span class="code-comment">// Still working on it...</span>
+    <span class="code-func">fetch</span>(<span class="code-string">'/api/health'</span>);
+  }
+}</div>
+    <div class="code-chunk glow-effect">
+<span class="code-keyword">if</span> (system.<span class="code-func">isReady</span>()) {
+  <span class="code-func">launch</span>(<span class="code-string">'Production'</span>);
+} <span class="code-keyword">else</span> {
+  <span class="code-func">wait</span>(60000);
+}</div>
+    <div class="code-chunk">
+<span class="code-keyword">import</span> React, { <span class="code-func">useState</span> } <span class="code-keyword">from</span> <span class="code-string">'react'</span>;
+<span class="code-keyword">const</span> App = () => {
+  <span class="code-keyword">const</span> [state, setState] = <span class="code-func">useState</span>(<span class="code-string">'init'</span>);
+  <span class="code-keyword">return</span> <span class="code-string">&lt;Loader /&gt;</span>;
+}</div>
+    <div class="code-chunk glow-effect">
+SELECT * FROM systems
+WHERE status = <span class="code-string">'active'</span>
+AND performance > 99.9
+ORDER BY uptime DESC;</div>
+    <div class="code-chunk">
+<span class="code-keyword">def</span> <span class="code-func">optimize_model</span>(layers):
+    <span class="code-keyword">for</span> layer <span class="code-keyword">in</span> layers:
+        layer.<span class="code-func">train</span>(epochs=100)
+    <span class="code-keyword">return</span> <span class="code-string">"Optimized"</span></div>
+    <div class="code-chunk">
+{
+  <span class="code-string">"version"</span>: <span class="code-string">"2.0.0"</span>,
+  <span class="code-string">"features"</span>: [<span class="code-string">"AI"</span>, <span class="code-string">"Cloud"</span>],
+  <span class="code-string">"stable"</span>: <span class="code-keyword">true</span>
+}</div>
+    <div class="code-chunk glow-effect">
+<span class="code-keyword">try</span> {
+  <span class="code-keyword">await</span> database.<span class="code-func">migrate</span>();
+  logger.<span class="code-func">info</span>(<span class="code-string">'Migration done'</span>);
+} <span class="code-keyword">catch</span> (e) {
+  <span class="code-func">rollback</span>();
+}</div>
+    <div class="code-chunk">
+<span class="code-keyword">interface</span> <span class="code-func">User</span> {
+  id: <span class="code-func">string</span>;
+  role: <span class="code-string">'admin'</span> | <span class="code-string">'user'</span>;
+  permissions: <span class="code-func">string</span>[];
+}</div>
+    <div class="code-chunk glow-effect">
+<span class="code-keyword">while</span> (server.<span class="code-func">isBusy</span>()) {
+  <span class="code-func">scaleUp</span>(instances + 1);
+  <span class="code-comment">// Adding more power</span>
+  <span class="code-func">sleep</span>(1000);
+}</div>
+  </div>
+
   <div class="container">
     <div class="icon-wrapper">
       <div class="icon-ring"></div>

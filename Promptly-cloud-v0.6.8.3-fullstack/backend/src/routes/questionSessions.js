@@ -13,8 +13,10 @@ import { goBack, skipQuestion } from "../lib/questionNavigator.js";
 import { getModelIds, resolveModelName, isValidModel, getModelConfig } from "../lib/modelRegistry.js";
 import { INFERENCE_PROFILES } from "../lib/inferenceProfiles.js";
 import { checkQuestionWizardLimit, recordUsage, canUseMode } from "../lib/planLimits.js";
+import { optionalAuth } from "./auth.js";
 
 export const questionSessionRouter = Router();
+questionSessionRouter.use(optionalAuth);
 
 const PROJECT_DESCRIPTION_REQUIRED_MESSAGE = "Project description is required.";
 

@@ -12,36 +12,13 @@
 import { Router } from "express";
 import { nanoid } from "nanoid";
 import { z } from "zod";
-import jwt from "jsonwebtoken";
 import { db, ensureUser } from "../lib/db.js";
 import { chatText, chatJson, LlmDisabledError } from "../lib/llmRouter.js";
 import { getModePolicy } from "../lib/modePolicies.js";
 import { spendTokensForRun, getTokenStatus } from "../lib/tokenUsage.js";
 import { FEATURES } from "../lib/subscriptionConfig.js";
 import { checkPromptOptimizationLimit, recordUsage, canUseMode } from "../lib/planLimits.js";
-
-const TOKEN_SECRET = process.env.JWT_SECRET || "your-secret-key-here";
-
-// Optional auth middleware: parse JWT if present, but don't require it
-function optionalAuth(req, res, next) {
-  const authHeader = req.headers.authorization || "";
-  const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : null;
-  
-  if (token) {
-    try {
-      const payload = jwt.verify(token, TOKEN_SECRET);
-      req.user = payload;
-      console.log(`[pipeline] ✅ Authenticated user: ${payload.sub}`);
-    } catch (err) {
-      console.log(`[pipeline] ⚠️ Invalid token, proceeding as demo-user:`, err.message);
-      // Don't fail, just proceed without req.user
-    }
-  } else {
-    console.log(`[pipeline] ℹ️ No token provided, proceeding as demo-user`);
-  }
-  
-  next();
-}
+import { optionalAuth } from "./auth.js";
 
 export const pipelineRouter = Router();
 

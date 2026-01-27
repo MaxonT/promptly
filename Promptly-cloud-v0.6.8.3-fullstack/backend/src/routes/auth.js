@@ -158,3 +158,17 @@ export function requireAuth(req, res, next) {
     return res.status(401).json({ ok: false, error: "Invalid token" });
   }
 }
+
+export function optionalAuth(req, _res, next) {
+  const authHeader = req.headers.authorization || "";
+  const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : null;
+  if (!token) {
+    return next();
+  }
+  try {
+    req.user = jwt.verify(token, TOKEN_SECRET);
+  } catch (err) {
+    console.log("[optionalAuth] Invalid token provided:", err.message);
+  }
+  next();
+}

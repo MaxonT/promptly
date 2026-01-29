@@ -112,7 +112,13 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
         valueEl.className = "result-human-value";
         
         if (Array.isArray(value)) {
-          valueEl.innerHTML = value.map(v => `• ${v}`).join("<br>");
+          // 安全地处理数组值，防止XSS
+          valueEl.textContent = '';
+          value.forEach(v => {
+            const item = document.createElement('div');
+            item.textContent = `• ${v}`;
+            valueEl.appendChild(item);
+          });
         } else if (typeof value === "object") {
           valueEl.textContent = JSON.stringify(value, null, 2);
         } else {
@@ -145,7 +151,10 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
   }
 
   function renderPromptBlocks() {
-    promptBlocksContainer.innerHTML = "";
+    // 安全地清空容器
+    while (promptBlocksContainer.firstChild) {
+      promptBlocksContainer.removeChild(promptBlocksContainer.firstChild);
+    }
     
     if (!currentPrompt || !Array.isArray(currentPrompt.blocks) || currentPrompt.blocks.length === 0) {
       promptBlocksContainer.innerHTML = '<p style="color: rgba(148,163,184,0.8); padding: 1rem;">No compiled prompt blocks available.</p>';
@@ -213,7 +222,10 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
 
   function renderExplanation() {
     if (!currentPrompt || !currentPrompt.explanation) {
-      explanationBrief.innerHTML = '<p style="color: rgba(148,163,184,0.8);">No explanation available.</p>';
+      const noExplanationMsg = document.createElement('p');
+      noExplanationMsg.style.color = 'rgba(148,163,184,0.8)';
+      noExplanationMsg.textContent = 'No explanation available.';
+      explanationBrief.appendChild(noExplanationMsg);
       document.getElementById("toggleExplanationBtn").style.display = "none";
       return;
     }

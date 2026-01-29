@@ -9,8 +9,9 @@ export const authRouter = Router();
 let TOKEN_SECRET = process.env.JWT_SECRET;
 if (!TOKEN_SECRET) {
   if (process.env.NODE_ENV === "development") {
-    console.warn("[promptly] WARNING: JWT_SECRET is not set. Using default insecure development secret.");
-    TOKEN_SECRET = "dev";
+    // 即使开发环境也使用安全的密钥
+    console.warn("[promptly] WARNING: JWT_SECRET is not set. Generating secure development secret.");
+    TOKEN_SECRET = require('crypto').randomBytes(32).toString('hex');
   } else {
     throw new Error("[promptly] FATAL: JWT_SECRET environment variable must be set in production.");
   }

@@ -240,7 +240,10 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
     }
 
     if (modelListEl) {
-      modelListEl.innerHTML = "";
+      // 安全地清空容器
+      while (modelListEl.firstChild) {
+        modelListEl.removeChild(modelListEl.firstChild);
+      }
     }
     const modelDisplayName = "Promptly Refined LLM Model";
     const modelItems = [
@@ -295,7 +298,10 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
       }
 
     if (featuresListEl) {
-      featuresListEl.innerHTML = "";
+      // 安全地清空容器
+      while (featuresListEl.firstChild) {
+        featuresListEl.removeChild(featuresListEl.firstChild);
+      }
     }
     const features = s.features || {
       questionWizard: true,

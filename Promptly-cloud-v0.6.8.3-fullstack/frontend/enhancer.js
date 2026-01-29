@@ -299,24 +299,53 @@
       return;
     }
 
-    const removeTitle = t("enhancer.removeAttachment");
-    attachmentList.innerHTML = attachments.map((att, index) => `
-      <div class="attachment-item" data-index="${index}">
-        <span class="attachment-icon">${getFileIcon(att.type)}</span>
-        <div class="attachment-info">
-          <div class="attachment-name" title="${att.name}">${att.name}</div>
-          <div class="attachment-size">${formatSize(att.size)}</div>
-        </div>
-        <button class="attachment-remove" data-index="${index}" title="${removeTitle}">×</button>
-      </div>
-    `).join('');
+    // 安全地清空容器
+    while (attachmentList.firstChild) {
+      attachmentList.removeChild(attachmentList.firstChild);
+    }
 
-    // Add event listeners to remove buttons
-    attachmentList.querySelectorAll('.attachment-remove').forEach(btn => {
-      btn.addEventListener('click', (e) => {
+    const removeTitle = t("enhancer.removeAttachment");
+    
+    // 安全地创建附件列表元素，防止XSS
+    attachments.forEach((att, index) => {
+      const item = document.createElement('div');
+      item.className = 'attachment-item';
+      item.dataset.index = index;
+      
+      const icon = document.createElement('span');
+      icon.className = 'attachment-icon';
+      icon.textContent = getFileIcon(att.type);
+      
+      const info = document.createElement('div');
+      info.className = 'attachment-info';
+      
+      const name = document.createElement('div');
+      name.className = 'attachment-name';
+      name.textContent = att.name;
+      name.title = att.name;
+      
+      const size = document.createElement('div');
+      size.className = 'attachment-size';
+      size.textContent = formatSize(att.size);
+      
+      const removeBtn = document.createElement('button');
+      removeBtn.className = 'attachment-remove';
+      removeBtn.dataset.index = index;
+      removeBtn.title = removeTitle;
+      removeBtn.textContent = '×';
+      
+      // 添加事件监听器
+      removeBtn.addEventListener('click', (e) => {
         const index = parseInt(e.target.getAttribute('data-index'), 10);
         removeAttachment(index);
       });
+      
+      info.appendChild(name);
+      info.appendChild(size);
+      item.appendChild(icon);
+      item.appendChild(info);
+      item.appendChild(removeBtn);
+      attachmentList.appendChild(item);
     });
 
     log(`${attachments.length} file(s) attached`);

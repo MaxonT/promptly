@@ -23,9 +23,32 @@ if (USE_POSTGRES) {
   
   const DB_PATH = process.env.SQLITE_PATH || "./data/app.db";
   console.log(`[promptly] SQLite database path: ${DB_PATH}`);
-  fs.mkdirSync(path.dirname(DB_PATH), { recursive: true });
   
-  const sqliteDb = new Database(DB_PATH);
+  // 确保数据库目录存在且权限正确
+  const dbDir = path.dirname(DB_PATH);
+  fs.mkdirSync(dbDir, { recursive: true, mode: 0o750 });
+  
+  // 设置安全的数据库选项
+  const sqliteDb = new Database(DB_PATH, {
+    fileMustExist: false,
+    timeout: 5000,
+    verbose: process.env.NODE_ENV === 'development' ? console.log : undefined
+  });
+  
+  // 设置安全的SQLite配置
+  sqliteDb.pragma('journal_mode = WAL');  // WAL模式提供更好的并发性
+  sqliteDb.pragma('synchronous = NORMAL'); // 平衡性能和安全性
+  sqliteDb.pragma('foreign_keys = ON');    // 启用外键约束
+  sqliteDb.pragma('temp_store = MEMORY');  // 临时数据存储在内存中
+  
+  // 验证数据库连接
+  try {
+    sqliteDb.exec('SELECT 1');
+    console.log('[promptly] ✅ SQLite database connection verified');
+  } catch (error) {
+    console.error('[promptly] ❌ SQLite database connection failed:', error);
+    throw error;
+  }
   
   // Export SQLite Database directly (synchronous API)
   // Routes use db.prepare(), db.exec(), etc. which are synchronous

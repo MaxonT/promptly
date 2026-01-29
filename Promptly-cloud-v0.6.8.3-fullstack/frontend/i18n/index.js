@@ -116,12 +116,18 @@ class I18nManager {
 
     console.log('[i18n] Initializing language selector...');
 
-    // Force clear and rebuild to ensure no stale state
-    select.innerHTML = '';
-    const options = i18nConfig.supportedLocales
-      .map(code => `<option value="${code}">${i18nConfig.localeLabels[code] || code}</option>`)
-      .join('');
-    select.innerHTML = options;
+    // 安全地清空并重建选择器，防止XSS
+    while (select.firstChild) {
+      select.removeChild(select.firstChild);
+    }
+    
+    // 安全地创建选项元素
+    i18nConfig.supportedLocales.forEach(code => {
+      const option = document.createElement('option');
+      option.value = code;
+      option.textContent = i18nConfig.localeLabels[code] || code;
+      select.appendChild(option);
+    });
     
     // Handle locale matching (e.g. en-US -> en)
     const currentLang = (this.instance && this.instance.language) ? this.instance.language : i18nConfig.defaultLocale;
@@ -247,6 +253,8 @@ class I18nManager {
             el.placeholder = translation;
         }
       } else if (mode === 'html') {
+        // 仅允许受信任的翻译使用innerHTML，建议改用textContent
+        console.warn('[i18n] Using innerHTML mode - ensure translation content is trusted');
         el.innerHTML = translation;
       } else {
         if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') {

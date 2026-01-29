@@ -4,7 +4,7 @@
  */
 
 import rateLimit from "express-rate-limit";
-import { createSafeErrorResponse, logError } from "./secureError.js";
+import { createSafeErrorResponse, logError } from "../lib/secureError.js";
 
 /**
  * 请求体大小限制中间件

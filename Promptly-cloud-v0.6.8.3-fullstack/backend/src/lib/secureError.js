@@ -2,6 +2,8 @@
  * 安全的错误处理工具
  */
 
+import { nanoid } from "nanoid";
+
 /**
  * 生产环境安全的错误响应
  * @param {Error} error - 原始错误
@@ -36,7 +38,7 @@ export function createSafeErrorResponse(error, userMessage = "操作失败") {
  * @param {Object} metadata - 额外的元数据
  */
 export function logError(context, error, metadata = {}) {
-  const errorId = require('nanoid').nanoid(8);
+  const errorId = nanoid(8);
   
   // 安全的日志记录（移除敏感信息）
   const safeMetadata = sanitizeLogData(metadata);

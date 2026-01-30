@@ -1,4 +1,4 @@
-# Render 服务保活脚本使用指南
+launchctl list | grep promptly# Render 服务保活脚本使用指南
 
 ## 概述
 此脚本每 10 分钟 ping 一次你的后端服务，防止 Render 上的免费层应用因不活跃而进入休眠状态。

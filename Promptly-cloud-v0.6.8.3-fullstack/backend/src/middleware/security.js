@@ -157,6 +157,18 @@ export function createUserRateLimit(options = {}) {
  * SQL注入检测中间件
  */
 export function detectSQLInjection(req, res, next) {
+  // 白名单路径 - 这些路径使用安全的参数化查询，无需检测
+  const whitelistPaths = [
+    '/api/analytics/dashboard/timeseries',
+    '/api/analytics/dashboard/summary',
+    '/api/analytics/dashboard/track'  // Analytics tracking API (uses parameterized queries)
+  ];
+  
+  // 如果路径在白名单中，跳过检测
+  if (whitelistPaths.some(path => req.path.startsWith(path))) {
+    return next();
+  }
+  
   const sqlPatterns = [
     /('|(\\')|(;|\\;)|(\\|)|(\\*)|(\%27)|(\\x27))/i,
     /(select|insert|update|delete|drop|create|alter|exec|execute)/i,
@@ -165,6 +177,11 @@ export function detectSQLInjection(req, res, next) {
   
   const checkValue = (value, path = '') => {
     if (typeof value === 'string') {
+      // 跳过纯数字值的检测（如分页参数、天数等）
+      if (/^\d+$/.test(value)) {
+        return null;
+      }
+      
       for (const pattern of sqlPatterns) {
         if (pattern.test(value)) {
           logError('sqlInjectionDetected', new Error('Potential SQL injection'), {

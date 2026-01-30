@@ -1,46 +1,91 @@
-## Quick orientation for AI coding agents
+## Quick Orientation for AI Coding Agents
 
-This repo is a small full‑stack app: a static frontend and an Express backend that stores prompt specs, runs, and evaluations in SQLite. Use these notes to be productive immediately.
+Promptly is a full-stack prompt optimization pipeline: static frontend + Express backend + SQLite/PostgreSQL. The core flow is: **Spec → Question → LLM Agents → Metrics → Outcome**.
 
-Key places to read first
-- `backend/src/server.js` — API surface and mounted routers: `/api/auth`, `/api/docs`, `/api/share`, `/api/specs`, `/api/question-sessions`, `/api/runs` and `/api/settings`.
-- `backend/src/lib/db.js` — canonical SQLite schema and important table names: `specs`, `compiled_prompts`, `runs`, `run_errors`, `evaluations`, `outcome_runs`, `outcome_candidates`.
-- `backend/src/lib/openaiClient.js` — centralized LLM client. Note: when `OPENAI_API_KEY` is missing the code disables LLM features and throws `LlmDisabledError`.
-- `backend/src/lib/evaluationEngine.js` — how evaluator prompts are composed and the expected JSON schema (score 0–100, verdict, summary, issues/suggestions). Use this as the canonical evaluator contract.
-- `backend/src/lib/runLogger.js` — how runs are created and marked success/failure (`createRun`, `completeRunSuccess`, `completeRunFailure`). Run IDs and error IDs use prefixes like `run_` and `err_`.
-- `frontend/config.js` — frontend's API base (set for production). For local dev ensure `PROMPTLY_API_BASE` points to `http://localhost:8080`.
+### Architecture Overview
+```
+frontend/           Static HTML/JS/CSS (deploy to Vercel)
+├── core.js         Main app logic, API calls via window.PROMPTLY_API_BASE
+├── wizard.js       Question wizard flow
+├── i18n/           Internationalization system (9 languages)
+└── locales/*.json  Translation files
 
-Developer workflows & useful commands
-- Backend development: cd `backend` then `npm install` and `npm run dev` (watches `src/server.js`).
-- Run migrations: `npm run migrate` (runs `migrations/000_init.js`).
-- Basic self-test: `npm run test` runs `scripts/selftest.js`. You can target a running backend: `SELFTEST_BASE_URL=http://localhost:8080 node scripts/selftest.js`.
-- Health probe: `npm run health` -> `scripts/healthcheck.js` or call `/api/health`.
-- Docker: `backend/Dockerfile` builds a production image; backend listens on port 8080.
+backend/src/
+├── server.js       Express app with all route mounts
+├── routes/         API endpoints: auth, specs, pipeline, billing, analytics
+└── lib/
+    ├── db.js           DB adapter (SQLite or PostgreSQL auto-detect)
+    ├── llmRouter.js    LLM dispatch: openai/groq providers (SINGLE SOURCE OF TRUTH)
+    ├── openaiClient.js OpenAI client + LlmDisabledError
+    ├── runLogger.js    Run lifecycle: createRun → completeRunSuccess/Failure
+    ├── evaluationEngine.js  Evaluator contract (score 0-100, verdict, summary)
+    └── subscriptionConfig.js Token limits, trial config, pricing
+```
 
-Environment & runtime signals
-- Required/relevant env vars found in code: `OPENAI_API_KEY`, `OPENAI_DEFAULT_MODEL` (or `OPENAI_MODEL` in some modules), `OUTCOME_MODEL`, `SQLITE_PATH`, `CORS_ORIGIN`, `JWT_SECRET`, `PORT`. See `backend/.env.example` for a starter.
-- LLM feature gate: absence of `OPENAI_API_KEY` disables LLM code paths — handle `LlmDisabledError` in edits where applicable.
+### Key Entry Points
+- `backend/src/server.js` — All routes: `/api/auth`, `/api/pipeline`, `/api/specs`, `/api/runs`, `/api/billing`
+- `backend/src/routes/pipeline.js` — Core pipeline with SSE streaming (`/api/pipeline/run`, `/api/pipeline/stream/:runId`)
+- `backend/src/lib/db.js` — Schema: `users`, `specs`, `runs`, `run_errors`, `evaluations`, `outcome_runs`
 
-Project-specific conventions & patterns
-- DB: uses synchronous `better-sqlite3` and stores complex objects as JSON strings (e.g., `input_blocks`, `raw_output`, `request_json`, `result_json`). Read/parse these when adding integrations.
-- Runs lifecycle: create a run with `createRun(...)`, then always call `completeRunSuccess` or `completeRunFailure` so state and diagnostics are saved.
-- LLM contract: `openaiClient.chatJson` expects the model to return JSON text (the code uses OpenAI response_format `json_object`). When changing prompts, ensure the model returns strictly JSON parseable strings.
-- ID prefixes: `run_`, `err_`, `outcome_`, and `cand_`-style ids are used; keep these or follow existing patterns when writing helper utilities.
+### Developer Workflows
+```bash
+# Backend dev (auto-runs migrations, watches changes)
+cd backend && npm install && npm run dev
 
-Integration points to watch
-- Frontend <-> backend: static frontend calls API endpoints under `/api/*`. See `frontend/core.js` and `frontend/wizard.js` for usage patterns (how they send spec/compiled prompt data).
-- LLM interactions: `backend/src/lib/openaiClient.js` and callers (`evaluationEngine.js`, outcome runner, other agents) — keep prompt text and parsing consistent.
+# Migrations only
+cd backend && npm run migrate
 
-When making changes, prefer small, testable edits
-- Add unit-like self-checks by using `backend/scripts/selftest.js` or the `test_*.sh` quick scripts in the `backend` directory.
-- If you change DB schema, add a migration under `backend/migrations/` and update `migrate` script usage.
+# Self-test (targets running server)
+SELFTEST_BASE_URL=http://localhost:8080 node backend/scripts/selftest.js
 
-Examples (copyable) — run locally
-- Start backend dev server
-  - cd backend && npm install && npm run dev
-- Run migrations
-  - cd backend && npm run migrate
-- Run selftest against local server
-  - SELFTEST_BASE_URL=http://localhost:8080 node backend/scripts/selftest.js
+# Health check
+curl http://localhost:8080/api/health
+```
 
-If anything is unclear or you'd like me to expand specific sections (API examples, prompt text locations, or a developer checklist), tell me which area and I will iterate. 
+### Critical Patterns
+
+**LLM Calls** — Always route through `llmRouter.js`, never call clients directly:
+```javascript
+import { chatJson, chatText, LlmDisabledError } from "../lib/llmRouter.js";
+// Provider MUST be explicit: 'openai' or 'groq'
+await chatJson({ system, user, model, provider: 'openai' });
+```
+
+**Run Lifecycle** — Always complete runs (success or failure):
+```javascript
+import { createRun, completeRunSuccess, completeRunFailure } from "../lib/runLogger.js";
+const runId = createRun({ model, inputBlocks });
+try {
+  const result = await doWork();
+  completeRunSuccess(runId, result);
+} catch (err) {
+  completeRunFailure(runId, "runtime_exception", err.message);
+}
+```
+
+**DB Operations** — Synchronous `better-sqlite3`; JSON-stringify complex objects:
+```javascript
+import { db } from "../lib/db.js";
+db.prepare("INSERT INTO specs (id, spec_json) VALUES (?, ?)").run(id, JSON.stringify(spec));
+```
+
+**ID Prefixes** — Use consistently: `run_`, `err_`, `outcome_`, `cand_`, `spec_`
+
+### Environment Variables
+Copy `backend/.env.example` to `.env`. Critical vars:
+- `OPENAI_API_KEY` — Required for LLM features (missing = `LlmDisabledError`)
+- `OPENAI_BASE_URL` — Custom endpoint (for proxies/Groq)
+- `JWT_SECRET` — Required in production
+- `CORS_ORIGIN` — Frontend domain (e.g., `https://your-app.vercel.app`)
+- `SQLITE_PATH` — DB path (or `DATABASE_URL` for PostgreSQL)
+
+### Adding New Features
+1. **New API route**: Add to `backend/src/routes/`, mount in `server.js`
+2. **New DB table**: Add migration in `backend/migrations/00X_*.js`
+3. **New i18n keys**: Add to all `frontend/locales/*.json` files
+4. **Schema validation**: Use `zod` (see `evaluationEngine.js` for patterns)
+
+### Testing & Validation
+- `npm run test` in backend runs `scripts/selftest.js`
+- `test-deployment.sh <url>` for deployment verification
+- `verify-integration.sh` checks frontend-backend connection 

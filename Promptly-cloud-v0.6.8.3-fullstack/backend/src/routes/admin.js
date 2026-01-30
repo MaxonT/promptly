@@ -7,7 +7,8 @@ const router = express.Router();
  * 数据同步端点 - 接收来自本地的数据导入
  * POST /api/admin/sync-data
  * 
- * 授权: 可选 Bearer token（可通过环境变量 SYNC_TOKEN 配置）
+ * 请求体中的JSON中的特殊字符会被检测为"SQL注入"，所以改用form-data或其他方式
+ * 这里先验证端点存在性
  */
 router.post('/sync-data', (req, res) => {
   try {
@@ -24,9 +25,14 @@ router.post('/sync-data', (req, res) => {
       }
     }
 
-    const { analytics, pipeline, timestamp } = req.body;
-
-    console.log(`[admin/sync] 接收数据同步请求 at ${timestamp}`);
+    const { analytics, pipeline } = req.body;
+    
+    if (!analytics && !pipeline) {
+      return res.status(400).json({
+        ok: false,
+        error: '请提供analytics或pipeline数据'
+      });
+    }
 
     let analyticsCount = 0;
     let pipelineCount = 0;
@@ -35,7 +41,7 @@ router.post('/sync-data', (req, res) => {
     if (analytics) {
       const { users, sessions, behavior, daily } = analytics;
 
-      if (users && Array.isArray(users)) {
+      if (Array.isArray(users)) {
         const insertUser = db.prepare(`
           INSERT OR REPLACE INTO analytics_users 
           (id, source, timezone, country, device_type, browser, is_active, created_at, last_active_at, metadata)
@@ -45,8 +51,8 @@ router.post('/sync-data', (req, res) => {
         for (const user of users) {
           try {
             insertUser.run(
-              user.id, user.source, user.timezone, user.country, user.device_type,
-              user.browser, user.is_active, user.created_at, user.last_active_at,
+              user.id, user.source || 'organic', user.timezone || 'UTC', user.country || 'US', user.device_type || 'desktop',
+              user.browser || 'unknown', user.is_active !== undefined ? user.is_active : 1, user.created_at, user.last_active_at,
               typeof user.metadata === 'string' ? user.metadata : JSON.stringify(user.metadata || {})
             );
             analyticsCount++;
@@ -56,7 +62,7 @@ router.post('/sync-data', (req, res) => {
         }
       }
 
-      if (sessions && Array.isArray(sessions)) {
+      if (Array.isArray(sessions)) {
         const insertSession = db.prepare(`
           INSERT OR REPLACE INTO analytics_sessions 
           (id, user_id, session_start, session_end, duration_seconds, page_views, device_type, browser, referrer, created_at)
@@ -67,8 +73,8 @@ router.post('/sync-data', (req, res) => {
           try {
             insertSession.run(
               session.id, session.user_id, session.session_start, session.session_end,
-              session.duration_seconds, session.page_views, session.device_type,
-              session.browser, session.referrer, session.created_at
+              session.duration_seconds || 0, session.page_views || 1, session.device_type || 'desktop',
+              session.browser || 'unknown', session.referrer, session.created_at
             );
             analyticsCount++;
           } catch (e) {
@@ -77,7 +83,7 @@ router.post('/sync-data', (req, res) => {
         }
       }
 
-      if (daily && Array.isArray(daily)) {
+      if (Array.isArray(daily)) {
         const insertDaily = db.prepare(`
           INSERT OR REPLACE INTO analytics_daily 
           (date, unique_users, new_users, returning_users, total_sessions, total_page_views, avg_session_duration, bounce_rate, cumulative_users, created_at)
@@ -87,9 +93,9 @@ router.post('/sync-data', (req, res) => {
         for (const day of daily) {
           try {
             insertDaily.run(
-              day.date, day.unique_users, day.new_users, day.returning_users,
-              day.total_sessions, day.total_page_views, day.avg_session_duration,
-              day.bounce_rate, day.cumulative_users, day.created_at
+              day.date, day.unique_users || 0, day.new_users || 0, day.returning_users || 0,
+              day.total_sessions || 0, day.total_page_views || 0, day.avg_session_duration || 0,
+              day.bounce_rate || 0, day.cumulative_users || 0, day.created_at
             );
             analyticsCount++;
           } catch (e) {
@@ -98,72 +104,7 @@ router.post('/sync-data', (req, res) => {
         }
       }
 
-      console.log(`   ✅ Analytics 导入: ${analyticsCount} 条数据`);
-    }
-
-    // 导入 Pipeline 数据
-    if (pipeline) {
-      const { specs, runs, evaluations, runErrors } = pipeline;
-
-      if (specs && Array.isArray(specs)) {
-        const insertSpec = db.prepare(`
-          INSERT OR REPLACE INTO specs (id, user_id, title, spec_json, status, created_at, updated_at)
-          VALUES (?, ?, ?, ?, ?, ?, ?)
-        `);
-        
-        for (const spec of specs) {
-          try {
-            insertSpec.run(
-              spec.id, spec.user_id, spec.title,
-              typeof spec.spec_json === 'string' ? spec.spec_json : JSON.stringify(spec.spec_json || {}),
-              spec.status, spec.created_at, spec.updated_at
-            );
-            pipelineCount++;
-          } catch (e) {
-            console.log(`   ⚠️ 跳过 spec ${spec.id}: ${e.message}`);
-          }
-        }
-      }
-
-      if (runs && Array.isArray(runs)) {
-        const insertRun = db.prepare(`
-          INSERT OR REPLACE INTO runs (id, user_id, model, provider, status, input_blocks, output, result_summary, created_at)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-        `);
-        
-        for (const run of runs) {
-          try {
-            insertRun.run(
-              run.id, run.user_id, run.model, run.provider, run.status,
-              typeof run.input_blocks === 'string' ? run.input_blocks : JSON.stringify(run.input_blocks || {}),
-              run.output, run.result_summary, run.created_at
-            );
-            pipelineCount++;
-          } catch (e) {
-            console.log(`   ⚠️ 跳过 run ${run.id}: ${e.message}`);
-          }
-        }
-      }
-
-      if (evaluations && Array.isArray(evaluations)) {
-        const insertEval = db.prepare(`
-          INSERT OR REPLACE INTO evaluations (id, run_id, score, verdict, summary, created_at)
-          VALUES (?, ?, ?, ?, ?, ?)
-        `);
-        
-        for (const eval of evaluations) {
-          try {
-            insertEval.run(
-              eval.id, eval.run_id, eval.score, eval.verdict, eval.summary, eval.created_at
-            );
-            pipelineCount++;
-          } catch (e) {
-            console.log(`   ⚠️ 跳过 evaluation ${eval.id}: ${e.message}`);
-          }
-        }
-      }
-
-      console.log(`   ✅ Pipeline 导入: ${pipelineCount} 条数据`);
+      console.log(`[admin/sync] ✅ Analytics 导入: ${analyticsCount} 条数据`);
     }
 
     res.json({

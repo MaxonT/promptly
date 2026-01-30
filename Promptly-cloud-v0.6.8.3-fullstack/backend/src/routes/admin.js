@@ -34,6 +34,67 @@ router.post('/sync-data', (req, res) => {
       });
     }
 
+    // 确保analytics表存在
+    if (analytics) {
+      try {
+        db.exec(`
+          CREATE TABLE IF NOT EXISTS analytics_users (
+            id TEXT PRIMARY KEY,
+            source TEXT DEFAULT 'organic',
+            timezone TEXT DEFAULT 'UTC',
+            country TEXT DEFAULT 'US',
+            device_type TEXT DEFAULT 'desktop',
+            browser TEXT,
+            is_active INTEGER DEFAULT 1,
+            created_at TEXT NOT NULL,
+            last_active_at TEXT,
+            metadata TEXT DEFAULT '{}'
+          );
+          
+          CREATE TABLE IF NOT EXISTS analytics_sessions (
+            id TEXT PRIMARY KEY,
+            user_id TEXT NOT NULL,
+            session_start TEXT NOT NULL,
+            session_end TEXT,
+            duration_seconds INTEGER DEFAULT 0,
+            page_views INTEGER DEFAULT 1,
+            device_type TEXT,
+            browser TEXT,
+            referrer TEXT,
+            created_at TEXT NOT NULL
+          );
+          
+          CREATE TABLE IF NOT EXISTS analytics_behavior (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id TEXT NOT NULL,
+            session_id TEXT,
+            recorded_at TEXT NOT NULL,
+            mouse_movements INTEGER DEFAULT 0,
+            scrolls INTEGER DEFAULT 0,
+            clicks INTEGER DEFAULT 0,
+            typing_events INTEGER DEFAULT 0,
+            engagement_score REAL DEFAULT 50.0
+          );
+          
+          CREATE TABLE IF NOT EXISTS analytics_daily (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            date TEXT UNIQUE NOT NULL,
+            unique_users INTEGER DEFAULT 0,
+            new_users INTEGER DEFAULT 0,
+            returning_users INTEGER DEFAULT 0,
+            total_sessions INTEGER DEFAULT 0,
+            total_page_views INTEGER DEFAULT 0,
+            avg_session_duration INTEGER DEFAULT 0,
+            bounce_rate REAL DEFAULT 0.15,
+            cumulative_users INTEGER DEFAULT 0,
+            created_at TEXT NOT NULL
+          );
+        `);
+      } catch (e) {
+        console.log(`[admin/sync] Tables already exist or create failed: ${e.message}`);
+      }
+    }
+
     let analyticsCount = 0;
     let pipelineCount = 0;
 
@@ -57,7 +118,7 @@ router.post('/sync-data', (req, res) => {
             );
             analyticsCount++;
           } catch (e) {
-            console.log(`   ⚠️ 跳过用户 ${user.id}: ${e.message}`);
+            console.log(`[admin/sync] ⚠️ 跳过用户 ${user.id}: ${e.message}`);
           }
         }
       }
@@ -78,7 +139,7 @@ router.post('/sync-data', (req, res) => {
             );
             analyticsCount++;
           } catch (e) {
-            console.log(`   ⚠️ 跳过会话 ${session.id}: ${e.message}`);
+            console.log(`[admin/sync] ⚠️ 跳过会话 ${session.id}: ${e.message}`);
           }
         }
       }
@@ -99,7 +160,7 @@ router.post('/sync-data', (req, res) => {
             );
             analyticsCount++;
           } catch (e) {
-            console.log(`   ⚠️ 跳过日期 ${day.date}: ${e.message}`);
+            console.log(`[admin/sync] ⚠️ 跳过日期 ${day.date}: ${e.message}`);
           }
         }
       }

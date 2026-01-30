@@ -29,7 +29,7 @@ from datetime import datetime, timedelta
 # ============ 配置区域 ============
 CONFIG = {
     "SERVICE_NAME": "Promptly-Behavior-Simulator",
-    "API_BASE": os.environ.get("API_BASE", "http://localhost:8080"),
+    "API_BASE": os.environ.get("API_BASE", "https://promptly-v0-6-cloudtest-cursor-dev.onrender.com"),
     
     # 时间段概率 (%)
     "PROBABILITY": {

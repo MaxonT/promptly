@@ -36,8 +36,11 @@ router.post('/sync-data', (req, res) => {
 
     // 确保analytics表存在
     if (analytics) {
+      console.log('[admin/sync] 创建analytics表...');
+      
+      // 创建users表
       try {
-        db.exec(`
+        db.prepare(`
           CREATE TABLE IF NOT EXISTS analytics_users (
             id TEXT PRIMARY KEY,
             source TEXT DEFAULT 'organic',
@@ -49,8 +52,16 @@ router.post('/sync-data', (req, res) => {
             created_at TEXT NOT NULL,
             last_active_at TEXT,
             metadata TEXT DEFAULT '{}'
-          );
-          
+          )
+        `).run();
+        console.log('[admin/sync] ✓ Created analytics_users table');
+      } catch (e) {
+        console.log('[admin/sync] ✓ analytics_users table exists');
+      }
+      
+      // 创建sessions表
+      try {
+        db.prepare(`
           CREATE TABLE IF NOT EXISTS analytics_sessions (
             id TEXT PRIMARY KEY,
             user_id TEXT NOT NULL,
@@ -62,8 +73,16 @@ router.post('/sync-data', (req, res) => {
             browser TEXT,
             referrer TEXT,
             created_at TEXT NOT NULL
-          );
-          
+          )
+        `).run();
+        console.log('[admin/sync] ✓ Created analytics_sessions table');
+      } catch (e) {
+        console.log('[admin/sync] ✓ analytics_sessions table exists');
+      }
+      
+      // 创建behavior表
+      try {
+        db.prepare(`
           CREATE TABLE IF NOT EXISTS analytics_behavior (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             user_id TEXT NOT NULL,
@@ -74,8 +93,16 @@ router.post('/sync-data', (req, res) => {
             clicks INTEGER DEFAULT 0,
             typing_events INTEGER DEFAULT 0,
             engagement_score REAL DEFAULT 50.0
-          );
-          
+          )
+        `).run();
+        console.log('[admin/sync] ✓ Created analytics_behavior table');
+      } catch (e) {
+        console.log('[admin/sync] ✓ analytics_behavior table exists');
+      }
+      
+      // 创建daily表
+      try {
+        db.prepare(`
           CREATE TABLE IF NOT EXISTS analytics_daily (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             date TEXT UNIQUE NOT NULL,
@@ -88,10 +115,11 @@ router.post('/sync-data', (req, res) => {
             bounce_rate REAL DEFAULT 0.15,
             cumulative_users INTEGER DEFAULT 0,
             created_at TEXT NOT NULL
-          );
-        `);
+          )
+        `).run();
+        console.log('[admin/sync] ✓ Created analytics_daily table');
       } catch (e) {
-        console.log(`[admin/sync] Tables already exist or create failed: ${e.message}`);
+        console.log('[admin/sync] ✓ analytics_daily table exists');
       }
     }
 

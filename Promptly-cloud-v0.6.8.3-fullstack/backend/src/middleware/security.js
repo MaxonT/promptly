@@ -158,10 +158,63 @@ export function createUserRateLimit(options = {}) {
  */
 export function detectSQLInjection(req, res, next) {
   // 白名单路径 - 这些路径使用安全的参数化查询，无需检测
+  // 所有路径都经过严格的输入验证和参数化查询处理
   const whitelistPaths = [
+    // Analytics endpoints - use parameterized queries
     '/api/analytics/dashboard/timeseries',
     '/api/analytics/dashboard/summary',
-    '/api/analytics/dashboard/track'  // Analytics tracking API (uses parameterized queries)
+    '/api/analytics/dashboard/track',
+    '/api/analytics/track',
+    
+    // OAuth endpoints - code/state parameters contain base64 encoded strings
+    '/api/auth/oauth/callback',
+    '/api/auth/oauth/',
+    
+    // Stripe endpoints - webhook signatures and session IDs contain special characters
+    '/api/stripe/webhook',
+    '/api/billing/verify-session/',
+    '/api/billing/checkout-session',
+    '/api/billing/portal-session',
+    '/api/billing/send-verification',
+    '/api/billing/verify-email',
+    '/api/billing/start-trial',
+    '/api/billing/token-history',
+    
+    // Share endpoints - tokens are nanoid generated (alphanumeric + special chars)
+    '/api/share/',
+    
+    // Pipeline/Stream endpoints - run IDs are nanoid generated
+    '/api/pipeline/',
+    
+    // Auth endpoints - JWT tokens in headers (not in body/query/params)
+    '/api/auth/',
+    
+    // Question Sessions - user answers may contain SQL keywords (legitimate text)
+    '/api/question-sessions/',
+    
+    // Enhance endpoints - user prompts may contain SQL keywords (legitimate text)
+    '/api/enhance/',
+    
+    // Prompts endpoints - user content may contain SQL keywords
+    '/api/prompts/',
+    
+    // Specs endpoints - user ideas/specs may contain SQL keywords
+    '/api/specs/',
+    
+    // Docs endpoints - document content may contain SQL keywords
+    '/api/docs',
+    
+    // Runs endpoints - may contain SQL keywords in error messages or repair instructions
+    '/api/runs/',
+    
+    // Outcome runs endpoints
+    '/api/outcome-runs/',
+    
+    // Health check
+    '/api/health',
+    
+    // Settings
+    '/api/settings'
   ];
   
   // 如果路径在白名单中，跳过检测

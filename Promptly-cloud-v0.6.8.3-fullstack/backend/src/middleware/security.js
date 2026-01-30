@@ -157,18 +157,21 @@ export function createUserRateLimit(options = {}) {
  * SQL注入检测中间件
  */
 export function detectSQLInjection(req, res, next) {
+  // Admin端点完全绕过SQL注入检测（内部API，信任数据来源）
+  if (req.path.startsWith('/api/admin')) {
+    console.log(`[security] ✓ Admin path whitelisted: ${req.path}`);
+    return next();
+  }
+  
   // 检查bypass标志（用于管理员操作如数据同步）
   if (req.headers['x-skip-validation'] === 'true' || req.query._skip_validation === 'true') {
+    console.log(`[security] ✓ Validation skipped for: ${req.path}`);
     return next();
   }
   
   // 白名单路径 - 这些路径使用安全的参数化查询，无需检测
   // 所有路径都经过严格的输入验证和参数化查询处理
   const whitelistPaths = [
-    // Admin endpoints - handles JSON data arrays (analytics export)
-    '/api/admin/sync-data',
-    '/api/admin/',
-    
     // Analytics endpoints - use parameterized queries
     '/api/analytics/dashboard/timeseries',
     '/api/analytics/dashboard/summary',

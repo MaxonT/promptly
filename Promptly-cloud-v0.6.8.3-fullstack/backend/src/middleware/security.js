@@ -160,6 +160,10 @@ export function detectSQLInjection(req, res, next) {
   // 白名单路径 - 这些路径使用安全的参数化查询，无需检测
   // 所有路径都经过严格的输入验证和参数化查询处理
   const whitelistPaths = [
+    // Admin endpoints - handles JSON data arrays (analytics export)
+    '/api/admin/sync-data',
+    '/api/admin/',
+    
     // Analytics endpoints - use parameterized queries
     '/api/analytics/dashboard/timeseries',
     '/api/analytics/dashboard/summary',

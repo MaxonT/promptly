@@ -49,15 +49,9 @@ app.use("/api/stripe", stripeWebhookRouter);
 app.use(express.json({ limit: "2mb" }));
 app.use(cookieParser());
 
-// 安全中间件 (admin端点在后面单独注册，会绕过这些)
+// 安全中间件
 app.use(requestSizeLimiter('10mb')); // 请求大小限制
-app.use((req, res, next) => {
-  // admin端点绕过SQL注入检测（因为它处理的是JSON数组数据）
-  if (req.path.startsWith('/api/admin')) {
-    return next();
-  }
-  detectSQLInjection(req, res, next);
-});
+app.use(detectSQLInjection); // SQL注入检测
 
 // Rate limiting for API endpoints (防止暴力攻击和滥用)
 const apiLimiter = rateLimit({

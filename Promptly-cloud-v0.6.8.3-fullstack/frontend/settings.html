@@ -8,6 +8,7 @@
   <link rel="stylesheet" href="theme.css" />
   <link rel="stylesheet" href="style.css" />
   <link rel="stylesheet" href="settings.css" />
+  <link rel="stylesheet" href="account.css" />
   <script src="config.js"></script>
   <script src="lib/i18next.min.js"></script>
   <script type="module" src="i18n/index.js"></script>
@@ -106,6 +107,104 @@
           <button type="submit">Register</button>
         </form>
       </div>
+
+      <!-- Account Management Section (visible when logged in) -->
+      <div id="accountManagementSection" class="account-management hidden">
+        <button id="manageAccountToggle" type="button" class="account-logout">
+          <span id="toggleIcon">▶</span>
+          <span>Manage Account</span>
+        </button>
+
+        <!-- Expandable Account Details -->
+        <div id="accountDetailsPanel" class="account-details-panel hidden">
+          <!-- Subscription Card -->
+          <div class="account-card">
+            <div class="card-header">
+              <h3>Subscription</h3>
+              <span id="subscriptionStatus" class="status-badge">--</span>
+            </div>
+            <div class="card-body">
+              <div class="info-grid">
+                <div class="info-item">
+                  <span class="info-label">Plan</span>
+                  <span id="planName" class="info-value">--</span>
+                </div>
+                <div class="info-item">
+                  <span class="info-label">Period End</span>
+                  <span id="periodEnd" class="info-value">--</span>
+                </div>
+                <div class="info-item" id="trialEndItem" style="display: none;">
+                  <span class="info-label">Trial Ends</span>
+                  <span id="trialEnd" class="info-value">--</span>
+                </div>
+              </div>
+              <div class="card-actions">
+                <button id="manageSubscriptionBtn" class="btn btn-primary btn-sm">Manage Subscription</button>
+                <a href="subscription.html" class="btn btn-secondary btn-sm">View Plans</a>
+              </div>
+            </div>
+          </div>
+
+          <!-- Token Balance Card -->
+          <div class="account-card">
+            <div class="card-header">
+              <h3>Token Balance</h3>
+            </div>
+            <div class="card-body">
+              <div class="token-overview">
+                <div class="token-total">
+                  <span id="totalTokens" class="token-amount">--</span>
+                  <span class="token-label">Total Available</span>
+                </div>
+              </div>
+              <div class="token-breakdown">
+                <div class="token-bucket">
+                  <div class="bucket-header">
+                    <span class="bucket-name">Daily Free</span>
+                    <span id="dailyFreeTokens" class="bucket-value">--</span>
+                  </div>
+                  <div class="bucket-bar">
+                    <div id="dailyFreeBar" class="bucket-fill" style="width: 0%"></div>
+                  </div>
+                  <span class="bucket-note">Refreshes at UTC 00:00</span>
+                </div>
+                <div class="token-bucket">
+                  <div class="bucket-header">
+                    <span class="bucket-name">Monthly</span>
+                    <span id="monthlyTokens" class="bucket-value">--</span>
+                  </div>
+                  <div class="bucket-bar">
+                    <div id="monthlyBar" class="bucket-fill" style="width: 0%"></div>
+                  </div>
+                </div>
+                <div class="token-bucket" id="trialBucket" style="display: none;">
+                  <div class="bucket-header">
+                    <span class="bucket-name">Trial</span>
+                    <span id="trialTokens" class="bucket-value">--</span>
+                  </div>
+                  <div class="bucket-bar">
+                    <div id="trialBar" class="bucket-fill trial" style="width: 0%"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Usage History Card -->
+          <div class="account-card">
+            <div class="card-header">
+              <h3>Usage History</h3>
+              <button id="refreshHistoryBtn" class="btn btn-sm btn-secondary">Refresh</button>
+            </div>
+            <div class="card-body">
+              <div id="usageHistory" class="usage-history">
+                <div class="loading-placeholder">No usage history yet.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <button id="logoutBtn" class="account-logout hidden">Log out</button>
     </section>
 

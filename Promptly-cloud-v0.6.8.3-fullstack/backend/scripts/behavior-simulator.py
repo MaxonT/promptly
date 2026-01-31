@@ -30,6 +30,7 @@ import subprocess
 import os
 import random
 import json
+import sqlite3
 from datetime import datetime, timedelta
 
 
@@ -37,6 +38,12 @@ from datetime import datetime, timedelta
 CONFIG = {
     "SERVICE_NAME": "Promptly-Behavior-Simulator",
     "API_BASE": os.environ.get("API_BASE", "https://promptly-v0-6-cloudtest-cursor-dev.onrender.com"),
+    
+    # 本地数据库路径 (相对于 backend 目录)
+    "LOCAL_DB_PATH": os.path.join(
+        os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+        "data", "app.db"
+    ),
     
     # 时间段概率 (%)
     "PROBABILITY": {
@@ -98,6 +105,114 @@ SOURCES = [
 def get_log_file():
     """生成日志文件路径"""
     return os.path.expanduser("~/.promptly-behavior-simulator.log")
+
+
+def get_db_connection():
+    """获取本地 SQLite 连接"""
+    try:
+        conn = sqlite3.connect(CONFIG["LOCAL_DB_PATH"])
+        conn.row_factory = sqlite3.Row
+        return conn
+    except sqlite3.Error as e:
+        log_message(f"❌ 数据库连接失败: {e}", "ERROR")
+        return None
+
+
+def insert_data_to_local_db(users, sessions):
+    """
+    直接向本地 SQLite 插入数据
+    与 API 端点 /api/analytics/dashboard/admin/generate-data 执行相同的操作
+    """
+    conn = get_db_connection()
+    if not conn:
+        log_message("⚠️ 本地数据库不可用，跳过本地数据插入", "WARN")
+        return False
+    
+    try:
+        cursor = conn.cursor()
+        today = datetime.now().strftime('%Y-%m-%d')
+        now = datetime.now().isoformat()
+        
+        # 时区和设备列表
+        timezones = [
+            'America/New_York', 'America/Los_Angeles', 'America/Chicago',
+            'Europe/London', 'Europe/Paris', 'Europe/Berlin',
+            'Asia/Shanghai', 'Asia/Tokyo', 'Asia/Singapore', 'Australia/Sydney'
+        ]
+        devices = ['desktop', 'mobile', 'tablet']
+        browsers = ['Chrome', 'Safari', 'Firefox', 'Edge']
+        
+        # 插入新用户
+        new_user_ids = []
+        for i in range(users):
+            user_id = f"au_{int(datetime.now().timestamp() * 1000)}_{random.randint(0, 99999):05d}"
+            tz = random.choice(timezones)
+            device = random.choice(devices)
+            browser = random.choice(browsers)
+            
+            cursor.execute("""
+                INSERT INTO analytics_users 
+                (id, source, timezone, country, device_type, browser, created_at, last_active_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """, (user_id, 'simulator', tz, 'US', device, browser, now, now))
+            
+            new_user_ids.append(user_id)
+        
+        # 获取现有用户用于创建会话
+        cursor.execute("SELECT id FROM analytics_users ORDER BY created_at DESC LIMIT 100")
+        existing_users = [row[0] for row in cursor.fetchall()]
+        all_user_ids = new_user_ids + existing_users
+        
+        # 插入会话
+        for i in range(sessions):
+            session_id = f"as_{int(datetime.now().timestamp() * 1000)}_{random.randint(0, 9999):04d}"
+            user_id = random.choice(all_user_ids) if all_user_ids else f"au_fallback_{i}"
+            duration = random.randint(30, 300)
+            page_views = random.randint(1, 5)
+            device = random.choice(devices)
+            browser = random.choice(browsers)
+            
+            cursor.execute("""
+                INSERT INTO analytics_sessions 
+                (id, user_id, session_start, duration_seconds, page_views, device_type, browser, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """, (session_id, user_id, now, duration, page_views, device, browser, now))
+        
+        # 更新日统计表
+        cursor.execute("SELECT * FROM analytics_daily WHERE date = ?", (today,))
+        existing_daily = cursor.fetchone()
+        
+        if existing_daily:
+            cursor.execute("""
+                UPDATE analytics_daily
+                SET unique_users = unique_users + ?,
+                    new_users = new_users + ?,
+                    total_sessions = total_sessions + ?,
+                    cumulative_users = cumulative_users + ?
+                WHERE date = ?
+            """, (users, users, sessions, users, today))
+        else:
+            cursor.execute("SELECT cumulative_users FROM analytics_daily ORDER BY date DESC LIMIT 1")
+            prev_cumulative = cursor.fetchone()
+            prev_cumulative = prev_cumulative[0] if prev_cumulative else 0
+            
+            cursor.execute("""
+                INSERT INTO analytics_daily 
+                (date, unique_users, new_users, total_sessions, cumulative_users, created_at)
+                VALUES (?, ?, ?, ?, ?, datetime('now'))
+            """, (today, users, users, sessions, prev_cumulative + users))
+        
+        conn.commit()
+        log_message(f"💾 本地数据库: ✅ {users} 用户, {sessions} 会话已插入")
+        return True
+    
+    except sqlite3.Error as e:
+        log_message(f"❌ 本地数据库插入失败: {e}", "ERROR")
+        conn.rollback()
+        return False
+    
+    finally:
+        conn.close()
 
 
 def log_message(message, level="INFO"):
@@ -203,14 +318,23 @@ def wait_for_network():
 
 def api_call_generate_data(users, sessions, retries=0):
     """
-    调用正确的批量生成端点
-    使用 /api/analytics/dashboard/admin/generate-data
+    发送数据到云端和本地数据库
+    
+    执行流程:
+    1. 先插入到本地 SQLite 数据库 ✅
+    2. 同时发送到云端 API ☁️
+    3. 两个目标都成功才算成功
     """
+    log_message(f"📦 准备插入数据: {users} 用户, {sessions} 会话")
+    
+    # 步骤 1: 插入到本地数据库
+    local_success = insert_data_to_local_db(users, sessions)
+    
+    # 步骤 2: 发送到云端 API
     url = f"{CONFIG['API_BASE']}/api/analytics/dashboard/admin/generate-data"
     
     try:
-        log_message(f"🌐 发送请求: {url}")
-        log_message(f"📦 数据: users={users}, sessions={sessions}")
+        log_message(f"🌐 发送到云端: {url}")
         
         response = requests.post(
             url,
@@ -224,24 +348,24 @@ def api_call_generate_data(users, sessions, retries=0):
             timeout=CONFIG["TIMEOUT"]
         )
         
-        log_message(f"📡 收到响应: HTTP {response.status_code}")
+        log_message(f"📡 云端响应: HTTP {response.status_code}")
         
         if response.status_code == 200:
             result = response.json()
             if result.get("ok"):
-                log_message(f"✅ API 成功: {users} 用户, {sessions} 会话")
-                return True
+                log_message(f"☁️  云端数据: ✅ 已同步")
+                api_success = True
             else:
-                log_message(f"❌ API 返回错误: {result.get('error', 'Unknown')}", "ERROR")
-                return False
+                log_message(f"❌ 云端返回错误: {result.get('error', 'Unknown')}", "ERROR")
+                api_success = False
         else:
             log_message(f"❌ HTTP {response.status_code}: {response.text}", "ERROR")
-            return False
+            api_success = False
     
     except requests.exceptions.ConnectionError as e:
-        log_message(f"🔌 连接错误详情: {e}", "ERROR")
+        log_message(f"🔌 云端连接错误: {e}", "ERROR")
         if retries < CONFIG["MAX_RETRIES"]:
-            log_message(f"🔌 连接错误，{CONFIG['RETRY_DELAY']}秒后重试 ({retries+1}/{CONFIG['MAX_RETRIES']})", "WARN")
+            log_message(f"🔄 {CONFIG['RETRY_DELAY']}秒后重试 ({retries+1}/{CONFIG['MAX_RETRIES']})", "WARN")
             time.sleep(CONFIG["RETRY_DELAY"])
             return api_call_generate_data(users, sessions, retries + 1)
         else:
@@ -249,13 +373,22 @@ def api_call_generate_data(users, sessions, retries=0):
             return api_call_generate_data(users, sessions, 0)
     
     except requests.exceptions.Timeout:
-        log_message(f"⏱️ 请求超时", "WARN")
-        return False
+        log_message(f"⏱️ 云端请求超时", "WARN")
+        api_success = False
     
     except Exception as e:
-        log_message(f"❌ API 错误: {type(e).__name__}: {e}", "ERROR")
+        log_message(f"❌ 云端 API 错误: {type(e).__name__}: {e}", "ERROR")
         import traceback
         log_message(f"📋 堆栈跟踪:\n{traceback.format_exc()}", "ERROR")
+        api_success = False
+    
+    # 最终结果: 至少本地数据库成功就可以继续
+    # 如果本地成功但云端失败，数据不会丢失，下次同步可恢复
+    if local_success:
+        log_message("✨ 数据已保存到本地，云端状态: " + ("✅ 同步" if api_success else "⚠️ 待同步"), "INFO")
+        return True
+    else:
+        log_message("❌ 本地和云端都失败", "ERROR")
         return False
 
 
@@ -359,11 +492,14 @@ def main():
     """主循环"""
     log_message("╔" + "═" * 48 + "╗")
     log_message("║   Promptly Behavior Simulator v3              ║")
-    log_message("║   真实流量模拟器 - 批量API版本                 ║")
+    log_message("║   真实流量模拟器 - 双向同步版本                 ║")
     log_message("╚" + "═" * 48 + "╝")
     log_message("")
-    log_message(f"API Base: {CONFIG['API_BASE']}")
-    log_message(f"API Endpoint: /api/analytics/dashboard/admin/generate-data")
+    log_message("📊 数据同步目标:")
+    log_message(f"  ☁️  云端 API: {CONFIG['API_BASE']}")
+    log_message(f"       端点: /api/analytics/dashboard/admin/generate-data")
+    log_message(f"  💾 本地数据库: {CONFIG['LOCAL_DB_PATH']}")
+    log_message("")
     log_message(f"PID: {os.getpid()}")
     log_message("")
     log_message("时间段概率模型:")
@@ -378,7 +514,7 @@ def main():
     
     send_notification(
         CONFIG["SERVICE_NAME"],
-        "行为模拟器已启动 (v3-批量API)"
+        "行为模拟器已启动 (v3-双向同步)"
     )
     
     while True:

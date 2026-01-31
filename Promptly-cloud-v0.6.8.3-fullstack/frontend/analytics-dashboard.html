@@ -39,12 +39,6 @@
         </svg>
         Refresh
       </button>
-      <select id="timeRange" class="time-selector">
-        <option value="7d">Last 7 Days</option>
-        <option value="14d" selected>Last 14 Days</option>
-        <option value="30d">Last 30 Days</option>
-        <option value="all">All Time</option>
-      </select>
       <a href="index.html" class="nav-link">← Back to App</a>
     </div>
   </header>
@@ -135,8 +129,15 @@
         <div class="metric-card metric-bounce">
           <span class="metric-icon">⏱️</span>
           <p class="metric-label">Bounce</p>
-          <p class="metric-value" id="metricBounce">0%</p>
-          <p class="metric-desc">Exit Rate</p>
+          <p class="metric-value" id="metricBounce">0.00%</p>
+          <p class="metric-desc">Exit Rate (Live)</p>
+        </div>
+
+        <div class="metric-card metric-return">
+          <span class="metric-icon">🔄</span>
+          <p class="metric-label">Return Freq</p>
+          <p class="metric-value" id="metricReturnFreq">0.00</p>
+          <p class="metric-desc">Avg Days Between Visits</p>
         </div>
 
         <div class="metric-card metric-new">
@@ -152,9 +153,17 @@
         <div class="chart-card">
           <div class="chart-header">
             <h3>📈 Growth Velocity</h3>
-            <div class="chart-legend">
-              <span class="legend-item legend-users"><span class="legend-dot"></span> Users</span>
-              <span class="legend-item legend-sessions"><span class="legend-dot"></span> Sessions</span>
+            <div class="chart-controls">
+              <select id="growthVelocityRange" class="chart-range-selector">
+                <option value="1h">Last 1 Hour</option>
+                <option value="6h">Last 6 Hours</option>
+                <option value="12h">Last 12 Hours</option>
+                <option value="30d" selected>Last 30 Days</option>
+              </select>
+              <div class="chart-legend">
+                <span class="legend-item legend-users"><span class="legend-dot"></span> Users</span>
+                <span class="legend-item legend-sessions"><span class="legend-dot"></span> Sessions</span>
+              </div>
             </div>
           </div>
           <div class="chart-container">

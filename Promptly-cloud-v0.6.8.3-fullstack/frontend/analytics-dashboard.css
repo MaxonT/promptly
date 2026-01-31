@@ -513,12 +513,22 @@
   justify-content: space-between;
   align-items: center;
   margin-bottom: 24px;
+  flex-wrap: wrap;
+  gap: 12px;
 }
 
 .chart-header h3 {
   margin: 0;
   font-size: 18px;
   font-weight: 700;
+}
+
+/* 4️⃣ Growth Velocity 图表控件布局 */
+.chart-controls {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
 }
 
 .chart-legend {

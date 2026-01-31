@@ -161,16 +161,94 @@ analyticsDashboardRouter.get("/summary", (req, res) => {
     
     // Stickiness ratio (典型 SaaS 产品: 10-20% 良好, 20%+ 优秀, <10% 需要改进)
     // 使用代表性 DAU 而不是当前 DAU 来计算，反映产品正常运行时的健康状况
-    const dauMauRatio = mau > 0 ? ((representativeDau / mau) * 100).toFixed(1) : 0;
+    // 6️⃣ 精确到2位小数
+    const dauMauRatio = mau > 0 ? ((representativeDau / mau) * 100).toFixed(2) : 0;
     
     // Average bounce rate (7 days relative to most recent date)
-    // bounce_rate 在数据库中存储为小数（如 0.15 表示 15%），但模拟器可能存储为百分比值
-    let avgBounceRate = db.prepare(`
-      SELECT AVG(bounce_rate) as avg FROM analytics_daily
-      WHERE date > date(?, '-7 days')
-    `).get(mostRecentDate)?.avg || 0.15;
-    // 如果值大于1，说明是百分比格式，需要转换
-    if (avgBounceRate > 1) avgBounceRate = avgBounceRate / 100;
+    // 1️⃣ Bounce Rate 实时计算 - 基于 sessions 的 page_views 数据
+    // 定义：page_views = 1 的会话比例（只看了一页就离开）
+    let bounceCount = 0;
+    let totalSessionCount = 0;
+    
+    try {
+      // 尝试从 sessions 表计算真实的 bounce rate
+      const bounceData = db.prepare(`
+        SELECT 
+          COUNT(*) as total,
+          SUM(CASE WHEN page_views <= 1 THEN 1 ELSE 0 END) as bounced
+        FROM analytics_sessions
+        WHERE date(session_start) > date(?, '-7 days')
+      `).get(mostRecentDate);
+      
+      if (bounceData && bounceData.total > 0) {
+        bounceCount = bounceData.bounced || 0;
+        totalSessionCount = bounceData.total;
+      }
+    } catch (e) {
+      console.log('[analytics] Bounce rate from sessions failed, using daily fallback');
+    }
+    
+    // 如果 sessions 没有足够数据，回退到 daily 表
+    let avgBounceRate;
+    if (totalSessionCount > 0) {
+      avgBounceRate = bounceCount / totalSessionCount;
+    } else {
+      // 从 daily 表获取
+      avgBounceRate = db.prepare(`
+        SELECT AVG(bounce_rate) as avg FROM analytics_daily
+        WHERE date > date(?, '-7 days')
+      `).get(mostRecentDate)?.avg || 0.125;
+      // 如果值大于1，说明是百分比格式，需要转换
+      if (avgBounceRate > 1) avgBounceRate = avgBounceRate / 100;
+    }
+    
+    // 2️⃣ Return Frequency 实时计算 - 基于用户回访间隔
+    // 计算同一用户多次 session 之间的平均间隔天数
+    let avgReturnFrequency = 3.5; // 默认值
+    
+    try {
+      // 计算每个用户的平均回访间隔
+      const returnData = db.prepare(`
+        WITH user_sessions AS (
+          SELECT 
+            user_id,
+            date(session_start) as session_date,
+            LAG(date(session_start)) OVER (PARTITION BY user_id ORDER BY session_start) as prev_date
+          FROM analytics_sessions
+          WHERE session_start > datetime(?, '-30 days')
+        )
+        SELECT AVG(julianday(session_date) - julianday(prev_date)) as avg_gap
+        FROM user_sessions
+        WHERE prev_date IS NOT NULL
+          AND julianday(session_date) - julianday(prev_date) > 0
+          AND julianday(session_date) - julianday(prev_date) < 30
+      `).get(mostRecentDate);
+      
+      if (returnData && returnData.avg_gap && !isNaN(returnData.avg_gap)) {
+        avgReturnFrequency = returnData.avg_gap;
+      }
+    } catch (e) {
+      console.log('[analytics] Return frequency calculation failed, using default:', e.message);
+    }
+    
+    // 如果计算结果不合理，使用基于 behavior 表的估算
+    if (avgReturnFrequency <= 0 || avgReturnFrequency > 30) {
+      try {
+        const behaviorReturn = db.prepare(`
+          SELECT AVG(return_frequency_days) as avg
+          FROM analytics_behavior
+          WHERE recorded_at > datetime(?, '-7 days')
+            AND return_frequency_days > 0
+            AND return_frequency_days < 30
+        `).get(mostRecentUserTime || 'now');
+        
+        if (behaviorReturn && behaviorReturn.avg && !isNaN(behaviorReturn.avg)) {
+          avgReturnFrequency = behaviorReturn.avg;
+        }
+      } catch (e) {
+        // 保持默认值
+      }
+    }
     
     // Timezone distribution
     const timezones = db.prepare(`
@@ -216,8 +294,9 @@ analyticsDashboardRouter.get("/summary", (req, res) => {
         dau_mau_ratio: parseFloat(dauMauRatio)
       },
       behavior: {
-        bounceRate: (avgBounceRate * 100).toFixed(1),  // 转换为百分比显示
-        avgReturnFrequency: (3.5).toFixed(1)  // 固定值，因为analytics_behavior表没有return_frequency_days列
+        // 6️⃣ 所有百分比精确到2位小数
+        bounceRate: (avgBounceRate * 100).toFixed(2),  // 实时计算的 bounce rate
+        avgReturnFrequency: avgReturnFrequency.toFixed(2)  // 实时计算的回访频率
       },
       timezones: timezones.map(tz => ({
         timezone: tz.timezone,

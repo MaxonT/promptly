@@ -79,10 +79,12 @@ async function syncData() {
     console.log('📊 导出Analytics数据...');
     const analyticsUsers = db.prepare('SELECT * FROM analytics_users').all();
     const analyticsSessions = db.prepare('SELECT * FROM analytics_sessions').all();
+    const analyticsBehavior = db.prepare('SELECT * FROM analytics_behavior').all();
     const analyticsDaily = db.prepare('SELECT * FROM analytics_daily').all();
     
     console.log(`   ✅ Users: ${analyticsUsers.length} 条`);
     console.log(`   ✅ Sessions: ${analyticsSessions.length} 条`);
+    console.log(`   ✅ Behavior: ${analyticsBehavior.length} 条`);
     console.log(`   ✅ Daily: ${analyticsDaily.length} 条`);
     
     db.close();
@@ -116,6 +118,19 @@ async function syncData() {
         totalCount += result.analyticsCount || 0;
         const progress = Math.min(i + BATCH_SIZE, analyticsSessions.length);
         console.log(`      [${progress}/${analyticsSessions.length}]`);
+      }
+    }
+    
+    // 分批发送behavior数据
+    if (analyticsBehavior.length > 0) {
+      const batches = Math.ceil(analyticsBehavior.length / BATCH_SIZE);
+      console.log(`   📤 Behavior数据（${batches}批）...`);
+      for (let i = 0; i < analyticsBehavior.length; i += BATCH_SIZE) {
+        const batch = analyticsBehavior.slice(i, i + BATCH_SIZE);
+        const result = await sendBatch(cloudUrl, { analytics: { behavior: batch } });
+        totalCount += result.analyticsCount || 0;
+        const progress = Math.min(i + BATCH_SIZE, analyticsBehavior.length);
+        console.log(`      [${progress}/${analyticsBehavior.length}]`);
       }
     }
     

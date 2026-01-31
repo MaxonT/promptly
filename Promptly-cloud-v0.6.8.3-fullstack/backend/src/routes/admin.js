@@ -185,6 +185,41 @@ router.post('/sync-data', (req, res) => {
         }
       }
 
+      if (Array.isArray(behavior) && behavior.length > 0) {
+        console.log(`[admin/sync] 准备插入 ${behavior.length} 条行为数据...`);
+        const insertBehavior = db.prepare(`
+          INSERT OR REPLACE INTO analytics_behavior 
+          (id, session_id, user_id, event_type, event_timestamp, page_url, element_selector, metadata, created_at)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `);
+        
+        const insertTransaction = db.transaction((behaviorList) => {
+          let inserted = 0;
+          for (const bh of behaviorList) {
+            try {
+              insertBehavior.run(
+                bh.id, bh.session_id, bh.user_id, bh.event_type, bh.event_timestamp,
+                bh.page_url, bh.element_selector || null,
+                typeof bh.metadata === 'string' ? bh.metadata : JSON.stringify(bh.metadata || {}),
+                bh.created_at
+              );
+              inserted++;
+            } catch (e) {
+              console.log(`[admin/sync] ⚠️ 跳过行为 ${bh.id}: ${e.message}`);
+            }
+          }
+          return inserted;
+        });
+        
+        try {
+          const behaviorInserted = insertTransaction(behavior);
+          analyticsCount += behaviorInserted;
+          console.log(`[admin/sync] ✓ 成功插入 ${behaviorInserted} 条行为数据`);
+        } catch (e) {
+          console.error(`[admin/sync] ✗ 行为数据事务失败: ${e.message}`);
+        }
+      }
+
       if (Array.isArray(daily) && daily.length > 0) {
         console.log(`[admin/sync] 准备插入 ${daily.length} 条日数据...`);
         const insertDaily = db.prepare(`
@@ -261,6 +296,29 @@ router.post('/sync-data', (req, res) => {
       ok: false,
       error: error.message
     });
+  }
+});
+
+/**
+ * GET /api/admin/debug-daily
+ * Debug endpoint to查看 daily 表的所有数据
+ */
+router.get("/debug-daily", (req, res) => {
+  try {
+    const count = db.prepare('SELECT COUNT(*) as c FROM analytics_daily').get();
+    const all = db.prepare('SELECT date, unique_users, new_users, cumulative_users FROM analytics_daily ORDER BY date').all();
+    const first5 = all.slice(0, 5);
+    const last5 = all.slice(-5);
+    
+    res.json({
+      ok: true,
+      total: count.c,
+      first5,
+      last5,
+      allDates: all.map(d => d.date)
+    });
+  } catch (error) {
+    res.status(500).json({ ok: false, error: error.message });
   }
 });
 

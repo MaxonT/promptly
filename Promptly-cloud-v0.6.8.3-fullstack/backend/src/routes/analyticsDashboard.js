@@ -291,7 +291,7 @@ analyticsDashboardRouter.get("/summary", (req, res) => {
         dau,
         wau,
         mau,
-        dau_mau_ratio: parseFloat(dauMauRatio)
+        dau_mau_ratio: dauMauRatio  // 保持字符串格式以保留2位小数
       },
       behavior: {
         // 6️⃣ 所有百分比精确到2位小数

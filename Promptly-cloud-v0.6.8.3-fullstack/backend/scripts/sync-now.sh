@@ -9,8 +9,8 @@
 # ============================================
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-BACKEND_DIR="$SCRIPT_DIR"
-LOG_FILE="$SCRIPT_DIR/../logs/sync.log"
+BACKEND_DIR="$(dirname "$SCRIPT_DIR")"
+LOG_FILE="$BACKEND_DIR/../logs/sync.log"
 CLOUD_URL="https://promptly-v0-6-cloudtest-cursor-dev.onrender.com"
 
 # 确保日志目录存在

@@ -14,9 +14,9 @@
 // 2. Or manually edit this file with your backend URL
 // ============================================
 
-// 临时配置 - 本地开发
-// 这个 URL 会在 Vercel 部署时自动替换为环境变量的值
-window.PROMPTLY_API_BASE = "http://localhost:8080";
+// 临时配置 - 前端静态站点使用的后端地址
+// 这个 URL 会在构建/部署时被环境变量替换（如有）
+window.PROMPTLY_API_BASE = "https://promptly-v0-6-cloudtest-cursor-dev.onrender.com";
 
 // 维护模式开关
 // 设置为 true 时，所有访问都会重定向到维护页面

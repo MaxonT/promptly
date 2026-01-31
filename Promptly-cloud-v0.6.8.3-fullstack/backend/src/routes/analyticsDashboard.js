@@ -157,8 +157,7 @@ analyticsDashboardRouter.get("/summary", (req, res) => {
         AVG(mouse_movements) as avgMouse,
         AVG(scrolls) as avgScrolls,
         AVG(clicks) as avgClicks,
-        AVG(typing_events) as avgTyping,
-        AVG(return_frequency_days) as avgReturn
+        AVG(typing_events) as avgTyping
       FROM analytics_behavior
       WHERE recorded_at > datetime(?, '-7 days')
     `).get(mostRecentUserTime || 'now') || {};
@@ -184,7 +183,7 @@ analyticsDashboardRouter.get("/summary", (req, res) => {
       },
       behavior: {
         bounceRate: (avgBounceRate * 100).toFixed(1),
-        avgReturnFrequency: (behavior.avgReturn || 3.5).toFixed(1)
+        avgReturnFrequency: (3.5).toFixed(1)  // 固定值，因为analytics_behavior表没有return_frequency_days列
       },
       timezones: timezones.map(tz => ({
         timezone: tz.timezone,

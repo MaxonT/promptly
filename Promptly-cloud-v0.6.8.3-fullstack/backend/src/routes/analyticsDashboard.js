@@ -133,10 +133,13 @@ analyticsDashboardRouter.get("/summary", (req, res) => {
     const dauMauRatio = mau > 0 ? ((dau / mau) * 100).toFixed(1) : 0;
     
     // Average bounce rate (7 days relative to most recent date)
-    const avgBounceRate = db.prepare(`
+    // bounce_rate 在数据库中存储为小数（如 0.15 表示 15%），但模拟器可能存储为百分比值
+    let avgBounceRate = db.prepare(`
       SELECT AVG(bounce_rate) as avg FROM analytics_daily
       WHERE date > date(?, '-7 days')
     `).get(mostRecentDate)?.avg || 0.15;
+    // 如果值大于1，说明是百分比格式，需要转换
+    if (avgBounceRate > 1) avgBounceRate = avgBounceRate / 100;
     
     // Timezone distribution
     const timezones = db.prepare(`
@@ -182,7 +185,7 @@ analyticsDashboardRouter.get("/summary", (req, res) => {
         dau_mau_ratio: parseFloat(dauMauRatio)
       },
       behavior: {
-        bounceRate: (avgBounceRate * 100).toFixed(1),
+        bounceRate: (avgBounceRate * 100).toFixed(1),  // 转换为百分比显示
         avgReturnFrequency: (3.5).toFixed(1)  // 固定值，因为analytics_behavior表没有return_frequency_days列
       },
       timezones: timezones.map(tz => ({

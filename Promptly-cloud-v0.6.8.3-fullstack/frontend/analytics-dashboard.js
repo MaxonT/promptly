@@ -71,9 +71,10 @@ async function fetchSummary() {
 async function fetchTimeseries() {
   try {
     // Use the larger of timeRange or cumulativeRange for data fetching
+    // Always use period=all to get full historical data for cumulative chart
     const getDays = (range) => range === '7d' ? 7 : range === '14d' ? 14 : range === '30d' ? 30 : 365;
     const days = Math.max(getDays(state.timeRange), getDays(state.cumulativeRange));
-    const res = await fetch(`${CONFIG.apiBase}/api/analytics/dashboard/timeseries?days=${days}`);
+    const res = await fetch(`${CONFIG.apiBase}/api/analytics/dashboard/timeseries?period=all`);
     if (!res.ok) throw new Error('Failed to fetch timeseries');
     const data = await res.json();
     if (data.ok) {

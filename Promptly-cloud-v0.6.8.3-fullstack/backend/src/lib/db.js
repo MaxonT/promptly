@@ -22,14 +22,17 @@ if (USE_POSTGRES) {
   console.log('[promptly] Using SQLite database');
   
   const DB_PATH = process.env.SQLITE_PATH || "./data/app.db";
+  const absoluteDBPath = path.resolve(DB_PATH);
   console.log(`[promptly] SQLite database path: ${DB_PATH}`);
+  console.log(`[promptly] SQLite absolute path: ${absoluteDBPath}`);
+  console.log(`[promptly] Current working directory: ${process.cwd()}`);
   
   // 确保数据库目录存在且权限正确
-  const dbDir = path.dirname(DB_PATH);
+  const dbDir = path.dirname(absoluteDBPath);
   fs.mkdirSync(dbDir, { recursive: true, mode: 0o750 });
   
   // 设置安全的数据库选项
-  const sqliteDb = new Database(DB_PATH, {
+  const sqliteDb = new Database(absoluteDBPath, {
     fileMustExist: false,
     timeout: 5000,
     verbose: process.env.NODE_ENV === 'development' ? console.log : undefined

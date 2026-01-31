@@ -27,6 +27,14 @@ router.post('/sync-data', (req, res) => {
 
     const { analytics, pipeline } = req.body;
     
+    console.log('[admin/sync] 收到同步请求，数据体:', { 
+      hasAnalytics: !!analytics, 
+      hasPipeline: !!pipeline,
+      analyticsUsers: analytics?.users?.length || 0,
+      analyticsSessions: analytics?.sessions?.length || 0,
+      analyticsDaily: analytics?.daily?.length || 0
+    });
+    
     if (!analytics && !pipeline) {
       return res.status(400).json({
         ok: false,

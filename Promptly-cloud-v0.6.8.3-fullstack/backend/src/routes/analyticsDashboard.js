@@ -219,9 +219,11 @@ analyticsDashboardRouter.get("/summary", (req, res) => {
  */
 analyticsDashboardRouter.get("/timeseries", (req, res) => {
   try {
-    // Parse days safely - only allow numeric values
+    // Support period=all for full history, or days=N for last N days
+    const period = req.query.period;
     const daysParam = String(req.query.days || '14').replace(/[^0-9]/g, '');
     const days = Math.min(Math.max(parseInt(daysParam) || 14, 1), 365);
+    const getAllData = period === 'all';
     
     const tableCheck = db.prepare(`
       SELECT name FROM sqlite_master WHERE type='table' AND name='analytics_daily'
@@ -241,19 +243,34 @@ analyticsDashboardRouter.get("/timeseries", (req, res) => {
       return res.json({ ok: true, data: [] });
     }
     
-    // Query data relative to the most recent date in database
-    const data = db.prepare(`
-      SELECT 
-        date,
-        unique_users as users,
-        total_sessions as sessions,
-        new_users as newUsers,
-        cumulative_users as cumulativeUsers,
-        bounce_rate as bounceRate
-      FROM analytics_daily
-      WHERE date > date(?, '-' || ? || ' days')
-      ORDER BY date ASC
-    `).all(mostRecentDate, days);
+    // Query data - all data if period=all, otherwise last N days
+    let data;
+    if (getAllData) {
+      data = db.prepare(`
+        SELECT 
+          date,
+          unique_users as users,
+          total_sessions as sessions,
+          new_users as newUsers,
+          cumulative_users as cumulativeUsers,
+          bounce_rate as bounceRate
+        FROM analytics_daily
+        ORDER BY date ASC
+      `).all();
+    } else {
+      data = db.prepare(`
+        SELECT 
+          date,
+          unique_users as users,
+          total_sessions as sessions,
+          new_users as newUsers,
+          cumulative_users as cumulativeUsers,
+          bounce_rate as bounceRate
+        FROM analytics_daily
+        WHERE date > date(?, '-' || ? || ' days')
+        ORDER BY date ASC
+      `).all(mostRecentDate, days);
+    }
     
     res.json({
       ok: true,

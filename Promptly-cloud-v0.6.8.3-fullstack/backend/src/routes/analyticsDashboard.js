@@ -30,9 +30,15 @@ const CONFIG = {
 analyticsDashboardRouter.get("/summary", (req, res) => {
   try {
     // Check if analytics tables exist
-    const tableCheck = db.prepare(`
-      SELECT name FROM sqlite_master WHERE type='table' AND name='analytics_daily'
-    `).get();
+    let tableCheck;
+    try {
+      tableCheck = db.prepare(`
+        SELECT name FROM sqlite_master WHERE type='table' AND name='analytics_daily'
+      `).get();
+    } catch (e) {
+      console.error('[analytics-dashboard] 表检查失败:', e.message);
+      return res.status(500).json({ ok: false, error: `表检查失败: ${e.message}` });
+    }
     
     if (!tableCheck) {
       return res.json({
@@ -199,8 +205,12 @@ analyticsDashboardRouter.get("/summary", (req, res) => {
       timestamp: new Date().toISOString()
     });
   } catch (err) {
-    console.error('[analytics-dashboard] Summary error:', err);
-    res.status(500).json({ ok: false, error: 'Failed to get analytics summary' });
+    console.error('[analytics-dashboard] Summary error:', err.message);
+    console.error('[analytics-dashboard] Stack:', err.stack);
+    res.status(500).json({ 
+      ok: false, 
+      error: `Failed to get analytics summary: ${err.message}` 
+    });
   }
 });
 

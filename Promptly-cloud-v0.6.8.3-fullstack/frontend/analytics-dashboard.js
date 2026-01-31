@@ -116,8 +116,6 @@ function renderDashboard() {
   document.getElementById('metricStickiness').textContent = `${parseFloat(s.activity?.dau_mau_ratio || 0).toFixed(2)}%`;
   // 1️⃣ Bounce Rate 实时更新，精确到2位小数
   document.getElementById('metricBounce').textContent = `${parseFloat(s.behavior?.bounceRate || 0).toFixed(2)}%`;
-  // 2️⃣ Return Frequency 实时更新，精确到2位小数
-  document.getElementById('metricReturnFreq').textContent = parseFloat(s.behavior?.avgReturnFrequency || 0).toFixed(2);
   document.getElementById('metricNew').textContent = formatNumber(s.users?.newLast24h || 0);
   
   // Update engagement stats

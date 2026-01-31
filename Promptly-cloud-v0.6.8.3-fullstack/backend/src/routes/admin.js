@@ -84,6 +84,9 @@ router.post('/sync-data', (req, res) => {
             scrolls INTEGER DEFAULT 0,
             clicks INTEGER DEFAULT 0,
             typing_events INTEGER DEFAULT 0,
+            hover_time_ms INTEGER DEFAULT 0,
+            bounce_probability REAL DEFAULT 0.15,
+            return_frequency_days REAL DEFAULT 3.5,
             engagement_score REAL DEFAULT 50.0
           );
           
@@ -189,8 +192,8 @@ router.post('/sync-data', (req, res) => {
         console.log(`[admin/sync] 准备插入 ${behavior.length} 条行为数据...`);
         const insertBehavior = db.prepare(`
           INSERT OR REPLACE INTO analytics_behavior 
-          (id, session_id, user_id, event_type, event_timestamp, page_url, element_selector, metadata, created_at)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+          (id, user_id, session_id, recorded_at, mouse_movements, scrolls, clicks, typing_events, hover_time_ms, bounce_probability, return_frequency_days, engagement_score)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `);
         
         const insertTransaction = db.transaction((behaviorList) => {
@@ -198,10 +201,9 @@ router.post('/sync-data', (req, res) => {
           for (const bh of behaviorList) {
             try {
               insertBehavior.run(
-                bh.id, bh.session_id, bh.user_id, bh.event_type, bh.event_timestamp,
-                bh.page_url, bh.element_selector || null,
-                typeof bh.metadata === 'string' ? bh.metadata : JSON.stringify(bh.metadata || {}),
-                bh.created_at
+                bh.id, bh.user_id, bh.session_id, bh.recorded_at,
+                bh.mouse_movements || 0, bh.scrolls || 0, bh.clicks || 0, bh.typing_events || 0,
+                bh.hover_time_ms || 0, bh.bounce_probability || 0.15, bh.return_frequency_days || 3.5, bh.engagement_score || 50.0
               );
               inserted++;
             } catch (e) {

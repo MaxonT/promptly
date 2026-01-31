@@ -1,14 +1,9 @@
 #!/bin/bash
 # ===========================================
-# Promptly Analytics Behavior Simulator v3
+# Promptly Analytics Behavior Simulator v2
 # ===========================================
 # 
-# 真实用户行为模拟器 - 批量API版本
-# 
-# ⚠️  重要配置说明:
-#   - API端点: /api/analytics/dashboard/admin/generate-data (批量生成)
-#   - 默认URL: https://promptly-v0-6-cloudtest-cursor-dev.onrender.com
-#   - 如需本地测试: export API_BASE="http://localhost:8080"
+# 更真实的用户行为模拟器
 # 
 # 特点:
 #   - 基于时间段的概率模型 (上午30%, 下午40%, 晚上20%, 夜间10%)
@@ -24,9 +19,8 @@
 #
 # ===========================================
 
-# 🔧 生产环境URL配置（如需本地测试请手动设置环境变量）
-API_BASE="${API_BASE:-https://promptly-v0-6-cloudtest-cursor-dev.onrender.com}"
-LOG_FILE="$HOME/.promptly-behavior-simulator.log"
+API_BASE="${API_BASE:-http://localhost:8080}"
+LOG_FILE="/tmp/promptly-behavior-simulator.log"
 PID_FILE="/tmp/promptly-behavior-simulator.pid"
 
 # 颜色

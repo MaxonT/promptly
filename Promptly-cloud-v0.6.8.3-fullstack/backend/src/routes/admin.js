@@ -109,66 +109,105 @@ router.post('/sync-data', (req, res) => {
     if (analytics) {
       const { users, sessions, behavior, daily } = analytics;
 
-      if (Array.isArray(users)) {
+      if (Array.isArray(users) && users.length > 0) {
+        console.log(`[admin/sync] 准备插入 ${users.length} 条用户数据...`);
         const insertUser = db.prepare(`
           INSERT OR REPLACE INTO analytics_users 
           (id, source, timezone, country, device_type, browser, is_active, created_at, last_active_at, metadata)
           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `);
         
-        for (const user of users) {
-          try {
-            insertUser.run(
-              user.id, user.source || 'organic', user.timezone || 'UTC', user.country || 'US', user.device_type || 'desktop',
-              user.browser || 'unknown', user.is_active !== undefined ? user.is_active : 1, user.created_at, user.last_active_at,
-              typeof user.metadata === 'string' ? user.metadata : JSON.stringify(user.metadata || {})
-            );
-            analyticsCount++;
-          } catch (e) {
-            console.log(`[admin/sync] ⚠️ 跳过用户 ${user.id}: ${e.message}`);
+        // 使用事务确保所有数据同时提交
+        const insertTransaction = db.transaction((usersList) => {
+          let inserted = 0;
+          for (const user of usersList) {
+            try {
+              const result = insertUser.run(
+                user.id, user.source || 'organic', user.timezone || 'UTC', user.country || 'US', user.device_type || 'desktop',
+                user.browser || 'unknown', user.is_active !== undefined ? user.is_active : 1, user.created_at, user.last_active_at,
+                typeof user.metadata === 'string' ? user.metadata : JSON.stringify(user.metadata || {})
+              );
+              inserted++;
+            } catch (e) {
+              console.log(`[admin/sync] ⚠️ 跳过用户 ${user.id}: ${e.message}`);
+            }
           }
+          return inserted;
+        });
+        
+        try {
+          analyticsCount += insertTransaction(users);
+          console.log(`[admin/sync] ✓ 成功插入 ${analyticsCount} 条用户数据`);
+        } catch (e) {
+          console.error(`[admin/sync] ✗ 用户数据事务失败: ${e.message}`);
         }
       }
 
-      if (Array.isArray(sessions)) {
+      if (Array.isArray(sessions) && sessions.length > 0) {
+        console.log(`[admin/sync] 准备插入 ${sessions.length} 条会话数据...`);
         const insertSession = db.prepare(`
           INSERT OR REPLACE INTO analytics_sessions 
           (id, user_id, session_start, session_end, duration_seconds, page_views, device_type, browser, referrer, created_at)
           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `);
         
-        for (const session of sessions) {
-          try {
-            insertSession.run(
-              session.id, session.user_id, session.session_start, session.session_end,
-              session.duration_seconds || 0, session.page_views || 1, session.device_type || 'desktop',
-              session.browser || 'unknown', session.referrer, session.created_at
-            );
-            analyticsCount++;
-          } catch (e) {
-            console.log(`[admin/sync] ⚠️ 跳过会话 ${session.id}: ${e.message}`);
+        const insertTransaction = db.transaction((sessionsList) => {
+          let inserted = 0;
+          for (const session of sessionsList) {
+            try {
+              insertSession.run(
+                session.id, session.user_id, session.session_start, session.session_end,
+                session.duration_seconds || 0, session.page_views || 1, session.device_type || 'desktop',
+                session.browser || 'unknown', session.referrer, session.created_at
+              );
+              inserted++;
+            } catch (e) {
+              console.log(`[admin/sync] ⚠️ 跳过会话 ${session.id}: ${e.message}`);
+            }
           }
+          return inserted;
+        });
+        
+        try {
+          const sessionsInserted = insertTransaction(sessions);
+          analyticsCount += sessionsInserted;
+          console.log(`[admin/sync] ✓ 成功插入 ${sessionsInserted} 条会话数据`);
+        } catch (e) {
+          console.error(`[admin/sync] ✗ 会话数据事务失败: ${e.message}`);
         }
       }
 
-      if (Array.isArray(daily)) {
+      if (Array.isArray(daily) && daily.length > 0) {
+        console.log(`[admin/sync] 准备插入 ${daily.length} 条日数据...`);
         const insertDaily = db.prepare(`
           INSERT OR REPLACE INTO analytics_daily 
           (date, unique_users, new_users, returning_users, total_sessions, total_page_views, avg_session_duration, bounce_rate, cumulative_users, created_at)
           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `);
         
-        for (const day of daily) {
-          try {
-            insertDaily.run(
-              day.date, day.unique_users || 0, day.new_users || 0, day.returning_users || 0,
-              day.total_sessions || 0, day.total_page_views || 0, day.avg_session_duration || 0,
-              day.bounce_rate || 0, day.cumulative_users || 0, day.created_at
-            );
-            analyticsCount++;
-          } catch (e) {
-            console.log(`[admin/sync] ⚠️ 跳过日期 ${day.date}: ${e.message}`);
+        const insertTransaction = db.transaction((dailyList) => {
+          let inserted = 0;
+          for (const day of dailyList) {
+            try {
+              insertDaily.run(
+                day.date, day.unique_users || 0, day.new_users || 0, day.returning_users || 0,
+                day.total_sessions || 0, day.total_page_views || 0, day.avg_session_duration || 0,
+                day.bounce_rate || 0, day.cumulative_users || 0, day.created_at
+              );
+              inserted++;
+            } catch (e) {
+              console.log(`[admin/sync] ⚠️ 跳过日期 ${day.date}: ${e.message}`);
+            }
           }
+          return inserted;
+        });
+        
+        try {
+          const dailyInserted = insertTransaction(daily);
+          analyticsCount += dailyInserted;
+          console.log(`[admin/sync] ✓ 成功插入 ${dailyInserted} 条日数据`);
+        } catch (e) {
+          console.error(`[admin/sync] ✗ 日数据事务失败: ${e.message}`);
         }
       }
 

@@ -214,6 +214,14 @@ router.post('/sync-data', (req, res) => {
       console.log(`[admin/sync] ✅ Analytics 导入: ${analyticsCount} 条数据`);
     }
 
+    // 强制WAL checkpoint确保数据持久化
+    try {
+      db.exec('PRAGMA wal_checkpoint(RESTART);');
+      console.log('[admin/sync] ✓ WAL checkpoint完成');
+    } catch (e) {
+      console.warn('[admin/sync] ⚠️ WAL checkpoint失败:', e.message);
+    }
+
     res.json({
       ok: true,
       message: '数据同步成功',

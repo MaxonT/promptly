@@ -230,12 +230,28 @@ router.post('/sync-data', (req, res) => {
       console.warn('[admin/sync] ⚠️ WAL checkpoint失败:', e.message);
     }
 
+    // 验证数据是否真的被写入
+    let verifyUsers = 0, verifySessions = 0, verifyDaily = 0;
+    try {
+      verifyUsers = db.prepare('SELECT COUNT(*) as c FROM analytics_users').get()?.c || 0;
+      verifySessions = db.prepare('SELECT COUNT(*) as c FROM analytics_sessions').get()?.c || 0;
+      verifyDaily = db.prepare('SELECT COUNT(*) as c FROM analytics_daily').get()?.c || 0;
+      console.log(`[admin/sync] ✓ 数据验证: Users=${verifyUsers}, Sessions=${verifySessions}, Daily=${verifyDaily}`);
+    } catch (e) {
+      console.error(`[admin/sync] ✗ 数据验证失败: ${e.message}`);
+    }
+
     res.json({
       ok: true,
       message: '数据同步成功',
       analyticsCount,
       pipelineCount,
       totalCount: analyticsCount + pipelineCount,
+      verified: {
+        users: verifyUsers,
+        sessions: verifySessions,
+        daily: verifyDaily
+      },
       timestamp: new Date().toISOString()
     });
 

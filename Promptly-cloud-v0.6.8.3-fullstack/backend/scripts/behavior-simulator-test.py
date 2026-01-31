@@ -17,8 +17,11 @@ from datetime import datetime, timedelta
 
 
 # ============ 测试配置 ============
+# ⚠️ 注意: 这是测试版本，默认连接本地服务器
+# 生产环境请使用: behavior-simulator.py (不是这个测试文件)
 CONFIG = {
     "SERVICE_NAME": "Promptly-Behavior-Simulator-Test",
+    # 测试默认用localhost，生产环境请设置 API_BASE 环境变量
     "API_BASE": os.environ.get("API_BASE", "http://localhost:8080"),
     
     # 时间段概率 (%) - 测试时设为100%确保生成

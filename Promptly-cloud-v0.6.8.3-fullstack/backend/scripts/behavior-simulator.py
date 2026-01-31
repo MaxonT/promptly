@@ -1,11 +1,16 @@
 #!/usr/bin/env python3
 """
-Promptly Analytics Behavior Simulator v2
+Promptly Analytics Behavior Simulator v3 - 生产版本
 =========================================
 
-真实用户行为模拟器 - 基于 keep-alive.py 架构
+真实用户行为模拟器 - 批量API版本
 
-特点:
+🔧 API配置:
+  - 端点: /api/analytics/dashboard/admin/generate-data
+  - 默认URL: https://promptly-v0-6-cloudtest-cursor-dev.onrender.com
+  - 环境变量: API_BASE (可覆盖默认值)
+
+✨ 特点:
   - Mac 开机自动启动 (via launchd)
   - Mac 休眠自动暂停, 唤醒自动恢复
   - 网络断开等待, 恢复后继续
@@ -14,6 +19,8 @@ Promptly Analytics Behavior Simulator v2
   - 基于时间段的概率模型
   - 批量用户生成 (5-20个/批次)
   - 不规律等待时间 (30分钟-4小时)
+
+⚠️  重要: 不要使用 behavior-simulator-test.py (那是测试版本)
 """
 
 import requests
@@ -194,113 +201,84 @@ def wait_for_network():
     )
 
 
-def api_call(endpoint, data, retries=0):
-    """带重试的 API 调用"""
-    url = f"{CONFIG['API_BASE']}{endpoint}"
+def api_call_generate_data(users, sessions, retries=0):
+    """
+    调用正确的批量生成端点
+    使用 /api/analytics/dashboard/admin/generate-data
+    """
+    url = f"{CONFIG['API_BASE']}/api/analytics/dashboard/admin/generate-data"
     
     try:
+        log_message(f"🌐 发送请求: {url}")
+        log_message(f"📦 数据: users={users}, sessions={sessions}")
+        
         response = requests.post(
             url,
-            json=data,
+            json={
+                "users": users,
+                "sessions": sessions
+            },
+            headers={
+                "X-Admin-Key": os.environ.get("ADMIN_API_KEY", "")
+            },
             timeout=CONFIG["TIMEOUT"]
         )
-        return response.status_code == 200
+        
+        log_message(f"📡 收到响应: HTTP {response.status_code}")
+        
+        if response.status_code == 200:
+            result = response.json()
+            if result.get("ok"):
+                log_message(f"✅ API 成功: {users} 用户, {sessions} 会话")
+                return True
+            else:
+                log_message(f"❌ API 返回错误: {result.get('error', 'Unknown')}", "ERROR")
+                return False
+        else:
+            log_message(f"❌ HTTP {response.status_code}: {response.text}", "ERROR")
+            return False
     
-    except requests.exceptions.ConnectionError:
+    except requests.exceptions.ConnectionError as e:
+        log_message(f"🔌 连接错误详情: {e}", "ERROR")
         if retries < CONFIG["MAX_RETRIES"]:
             log_message(f"🔌 连接错误，{CONFIG['RETRY_DELAY']}秒后重试 ({retries+1}/{CONFIG['MAX_RETRIES']})", "WARN")
             time.sleep(CONFIG["RETRY_DELAY"])
-            return api_call(endpoint, data, retries + 1)
+            return api_call_generate_data(users, sessions, retries + 1)
         else:
             wait_for_network()
-            return api_call(endpoint, data, 0)
+            return api_call_generate_data(users, sessions, 0)
     
     except requests.exceptions.Timeout:
-        log_message(f"⏱️ 请求超时: {endpoint}", "WARN")
+        log_message(f"⏱️ 请求超时", "WARN")
         return False
     
     except Exception as e:
-        log_message(f"❌ API 错误: {e}", "ERROR")
+        log_message(f"❌ API 错误: {type(e).__name__}: {e}", "ERROR")
+        import traceback
+        log_message(f"📋 堆栈跟踪:\n{traceback.format_exc()}", "ERROR")
         return False
 
 
-def simulate_new_user():
-    """模拟新用户注册"""
-    user_id = random_user_id()
-    data = {
-        "userId": user_id,
-        "source": weighted_choice(SOURCES),
-        "timezone": random.choice(TIMEZONES),
-        "deviceType": weighted_choice(DEVICES),
-        "browser": weighted_choice(BROWSERS),
-    }
+def calculate_batch_size():
+    """
+    根据时间段和概率计算本轮应生成的用户和会话数
+    """
+    period, _ = get_time_period()
+    probability = CONFIG["PROBABILITY"][period] / 100.0  # 转换为 0-1
     
-    api_call("/api/analytics/dashboard/track/user", data)
-    return user_id
-
-
-def get_user_behavior(user_type):
-    """根据用户类型生成行为数据"""
-    if user_type == "engaged":
-        return {
-            "duration": random.randint(180, 780),     # 3-13分钟
-            "page_views": random.randint(5, 15),
-            "mouse_moves": random.randint(150, 450),
-            "scrolls": random.randint(20, 70),
-            "clicks": random.randint(10, 40),
-            "typing": random.randint(50, 200),
-        }
-    elif user_type == "casual":
-        return {
-            "duration": random.randint(60, 300),      # 1-5分钟
-            "page_views": random.randint(2, 7),
-            "mouse_moves": random.randint(50, 200),
-            "scrolls": random.randint(5, 25),
-            "clicks": random.randint(3, 15),
-            "typing": random.randint(10, 60),
-        }
-    else:  # bouncer
-        return {
-            "duration": random.randint(5, 35),        # 5-35秒
-            "page_views": 1,
-            "mouse_moves": random.randint(10, 50),
-            "scrolls": random.randint(0, 5),
-            "clicks": random.randint(0, 3),
-            "typing": random.randint(0, 5),
-        }
-
-
-def simulate_session(user_id, user_type):
-    """模拟用户会话"""
-    session_id = random_session_id()
-    behavior = get_user_behavior(user_type)
+    # 基础批次大小
+    base_size = (CONFIG["MIN_BATCH_SIZE"] + CONFIG["MAX_BATCH_SIZE"]) // 2
     
-    # 开始会话
-    api_call("/api/analytics/dashboard/track/session-start", {
-        "userId": user_id,
-        "sessionId": session_id,
-        "deviceType": weighted_choice(DEVICES),
-        "browser": weighted_choice(BROWSERS),
-    })
+    # 根据时间段概率调整
+    adjusted_size = int(base_size * probability)
     
-    # 记录行为
-    api_call("/api/analytics/dashboard/track/behavior", {
-        "userId": user_id,
-        "sessionId": session_id,
-        "mouseMovements": behavior["mouse_moves"],
-        "scrolls": behavior["scrolls"],
-        "clicks": behavior["clicks"],
-        "typingEvents": behavior["typing"],
-    })
+    # 添加随机波动 (±30%)
+    users = max(1, int(adjusted_size * (0.7 + random.random() * 0.6)))
     
-    # 结束会话
-    api_call("/api/analytics/dashboard/track/session-end", {
-        "sessionId": session_id,
-        "duration": behavior["duration"],
-        "pageViews": behavior["page_views"],
-    })
+    # 会话数略多于用户数 (1.2-1.8倍)
+    sessions = int(users * (1.2 + random.random() * 0.6))
     
-    return session_id, behavior
+    return users, sessions
 
 
 def get_user_type():
@@ -315,83 +293,77 @@ def get_user_type():
 
 
 def generate_batch():
-    """生成一批用户"""
-    batch_size = random.randint(CONFIG["MIN_BATCH_SIZE"], CONFIG["MAX_BATCH_SIZE"])
+    """生成一批用户和会话 - 使用正确的批量API"""
     period, period_cn = get_time_period()
     probability = CONFIG["PROBABILITY"][period]
     
-    log_message("━" * 50)
-    log_message(f"📊 开始生成批次 | 时段: {period_cn} | 用户数: {batch_size}")
-    log_message("━" * 50)
-    
-    stats = {
-        "new_users": 0,
-        "returning_users": 0,
-        "engaged": 0,
-        "casual": 0,
-        "bouncer": 0,
-    }
-    
-    for i in range(1, batch_size + 1):
-        # 决定是新用户还是返回用户
-        is_new = random.randint(0, 99) < CONFIG["NEW_USER_RATIO"]
-        user_type = get_user_type()
-        
-        if is_new:
-            user_id = simulate_new_user()
-            stats["new_users"] += 1
-            user_label = f"+ 新用户 #{i}"
-        else:
-            # 返回用户
-            date_str = datetime.now().strftime('%Y%m%d')
-            user_id = f"au_{date_str}_{random.randint(0, 999):05d}"
-            stats["returning_users"] += 1
-            user_label = f"↩ 返回用户 #{i}"
-        
-        stats[user_type] += 1
-        
-        # 生成会话
-        session_id, behavior = simulate_session(user_id, user_type)
-        
-        log_message(f"  {user_label}: {user_id} ({user_type})")
-        log_message(f"    └─ 会话: {session_id} | {behavior['duration']}s | {behavior['page_views']}页")
-        
-        # 用户之间有小间隔
-        time.sleep(random.randint(1, 5))
+    # 计算本轮应生成的数量
+    users, sessions = calculate_batch_size()
     
     log_message("━" * 50)
-    log_message(f"✓ 批次完成 | 新用户: {stats['new_users']} | 返回: {stats['returning_users']}")
-    log_message(f"  用户类型: engaged={stats['engaged']}, casual={stats['casual']}, bouncer={stats['bouncer']}")
+    log_message(f"🔄 Cycle #{generate_batch.cycle_count} started")
+    log_message(f"📈 Growth mode: 0/6000 users")
+    log_message(f"📊 时段: {period_cn} | 概率: {probability}% | 生成: {users}用户, {sessions}会话")
     log_message("━" * 50)
     
-    return stats
+    # 调用批量生成API
+    success = api_call_generate_data(users, sessions)
+    
+    if success:
+        # 计算等待时间
+        wait_time = calculate_wait_time()
+        wait_formatted = format_duration(wait_time)
+        
+        log_message(f"✅ Cycle #{generate_batch.cycle_count} completed | {users}/{users} actions completed")
+        log_message(f"⏰ Next cycle in {wait_formatted}")
+        log_message("")
+        
+        generate_batch.cycle_count += 1
+        generate_batch.total_users += users
+        generate_batch.total_sessions += sessions
+        
+        return wait_time
+    else:
+        log_message("❌ Cycle failed, will retry after 60 seconds", "ERROR")
+        return 60
+
+# 初始化计数器
+generate_batch.cycle_count = 1
+generate_batch.total_users = 0
+generate_batch.total_sessions = 0
 
 
 def calculate_wait_time():
-    """计算下次等待时间"""
+    """计算下次等待时间（以秒为单位）"""
     wait = random.randint(CONFIG["MIN_WAIT"], CONFIG["MAX_WAIT"])
     return wait
 
 
 def format_duration(seconds):
-    """格式化时间"""
+    """格式化时间为易读格式"""
+    if seconds < 60:
+        return f"{seconds}s"
+    
     hours = seconds // 3600
     minutes = (seconds % 3600) // 60
     
     if hours > 0:
-        return f"{hours}小时{minutes}分钟"
+        if minutes > 0:
+            return f"{hours}h {minutes}m"
+        return f"{hours}h"
     else:
-        return f"{minutes}分钟"
+        return f"{minutes}m"
 
 
 def main():
     """主循环"""
     log_message("╔" + "═" * 48 + "╗")
-    log_message("║   Promptly Behavior Simulator v2              ║")
-    log_message("║   真实流量模拟器                               ║")
+    log_message("║   Promptly Behavior Simulator v3              ║")
+    log_message("║   真实流量模拟器 - 批量API版本                 ║")
     log_message("╚" + "═" * 48 + "╝")
     log_message("")
     log_message(f"API Base: {CONFIG['API_BASE']}")
+    log_message(f"API Endpoint: /api/analytics/dashboard/admin/generate-data")
     log_message(f"PID: {os.getpid()}")
     log_message("")
     log_message("时间段概率模型:")
@@ -400,52 +372,34 @@ def main():
     log_message(f"  📅 晚上 (18-24点): {CONFIG['PROBABILITY']['evening']}% 概率")
     log_message(f"  📅 夜间 (0-6点):   {CONFIG['PROBABILITY']['night']}% 概率")
     log_message("")
-    log_message(f"每批生成: {CONFIG['MIN_BATCH_SIZE']}-{CONFIG['MAX_BATCH_SIZE']} 个用户")
+    log_message(f"批次大小: {CONFIG['MIN_BATCH_SIZE']}-{CONFIG['MAX_BATCH_SIZE']} 个用户/批")
     log_message(f"等待间隔: {format_duration(CONFIG['MIN_WAIT'])} - {format_duration(CONFIG['MAX_WAIT'])}")
     log_message("")
     
     send_notification(
         CONFIG["SERVICE_NAME"],
-        "行为模拟器已启动"
+        "行为模拟器已启动 (v3-批量API)"
     )
     
-    round_count = 0
-    
     while True:
-        round_count += 1
-        period, period_cn = get_time_period()
-        probability = CONFIG["PROBABILITY"][period]
-        
         log_message("")
-        log_message(f"🕐 第 {round_count} 轮 | 当前时段: {period_cn} | 生成概率: {probability}%")
         
         # 检查网络
         if not check_network():
             wait_for_network()
         
-        # 根据概率决定是否生成
-        if should_generate():
-            try:
-                generate_batch()
-            except Exception as e:
-                log_message(f"❌ 批次生成错误: {e}", "ERROR")
-                send_notification(
-                    CONFIG["SERVICE_NAME"],
-                    f"批次生成错误: {type(e).__name__}"
-                )
-        else:
-            log_message(f"⏸ 本轮跳过生成 (概率未命中: {random.randint(probability, 99)} >= {probability})")
+        # 生成批次并获取等待时间
+        try:
+            wait_time = generate_batch()
+        except Exception as e:
+            log_message(f"❌ 批次生成错误: {e}", "ERROR")
+            send_notification(
+                CONFIG["SERVICE_NAME"],
+                f"批次生成错误: {type(e).__name__}"
+            )
+            wait_time = 60  # 出错后等待1分钟
         
-        # 计算等待时间
-        wait_time = calculate_wait_time()
-        wait_formatted = format_duration(wait_time)
-        next_time = (datetime.now() + timedelta(seconds=wait_time)).strftime('%Y-%m-%d %H:%M:%S')
-        
-        log_message("")
-        log_message(f"💤 等待 {wait_formatted} 后继续...")
-        log_message(f"⏰ 下次运行: {next_time}")
-        log_message("")
-        
+        # 等待下一轮
         time.sleep(wait_time)
 
 

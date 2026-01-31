@@ -1,9 +1,14 @@
 #!/bin/bash
 #
-# Promptly Behavior Simulator - 安装脚本
-# =====================================
+# Promptly Behavior Simulator v3 - 安装脚本
+# =========================================
 # 
 # 此脚本将行为模拟器安装为 macOS launchd 服务
+# 
+# 🔧 配置说明:
+#   - 默认API: https://promptly-v0-6-cloudtest-cursor-dev.onrender.com
+#   - API端点: /api/analytics/dashboard/admin/generate-data
+#   - 如需本地测试: 手动修改下方的 API_BASE 变量
 # 
 # 功能:
 #   - Mac 开机自动启动
@@ -21,9 +26,14 @@ PLIST_SOURCE="$SCRIPT_DIR/$PLIST_NAME"
 PLIST_DEST="$HOME/Library/LaunchAgents/$PLIST_NAME"
 SIMULATOR_SCRIPT="$SCRIPT_DIR/behavior-simulator.py"
 
+# 🔧 生产环境配置 (如需本地测试请修改此行)
+API_BASE_URL="https://promptly-v0-6-cloudtest-cursor-dev.onrender.com"
+
 echo "╔════════════════════════════════════════════════╗"
-echo "║   Promptly Behavior Simulator 安装程序         ║"
+echo "║   Promptly Behavior Simulator v3 安装程序      ║"
 echo "╚════════════════════════════════════════════════╝"
+echo ""
+echo "📡 API地址: $API_BASE_URL"
 echo ""
 
 # 检查 Python 版本
@@ -93,7 +103,7 @@ cat > "$PLIST_DEST" << EOF
     <key>PATH</key>
     <string>/Library/Frameworks/Python.framework/Versions/3.13/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
     <key>API_BASE</key>
-    <string>http://localhost:8080</string>
+    <string>$API_BASE_URL</string>
   </dict>
 </dict>
 </plist>

@@ -68,6 +68,7 @@ function buildUserPayload(row) {
   return {
     id: row.id,
     email: row.email,
+    timezone: row.timezone || "UTC",
     subscription: {
       tier: row.subscription_tier || "free",
       isActive: !!row.subscription_active
@@ -369,4 +370,3 @@ oauthRouter.get("/callback", async (req, res) => {
     return res.redirect(errorUrl.toString());
   }
 });
-

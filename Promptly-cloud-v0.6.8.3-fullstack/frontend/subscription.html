@@ -10,6 +10,7 @@
   <link rel="stylesheet" href="style.css" />
   <link rel="stylesheet" href="subscription.css" />
   <script src="config.js"></script>
+  <script src="lib/authGuard.js"></script>
   <script src="lib/i18next.min.js"></script>
   <script type="module" src="i18n/index.js"></script>
 </head>
@@ -179,7 +180,7 @@
           <div class="usage-icon">🔄</div>
           <h3 data-i18n="subscription.usage_reset_title">When do limits reset?</h3>
           <p data-i18n="subscription.usage_reset_desc">
-            Limits reset daily at UTC 00:00.
+            Limits reset daily at 00:00 in your timezone.
           </p>
         </div>
       </div>
@@ -206,7 +207,7 @@
         <details class="faq-item">
           <summary data-i18n="subscription.faq_limits_q">How do daily limits work?</summary>
           <p data-i18n="subscription.faq_limits_a">
-            Your daily limits reset at UTC 00:00. Both Monthly and Annual plans include the same daily limits.
+            Your daily limits reset at 00:00 in your timezone. Both Monthly and Annual plans include the same daily limits.
           </p>
         </details>
         <details class="faq-item">

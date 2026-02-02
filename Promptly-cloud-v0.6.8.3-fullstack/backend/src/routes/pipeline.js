@@ -18,12 +18,34 @@ import { getModePolicy } from "../lib/modePolicies.js";
 import { spendTokensForRun, getTokenStatus } from "../lib/tokenUsage.js";
 import { FEATURES } from "../lib/subscriptionConfig.js";
 import { checkPromptOptimizationLimit, recordUsage, canUseMode } from "../lib/planLimits.js";
-import { optionalAuth } from "./auth.js";
+import { requireAuth } from "./auth.js";
 
 export const pipelineRouter = Router();
 
 // Store active SSE connections by runId
 const activeStreams = new Map();
+const streamAuth = new Map();
+
+function issueStreamToken(runId, userId) {
+  const token = nanoid(32);
+  streamAuth.set(runId, {
+    userId,
+    token,
+    expiresAt: Date.now() + 15 * 60 * 1000
+  });
+  return token;
+}
+
+function validateStreamToken(runId, token) {
+  if (!token || typeof token !== "string") return false;
+  const record = streamAuth.get(runId);
+  if (!record) return false;
+  if (record.expiresAt < Date.now()) {
+    streamAuth.delete(runId);
+    return false;
+  }
+  return record.token === token;
+}
 
 /**
  * GET /api/pipeline/health
@@ -43,12 +65,6 @@ pipelineRouter.get("/health", (req, res) => {
     activeStreams: activeStreams.size
   });
 });
-
-// Helper to get user ID from request
-function getUserId(req) {
-  if (req.user && req.user.sub) return req.user.sub;
-  return "demo-user";
-}
 
 function stripThinkBlocks(text) {
   if (!text || typeof text !== "string") return text;
@@ -77,6 +93,10 @@ function sendEvent(runId, event, data) {
  */
 pipelineRouter.get("/stream/:runId", (req, res) => {
   const { runId } = req.params;
+  const st = req.query?.st;
+  if (!validateStreamToken(runId, st)) {
+    return res.status(401).json({ ok: false, error: "Unauthorized" });
+  }
 
   // Set SSE headers
   res.setHeader("Content-Type", "text/event-stream");
@@ -124,9 +144,9 @@ const PipelineRunRequestSchema = z.object({
   model: z.string().optional()
 });
 
-pipelineRouter.post("/run", optionalAuth, async (req, res) => {
+pipelineRouter.post("/run", requireAuth, async (req, res) => {
   console.log(`[pipeline] POST /run received`);
-  const userId = getUserId(req);
+  const userId = req.user.sub;
   ensureUser(userId);
 
   const parsed = PipelineRunRequestSchema.safeParse(req.body);
@@ -154,12 +174,14 @@ pipelineRouter.post("/run", optionalAuth, async (req, res) => {
   // Generate a unique runId for this pipeline execution
   const runId = `run_${nanoid(16)}`;
   console.log(`[pipeline] Generated runId: ${runId}`);
+  const streamToken = issueStreamToken(runId, userId);
 
   // Immediately return runId and SSE endpoint
   res.json({
     ok: true,
     runId,
-    streamUrl: `/api/pipeline/stream/${runId}`
+    streamUrl: `/api/pipeline/stream/${runId}`,
+    streamToken
   });
 
   // Execute pipeline asynchronously and send events
@@ -1077,4 +1099,3 @@ Provide honest, objective scores based on the criteria.`;
     }
   }
 }
-

@@ -21,6 +21,7 @@ import { tokenLedger } from "../lib/tokenLedger.js";
 import { trialAntiAbuse } from "../lib/trialAntiAbuse.js";
 import { shouldInjectError, injectDelay, InjectedError } from "../lib/errorInjector.js";
 import { getUserPlan, getDailyUsage } from "../lib/planLimits.js";
+import { getNextLocalMidnightIso, normalizeTimeZone } from "../lib/timezone.js";
 import {
   PLANS,
   FEATURES,
@@ -100,7 +101,7 @@ billingRouter.get("/status", requireAuth, (req, res) => {
     
     // Get user info
     const user = db.prepare(`
-      SELECT email, email_verified, trial_used, trial_started_at, created_at
+      SELECT email, email_verified, trial_used, trial_started_at, created_at, timezone
       FROM users WHERE id = ?
     `).get(userId);
     
@@ -112,9 +113,13 @@ billingRouter.get("/status", requireAuth, (req, res) => {
       trialDaysRemaining = Math.max(0, Math.ceil((trialEnd - now) / (1000 * 60 * 60 * 24)));
     }
     
+    const tz = normalizeTimeZone(user?.timezone);
+
     res.json({
       ok: true,
       plan: plan, // 'free', 'monthly', 'yearly', or 'trial'
+      timezone: tz,
+      nextResetAt: getNextLocalMidnightIso(tz),
       subscription: {
         status: subscription.status,
         plan: subscription.plan,

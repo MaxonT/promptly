@@ -22,6 +22,13 @@
   const fileInput = document.getElementById("fileInput");
   const attachmentList = document.getElementById("attachmentList");
 
+  if (!window.authGuard?.requireLogin({ redirectTo: "settings.html#accountPanel" })) {
+    [runEnhanceBtn, runScoreBtn, runValidateBtn, attachBtn].forEach((btn) => {
+      if (btn) btn.disabled = true;
+    });
+    return;
+  }
+
   function log(line) {
     const ts = new Date().toISOString().slice(11, 19);
     logEl.textContent += `[${ts}] ${line}\n`;
@@ -126,7 +133,7 @@
         }))
       };
       
-      const res = await fetch(`/api/enhance${path}`, {
+      const res = await window.authGuard.fetchWithAuth(`${window.authGuard.API_BASE}/api/enhance${path}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body)
@@ -181,7 +188,7 @@
     clearError();
     try {
       log("POST /score ...");
-      const res = await fetch("/api/enhance/score", {
+      const res = await window.authGuard.fetchWithAuth(`${window.authGuard.API_BASE}/api/enhance/score`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ prompt })
@@ -219,7 +226,7 @@
     clearError();
     try {
       log("POST /validate ...");
-      const res = await fetch("/api/enhance/validate", {
+      const res = await window.authGuard.fetchWithAuth(`${window.authGuard.API_BASE}/api/enhance/validate`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ prompt })

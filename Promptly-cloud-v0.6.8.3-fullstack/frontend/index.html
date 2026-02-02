@@ -17,6 +17,7 @@
 <link rel="stylesheet" href="theme.css" />
   <link rel="stylesheet" href="style.css" />
   <script src="config.js"></script>
+  <script src="lib/authGuard.js"></script>
   <script src="lib/dataAggregator.js"></script>
   <script src="lib/particles.js"></script>
   <script src="lib/i18next.min.js"></script>
@@ -3143,20 +3144,15 @@ document.addEventListener('DOMContentLoaded', () => {
       console.log(`[Promptly] ✅ Frontend version: ${FRONTEND_VERSION}`);
       console.log(`[Promptly] ✅ Request data:`, { idea: task.substring(0, 50) + '...', model: currentModel });
       
-      // 1. Start pipeline execution
-      const token = localStorage.getItem('promptly.token');
-      const headers = {
-        'Content-Type': 'application/json'
-      };
-      
-      // Add Authorization header if user is logged in
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
+      if (!window.authGuard?.requireLogin({ redirectTo: 'settings.html#accountPanel' })) {
+        throw new Error('Please log in first');
       }
-      
-      const response = await fetch(pipelineUrl, {
+
+      const response = await window.authGuard.fetchWithAuth(pipelineUrl, {
         method: 'POST',
-        headers: headers,
+        headers: {
+          'Content-Type': 'application/json'
+        },
         body: JSON.stringify({
           idea: task,
           attachments: [],
@@ -3179,11 +3175,11 @@ document.addEventListener('DOMContentLoaded', () => {
       const responseData = await response.json();
       console.log('[Promptly] ✅ Pipeline API响应:', responseData);
       
-      const { runId, streamUrl } = responseData;
+      const { runId, streamUrl, streamToken } = responseData;
       console.log('[Promptly] ✅ Pipeline已启动, runId:', runId);
 
       // 2. Connect to SSE stream
-      const fullStreamUrl = `${apiBase}${streamUrl}`;
+      const fullStreamUrl = `${apiBase}${streamUrl}?st=${encodeURIComponent(streamToken || '')}`;
       currentPipelineEventSource = new EventSource(fullStreamUrl);
 
       currentPipelineEventSource.onopen = () => {

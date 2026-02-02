@@ -5,8 +5,10 @@ import { db, ensureUser } from "../lib/db.js";
 import { compileSpecToPrompt } from "../lib/specCompiler.js";
 import { evaluatePrompt } from "../lib/evaluationEngine.js";
 import { chatJson, LlmDisabledError } from "../lib/llmRouter.js";
+import { requireAuth } from "./auth.js";
 
 export const specsRouter = Router();
+specsRouter.use(requireAuth);
 
 const CreateSpecSchema = z.object({
   title: z.string().min(1),
@@ -37,12 +39,6 @@ function requireOwner(row, userId) {
   return true;
 }
 
-// NOTE: real auth middleware should populate req.user; for demo we fallback to a demo id.
-function getUserId(req) {
-  if (req.user && req.user.sub) return req.user.sub;
-  return "demo-user";
-}
-
 // Helper to safely parse JSON fields
 function safeParseJSON(value) {
   if (!value) return null;
@@ -56,7 +52,7 @@ function safeParseJSON(value) {
 // S2: Enhanced spec listing with filters and pagination
 specsRouter.get("/", (req, res) => {
   try {
-    const userId = getUserId(req);
+    const userId = req.user.sub;
     
     // Parse and validate query parameters
     const {
@@ -174,7 +170,7 @@ specsRouter.get("/", (req, res) => {
 });
 
 specsRouter.post("/", (req, res) => {
-  const userId = getUserId(req);
+  const userId = req.user.sub;
   const parsed = CreateSpecSchema.safeParse(req.body);
   if (!parsed.success) {
     return res.status(400).json({ ok: false, error: parsed.error.flatten() });
@@ -205,7 +201,7 @@ specsRouter.post("/", (req, res) => {
 });
 
 specsRouter.get("/:id", (req, res) => {
-  const userId = getUserId(req);
+  const userId = req.user.sub;
   const row = db.prepare("SELECT * FROM specs WHERE id = ?").get(req.params.id);
   if (!requireOwner(row, userId)) {
     return res.status(404).json({ ok: false, error: "Not found" });
@@ -236,7 +232,7 @@ specsRouter.get("/:id", (req, res) => {
 });
 
 specsRouter.patch("/:id", (req, res) => {
-  const userId = getUserId(req);
+  const userId = req.user.sub;
   const parsed = CreateSpecSchema.safeParse(req.body);
   if (!parsed.success) {
     return res.status(400).json({ ok: false, error: parsed.error.flatten() });
@@ -270,7 +266,7 @@ specsRouter.patch("/:id", (req, res) => {
 });
 
 specsRouter.post("/:id/compile", (req, res) => {
-  const userId = getUserId(req);
+  const userId = req.user.sub;
   const row = db.prepare("SELECT * FROM specs WHERE id = ?").get(req.params.id);
   if (!requireOwner(row, userId)) {
     return res.status(404).json({ ok: false, error: "Not found" });
@@ -292,7 +288,7 @@ specsRouter.post("/:id/compile", (req, res) => {
 
 // POST /api/specs/:id/evaluate - Evaluate an existing compiled prompt
 specsRouter.post("/:id/evaluate", async (req, res) => {
-  const userId = getUserId(req);
+  const userId = req.user.sub;
   const row = db.prepare("SELECT * FROM specs WHERE id = ?").get(req.params.id);
   if (!requireOwner(row, userId)) {
     return res.status(404).json({ ok: false, error: "Not found" });
@@ -379,7 +375,7 @@ specsRouter.post("/:id/evaluate", async (req, res) => {
 
 // POST /api/specs/:id/compile-and-evaluate - Compile and evaluate in one call
 specsRouter.post("/:id/compile-and-evaluate", async (req, res) => {
-  const userId = getUserId(req);
+  const userId = req.user.sub;
   const row = db.prepare("SELECT * FROM specs WHERE id = ?").get(req.params.id);
   if (!requireOwner(row, userId)) {
     return res.status(404).json({ ok: false, error: "Not found" });
@@ -454,7 +450,7 @@ specsRouter.post("/:id/compile-and-evaluate", async (req, res) => {
 
 // GET /api/specs/:id/evaluations - List all evaluations for a spec
 specsRouter.get("/:id/evaluations", (req, res) => {
-  const userId = getUserId(req);
+  const userId = req.user.sub;
   const row = db.prepare("SELECT * FROM specs WHERE id = ?").get(req.params.id);
   if (!requireOwner(row, userId)) {
     return res.status(404).json({ ok: false, error: "Not found" });
@@ -511,7 +507,7 @@ const FromIdeaRequestSchema = z.object({
 });
 
 specsRouter.post("/from-idea", async (req, res) => {
-  const userId = getUserId(req);
+  const userId = req.user.sub;
   ensureUser(userId);
 
   const parsed = FromIdeaRequestSchema.safeParse(req.body);

@@ -34,6 +34,11 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
   // Main Load Function
   // ============================================
   async function loadResult() {
+    if (!window.authGuard?.requireLogin({ redirectTo: "settings.html#accountPanel" })) {
+      showError("Please log in first");
+      return;
+    }
+
     if (!currentSpecId) {
       showError("Missing specId in URL. Example: result.html?specId=spec_xxx");
       return;
@@ -41,7 +46,7 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
 
     try {
       // Load spec
-      const specRes = await fetch(`${API_BASE}/api/specs/${encodeURIComponent(currentSpecId)}`);
+      const specRes = await window.authGuard.fetchWithAuth(`${API_BASE}/api/specs/${encodeURIComponent(currentSpecId)}`);
       if (!specRes.ok) {
         const txt = await specRes.text();
         throw new Error(`Failed to load spec: HTTP ${specRes.status} ${txt}`);
@@ -51,7 +56,7 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
 
       // Compile prompt blocks
       try {
-        const cpRes = await fetch(`${API_BASE}/api/specs/${encodeURIComponent(currentSpecId)}/compile`, {
+        const cpRes = await window.authGuard.fetchWithAuth(`${API_BASE}/api/specs/${encodeURIComponent(currentSpecId)}/compile`, {
           method: "POST"
         });
         if (cpRes.ok) {

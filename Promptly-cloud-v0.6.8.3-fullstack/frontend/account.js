@@ -31,6 +31,7 @@
   const logoutBtn = document.getElementById('logoutBtn');
   const loadingOverlay = document.getElementById('loadingOverlay');
   const toastContainer = document.getElementById('toastContainer');
+  const dailyResetNote = document.getElementById('dailyResetNote');
 
   // State
   let authToken = null;
@@ -73,16 +74,12 @@
       ...options.headers,
     };
     
-    if (authToken) {
-      headers['Authorization'] = `Bearer ${authToken}`;
-    }
-    
-    const response = await fetch(`${API_BASE}${endpoint}`, {
+    const response = await window.authGuard.fetchWithAuth(`${API_BASE}${endpoint}`, {
       ...options,
       headers,
     });
     
-    const data = await response.json();
+    const data = await response.json().catch(() => ({}));
     
     if (!response.ok) {
       throw new Error(data.error || data.message || 'Request failed');
@@ -136,6 +133,7 @@
   // =============================================
 
   function showLoginRequired() {
+    window.authGuard?.showLoginRequired?.();
     loginRequired.classList.remove('hidden');
     accountContent.classList.add('hidden');
   }
@@ -146,7 +144,7 @@
   }
 
   function updateStatusDisplay(data) {
-    const { subscription, usage, limits, user } = data;
+    const { subscription, usage, limits, user, timezone, nextResetAt } = data;
     
     // Subscription Status
     subscriptionStatus.textContent = getStatusText(subscription.status);
@@ -197,6 +195,24 @@
 
       promptUsageToday.textContent = `${promptUsed} / ${promptDaily}`;
       wizardUsageToday.textContent = `${wizardUsed} / ${wizardDaily}`;
+    }
+
+    if (dailyResetNote) {
+      const tz = timezone || Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+      if (nextResetAt) {
+        const dt = new Date(nextResetAt);
+        const when = dt.toLocaleString(undefined, {
+          timeZone: tz,
+          year: "numeric",
+          month: "2-digit",
+          day: "2-digit",
+          hour: "2-digit",
+          minute: "2-digit"
+        });
+        dailyResetNote.textContent = `Resets at ${when} (${tz})`;
+      } else {
+        dailyResetNote.textContent = `Resets daily at 00:00 (${tz})`;
+      }
     }
     
     // User Info

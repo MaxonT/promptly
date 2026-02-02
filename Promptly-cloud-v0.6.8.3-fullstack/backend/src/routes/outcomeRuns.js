@@ -5,8 +5,10 @@ import { db } from "../lib/db.js";
 import { chatJson, LlmDisabledError } from "../lib/llmRouter.js";
 import { buildEvaluationMetrics } from "../lib/metricsEngine.js";
 import { isValidModel, getModelConfig, MODEL_REGISTRY } from "../lib/modelRegistry.js";
+import { requireAuth } from "./auth.js";
 
 export const outcomeRunsRouter = Router();
+outcomeRunsRouter.use(requireAuth);
 
 /**
  * Field definitions for Layer 2/3 data

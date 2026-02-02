@@ -13,6 +13,7 @@
 
 import { db } from "./db.js";
 import { stripeService } from "./stripeService.js";
+import { getLocalDateKey, normalizeTimeZone } from "./timezone.js";
 import {
   SUBSCRIPTION_STATUS,
   DAILY_PROMPT_OPTIMIZATIONS_PER_DAY,
@@ -61,7 +62,7 @@ const PLAN_LIMITS = {
  * Returns: 'free', 'monthly', 'yearly', or 'trial'
  */
 export function getUserPlan(userId) {
-  if (!userId || userId === 'demo-user') {
+  if (!userId) {
     return 'free';
   }
   
@@ -123,13 +124,12 @@ export function canUseMode(userId, mode) {
  * @param {string} date - Date in YYYY-MM-DD format (defaults to today)
  */
 export function getDailyUsage(userId, featureType, date = null) {
-  if (!userId || userId === 'demo-user') {
-    return 0;
-  }
-  
+  if (!userId) return 0;
+
   if (!date) {
-    const today = new Date();
-    date = today.toISOString().split('T')[0]; // YYYY-MM-DD
+    const row = db.prepare("SELECT timezone FROM users WHERE id = ?").get(userId);
+    const tz = normalizeTimeZone(row?.timezone);
+    date = getLocalDateKey(tz, new Date());
   }
   
   try {
@@ -156,11 +156,11 @@ export function getDailyUsage(userId, featureType, date = null) {
  * @param {string} featureType - 'prompt_optimization' or 'question_wizard'
  */
 export function recordUsage(userId, featureType) {
-  if (!userId || userId === 'demo-user') {
-    return; // Don't record demo usage
-  }
-  
-  const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+  if (!userId) return;
+
+  const row = db.prepare("SELECT timezone FROM users WHERE id = ?").get(userId);
+  const tz = normalizeTimeZone(row?.timezone);
+  const today = getLocalDateKey(tz, new Date());
   const now = new Date().toISOString();
   
   console.log(`[planLimits] Recording usage for user ${userId}, feature: ${featureType}, date: ${today}`);

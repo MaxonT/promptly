@@ -90,8 +90,8 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
   }
 
   async function fetchWithAuth(path, options = {}) {
-    const headers = authHeaders(options.headers || {});
-    return fetch(`${API_BASE}${path}`, { ...options, headers });
+    const headers = options.headers || {};
+    return window.authGuard.fetchWithAuth(`${API_BASE}${path}`, { ...options, headers });
   }
 
   async function loadAccount() {
@@ -115,7 +115,8 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
       console.error(err);
       saveToken(null);
       updateAuthView(null);
-      setAuthMessage("Session expired. Please sign in again.", true);
+      window.authGuard?.showLoginRequired?.();
+      setAuthMessage("Please log in first", true);
       log("Account error: " + err.message);
     }
   }
@@ -275,6 +276,25 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
         const wizardDaily = limits?.questionWizard?.daily ?? "--";
         promptUsageToday.textContent = `${promptUsed} / ${promptDaily}`;
         wizardUsageToday.textContent = `${wizardUsed} / ${wizardDaily}`;
+      }
+
+      const noteEl = document.getElementById("settingsDailyResetNote");
+      if (noteEl) {
+        const tz = statusData.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+        if (statusData.nextResetAt) {
+          const dt = new Date(statusData.nextResetAt);
+          const when = dt.toLocaleString(undefined, {
+            timeZone: tz,
+            year: "numeric",
+            month: "2-digit",
+            day: "2-digit",
+            hour: "2-digit",
+            minute: "2-digit"
+          });
+          noteEl.textContent = `Resets at ${when} (${tz})`;
+        } else {
+          noteEl.textContent = `Resets daily at 00:00 (${tz})`;
+        }
       }
     } catch (err) {
       console.error("Account management load error:", err);

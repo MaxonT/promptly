@@ -17,6 +17,8 @@ if (USE_POSTGRES) {
   // Dynamic import PostgreSQL module (top-level await supported in Node.js 14.8+)
   dbModule = await import('./db-pg.js');
   console.log('[promptly] Using PostgreSQL database');
+  await dbModule.initializeSchema();
+  await dbModule.ensureDemoUser();
 } else {
   // Use SQLite (default)
   console.log('[promptly] Using SQLite database');
@@ -324,6 +326,8 @@ CREATE INDEX IF NOT EXISTS idx_plan_usage_user_date ON plan_usage(user_id, date,
   ensureColumn("candidate_prompts", "metrics_json", "TEXT");
   ensureColumn("users", "oauth_provider", "TEXT");
   ensureColumn("users", "oauth_id", "TEXT");
+  ensureColumn("users", "timezone", "TEXT DEFAULT 'UTC'");
+  ensureColumn("users", "timezone_updated_at", "TEXT");
   ensureColumn("runs", "completed_at", "TEXT");
   ensureColumn("runs", "metrics_json", "TEXT");
   ensureColumn("evaluations", "metrics_json", "TEXT");

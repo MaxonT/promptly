@@ -85,14 +85,10 @@
 import express from "express";
 import { chatJson, chatText, LlmDisabledError } from "../lib/llmRouter.js";
 import { checkPromptOptimizationLimit, recordUsage } from "../lib/planLimits.js";
+import { requireAuth } from "./auth.js";
 
 const enhanceRouter = express.Router();
-
-// Helper to get user ID from request
-function getUserId(req) {
-  if (req.user && req.user.sub) return req.user.sub;
-  return "demo-user";
-}
+enhanceRouter.use(requireAuth);
 
 /**
  * ATTACHMENT FEATURE - Helper Functions
@@ -277,7 +273,7 @@ enhanceRouter.post("/structure", async (req, res) => {
     console.log(`[promptly] 📝 /enhance/structure: Request received`);
     
     // Check plan limits
-    const userId = getUserId(req);
+    const userId = req.user.sub;
     const limitCheck = checkPromptOptimizationLimit(userId, 'standard'); // Structure enhancement uses standard mode
     if (!limitCheck.allowed) {
       return res.status(403).json({
@@ -380,7 +376,7 @@ Required Format:
 enhanceRouter.post("/style", async (req, res) => {
   try {
     // Check plan limits
-    const userId = getUserId(req);
+    const userId = req.user.sub;
     const limitCheck = checkPromptOptimizationLimit(userId, 'standard');
     if (!limitCheck.allowed) {
       return res.status(403).json({
@@ -448,7 +444,7 @@ Output: Enhanced prompt only.`;
 enhanceRouter.post("/simplify", async (req, res) => {
   try {
     // Check plan limits
-    const userId = getUserId(req);
+    const userId = req.user.sub;
     const limitCheck = checkPromptOptimizationLimit(userId, 'standard');
     if (!limitCheck.allowed) {
       return res.status(403).json({
@@ -631,4 +627,3 @@ If no issues found, return {"issues": []}`;
 });
 
 export { enhanceRouter };
-

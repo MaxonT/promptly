@@ -10,6 +10,7 @@
   <link rel="stylesheet" href="settings.css" />
   <link rel="stylesheet" href="account.css" />
   <script src="config.js"></script>
+  <script src="lib/authGuard.js"></script>
   <script src="lib/i18next.min.js"></script>
   <script type="module" src="i18n/index.js"></script>
   <script type="module" src="lib/authState.js"></script>
@@ -160,7 +161,7 @@
                   <span class="usage-limit-label">Question-wizard sessions today</span>
                   <span id="wizardUsageToday" class="usage-limit-value">--</span>
                 </div>
-                <div class="usage-limit-note">Resets daily at UTC 00:00</div>
+                <div class="usage-limit-note" id="settingsDailyResetNote">Resets daily at 00:00 in your timezone</div>
               </div>
             </div>
           </div>

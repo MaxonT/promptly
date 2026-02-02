@@ -16,14 +16,10 @@ import { z } from "zod";
 import { db, ensureUser } from "../lib/db.js";
 import { chatText, chatJson, LlmDisabledError } from "../lib/llmRouter.js";
 import { getModelConfig, resolveModelName, isValidModel } from "../lib/modelRegistry.js";
+import { requireAuth } from "./auth.js";
 
 export const promptsRouter = Router();
-
-// Helper to get user ID from request
-function getUserId(req) {
-  if (req.user && req.user.sub) return req.user.sub;
-  return "demo-user";
-}
+promptsRouter.use(requireAuth);
 
 /**
  * POST /api/prompts/generate-candidates
@@ -38,7 +34,7 @@ const GenerateCandidatesRequestSchema = z.object({
 });
 
 promptsRouter.post("/generate-candidates", async (req, res) => {
-  const userId = getUserId(req);
+  const userId = req.user.sub;
   ensureUser(userId);
 
   const parsed = GenerateCandidatesRequestSchema.safeParse(req.body);
@@ -221,7 +217,7 @@ const ScoreRequestSchema = z.object({
 });
 
 promptsRouter.post("/score", async (req, res) => {
-  const userId = getUserId(req);
+  const userId = req.user.sub;
   ensureUser(userId);
 
   const parsed = ScoreRequestSchema.safeParse(req.body);
@@ -363,7 +359,7 @@ const SelectBestRequestSchema = z.object({
 });
 
 promptsRouter.post("/select-best", async (req, res) => {
-  const userId = getUserId(req);
+  const userId = req.user.sub;
   ensureUser(userId);
 
   const parsed = SelectBestRequestSchema.safeParse(req.body);
@@ -466,5 +462,3 @@ promptsRouter.post("/select-best", async (req, res) => {
     });
   }
 });
-
-

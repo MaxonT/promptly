@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Subscription Success - Promptly</title>
   <link rel="stylesheet" href="style.css">
+  <script src="config.js"></script>
+  <script src="lib/authGuard.js"></script>
   <style>
     .success-page {
       min-height: 100vh;
@@ -333,20 +335,17 @@
     
     // Verification polling
     async function startVerification() {
-      const token = localStorage.getItem('promptly.token');
-      
+      const token = window.authGuard?.getToken?.() || localStorage.getItem('promptly.token');
+
       if (!token) {
-        showError('Authentication required. Please log in and try again.');
+        showError('Please log in first');
         track(EVENTS.CHECKOUT_SUCCESS_ERROR, { error: 'missing_auth' });
         return;
       }
       
       try {
-        const response = await fetch(`${API_BASE}/api/billing/verify-session/${sessionId}`, {
-          headers: { 'Authorization': `Bearer ${token}` },
-        });
-        
-        const data = await response.json();
+        const response = await window.authGuard.fetchWithAuth(`${API_BASE}/api/billing/verify-session/${sessionId}`, {});
+        const data = await response.json().catch(() => ({}));
         
         if (!response.ok) {
           throw new Error(data.error || 'Verification failed');
@@ -473,16 +472,17 @@
     window.retryVerification = retryVerification;
     
     async function loadSubscriptionDetails() {
-      const token = localStorage.getItem('promptly.token');
-      if (!token) return;
+      const token = window.authGuard?.getToken?.() || localStorage.getItem('promptly.token');
+      if (!token) {
+        showError('Please log in first');
+        return;
+      }
       
       try {
-        const response = await fetch(`${API_BASE}/api/billing/status`, {
-          headers: { 'Authorization': `Bearer ${token}` },
-        });
+        const response = await window.authGuard.fetchWithAuth(`${API_BASE}/api/billing/status`, {});
         
         if (response.ok) {
-          const data = await response.json();
+          const data = await response.json().catch(() => ({}));
           
           document.getElementById('planName').textContent = 
             data.subscription.plan ? data.subscription.plan.charAt(0).toUpperCase() + data.subscription.plan.slice(1) : 'Pro';
@@ -490,8 +490,22 @@
           const promptDaily = data.limits?.promptOptimization?.daily;
           const wizardDaily = data.limits?.questionWizard?.daily;
           if (promptDaily && wizardDaily) {
+            const tz = data.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+            let resetText = `Resets daily at 00:00 (${tz})`;
+            if (data.nextResetAt) {
+              const dt = new Date(data.nextResetAt);
+              const when = dt.toLocaleString(undefined, {
+                timeZone: tz,
+                year: "numeric",
+                month: "2-digit",
+                day: "2-digit",
+                hour: "2-digit",
+                minute: "2-digit"
+              });
+              resetText = `Resets at ${when} (${tz})`;
+            }
             document.getElementById('dailyLimits').textContent =
-              `${promptDaily} prompt optimizations/day · ${wizardDaily} question-wizard sessions/day`;
+              `${promptDaily} prompt optimizations/day · ${wizardDaily} question-wizard sessions/day · ${resetText}`;
           }
           
           if (data.subscription.periodEnd) {

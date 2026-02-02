@@ -20,6 +20,13 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
 
   let currentId = null;
 
+  if (!window.authGuard?.requireLogin({ redirectTo: "settings.html#accountPanel" })) {
+    if (refreshBtn) refreshBtn.disabled = true;
+    if (compileBtn) compileBtn.disabled = true;
+    if (createBtn) createBtn.disabled = true;
+    return;
+  }
+
   function t(key, options = {}) {
     // Use centralized i18nManager for consistency
     if (!window.i18nManager || !window.i18nManager.instance) {
@@ -64,7 +71,7 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
   async function loadSpecs() {
     try {
       log("GET /api/specs ...");
-      const res = await fetch(`${API_BASE}/api/specs`);
+      const res = await window.authGuard.fetchWithAuth(`${API_BASE}/api/specs`);
       const data = await res.json().catch(() => ({}));
       if (!res.ok || !data) {
         log(`Specs list error: HTTP ${res.status}`);
@@ -102,7 +109,7 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
     if (!id) return;
     try {
       log(`GET /api/specs/${id} ...`);
-      const res = await fetch(`${API_BASE}/api/specs/${encodeURIComponent(id)}`);
+      const res = await window.authGuard.fetchWithAuth(`${API_BASE}/api/specs/${encodeURIComponent(id)}`);
       const data = await res.json().catch(() => ({}));
       if (!res.ok || !data) {
         log(`Spec detail error: HTTP ${res.status}`);
@@ -135,7 +142,7 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
     if (!currentId) return;
     try {
       log(`POST /api/specs/${currentId}/compile ...`);
-      const res = await fetch(`${API_BASE}/api/specs/${encodeURIComponent(currentId)}/compile`, {
+      const res = await window.authGuard.fetchWithAuth(`${API_BASE}/api/specs/${encodeURIComponent(currentId)}/compile`, {
         method: "POST"
       });
       const data = await res.json().catch(() => ({}));
@@ -179,7 +186,7 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
     }
     try {
       log("POST /api/specs ...");
-      const res = await fetch(`${API_BASE}/api/specs`, {
+      const res = await window.authGuard.fetchWithAuth(`${API_BASE}/api/specs`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ title, spec: specObj })

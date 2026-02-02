@@ -13,10 +13,10 @@ import { goBack, skipQuestion } from "../lib/questionNavigator.js";
 import { getModelIds, resolveModelName, isValidModel, getModelConfig } from "../lib/modelRegistry.js";
 import { INFERENCE_PROFILES } from "../lib/inferenceProfiles.js";
 import { checkQuestionWizardLimit, recordUsage, canUseMode } from "../lib/planLimits.js";
-import { optionalAuth } from "./auth.js";
+import { requireAuth } from "./auth.js";
 
 export const questionSessionRouter = Router();
-questionSessionRouter.use(optionalAuth);
+questionSessionRouter.use(requireAuth);
 
 const PROJECT_DESCRIPTION_REQUIRED_MESSAGE = "Project description is required.";
 
@@ -126,8 +126,7 @@ const ModelOnlySchema = z.object({
 const RUNNING_STATUSES = ["active", "ready_to_finalize"];
 
 function getUserId(req) {
-  if (req.user && req.user.sub) return req.user.sub;
-  return "demo-user";
+  return req.user.sub;
 }
 
 /**
@@ -393,13 +392,9 @@ questionSessionRouter.get("/status/active", (req, res) => {
       .prepare(
         `SELECT id, owner_id, kind, status, mode, model, language, created_at, updated_at
          FROM question_sessions
-         WHERE id = ?`
+         WHERE id = ? AND owner_id = ?`
       )
-      .get(requestedSessionId);
-
-    if (session && session.owner_id !== userId) {
-      session = null; // Do not leak other users' sessions
-    }
+      .get(requestedSessionId, userId);
   }
 
   if (!session) {
@@ -447,13 +442,14 @@ questionSessionRouter.get("/status/active", (req, res) => {
 
 questionSessionRouter.get("/:sessionId", (req, res) => {
   const { sessionId } = req.params;
+  const userId = getUserId(req);
   const session = db
     .prepare(
       `SELECT id, owner_id, kind, status, initial_description, mode, model, language, created_at, updated_at
        FROM question_sessions
-       WHERE id = ?`
+       WHERE id = ? AND owner_id = ?`
     )
-    .get(sessionId);
+    .get(sessionId, userId);
 
   if (!session) {
     return res.status(404).json({ ok: false, error: "Session not found" });
@@ -481,14 +477,15 @@ questionSessionRouter.get("/:sessionId", (req, res) => {
 // GET /api/question-sessions/:sessionId/state - hydrate in-progress sessions without creating a new one
 questionSessionRouter.get("/:sessionId/state", (req, res) => {
   const { sessionId } = req.params;
+  const userId = getUserId(req);
 
   const session = db
     .prepare(
       `SELECT id, owner_id, kind, status, initial_description, mode, model, language, created_at, updated_at
        FROM question_sessions
-       WHERE id = ?`
+       WHERE id = ? AND owner_id = ?`
     )
-    .get(sessionId);
+    .get(sessionId, userId);
 
   if (!session) {
     return res.status(404).json({ ok: false, error: "Session not found" });
@@ -557,9 +554,10 @@ questionSessionRouter.post("/:sessionId/answer", (req, res) => {
     return res.status(400).json({ ok: false, error: parsed.error.flatten() });
   }
   const { sessionId } = req.params;
+  const userId = getUserId(req);
   const session = db
-    .prepare("SELECT * FROM question_sessions WHERE id = ?")
-    .get(sessionId);
+    .prepare("SELECT * FROM question_sessions WHERE id = ? AND owner_id = ?")
+    .get(sessionId, userId);
   if (!session) {
     return res.status(404).json({ ok: false, error: "Session not found" });
   }
@@ -661,9 +659,10 @@ questionSessionRouter.post("/:sessionId/answer", (req, res) => {
 
 questionSessionRouter.post("/:sessionId/finalize", async (req, res) => {
   const { sessionId } = req.params;
+  const userId = getUserId(req);
   const session = db
-    .prepare("SELECT * FROM question_sessions WHERE id = ?")
-    .get(sessionId);
+    .prepare("SELECT * FROM question_sessions WHERE id = ? AND owner_id = ?")
+    .get(sessionId, userId);
   if (!session) {
     return res.status(404).json({ ok: false, error: "Session not found" });
   }
@@ -724,7 +723,10 @@ questionSessionRouter.post("/:sessionId/finalize", async (req, res) => {
 
     const compiled = compileSpecToPrompt(result.spec);
     const now = new Date().toISOString();
-    const userId = session.owner_id || "demo-user";
+    const userId = session.owner_id;
+    if (!userId) {
+      throw new Error("Session owner is missing");
+    }
     const specId = `spec_${nanoid(12)}`;
     const cpId = `cp_${nanoid(12)}`;
 

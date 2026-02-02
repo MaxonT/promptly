@@ -126,7 +126,7 @@
   "kpi_accuracy": "Precisión",
   "kpi_f1": "F1",
   "kpi_pass": "Tasa de aprobación",
-  "kpi_cost": "Costo de tokens",
+  "kpi_cost": "Costo estimado",
   "kpi_prog": "Progreso %",
   "growth_chart": "Crecimiento en iteraciones",
   "contrib_chart": "Contribución del cambio",
@@ -150,10 +150,10 @@
     "f1Desc": "2 × precisión × recuperación ÷ (precisión + recuperación).",
     "passRate": "Tasa de Aprobación",
     "passRateDesc": "Restricciones aprobadas / restricciones totales.",
-    "tokenCost": "Costo de Tokens",
+    "tokenCost": "Costo estimado",
     "tokenCostDesc": "prompt_tokens + completion_tokens.",
     "progress": "Progreso %",
-    "progressDesc": "promedio(precisión/objetivo_precisión, f1/objetivo_f1, tasa_aprobación/objetivo_tasa_aprobación, costo_token_ideal/costo_token) × 100."
+    "progressDesc": "promedio(precisión/objetivo_precisión, f1/objetivo_f1, tasa_aprobación/objetivo_tasa_aprobación, costo_ideal/costo) × 100."
   },
   "testCases": {
     "title": "Casos de Prueba",
@@ -170,7 +170,7 @@
     "step1": "Escribe tu tarea: define Instrucción + Restricciones + Estilo esperado.",
     "step2": "Agrega casos de prueba: para cada entrada, proporciona la salida ideal.",
     "step3": "Ejecutar: el sistema busca automáticamente, prueba y ajusta prompts.",
-    "step4": "Revisa KPIs: Precisión / F1 / Tasa de Aprobación / Costo de Token / Progreso% se actualizan después de cada ejecución.",
+    "step4": "Revisa KPIs: Precisión / F1 / Tasa de Aprobación / Costo estimado / Progreso% se actualizan después de cada ejecución.",
     "accuracyTrend": "Tendencia de Precisión",
     "errorBreakdown": "Desglose de Errores",
     "progressGauge": "Medidor de Progreso"
@@ -223,7 +223,7 @@
     "llmAgentsTitle": "Agentes LLM",
     "llmAgentsDesc": "Agentes especializados (Arquitecto, Editor, Juez, etc.) elaboran múltiples prompts candidatos en lugar de depender de una sola respuesta.",
     "metricsTitle": "Métricas y Puntuación",
-    "metricsDesc": "Cada candidato es puntuado en claridad, coherencia, coincidencia de estilo, seguridad, costo de token y riesgo para cuantificar la calidad.",
+    "metricsDesc": "Cada candidato es puntuado en claridad, coherencia, coincidencia de estilo, seguridad, costo y riesgo para cuantificar la calidad.",
     "outcomeTitle": "Ejecutor de Resultados",
     "outcomeDesc": "El ejecutor orientado a resultados aplica tus criterios de éxito, compara candidatos mejor-de-N y devuelve el resultado más robusto.",
     "algorithmSpecsTitle": "🔧 Especificaciones de Algoritmo",
@@ -234,7 +234,7 @@
     "specOrchestration": "Orquestación Multi-Agente",
     "specOrchestrationDesc": "Diferentes agentes colaboran en arquitectura, edición y juicio.",
     "specMetrics": "Panel de Métricas",
-    "specMetricsDesc": "Coherencia, estilo, tasa de aprobación, eficiencia de tokens y puntuaciones de riesgo influyen en la ganancia.",
+    "specMetricsDesc": "Coherencia, estilo, tasa de aprobación, eficiencia de costo y puntuaciones de riesgo influyen en la ganancia.",
     "specSelection": "Selección Mejor-de-N",
     "specSelectionDesc": "Comparamos candidatos en lugar de devolver el primer acierto.",
     "specOutcome": "Ejecutor de Resultados",

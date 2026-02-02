@@ -119,66 +119,23 @@
         </div>
       </div>
 
-      <!-- Token Balance Card -->
+      <!-- Usage Limits Card -->
       <div class="account-card">
         <div class="card-header">
-          <h2 data-i18n="account.token_balance">Token Balance</h2>
+          <h2 data-i18n="account.usage_limits">Usage limits</h2>
         </div>
         <div class="card-body">
-          <div class="token-overview">
-            <div class="token-total">
-              <span id="totalTokens" class="token-amount">--</span>
-              <span class="token-label" data-i18n="account.total_tokens">Total Available</span>
+          <div class="usage-limits-grid">
+            <div class="usage-limit-item">
+              <span class="usage-limit-label" data-i18n="account.prompt_optimizations_today">Prompt optimizations today</span>
+              <span id="promptUsageToday" class="usage-limit-value">--</span>
             </div>
+            <div class="usage-limit-item">
+              <span class="usage-limit-label" data-i18n="account.question_wizard_today">Question-wizard sessions today</span>
+              <span id="wizardUsageToday" class="usage-limit-value">--</span>
+            </div>
+            <div class="usage-limit-note" data-i18n="account.daily_reset_note">Resets daily at UTC 00:00</div>
           </div>
-          <div class="token-breakdown">
-            <div class="token-bucket">
-              <div class="bucket-header">
-                <span class="bucket-name" data-i18n="account.daily_free">Daily Free</span>
-                <span id="dailyFreeTokens" class="bucket-value">--</span>
-              </div>
-              <div class="bucket-bar">
-                <div id="dailyFreeBar" class="bucket-fill" style="width: 0%"></div>
-              </div>
-              <span class="bucket-note" data-i18n="account.daily_refresh_note">Refreshes at UTC 00:00</span>
-            </div>
-            <div class="token-bucket">
-              <div class="bucket-header">
-                <span class="bucket-name" data-i18n="account.monthly">Monthly Allocation</span>
-                <span id="monthlyTokens" class="bucket-value">--</span>
-              </div>
-              <div class="bucket-bar">
-                <div id="monthlyBar" class="bucket-fill" style="width: 0%"></div>
-              </div>
-            </div>
-            <div class="token-bucket" id="trialBucket" style="display: none;">
-              <div class="bucket-header">
-                <span class="bucket-name" data-i18n="account.trial_tokens">Trial Tokens</span>
-                <span id="trialTokens" class="bucket-value">--</span>
-              </div>
-              <div class="bucket-bar">
-                <div id="trialBar" class="bucket-fill trial" style="width: 0%"></div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Usage History Card -->
-      <div class="account-card">
-        <div class="card-header">
-          <h2 data-i18n="account.usage_history">Usage History</h2>
-          <button id="refreshHistoryBtn" class="btn btn-sm btn-secondary" data-i18n="account.refresh">
-            Refresh
-          </button>
-        </div>
-        <div class="card-body">
-          <div id="usageHistory" class="usage-history">
-            <div class="loading-placeholder" data-i18n="common.loading">Loading...</div>
-          </div>
-          <button id="loadMoreBtn" class="btn btn-secondary btn-block" style="display: none;">
-            <span data-i18n="account.load_more">Load More</span>
-          </button>
         </div>
       </div>
 

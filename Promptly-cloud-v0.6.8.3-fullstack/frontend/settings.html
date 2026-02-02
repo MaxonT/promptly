@@ -145,63 +145,26 @@
             </div>
           </div>
 
-          <!-- Token Balance Card -->
+          <!-- Usage Limits Card -->
           <div class="account-card">
             <div class="card-header">
-              <h3>Token Balance</h3>
+              <h3>Usage limits</h3>
             </div>
             <div class="card-body">
-              <div class="token-overview">
-                <div class="token-total">
-                  <span id="totalTokens" class="token-amount">--</span>
-                  <span class="token-label">Total Available</span>
+              <div class="usage-limits-grid">
+                <div class="usage-limit-item">
+                  <span class="usage-limit-label">Prompt optimizations today</span>
+                  <span id="promptUsageToday" class="usage-limit-value">--</span>
                 </div>
-              </div>
-              <div class="token-breakdown">
-                <div class="token-bucket">
-                  <div class="bucket-header">
-                    <span class="bucket-name">Daily Free</span>
-                    <span id="dailyFreeTokens" class="bucket-value">--</span>
-                  </div>
-                  <div class="bucket-bar">
-                    <div id="dailyFreeBar" class="bucket-fill" style="width: 0%"></div>
-                  </div>
-                  <span class="bucket-note">Refreshes at UTC 00:00</span>
+                <div class="usage-limit-item">
+                  <span class="usage-limit-label">Question-wizard sessions today</span>
+                  <span id="wizardUsageToday" class="usage-limit-value">--</span>
                 </div>
-                <div class="token-bucket">
-                  <div class="bucket-header">
-                    <span class="bucket-name">Monthly</span>
-                    <span id="monthlyTokens" class="bucket-value">--</span>
-                  </div>
-                  <div class="bucket-bar">
-                    <div id="monthlyBar" class="bucket-fill" style="width: 0%"></div>
-                  </div>
-                </div>
-                <div class="token-bucket" id="trialBucket" style="display: none;">
-                  <div class="bucket-header">
-                    <span class="bucket-name">Trial</span>
-                    <span id="trialTokens" class="bucket-value">--</span>
-                  </div>
-                  <div class="bucket-bar">
-                    <div id="trialBar" class="bucket-fill trial" style="width: 0%"></div>
-                  </div>
-                </div>
+                <div class="usage-limit-note">Resets daily at UTC 00:00</div>
               </div>
             </div>
           </div>
 
-          <!-- Usage History Card -->
-          <div class="account-card">
-            <div class="card-header">
-              <h3>Usage History</h3>
-              <button id="refreshHistoryBtn" class="btn btn-sm btn-secondary">Refresh</button>
-            </div>
-            <div class="card-body">
-              <div id="usageHistory" class="usage-history">
-                <div class="loading-placeholder">No usage history yet.</div>
-              </div>
-            </div>
-          </div>
         </div>
       </div>
 

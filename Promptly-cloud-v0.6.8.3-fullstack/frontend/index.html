@@ -150,7 +150,7 @@ html[data-theme="light"] .glossary-def{ color:#1F2937; }
 
 </style>
 <style>
-/* === v0.6.8.3 UI+ Patch: KPI borders, sparklines, badges, states, drawer, tokens === */
+/* === v0.6.8.3 UI+ Patch: KPI borders, sparklines, badges, states, drawer, cost === */
 :root{
   --surface:#0b0f14;
   --surface-2:#0f141b;
@@ -951,8 +951,8 @@ temperature: 0.5</textarea>
       </div>
       <div class="card kpi">
         <span class="label metric-with-tooltip" data-i18n="kpi_cost">
-          <span class="text-highlight">Token Cost</span>
-          <span class="metric-tooltip">Average tokens used per request (lower is better for cost)</span>
+          <span class="text-highlight">Estimated Cost</span>
+          <span class="metric-tooltip">Average usage per request (estimate)</span>
         </span>
         <span class="value" id="valCost">—</span>
         <span class="delta">&nbsp;</span>
@@ -1051,7 +1051,7 @@ temperature: 0.5</textarea>
               <span class="step-number-enhanced">4</span>
               <h4 class="step-title" data-i18n="whyPromptly.metricsTitle">Metrics & Scoring</h4>
             </div>
-            <p data-i18n="whyPromptly.metricsDesc">Every candidate is scored on <span class="highlight-accent">clarity, coherence, style match</span>, safety, token cost, and risk to <span class="keyword">quantify quality</span>.</p>
+            <p data-i18n="whyPromptly.metricsDesc">Every candidate is scored on <span class="highlight-accent">clarity, coherence, style match</span>, safety, cost, and risk to <span class="keyword">quantify quality</span>.</p>
           </article>
           <article class="algorithm-step-enhanced">
             <div class="step-header">
@@ -1068,7 +1068,7 @@ temperature: 0.5</textarea>
             <li><span class="spec-key" data-i18n="whyPromptly.specQuestions">Clarifying questions</span> – <span class="spec-desc" data-i18n="whyPromptly.specQuestionsDesc">Removes guesswork before generating prompts.</span></li>
             <li><span class="spec-key" data-i18n="whyPromptly.specOrchestration">Multi-agent orchestration</span> – <span class="spec-desc" data-i18n="whyPromptly.specOrchestrationDesc">Different agents collaborate on architecture, editing, and judgment.</span></li>
             <li><span class="spec-key" data-i18n="whyPromptly.specSelection">Best-of-N selection</span> – <span class="spec-desc" data-i18n="whyPromptly.specSelectionDesc">We compare candidates rather than returning the first hit.</span></li>
-            <li><span class="spec-key" data-i18n="whyPromptly.specMetrics">Metric panel</span> – <span class="spec-desc" data-i18n="whyPromptly.specMetricsDesc">Coherence, style, pass rate, token efficiency, and risk scores feed into the payoff.</span></li>
+            <li><span class="spec-key" data-i18n="whyPromptly.specMetrics">Metric panel</span> – <span class="spec-desc" data-i18n="whyPromptly.specMetricsDesc">Coherence, style, pass rate, cost efficiency, and risk scores feed into the payoff.</span></li>
             <li><span class="spec-key" data-i18n="whyPromptly.specOutcome">Outcome Runner</span> – <span class="spec-desc" data-i18n="whyPromptly.specOutcomeDesc">Picks the winner according to your defined tests/criteria.</span></li>
           </ul>
         </div>
@@ -1101,14 +1101,12 @@ window.refreshPlanBanner = async function() {
 
     if (!planBanner) return;
 
-    // Check if user is signed in by checking token
-    const token = localStorage.getItem('promptly.token');
+    const authToken = localStorage.getItem('promptly.token');
     
-    console.log('[Plan Banner] Token found:', !!token);
+    console.log('[Plan Banner] Signed in:', !!authToken);
 
     // If not signed in, show sign in prompt
-    if (!token) {
-      console.log('[Plan Banner] No token, showing sign in prompt');
+    if (!authToken) {
       planBanner.style.display = 'block';
       planBadge.textContent = '🔑 Sign In to See Your Plan';
       planDetails.textContent = 'Sign in to view your usage limits and available features';
@@ -1118,14 +1116,16 @@ window.refreshPlanBanner = async function() {
       return;
     }
 
-    // User is signed in, fetch their plan info
-    const API_BASE = window.PROMPTLY_API_BASE || 'https://promptly-v0-6-cloudtest-cursor-dev.onrender.com';
+    const apiBase = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim()) ||
+      (window.location && window.location.origin && window.location.origin !== "null"
+        ? window.location.origin
+        : "http://localhost:8080");
     
-    const res = await fetch(`${API_BASE}/api/billing/status`, {
+    const res = await fetch(`${apiBase}/api/billing/status`, {
       credentials: 'include',
       headers: {
         'Accept': 'application/json',
-        'Authorization': `Bearer ${token}`
+        'Authorization': `Bearer ${authToken}`
       }
     });
 
@@ -1160,25 +1160,25 @@ window.refreshPlanBanner = async function() {
       const limitPrompt = data.limits?.promptOptimization?.daily || 8;
       const usedWizard = data.usage?.questionWizard || 0;
       const limitWizard = data.limits?.questionWizard?.daily || 5;
-      const tokensFormatted = data.tokens?.totalFormatted || '0';
       
-      planDetails.textContent = `🎯 ${usedPrompt}/${limitPrompt} prompts/day | 🧙 ${usedWizard}/${limitWizard} wizards/day | 🪙 ${tokensFormatted} tokens (50K daily free)`;
-      planUpgradeLink.textContent = '⬆️ Upgrade for unlimited';
+      planDetails.textContent = `🎯 ${usedPrompt}/${limitPrompt} prompt optimizations today | 🧙 ${usedWizard}/${limitWizard} question-wizard sessions today`;
+      planUpgradeLink.textContent = '⬆️ Upgrade for 50/30 daily limits';
       planUpgradeLink.href = 'subscription.html';
       planUpgradeLink.style.display = 'inline-block';
       
-      console.log('[Plan Banner] ✅ Showing FREE plan info:', usedPrompt + '/' + limitPrompt, 'prompts,', usedWizard + '/' + limitWizard, 'wizards, tokens:', tokensFormatted);
+      console.log('[Plan Banner] ✅ Showing FREE plan info:', usedPrompt + '/' + limitPrompt, usedWizard + '/' + limitWizard);
     } else {
-      // Premium plan - show token limit
+      // Premium plan
       planBadge.textContent = '💎 Premium Plan';
-      const tokensFormatted = data.tokens?.totalFormatted || '0';
-      const monthlyTokens = data.tokens?.monthly || 0;
+      const usedPrompt = data.usage?.promptOptimization || 0;
+      const limitPrompt = data.limits?.promptOptimization?.daily || 50;
+      const usedWizard = data.usage?.questionWizard || 0;
+      const limitWizard = data.limits?.questionWizard?.daily || 30;
       
-      // Premium shows: unlimited features + token balance out of 1M/month
-      planDetails.textContent = `✨ Unlimited prompts & wizards | 🪙 ${tokensFormatted} tokens available (1M/month + 50K daily free)`;
+      planDetails.textContent = `🎯 ${usedPrompt}/${limitPrompt} prompt optimizations today | 🧙 ${usedWizard}/${limitWizard} question-wizard sessions today`;
       planUpgradeLink.style.display = 'none';
       
-      console.log('[Plan Banner] ✅ Showing PREMIUM plan info, tokens:', tokensFormatted, 'monthly balance:', monthlyTokens);
+      console.log('[Plan Banner] ✅ Showing PREMIUM plan info:', usedPrompt + '/' + limitPrompt, usedWizard + '/' + limitWizard);
     }
   } catch (err) {
     console.error('[Plan Banner] Exception:', err);
@@ -1198,7 +1198,7 @@ window.refreshPlanBanner = async function() {
   // Also listen for storage changes (cross-tab)
   window.addEventListener('storage', (e) => {
     if (e.key === 'promptly.token') {
-      console.log('[Plan Banner] 🔄 Token changed in storage, refreshing banner...');
+      console.log('[Plan Banner] 🔄 Auth state changed in storage, refreshing banner...');
       setTimeout(window.refreshPlanBanner, 500);
     }
   });
@@ -1295,7 +1295,7 @@ window.refreshPlanBanner = async function() {
     {key:'accuracy', labels:['Accuracy']},
     {key:'f1', labels:['F1']},
     {key:'pass_rate', labels:['Pass Rate','PassRate']},
-    {key:'token_cost', labels:['Token Cost','Token']},
+    {key:'token_cost', labels:['Estimated Cost','Cost']},
     {key:'progress', labels:['Progress %','Progress%','Progress']}
   ];
 
@@ -1366,15 +1366,15 @@ window.refreshPlanBanner = async function() {
 
   // Lightweight i18n for key labels (fallback to English)
   const i18n = {
-    en:{ 'accuracy':'Accuracy','f1':'F1','pass_rate':'Pass Rate','token_cost':'Token Cost','progress':'Progress %','user_guide':'User Guide','language':'Language'},
-    zh:{ 'accuracy':'准确率','f1':'F1','pass_rate':'通过率','token_cost':'Token 费用','progress':'进度 %','user_guide':'使用说明','language':'语言'},
-    es:{ 'accuracy':'Precisión','f1':'F1','pass_rate':'Tasa de éxito','token_cost':'Costo de tokens','progress':'Progreso %','user_guide':'Guía de uso','language':'Idioma'},
-    fr:{ 'accuracy':'Précision','f1':'F1','pass_rate':'Taux de réussite','token_cost':'Coût des jetons','progress':'Progression %','user_guide':'Guide d’utilisation','language':'Langue'},
-    hi:{ 'accuracy':'शुद्धता','f1':'F1','pass_rate':'पास दर','token_cost':'टोकन लागत','progress':'प्रगति %','user_guide':'उपयोग गाइड','language':'भाषा'},
-    ar:{ 'accuracy':'الدقة','f1':'F1','pass_rate':'معدل النجاح','token_cost':'تكلفة الرموز','progress':'التقدم %','user_guide':'دليل الاستخدام','language':'اللغة'},
-    pt:{ 'accuracy':'Acurácia','f1':'F1','pass_rate':'Taxa de aprovação','token_cost':'Custo de tokens','progress':'Progresso %','user_guide':'Guia do usuário','language':'Idioma'},
-    ja:{ 'accuracy':'正確度','f1':'F1','pass_rate':'合格率','token_cost':'トークン費用','progress':'進捗 %','user_guide':'ユーザーガイド','language':'言語'},
-    ko:{ 'accuracy':'정확도','f1':'F1','pass_rate':'통과율','token_cost':'토큰 비용','progress':'진행률 %','user_guide':'사용자 가이드','language':'언어'}
+    en:{ 'accuracy':'Accuracy','f1':'F1','pass_rate':'Pass Rate','token_cost':'Estimated Cost','progress':'Progress %','user_guide':'User Guide','language':'Language'},
+    zh:{ 'accuracy':'准确率','f1':'F1','pass_rate':'通过率','token_cost':'预估成本','progress':'进度 %','user_guide':'使用说明','language':'语言'},
+    es:{ 'accuracy':'Precisión','f1':'F1','pass_rate':'Tasa de éxito','token_cost':'Costo estimado','progress':'Progreso %','user_guide':'Guía de uso','language':'Idioma'},
+    fr:{ 'accuracy':'Précision','f1':'F1','pass_rate':'Taux de réussite','token_cost':'Coût estimé','progress':'Progression %','user_guide':'Guide d’utilisation','language':'Langue'},
+    hi:{ 'accuracy':'शुद्धता','f1':'F1','pass_rate':'पास दर','token_cost':'अनुमानित लागत','progress':'प्रगति %','user_guide':'उपयोग गाइड','language':'भाषा'},
+    ar:{ 'accuracy':'الدقة','f1':'F1','pass_rate':'معدل النجاح','token_cost':'التكلفة التقديرية','progress':'التقدم %','user_guide':'دليل الاستخدام','language':'اللغة'},
+    pt:{ 'accuracy':'Acurácia','f1':'F1','pass_rate':'Taxa de aprovação','token_cost':'Custo estimado','progress':'Progresso %','user_guide':'Guia do usuário','language':'Idioma'},
+    ja:{ 'accuracy':'正確度','f1':'F1','pass_rate':'合格率','token_cost':'推定コスト','progress':'進捗 %','user_guide':'ユーザーガイド','language':'言語'},
+    ko:{ 'accuracy':'정확도','f1':'F1','pass_rate':'통과율','token_cost':'예상 비용','progress':'진행률 %','user_guide':'사용자 가이드','language':'언어'}
   };
 
 
@@ -1393,7 +1393,7 @@ window.refreshPlanBanner = async function() {
         <li data-i18n="userGuide.step1"><strong>Write your task</strong>: define <em>Instruction</em> + <em>Constraints</em> + <em>Expected style</em>.</li>
         <li data-i18n="userGuide.step2"><strong>Add test cases</strong>: for each input, provide <em>ideal output</em>.</li>
         <li data-i18n="userGuide.step3"><strong>Run</strong>: the system auto-searches, tests, and tunes prompts.</li>
-        <li data-i18n="userGuide.step4"><strong>Review KPIs</strong>: Accuracy / F1 / Pass Rate / Token Cost / Progress% update after each run.</li>
+        <li data-i18n="userGuide.step4"><strong>Review KPIs</strong>: Accuracy / F1 / Pass Rate / Estimated Cost / Progress% update after each run.</li>
       </ol>
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px;">
         <div><img src="assets/placeholder_line.png" alt="Accuracy trend" style="width:100%;border-radius:12px;box-shadow:0 4px 24px rgba(0,0,0,.25)"><p style="opacity:.7;margin-top:6px" data-i18n="userGuide.accuracyTrend">Accuracy Trend</p></div>
@@ -1405,8 +1405,8 @@ window.refreshPlanBanner = async function() {
         <li><span class="glossary-term" data-i18n="glossary.accuracy">Accuracy</span><span class="glossary-def" data-i18n="glossary.accuracyDesc">Correct outputs / total cases.</span></li>
         <li><span class="glossary-term" data-i18n="glossary.f1">F1</span><span class="glossary-def" data-i18n="glossary.f1Desc">2 × precision × recall ÷ (precision + recall).</span></li>
         <li><span class="glossary-term" data-i18n="glossary.passRate">Pass Rate</span><span class="glossary-def" data-i18n="glossary.passRateDesc">Passed constraints / total constraints.</span></li>
-        <li><span class="glossary-term" data-i18n="glossary.tokenCost">Token Cost</span><span class="glossary-def" data-i18n="glossary.tokenCostDesc">prompt_tokens + completion_tokens.</span></li>
-        <li><span class="glossary-term" data-i18n="glossary.progress">Progress %</span><span class="glossary-def" data-i18n="glossary.progressDesc">average(accuracy/target_accuracy, f1/target_f1, pass_rate/target_pass_rate, ideal_token_cost/token_cost) × 100.</span></li>
+        <li><span class="glossary-term" data-i18n="glossary.tokenCost">Estimated Cost</span><span class="glossary-def" data-i18n="glossary.tokenCostDesc">Estimated model usage per request.</span></li>
+        <li><span class="glossary-term" data-i18n="glossary.progress">Progress %</span><span class="glossary-def" data-i18n="glossary.progressDesc">average(accuracy/target_accuracy, f1/target_f1, pass_rate/target_pass_rate, ideal_cost/cost) × 100.</span></li>
 </ul>
     `;
     document.body.appendChild(section);
@@ -2001,7 +2001,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
     
-    // Token Cost - display real backend value only (no candidate count estimation)
+    // Estimated Cost - display real backend value only (no candidate count estimation)
     const valCost = document.getElementById('valCost');
     if (valCost) {
       if (backendMetrics.tokenCost != null) {
@@ -2656,7 +2656,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const costBar = document.querySelector('#metric-cost .bar');
       const costValue = document.querySelector('#metric-cost .value');
       if (costBar && costValue) {
-        // Normalize token cost to 0-100 scale (assume max 1000 tokens)
+        // Normalize estimated cost to 0-100 scale (assume max 1000 units)
         const normalized = Math.min(100, Math.round((metrics.tokenCost / 1000) * 100));
         costBar.style.width = `${normalized}%`;
         costBar.setAttribute('data-value', normalized);
@@ -2749,7 +2749,7 @@ document.addEventListener('DOMContentLoaded', () => {
           spec: ['🔍 Analyzing user input...', '📝 Extracting structured spec...', '🎯 Identifying requirements...'],
           question: ['🤔 Analyzing spec gaps...', '❓ Generating clarifying questions...', '📊 Estimating completeness...'],
           agents: ['🤖 Architect agent drafting...', '✍️ Editor agent refining...', '⚖️ Judge agent validating...'],
-          metrics: ['📊 Calculating clarity score...', '🎨 Evaluating style match...', '🛡️ Assessing safety...', '💰 Computing token cost...'],
+          metrics: ['📊 Calculating clarity score...', '🎨 Evaluating style match...', '🛡️ Assessing safety...', '💰 Computing estimated cost...'],
           outcome: ['🏆 Comparing candidates...', '📈 Ranking by composite score...', '✅ Selecting best result...']
         };
         showAIReasoningChain(data.stage, stageReasonings[data.stage] || []);
@@ -3401,4 +3401,3 @@ if (document.readyState === 'loading') {
 
 </body>
 </html>
-

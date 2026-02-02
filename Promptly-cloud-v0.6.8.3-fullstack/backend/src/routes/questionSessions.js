@@ -1011,10 +1011,23 @@ questionSessionRouter.post("/next", async (req, res) => {
   }
 
   const { specId, sessionId = null, lastAnswer = null } = parsed.data;
+  const isNewSession = !sessionId;
 
   try {
     console.log(`[promptly] 📝 /api/question-sessions/next: Request received`);
     console.log(`[promptly] SpecId: ${specId}, SessionId: ${sessionId || 'new'}, LastAnswer: ${lastAnswer ? 'provided' : 'none'}`);
+
+    if (isNewSession) {
+      const limitCheck = checkQuestionWizardLimit(userId);
+      if (!limitCheck.allowed) {
+        return res.status(403).json({
+          ok: false,
+          error: limitCheck.reason,
+          usage: limitCheck.usage,
+          limit: limitCheck.limit
+        });
+      }
+    }
 
     // 1. Load Spec by specId
     const specRow = db.prepare("SELECT * FROM specs WHERE id = ?").get(specId);
@@ -1329,6 +1342,9 @@ Based on this specification and Q&A history, generate the next clarifying questi
     console.log(`[promptly] ✅ Updated session: step=${newStep}, complete=${sessionComplete}, completeness=${estimatedCompleteness.toFixed(2)}`);
 
     // 8. Return response
+    if (isNewSession) {
+      recordUsage(userId, 'question_wizard');
+    }
     res.json({
       ok: true,
       session: {

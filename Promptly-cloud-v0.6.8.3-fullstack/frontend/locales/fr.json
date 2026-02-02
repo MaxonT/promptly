@@ -169,7 +169,7 @@
   "kpi_accuracy": "Précision",
   "kpi_f1": "F1",
   "kpi_pass": "Taux de réussite",
-  "kpi_cost": "Coût des jetons",
+  "kpi_cost": "Coût estimé",
   "kpi_prog": "Progrès %",
   "growth_chart": "Croissance sur les itérations",
   "contrib_chart": "Contribution du changement",
@@ -223,8 +223,8 @@
     "promptDesc": "Instruction d'entrée donnée à un modèle de langage",
     "llm": "LLM (Large Language Model)",
     "llmDesc": "Modèle de langage de grande taille comme GPT, Claude, etc.",
-    "token": "Token",
-    "tokenDesc": "Unité de texte traitée par les LLM",
+    "token": "Usage",
+    "tokenDesc": "Mesure d'usage estimée par requête",
     "latency": "Latence",
     "latencyDesc": "Temps de réponse du modèle",
     "temperature": "Température",
@@ -340,7 +340,7 @@
     "issue2": "Résultats incohérents",
     "solution2": "Ajustez la température et ajoutez plus de contexte",
     "issue3": "Réponses lentes",
-    "solution3": "Optimisez la longueur du prompt et les tokens max"
+    "solution3": "Optimisez la longueur du prompt et l'usage maximal"
   },
   "layer1": {
     "title": "Couche 1: Configuration de Base",
@@ -440,7 +440,7 @@
     "reason1Title": "Gain de Temps",
     "reason1Desc": "Automatisez les tests et l'optimisation de vos prompts",
     "reason2Title": "Réduction des Coûts",
-    "reason2Desc": "Optimisez l'utilisation des tokens et réduisez les coûts API",
+    "reason2Desc": "Optimisez l'usage et réduisez les coûts API",
     "reason3Title": "Qualité Améliorée",
     "reason3Desc": "Obtenez des résultats cohérents et de haute qualité",
     "reason4Title": "Insights Basés sur les Données",

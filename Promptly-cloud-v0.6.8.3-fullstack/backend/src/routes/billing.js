@@ -26,6 +26,8 @@ import {
   FEATURES,
   isStripeConfigured,
   formatTokens,
+  DAILY_PROMPT_OPTIMIZATIONS_PER_DAY,
+  DAILY_QUESTION_WIZARD_SESSIONS_PER_DAY,
 } from "../lib/subscriptionConfig.js";
 
 export const billingRouter = Router();
@@ -40,20 +42,25 @@ export const stripeWebhookRouter = Router();
  * Returns available subscription plans
  */
 billingRouter.get("/plans", (req, res) => {
+  const sanitizePlanForUi = (plan) => ({
+    id: plan.id,
+    name: plan.name,
+    price: plan.price,
+    currency: plan.currency,
+    interval: plan.interval,
+    days: plan.days,
+    monthlyEquivalent: plan.monthlyEquivalent,
+    savings: plan.savings,
+    dailyLimits: plan.dailyLimits,
+    features: plan.features,
+  });
+
   res.json({
     ok: true,
     plans: {
-      monthly: {
-        ...PLANS.monthly,
-        priceId: undefined, // Don't expose Stripe price IDs
-      },
-      yearly: {
-        ...PLANS.yearly,
-        priceId: undefined,
-      },
-      trial: {
-        ...PLANS.trial,
-      },
+      monthly: sanitizePlanForUi(PLANS.monthly),
+      yearly: sanitizePlanForUi(PLANS.yearly),
+      trial: sanitizePlanForUi(PLANS.trial),
     },
     features: {
       subscriptionsEnabled: FEATURES.subscriptionsEnabled,
@@ -120,10 +127,10 @@ billingRouter.get("/status", requireAuth, (req, res) => {
       },
       limits: {
         promptOptimization: {
-          daily: plan === 'free' ? 8 : null // null means unlimited
+          daily: plan === 'free' ? 8 : DAILY_PROMPT_OPTIMIZATIONS_PER_DAY
         },
         questionWizard: {
-          daily: plan === 'free' ? 5 : null // null means unlimited
+          daily: plan === 'free' ? 5 : DAILY_QUESTION_WIZARD_SESSIONS_PER_DAY
         }
       },
       usage: {

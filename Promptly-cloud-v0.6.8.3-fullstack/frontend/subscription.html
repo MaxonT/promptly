@@ -58,9 +58,9 @@
           <span class="status-label" data-i18n="subscription.current_status">Current Status:</span>
           <span id="statusValue" class="status-value">--</span>
         </div>
-        <div class="token-info">
-          <span class="token-label" data-i18n="subscription.tokens_remaining">Tokens Remaining:</span>
-          <span id="tokenValue" class="token-value">--</span>
+        <div class="usage-info">
+          <span class="usage-label" data-i18n="subscription.usage_limits">Usage limits:</span>
+          <span id="usageLimitsValue" class="usage-value">--</span>
         </div>
       </div>
     </section>
@@ -72,7 +72,7 @@
         <div class="trial-text">
           <h3 data-i18n="subscription.trial_title">Start Your 14-Day Free Trial</h3>
           <p data-i18n="subscription.trial_description">
-            No credit card required. Get full access to all features with 200K base tokens + 20K daily tokens.
+            No credit card required. Full access to all features.
           </p>
         </div>
         <button id="startTrialBtn" class="btn btn-primary btn-lg" data-i18n="subscription.start_trial">
@@ -120,8 +120,8 @@
           </div>
           <ul class="plan-features">
             <li><span class="feature-icon">✓</span> <span data-i18n="subscription.feature_full_access">Full access to all features</span></li>
-            <li><span class="feature-icon">✓</span> <span data-i18n="subscription.feature_monthly_tokens">1M tokens per month</span></li>
-            <li><span class="feature-icon">✓</span> <span data-i18n="subscription.feature_daily_tokens">50K daily free tokens</span></li>
+            <li><span class="feature-icon">✓</span> <span data-i18n="subscription.feature_daily_prompt_optimizations">50 prompt optimizations per day</span></li>
+            <li><span class="feature-icon">✓</span> <span data-i18n="subscription.feature_daily_question_wizard">30 question-wizard sessions per day</span></li>
             <li><span class="feature-icon">✓</span> <span data-i18n="subscription.feature_priority_support">Priority support</span></li>
             <li><span class="feature-icon">✓</span> <span data-i18n="subscription.feature_cancel_anytime">Cancel anytime</span></li>
           </ul>
@@ -146,8 +146,8 @@
           </div>
           <ul class="plan-features">
             <li><span class="feature-icon">✓</span> <span data-i18n="subscription.feature_full_access">Full access to all features</span></li>
-            <li><span class="feature-icon">✓</span> <span data-i18n="subscription.feature_yearly_tokens">12M tokens per year</span></li>
-            <li><span class="feature-icon">✓</span> <span data-i18n="subscription.feature_daily_tokens">50K daily free tokens</span></li>
+            <li><span class="feature-icon">✓</span> <span data-i18n="subscription.feature_daily_prompt_optimizations">50 prompt optimizations per day</span></li>
+            <li><span class="feature-icon">✓</span> <span data-i18n="subscription.feature_daily_question_wizard">30 question-wizard sessions per day</span></li>
             <li><span class="feature-icon">✓</span> <span data-i18n="subscription.feature_priority_support">Priority support</span></li>
             <li><span class="feature-icon">✓</span> <span data-i18n="subscription.feature_save">Save $24/year</span></li>
           </ul>
@@ -158,32 +158,28 @@
       </div>
     </section>
 
-    <!-- Token Explanation Section -->
-    <section class="token-explanation">
-      <h2 data-i18n="subscription.token_title">Understanding Token Credits</h2>
-      <div class="token-cards">
-        <div class="token-card">
-          <div class="token-icon">🎯</div>
-          <h3 data-i18n="subscription.token_what_title">What are Tokens?</h3>
-          <p data-i18n="subscription.token_what_desc">
-            Tokens are units used by AI models to process text. Each word typically uses 1-4 tokens.
-            Your usage is metered based on both input and output tokens.
+    <section class="usage-explanation">
+      <h2 data-i18n="subscription.usage_title">Daily usage limits</h2>
+      <div class="usage-cards">
+        <div class="usage-card">
+          <div class="usage-icon">🎯</div>
+          <h3 data-i18n="subscription.usage_prompt_title">What counts as a Prompt optimization?</h3>
+          <p data-i18n="subscription.usage_prompt_desc">
+            Each time you run an optimization counts as 1.
           </p>
         </div>
-        <div class="token-card">
-          <div class="token-icon">📊</div>
-          <h3 data-i18n="subscription.token_usage_title">Transparent Billing</h3>
-          <p data-i18n="subscription.token_usage_desc">
-            After each run, you'll see a detailed breakdown: input tokens, output tokens,
-            total tokens used, and your remaining balance. No hidden fees.
+        <div class="usage-card">
+          <div class="usage-icon">🧩</div>
+          <h3 data-i18n="subscription.usage_wizard_title">What counts as a Question-wizard session?</h3>
+          <p data-i18n="subscription.usage_wizard_desc">
+            Starting a new wizard session counts toward the daily limit.
           </p>
         </div>
-        <div class="token-card">
-          <div class="token-icon">🔄</div>
-          <h3 data-i18n="subscription.token_daily_title">Daily Refresh</h3>
-          <p data-i18n="subscription.token_daily_desc">
-            Get free daily tokens that refresh at UTC midnight. These are used first before
-            your monthly allocation, maximizing your value.
+        <div class="usage-card">
+          <div class="usage-icon">🔄</div>
+          <h3 data-i18n="subscription.usage_reset_title">When do limits reset?</h3>
+          <p data-i18n="subscription.usage_reset_desc">
+            Limits reset daily at UTC 00:00.
           </p>
         </div>
       </div>
@@ -204,14 +200,13 @@
           <summary data-i18n="subscription.faq_trial_q">What happens after my trial?</summary>
           <p data-i18n="subscription.faq_trial_a">
             After your 14-day trial ends, you can subscribe to continue using Promptly.
-            Your unused tokens will expire, but you won't be charged automatically.
+            You won't be charged automatically.
           </p>
         </details>
         <details class="faq-item">
-          <summary data-i18n="subscription.faq_rollover_q">Do unused tokens roll over?</summary>
-          <p data-i18n="subscription.faq_rollover_a">
-            Monthly tokens do not roll over to the next period. Daily free tokens can
-            accumulate up to 2 days' worth (40K max).
+          <summary data-i18n="subscription.faq_limits_q">How do daily limits work?</summary>
+          <p data-i18n="subscription.faq_limits_a">
+            Your daily limits reset at UTC 00:00. Both Monthly and Annual plans include the same daily limits.
           </p>
         </details>
         <details class="faq-item">

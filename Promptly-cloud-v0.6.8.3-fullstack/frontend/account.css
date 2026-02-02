@@ -239,85 +239,46 @@
   flex-wrap: wrap;
 }
 
-/* Token Overview */
-.token-overview {
-  text-align: center;
-  margin-bottom: 2rem;
+/* Usage limits */
+.usage-limits-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
   padding: 1.5rem;
   background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-primary) 100%);
   border-radius: 1rem;
 }
 
-.token-total {
+.usage-limit-item {
   display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 0.75rem;
 }
 
-.token-amount {
-  font-size: 3rem;
+.usage-limit-label {
+  font-weight: 600;
+  font-size: 0.9375rem;
+  color: var(--text-primary);
+}
+
+.usage-limit-value {
   font-weight: 800;
+  font-size: 1.125rem;
   background: linear-gradient(135deg, var(--accent) 0%, var(--brand-2) 100%);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
 }
 
-.token-label {
-  font-size: 0.9375rem;
-  color: var(--text-secondary);
-}
-
-/* Token Breakdown */
-.token-breakdown {
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-}
-
-.token-bucket {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.bucket-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.bucket-name {
-  font-weight: 600;
-  font-size: 0.9375rem;
-}
-
-.bucket-value {
-  font-weight: 700;
-  color: var(--accent);
-}
-
-.bucket-bar {
-  height: 8px;
-  background: var(--bg-secondary);
-  border-radius: 4px;
-  overflow: hidden;
-}
-
-.bucket-fill {
-  height: 100%;
-  background: linear-gradient(90deg, var(--accent) 0%, var(--brand-2) 100%);
-  border-radius: 4px;
-  transition: width 0.3s ease;
-}
-
-.bucket-fill.trial {
-  background: linear-gradient(90deg, var(--info-color) 0%, var(--brand-2) 100%);
-}
-
-.bucket-note {
+.usage-limit-note {
+  margin-top: 0.25rem;
   font-size: 0.75rem;
   color: var(--text-muted);
+  text-align: center;
 }
 
 /* Usage History */
@@ -529,8 +490,8 @@
     font-size: 1.5rem;
   }
   
-  .token-amount {
-    font-size: 2.5rem;
+  .usage-limit-value {
+    font-size: 1.25rem;
   }
   
   .info-grid {

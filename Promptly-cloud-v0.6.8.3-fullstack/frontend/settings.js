@@ -20,13 +20,9 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
   const toggleIcon = document.getElementById("toggleIcon");
   const accountDetailsPanel = document.getElementById("accountDetailsPanel");
   const manageSubscriptionBtn = document.getElementById("manageSubscriptionBtn");
-  const refreshHistoryBtn = document.getElementById("refreshHistoryBtn");
   const TOKEN_KEY = "promptly.token";
 
   // Account management state
-  let historyOffset = 0;
-  const historyLimit = 20;
-  const TOKEN_LIMITS = { daily_free: 50000, monthly: 1000000, trial_base: 200000 };
 
   function log(line) {
     const ts = new Date().toISOString().slice(11, 19);
@@ -241,42 +237,22 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
     }
   });
 
-  refreshHistoryBtn?.addEventListener("click", () => {
-    historyOffset = 0;
-    const usageHistory = document.getElementById("usageHistory");
-    if (usageHistory) usageHistory.innerHTML = '<div class="loading-placeholder">Loading...</div>';
-    loadAccountManagementData();
-  });
-
   async function loadAccountManagementData() {
     const subscriptionStatus = document.getElementById("subscriptionStatus");
     const planName = document.getElementById("planName");
     const periodEnd = document.getElementById("periodEnd");
     const trialEndItem = document.getElementById("trialEndItem");
     const trialEnd = document.getElementById("trialEnd");
-    const totalTokens = document.getElementById("totalTokens");
-    const dailyFreeTokens = document.getElementById("dailyFreeTokens");
-    const monthlyTokens = document.getElementById("monthlyTokens");
-    const trialBucket = document.getElementById("trialBucket");
-    const trialTokens = document.getElementById("trialTokens");
-    const dailyFreeBar = document.getElementById("dailyFreeBar");
-    const monthlyBar = document.getElementById("monthlyBar");
-    const trialBar = document.getElementById("trialBar");
-    const usageHistory = document.getElementById("usageHistory");
-    if (!usageHistory) return;
+    const promptUsageToday = document.getElementById("promptUsageToday");
+    const wizardUsageToday = document.getElementById("wizardUsageToday");
 
     try {
-      const [statusRes, historyRes] = await Promise.all([
-        fetchWithAuth("/api/billing/status"),
-        fetchWithAuth(`/api/billing/token-history?limit=${historyLimit}&offset=0`),
-      ]);
+      const statusRes = await fetchWithAuth("/api/billing/status");
       const statusData = await statusRes.json();
-      const historyData = await historyRes.json();
 
       if (!statusRes.ok || !statusData.ok) throw new Error(statusData.error || "Failed to load status");
-      if (!historyRes.ok || !historyData.ok) throw new Error(historyData.error || "Failed to load history");
 
-      const { subscription, tokens } = statusData;
+      const { subscription, usage, limits } = statusData;
       subscriptionStatus && (subscriptionStatus.textContent = getStatusText(subscription.status));
       subscriptionStatus && (subscriptionStatus.className = `status-badge ${subscription.status}`);
       planName && (planName.textContent = subscription.plan ? capitalizeFirst(subscription.plan) : "None");
@@ -292,28 +268,16 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
       } else {
         manageSubscriptionBtn && (manageSubscriptionBtn.style.display = "none");
       }
-      totalTokens && (totalTokens.textContent = formatTokens(tokens.total));
-      dailyFreeTokens && (dailyFreeTokens.textContent = formatTokens(tokens.daily_free));
-      monthlyTokens && (monthlyTokens.textContent = formatTokens(tokens.monthly));
-      dailyFreeBar && (dailyFreeBar.style.width = `${Math.min(100, (tokens.daily_free / TOKEN_LIMITS.daily_free) * 100)}%`);
-      monthlyBar && (monthlyBar.style.width = `${Math.min(100, (tokens.monthly / TOKEN_LIMITS.monthly) * 100)}%`);
-      if (tokens.trial_base > 0) {
-        trialBucket && (trialBucket.style.display = "block");
-        trialTokens && (trialTokens.textContent = formatTokens(tokens.trial_base));
-        trialBar && (trialBar.style.width = `${Math.min(100, (tokens.trial_base / TOKEN_LIMITS.trial_base) * 100)}%`);
-      } else {
-        trialBucket && (trialBucket.style.display = "none");
-      }
-
-      const entries = historyData.history || [];
-      if (entries.length === 0) {
-        usageHistory.innerHTML = '<div class="empty-history"><p>No usage history yet.</p></div>';
-      } else {
-        usageHistory.innerHTML = entries.map(entry => createHistoryEntry(entry)).join("");
+      if (promptUsageToday && wizardUsageToday) {
+        const promptUsed = usage?.promptOptimization ?? 0;
+        const promptDaily = limits?.promptOptimization?.daily ?? "--";
+        const wizardUsed = usage?.questionWizard ?? 0;
+        const wizardDaily = limits?.questionWizard?.daily ?? "--";
+        promptUsageToday.textContent = `${promptUsed} / ${promptDaily}`;
+        wizardUsageToday.textContent = `${wizardUsed} / ${wizardDaily}`;
       }
     } catch (err) {
       console.error("Account management load error:", err);
-      usageHistory.innerHTML = '<div class="empty-history"><p>Failed to load. Please try again.</p></div>';
     }
   }
 
@@ -321,36 +285,12 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
     const m = { none: "No Subscription", trialing: "Trial Active", active: "Active", past_due: "Past Due", canceled: "Canceled", unpaid: "Unpaid" };
     return m[status] || status;
   }
-  function formatTokens(t) {
-    if (t == null) return "--";
-    if (t >= 1000000) return `${(t / 1000000).toFixed(1)}M`;
-    if (t >= 1000) return `${(t / 1000).toFixed(0)}K`;
-    return String(t);
-  }
   function formatDate(s) {
     if (!s) return "--";
     return new Date(s).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
   }
-  function formatDateTime(s) {
-    if (!s) return "--";
-    return new Date(s).toLocaleString(undefined, { year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
-  }
-  function formatBucket(b) {
-    const m = { daily_free: "Daily Free", monthly: "Monthly", trial_base: "Trial", adjustment: "Adjustment" };
-    return m[b] || b;
-  }
   function capitalizeFirst(str) {
     return str ? str.charAt(0).toUpperCase() + str.slice(1) : "";
-  }
-  function escapeHtml(str) {
-    if (!str) return "";
-    const d = document.createElement("div");
-    d.textContent = str;
-    return d.innerHTML;
-  }
-  function createHistoryEntry(entry) {
-    const pos = entry.change > 0;
-    return `<div class="usage-entry"><div class="usage-info"><span class="usage-reason">${escapeHtml(entry.reason || "Token change")}</span><span class="usage-time">${formatDateTime(entry.createdAt)}</span><span class="usage-bucket">${formatBucket(entry.bucket)}</span></div><span class="usage-change ${pos ? "positive" : "negative"}">${formatTokens(Math.abs(entry.change))}</span></div>`;
   }
 
   async function loadSettings() {

@@ -23,7 +23,7 @@ import { track, EVENTS } from './lib/analytics.js';
   const statusBanner = document.getElementById('statusBanner');
   const trialBanner = document.getElementById('trialBanner');
   const statusValue = document.getElementById('statusValue');
-  const tokenValue = document.getElementById('tokenValue');
+  const usageLimitsValue = document.getElementById('usageLimitsValue');
   const startTrialBtn = document.getElementById('startTrialBtn');
   const monthlyToggle = document.getElementById('monthlyToggle');
   const yearlyToggle = document.getElementById('yearlyToggle');
@@ -549,7 +549,7 @@ import { track, EVENTS } from './lib/analytics.js';
   function updateStatusDisplay() {
     if (!billingStatus) return;
     
-    const { subscription, tokens } = billingStatus;
+    const { subscription, limits } = billingStatus;
     
     statusBanner.classList.remove('hidden');
     
@@ -557,7 +557,13 @@ import { track, EVENTS } from './lib/analytics.js';
     statusValue.textContent = statusText;
     statusValue.className = `status-value ${subscription.status}`;
     
-    tokenValue.textContent = tokens.totalFormatted;
+    if (usageLimitsValue && limits?.promptOptimization?.daily && limits?.questionWizard?.daily) {
+      const promptDaily = limits.promptOptimization.daily;
+      const wizardDaily = limits.questionWizard.daily;
+      usageLimitsValue.textContent = window.i18n
+        ? window.i18n.t('subscription.usage_limits_value', { promptDaily, wizardDaily })
+        : `${promptDaily} prompt optimizations/day · ${wizardDaily} question-wizard sessions/day`;
+    }
     
     showTrialBanner(subscription.canStartTrial && subscription.status === 'none');
     
@@ -850,4 +856,3 @@ import { track, EVENTS } from './lib/analytics.js';
     });
   }
 })();
-

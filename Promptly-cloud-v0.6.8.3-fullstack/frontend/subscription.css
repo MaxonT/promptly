@@ -183,14 +183,14 @@ body.subscription-body::after {
 }
 
 .status-info,
-.token-info {
+.usage-info {
   display: flex;
   align-items: center;
   gap: 0.5rem;
 }
 
 .status-label,
-.token-label {
+.usage-label {
   color: var(--text-secondary);
   font-size: 0.875rem;
 }
@@ -218,7 +218,7 @@ body.subscription-body::after {
   color: var(--error-color);
 }
 
-.token-value {
+.usage-value {
   font-weight: 700;
   font-size: 1.125rem;
   color: var(--accent);
@@ -456,20 +456,20 @@ body.subscription-body::after {
   width: 100%;
 }
 
-/* Token Explanation Section */
-.token-explanation {
+/* Usage Explanation Section */
+.usage-explanation {
   padding: 4rem 2rem;
   background: var(--bg-secondary);
 }
 
-.token-explanation h2 {
+.usage-explanation h2 {
   text-align: center;
   font-size: 1.75rem;
   font-weight: 700;
   margin-bottom: 2rem;
 }
 
-.token-cards {
+.usage-cards {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: 1.5rem;
@@ -477,7 +477,7 @@ body.subscription-body::after {
   margin: 0 auto;
 }
 
-.token-card {
+.usage-card {
   background: var(--bg-primary);
   border: 1px solid var(--border-color);
   border-radius: 1rem;
@@ -485,19 +485,19 @@ body.subscription-body::after {
   text-align: center;
 }
 
-.token-icon {
+.usage-icon {
   font-size: 2.5rem;
   margin-bottom: 1rem;
 }
 
-.token-card h3 {
+.usage-card h3 {
   font-size: 1.125rem;
   font-weight: 700;
   margin-bottom: 0.75rem;
   color: var(--text-primary);
 }
 
-.token-card p {
+.usage-card p {
   font-size: 0.9375rem;
   color: var(--text-secondary);
   line-height: 1.6;
@@ -709,7 +709,7 @@ body.subscription-body::after {
     text-align: center;
   }
   
-  .token-cards {
+  .usage-cards {
     grid-template-columns: 1fr;
   }
   
@@ -1067,4 +1067,3 @@ body.subscription-body::after {
     font-size: 0.75rem;
   }
 }
-

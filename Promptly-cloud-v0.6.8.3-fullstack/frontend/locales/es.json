@@ -151,7 +151,7 @@
     "passRate": "Tasa de Aprobación",
     "passRateDesc": "Restricciones aprobadas / restricciones totales.",
     "tokenCost": "Costo estimado",
-    "tokenCostDesc": "prompt_tokens + completion_tokens.",
+    "tokenCostDesc": "Uso estimado del modelo por solicitud.",
     "progress": "Progreso %",
     "progressDesc": "promedio(precisión/objetivo_precisión, f1/objetivo_f1, tasa_aprobación/objetivo_tasa_aprobación, costo_ideal/costo) × 100."
   },

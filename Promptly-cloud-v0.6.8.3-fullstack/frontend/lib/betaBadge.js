@@ -16,12 +16,26 @@
   }
 
   function ensureBadge(container) {
-    if (!container || container.querySelector(".beta-badge")) return;
+    if (!container) return;
+
+    const img = container.querySelector("img");
+    if (!img) return;
+
+    let wrap = img.parentElement;
+    if (!wrap || !wrap.classList || !wrap.classList.contains("beta-logo-wrap")) {
+      wrap = document.createElement("span");
+      wrap.className = "beta-logo-wrap";
+      img.parentNode.insertBefore(wrap, img);
+      wrap.appendChild(img);
+    }
+
+    if (wrap.querySelector(".beta-badge")) return;
+
     const badge = document.createElement("span");
     badge.className = "beta-badge";
     badge.textContent = getBadgeText();
     badge.setAttribute("aria-label", getAriaLabel());
-    container.appendChild(badge);
+    wrap.appendChild(badge);
   }
 
   function apply() {
@@ -35,4 +49,3 @@
     apply();
   }
 })();
-

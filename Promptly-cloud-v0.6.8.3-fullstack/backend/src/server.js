@@ -18,28 +18,23 @@ import { promptsRouter } from "./routes/prompts.js";
 import { pipelineRouter } from "./routes/pipeline.js";
 import { billingRouter, stripeWebhookRouter } from "./routes/billing.js";
 import { analyticsRouter } from "./routes/analytics.js";
-import { analyticsDashboardRouter } from "./routes/analyticsDashboard.js";
 import { oauthRouter } from "./routes/oauth.js";
-import { adminRouter } from "./routes/admin.js";
 import { dailyRefreshJob } from "./lib/dailyRefreshJob.js";
 import dailyCompensationJob from "./lib/dailyCompensationJob.js";
 import { FEATURES } from "./lib/subscriptionConfig.js";
-import { requestSizeLimiter, detectSQLInjection } from "./middleware/security.js";
-import { cspMiddleware, handleCSPReport } from "./middleware/csp.js";
 
 dotenv.config();
 const app = express();
 
-const CORS_ORIGIN = process.env.CORS_ORIGIN || "http://localhost:5173";
-// 如果生产环境仍使用默认值,发出警告
-if (!process.env.CORS_ORIGIN && process.env.NODE_ENV === "production") {
-  console.warn("[promptly] WARNING: CORS_ORIGIN not set in production. Using default localhost.");
+// Trust proxy when running behind Render/Heroku reverse proxy
+// This is needed to get correct client IP from X-Forwarded-For header
+if (process.env.NODE_ENV === 'production') {
+  app.set('trust proxy', true);
 }
+
+const CORS_ORIGIN = process.env.CORS_ORIGIN || "*";
 app.use(cors({ origin: CORS_ORIGIN, credentials: true }));
 app.use(helmet());
-
-// 应用内容安全策略
-app.use(cspMiddleware);
 
 // Stripe webhook needs raw body for signature verification
 // Must be before express.json() middleware
@@ -48,10 +43,6 @@ app.use("/api/stripe", stripeWebhookRouter);
 
 app.use(express.json({ limit: "2mb" }));
 app.use(cookieParser());
-
-// 安全中间件
-app.use(requestSizeLimiter('10mb')); // 请求大小限制
-app.use(detectSQLInjection); // SQL注入检测
 
 // Rate limiting for API endpoints (防止暴力攻击和滥用)
 const apiLimiter = rateLimit({
@@ -98,9 +89,6 @@ app.use((req, res, next) => {
 app.get("/api/health", (req, res) => {
   res.json({ ok: true, status: "healthy", time: new Date().toISOString() });
 });
-
-// CSP违规报告端点
-app.post("/api/security/csp-report", express.json(), handleCSPReport);
 
 // settings endpoint used by settings.html
 app.get("/api/settings", (req, res) => {
@@ -164,14 +152,8 @@ console.log(`[promptly]   ✓ /api/stripe/webhook`);
 app.use("/api/analytics", analyticsRouter);
 console.log(`[promptly]   ✓ /api/analytics`);
 
-app.use("/api/analytics/dashboard", analyticsDashboardRouter);
-console.log(`[promptly]   ✓ /api/analytics/dashboard`);
-
 app.use("/api/auth/oauth", oauthRouter);
 console.log(`[promptly]   ✓ /api/auth/oauth`);
-
-app.use("/api/admin", adminRouter);
-console.log(`[promptly]   ✓ /api/admin`);
 
 app.use("/api/pipeline", pipelineRouter);
 console.log(`[promptly]   ✓ /api/pipeline (health, run, stream)`);

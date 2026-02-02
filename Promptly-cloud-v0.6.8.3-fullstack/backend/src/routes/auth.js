@@ -1,7 +1,6 @@
 import { Router } from "express";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
-import { randomBytes } from "crypto";
 import { db } from "../lib/db.js";
 import { nanoid } from "nanoid";
 
@@ -10,9 +9,8 @@ export const authRouter = Router();
 let TOKEN_SECRET = process.env.JWT_SECRET;
 if (!TOKEN_SECRET) {
   if (process.env.NODE_ENV === "development") {
-    // 即使开发环境也使用安全的密钥
-    console.warn("[promptly] WARNING: JWT_SECRET is not set. Generating secure development secret.");
-    TOKEN_SECRET = randomBytes(32).toString('hex');
+    console.warn("[promptly] WARNING: JWT_SECRET is not set. Using default insecure development secret.");
+    TOKEN_SECRET = "dev";
   } else {
     throw new Error("[promptly] FATAL: JWT_SECRET environment variable must be set in production.");
   }

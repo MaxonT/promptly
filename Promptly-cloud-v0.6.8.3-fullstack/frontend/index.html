@@ -21,8 +21,6 @@
   <script src="lib/particles.js"></script>
   <script src="lib/i18next.min.js"></script>
   <script type="module" src="i18n/index.js"></script>
-  <!-- 开发环境安全检查器 -->
-  <script src="lib/security-checker.js"></script>
 <style>
 /* === v0.5.3 UI Patch: gradients, titles, numbers, footer === */
 :root{
@@ -3146,11 +3144,19 @@ document.addEventListener('DOMContentLoaded', () => {
       console.log(`[Promptly] ✅ Request data:`, { idea: task.substring(0, 50) + '...', model: currentModel });
       
       // 1. Start pipeline execution
+      const token = localStorage.getItem('promptly.token');
+      const headers = {
+        'Content-Type': 'application/json'
+      };
+      
+      // Add Authorization header if user is logged in
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+      
       const response = await fetch(pipelineUrl, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
+        headers: headers,
         body: JSON.stringify({
           idea: task,
           attachments: [],

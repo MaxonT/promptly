@@ -586,11 +586,15 @@ import { track, EVENTS } from './lib/analytics.js';
     
     const { subscription, limits } = billingStatus;
     
-    statusBanner.classList.remove('hidden');
+    if (statusBanner) {
+      statusBanner.classList.remove('hidden');
+    }
     
     const statusText = getStatusText(subscription.status);
-    statusValue.textContent = statusText;
-    statusValue.className = `status-value ${subscription.status}`;
+    if (statusValue) {
+      statusValue.textContent = statusText;
+      statusValue.className = `status-value ${subscription.status}`;
+    }
     
     if (usageLimitsValue && limits?.promptOptimization?.daily && limits?.questionWizard?.daily) {
       const promptDaily = limits.promptOptimization.daily;

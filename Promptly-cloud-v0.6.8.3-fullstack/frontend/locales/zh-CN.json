@@ -326,7 +326,7 @@
     "beta_banner_learn_more": "了解更多",
     "beta_banner_details": "我们还在接入计费能力，订阅功能即将上线。",
     "beta_modal_title": "Beta",
-    "beta_modal_message": "订阅与试用功能暂不可用，敬请期待。",
+    "beta_modal_message": "订阅与试用仍在 Beta 阶段。\n我们正在打磨计费与整体体验，确保更稳定更流畅。\n现在点击订阅会先显示这个提示，开放后会第一时间更新。",
     "beta_modal_ok": "知道了",
     "current_status": "当前状态：",
     "usage_limits": "用量上限：",

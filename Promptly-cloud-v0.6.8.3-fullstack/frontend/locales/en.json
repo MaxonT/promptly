@@ -361,7 +361,7 @@
     "beta_banner_learn_more": "Learn more",
     "beta_banner_details": "We’re still connecting billing. Subscription will be available soon.",
     "beta_modal_title": "Beta",
-    "beta_modal_message": "Subscriptions and trials are not available yet. Coming soon.",
+    "beta_modal_message": "Subscriptions and trials are still in beta.\nWe are polishing billing and the experience for a smoother launch.\nClicking Subscribe will keep this preview open until it’s ready.",
     "beta_modal_ok": "OK",
     "current_status": "Current Status:",
     "usage_limits": "Usage limits:",

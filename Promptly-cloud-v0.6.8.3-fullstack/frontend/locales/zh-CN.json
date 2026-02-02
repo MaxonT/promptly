@@ -315,9 +315,16 @@
     "title": "在实际工作流中看 Promptly",
     "subtitle": "将混乱的业务需求转化为可执行的提示词规格、测试和报告。"
   },
+  "beta": {
+    "badge_text": "Beta",
+    "badge_aria": "Beta 版本 – 订阅暂不可用"
+  },
   "subscription": {
     "title": "选择您的计划",
     "subtitle": "释放 AI 驱动的提示词工程的完整力量",
+    "beta_banner_message": "⚠️ Beta 中：订阅暂不可用，敬请期待！",
+    "beta_banner_learn_more": "了解更多",
+    "beta_banner_details": "我们还在接入计费能力，订阅功能即将上线。",
     "current_status": "当前状态：",
     "usage_limits": "用量上限：",
     "usage_limits_value": "每天 {{promptDaily}} 次 Prompt 优化 · 每天 {{wizardDaily}} 次问题向导",
@@ -351,14 +358,14 @@
     "usage_wizard_title": "什么算一次问题向导？",
     "usage_wizard_desc": "每开始一次新的问题向导，会计入每日上限。",
     "usage_reset_title": "什么时候重置？",
-    "usage_reset_desc": "每日 UTC 00:00 重置。",
+    "usage_reset_desc": "每日按您的时区 00:00 重置。",
     "faq_title": "常见问题",
     "faq_cancel_q": "我可以随时取消吗？",
     "faq_cancel_a": "可以！您可以随时取消订阅。您的访问权限将持续到当前计费周期结束。",
     "faq_trial_q": "试用期结束后会怎样？",
     "faq_trial_a": "在您的 14 天试用期结束后，您可以订阅以继续使用 Promptly。我们不会自动扣费。",
     "faq_limits_q": "每日上限怎么计算？",
-    "faq_limits_a": "每日上限会在 UTC 00:00 重置。月度与年度计划的每日上限相同。",
+    "faq_limits_a": "每日上限会在您的时区 00:00 重置。月度与年度计划的每日上限相同。",
     "faq_payment_q": "您接受哪些支付方式？",
     "faq_payment_a": "我们通过 Stripe 安全支付平台接受所有主要信用卡。我们从不存储您的卡片详情。",
     "auth_required": "需要登录",

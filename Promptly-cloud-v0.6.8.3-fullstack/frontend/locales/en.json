@@ -350,9 +350,16 @@
     "deny_btn": "Deny",
     "loading": "Loading..."
   },
+  "beta": {
+    "badge_text": "Beta",
+    "badge_aria": "Beta version – subscription disabled"
+  },
   "subscription": {
     "title": "Choose Your Plan",
     "subtitle": "Unlock the full power of AI-powered prompt engineering",
+    "beta_banner_message": "⚠️ Beta: subscriptions not ready. Stay tuned!",
+    "beta_banner_learn_more": "Learn more",
+    "beta_banner_details": "We’re still connecting billing. Subscription will be available soon.",
     "current_status": "Current Status:",
     "usage_limits": "Usage limits:",
     "usage_limits_value": "{{promptDaily}} prompt optimizations/day · {{wizardDaily}} question-wizard sessions/day",
@@ -386,14 +393,14 @@
     "usage_wizard_title": "What counts as a Question-wizard session?",
     "usage_wizard_desc": "Starting a new wizard session counts toward the daily limit.",
     "usage_reset_title": "When do limits reset?",
-    "usage_reset_desc": "Limits reset daily at UTC 00:00.",
+    "usage_reset_desc": "Limits reset daily at 00:00 in your timezone.",
     "faq_title": "Frequently Asked Questions",
     "faq_cancel_q": "Can I cancel anytime?",
     "faq_cancel_a": "Yes! You can cancel your subscription at any time. Your access will continue until the end of your current billing period.",
     "faq_trial_q": "What happens after my trial?",
     "faq_trial_a": "After your 14-day trial ends, you can subscribe to continue using Promptly. You won't be charged automatically.",
     "faq_limits_q": "How do daily limits work?",
-    "faq_limits_a": "Your daily limits reset at UTC 00:00. Both Monthly and Annual plans include the same daily limits.",
+    "faq_limits_a": "Your daily limits reset at 00:00 in your timezone. Both Monthly and Annual plans include the same daily limits.",
     "faq_payment_q": "What payment methods do you accept?",
     "faq_payment_a": "We accept all major credit cards through Stripe's secure payment platform. We never store your card details.",
     "auth_required": "Sign In Required",

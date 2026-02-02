@@ -994,8 +994,30 @@ footer.footer{margin:28px 0;text-align:center;color:var(--muted)}
 /* === Promptly v0.5.6 aesthetic additions (logo + side patterns) === */
 .brand-logo{display:inline-flex; align-items:center; gap:10px}
 .brand-logo img{height:28px; width:auto; display:block}
+.beta-badge{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--bg-soft);
+  color: var(--text);
+  font-weight: 400;
+  font-size: 0.65em;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.beta-badge:empty{ display:none; }
 .hero-logo{display:flex; align-items:center; justify-content:center; padding:42px 0}
 .hero-logo img{height:72px; width:auto;}
+
+@media (max-width: 480px){
+  .brand-logo{ flex-wrap: wrap; }
+  .brand-logo .beta-badge{ flex-basis: 100%; width: fit-content; }
+  .nav-logo{ flex-wrap: wrap; }
+  .nav-logo .beta-badge{ flex-basis: 100%; width: fit-content; }
+}
 
 /* Side ornamental patterns */
 body::before, body::after{

@@ -31,6 +31,9 @@ import { track, EVENTS } from './lib/analytics.js';
   const toastContainer = document.getElementById('toastContainer');
   const subscribeButtons = document.querySelectorAll('.subscribe-btn');
   const pricingCards = document.querySelectorAll('.pricing-card');
+  const betaBanner = document.getElementById('betaBanner');
+  const betaLearnMore = document.getElementById('betaLearnMore');
+  const betaBannerDetails = document.getElementById('betaBannerDetails');
   
   // Auth Modal Elements
   const authModal = document.getElementById('authModal');
@@ -49,6 +52,11 @@ import { track, EVENTS } from './lib/analytics.js';
   let stateMachine = null;
   let selectedPlan = null;
   let idempotencyKey = null;
+  let billingPlans = null;
+  let subscriptionsAvailable = null;
+  let subscribeGateUnlocked = false;
+  let betaScrollPassed = false;
+  let betaFadeTimer = null;
 
   // =============================================
   // Initialization
@@ -75,6 +83,8 @@ import { track, EVENTS } from './lib/analytics.js';
     // Initialize State Machine
     stateMachine = new SubscriptionStateMachine();
     stateMachine.onStateChange(handleStateChange);
+
+    await loadBillingPlans();
     
     if (authToken) {
       await loadBillingStatus();
@@ -402,6 +412,91 @@ import { track, EVENTS } from './lib/analytics.js';
     return data;
   }
 
+  async function loadBillingPlans() {
+    try {
+      const res = await fetch(`${API_BASE}/api/billing/plans`, { method: 'GET' });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.ok) {
+        throw new Error(data.error || 'Failed to load plans');
+      }
+
+      billingPlans = data;
+      subscriptionsAvailable = !!data.subscriptionsAvailable;
+      if (betaBanner) {
+        if (subscriptionsAvailable) {
+          betaBanner.classList.add('hidden');
+        } else {
+          betaBanner.classList.remove('hidden');
+        }
+      }
+
+      subscribeGateUnlocked = subscriptionsAvailable;
+      applySubscribeLocks();
+
+      betaLearnMore?.addEventListener('click', () => {
+        if (betaBannerDetails) betaBannerDetails.classList.toggle('hidden');
+        subscribeGateUnlocked = true;
+        applySubscribeLocks();
+      });
+
+      if (betaBanner && !betaBanner.classList.contains('hidden')) {
+        const onScroll = () => {
+          if (betaScrollPassed) return;
+          const rect = betaBanner.getBoundingClientRect();
+          if (rect.bottom < 0) {
+            betaScrollPassed = true;
+            subscribeGateUnlocked = true;
+            applySubscribeLocks();
+
+            if (betaFadeTimer) clearTimeout(betaFadeTimer);
+            betaFadeTimer = setTimeout(() => {
+              betaBanner.classList.add('is-fading');
+              setTimeout(() => {
+                betaBanner.classList.add('hidden');
+              }, 260);
+            }, 5000);
+          }
+        };
+
+        window.addEventListener('scroll', onScroll, { passive: true });
+        onScroll();
+      }
+    } catch (err) {
+      console.error('[subscription] Failed to load billing plans:', err);
+      subscriptionsAvailable = false;
+      if (betaBanner) betaBanner.classList.remove('hidden');
+      subscribeGateUnlocked = false;
+      applySubscribeLocks();
+    }
+  }
+
+  function applySubscribeLocks() {
+    subscribeButtons.forEach((btn) => {
+      const plan = btn.dataset.plan;
+      if (plan === 'free') return;
+      if (billingStatus?.subscription?.status === 'active' || billingStatus?.subscription?.status === 'trialing') {
+        btn.classList.remove('is-locked');
+        btn.removeAttribute('aria-disabled');
+        return;
+      }
+
+      const locked = !subscriptionsAvailable || !subscribeGateUnlocked;
+      if (locked) {
+        btn.classList.add('is-locked');
+        btn.setAttribute('aria-disabled', 'true');
+      } else {
+        btn.classList.remove('is-locked');
+        btn.removeAttribute('aria-disabled');
+      }
+    });
+  }
+
+  function getBetaMessage() {
+    return window.i18n
+      ? window.i18n.t('subscription.beta_banner_message')
+      : '⚠️ Beta: subscriptions not ready. Stay tuned!';
+  }
+
   async function loadBillingStatus() {
     try {
       billingStatus = await apiCall('/api/billing/status');
@@ -568,6 +663,7 @@ import { track, EVENTS } from './lib/analytics.js';
     showTrialBanner(subscription.canStartTrial && subscription.status === 'none');
     
     updateSubscribeButtons(subscription);
+    applySubscribeLocks();
   }
 
   function getStatusText(status) {
@@ -667,6 +763,17 @@ import { track, EVENTS } from './lib/analytics.js';
         if (plan === 'free') {
           const message = window.i18n ? window.i18n.t('subscription.already_free_plan') : 'You are already on the free plan';
           showToast('info', message);
+          return;
+        }
+
+        if (billingStatus?.subscription?.status === 'active' || billingStatus?.subscription?.status === 'trialing') {
+          openBillingPortal();
+          return;
+        }
+
+        if (btn.classList.contains('is-locked')) {
+          if (betaBanner) betaBanner.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          showToast('info', getBetaMessage());
           return;
         }
         

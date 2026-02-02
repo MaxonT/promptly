@@ -41,3 +41,9 @@ console.log("[Promptly] API Base configured:", window.PROMPTLY_API_BASE);
 console.log("[Promptly] Maintenance Mode:", window.PROMPTLY_MAINTENANCE_MODE ? "🔧 ENABLED" : "✅ Disabled");
 console.log("[Promptly] ⚠️  Using auto-detected config");
 
+if (!document.querySelector('script[src$="lib/betaBadge.js"]')) {
+  const script = document.createElement("script");
+  script.src = "lib/betaBadge.js";
+  script.defer = true;
+  document.head.appendChild(script);
+}

@@ -67,6 +67,8 @@ billingRouter.get("/plans", (req, res) => {
       subscriptionsEnabled: FEATURES.subscriptionsEnabled,
       trialsEnabled: FEATURES.trialsEnabled,
     },
+    stripeConfigured: isStripeConfigured(),
+    subscriptionsAvailable: FEATURES.subscriptionsEnabled && isStripeConfigured(),
   });
 });
 

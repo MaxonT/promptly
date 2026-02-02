@@ -891,18 +891,9 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
         const options = q.options || [];
         const isMulti = q.type === "multi_choice";
 
+        // Skip questions with no options - don't show error to user
         if (options.length === 0) {
-          const missingDiv = document.createElement("div");
-          missingDiv.className = "wizard-missing-options";
-          missingDiv.innerHTML = `
-            <span class="wizard-missing-options-icon">⚠️</span>
-            <span>No options available. Click "Regenerate" to try more questions.</span>
-          `;
-          answerArea.appendChild(missingDiv);
-          card.appendChild(header);
-          card.appendChild(textDiv);
-          card.appendChild(answerArea);
-          questionsContainer.appendChild(card);
+          console.log(`[wizard] Skipping question "${q.id}" - no options available`);
           return;
         }
 

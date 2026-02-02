@@ -77,8 +77,14 @@ billingRouter.get("/status", requireAuth, (req, res) => {
     // Get subscription status
     const subscription = stripeService.getSubscriptionStatus(userId);
     
-    // Get token balances
-    const balances = tokenLedger.getTokenBalances(userId);
+    // Ensure free users have daily tokens
+    // For users without subscription, this will grant them daily tokens
+    let balances;
+    if (subscription.status === 'none' || !subscription.status) {
+      balances = tokenLedger.ensureFreeUserTokens(userId);
+    } else {
+      balances = tokenLedger.getTokenBalances(userId);
+    }
     
     // Get user plan and usage
     const plan = getUserPlan(userId);

@@ -46,6 +46,9 @@ export const YEARLY_PLAN_TOKENS = Number(process.env.YEARLY_PLAN_TOKENS || 12000
 // Daily free tokens for paid users
 export const PAID_DAILY_TOKENS = Number(process.env.PAID_DAILY_TOKENS || 50000);
 
+// Daily free tokens for free users (no subscription)
+export const FREE_USER_DAILY_TOKENS = Number(process.env.FREE_USER_DAILY_TOKENS || 50000);
+
 // =============================================
 // Multiplier Configuration
 // =============================================
@@ -160,6 +163,7 @@ export const TOKEN_SOURCES = {
   ADMIN: 'admin',
   API_USAGE: 'api_usage',
   TRIAL_START: 'trial_start',
+  SYSTEM: 'system',  // Auto-granted by system (e.g., free user daily tokens)
 };
 
 // =============================================

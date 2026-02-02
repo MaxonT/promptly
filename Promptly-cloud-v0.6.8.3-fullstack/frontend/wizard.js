@@ -578,9 +578,20 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
   }
   
   // Add questions to the global list (with sequential numbering)
+  // Filter out choice questions with no options
   function addQuestions(newQuestions) {
+    // Filter out single_choice/multi_choice questions that have no options
+    const validQuestions = newQuestions.filter(q => {
+      if ((q.type === 'single_choice' || q.type === 'multi_choice') && 
+          (!q.options || q.options.length === 0)) {
+        console.log(`[wizard] Filtering out question "${q.id}" - no options available`);
+        return false;
+      }
+      return true;
+    });
+    
     const startIndex = allQuestions.length;
-    newQuestions.forEach((q, idx) => {
+    validQuestions.forEach((q, idx) => {
       allQuestions.push({
         ...q,
         questionNumber: startIndex + idx + 1 // 1-based numbering

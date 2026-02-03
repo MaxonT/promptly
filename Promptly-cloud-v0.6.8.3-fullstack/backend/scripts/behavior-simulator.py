@@ -45,21 +45,21 @@ CONFIG = {
         "data", "app.db"
     ),
     
-    # 时间段概率 (%)
+    # 时间段概率 (%) - 提升1.5倍
     "PROBABILITY": {
-        "morning": 30,    # 6-12点
-        "afternoon": 40,  # 12-18点
-        "evening": 20,    # 18-24点
-        "night": 10,      # 0-6点
+        "morning": 45,    # 6-12点 (原30 → 45)
+        "afternoon": 60,  # 12-18点 (原40 → 60)
+        "evening": 30,    # 18-24点 (原20 → 30)
+        "night": 15,      # 0-6点 (原10 → 15)
     },
     
-    # 批次大小
-    "MIN_BATCH_SIZE": 5,
-    "MAX_BATCH_SIZE": 20,
+    # 批次大小 - 提升1.5倍
+    "MIN_BATCH_SIZE": 8,   # 原5 → 8
+    "MAX_BATCH_SIZE": 30,  # 原20 → 30
     
-    # 等待时间 (秒)
-    "MIN_WAIT": 1800,   # 30分钟
-    "MAX_WAIT": 14400,  # 4小时
+    # 等待时间 (秒) - 缩短为原来的2/3以提速1.5倍
+    "MIN_WAIT": 1200,   # 20分钟 (原30分钟)
+    "MAX_WAIT": 9600,   # 约2.7小时 (原4小时)
     
     # 用户类型分布 (%)
     "USER_TYPES": {

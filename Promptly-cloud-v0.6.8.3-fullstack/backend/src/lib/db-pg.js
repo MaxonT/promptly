@@ -391,8 +391,70 @@ export async function initializeSchema() {
       CONSTRAINT fk_usage_user FOREIGN KEY (user_id) REFERENCES users(id)
     );
 
+    -- Analytics tables
+    CREATE TABLE IF NOT EXISTS analytics_events (
+      id SERIAL PRIMARY KEY,
+      event VARCHAR(100) NOT NULL,
+      user_id VARCHAR(255),
+      session_id VARCHAR(255),
+      properties TEXT,
+      created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS analytics_users (
+      id VARCHAR(255) PRIMARY KEY,
+      source VARCHAR(100) DEFAULT 'organic',
+      timezone VARCHAR(100),
+      country VARCHAR(10),
+      device_type VARCHAR(50),
+      browser VARCHAR(50),
+      is_active BOOLEAN DEFAULT true,
+      created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      last_active_at TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS analytics_sessions (
+      id VARCHAR(255) PRIMARY KEY,
+      user_id VARCHAR(255) NOT NULL,
+      session_start TIMESTAMP NOT NULL,
+      duration_seconds INTEGER DEFAULT 0,
+      page_views INTEGER DEFAULT 0,
+      device_type VARCHAR(50),
+      browser VARCHAR(50),
+      created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      CONSTRAINT fk_analytics_session_user FOREIGN KEY (user_id) REFERENCES analytics_users(id)
+    );
+
+    CREATE TABLE IF NOT EXISTS analytics_behavior (
+      id SERIAL PRIMARY KEY,
+      user_id VARCHAR(255) NOT NULL,
+      session_id VARCHAR(255),
+      recorded_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      mouse_movements INTEGER DEFAULT 0,
+      scrolls INTEGER DEFAULT 0,
+      clicks INTEGER DEFAULT 0,
+      typing_events INTEGER DEFAULT 0,
+      engagement_score REAL DEFAULT 0,
+      CONSTRAINT fk_analytics_behavior_user FOREIGN KEY (user_id) REFERENCES analytics_users(id),
+      CONSTRAINT fk_analytics_behavior_session FOREIGN KEY (session_id) REFERENCES analytics_sessions(id)
+    );
+
+    CREATE TABLE IF NOT EXISTS analytics_daily (
+      date DATE PRIMARY KEY,
+      unique_users INTEGER DEFAULT 0,
+      new_users INTEGER DEFAULT 0,
+      total_sessions INTEGER DEFAULT 0,
+      cumulative_users INTEGER DEFAULT 0,
+      created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+
     -- Create indexes
     CREATE INDEX IF NOT EXISTS idx_plan_usage_user_date ON plan_usage(user_id, date, feature_type);
+    CREATE INDEX IF NOT EXISTS idx_analytics_events_created ON analytics_events(created_at);
+    CREATE INDEX IF NOT EXISTS idx_analytics_users_created ON analytics_users(created_at);
+    CREATE INDEX IF NOT EXISTS idx_analytics_sessions_start ON analytics_sessions(session_start);
+    CREATE INDEX IF NOT EXISTS idx_analytics_behavior_recorded ON analytics_behavior(recorded_at);
+    CREATE INDEX IF NOT EXISTS idx_analytics_daily_date ON analytics_daily(date);
   `;
 
   try {

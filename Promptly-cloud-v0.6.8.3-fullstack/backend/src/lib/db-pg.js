@@ -125,6 +125,21 @@ export const db = {
     }
   },
 
+  // Prepared statement support (sync-style API for better-sqlite3 compatibility)
+  prepare(sql) {
+    return {
+      get: (...params) => {
+        return this.get(sql, ...params);
+      },
+      all: (...params) => {
+        return this.all(sql, ...params);
+      },
+      run: (...params) => {
+        return this.run(sql, ...params);
+      }
+    };
+  },
+
   // Close connection pool
   async close() {
     await pool.end();

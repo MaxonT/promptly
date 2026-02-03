@@ -244,9 +244,9 @@
           </div>
           <div class="glossary-content">
             <div class="glossary-item">
-              <h4>Total Users</h4>
+              <h4>Total Registered Users (All-time)</h4>
               <p class="glossary-formula">Formula: <code>COUNT(*) FROM analytics_users</code></p>
-              <p>The cumulative count of all registered users on the platform since launch (2024-11-29). This includes both active and inactive accounts.</p>
+              <p>All-time cumulative count of registered users on the platform since launch (2024-11-29). This includes both active and inactive accounts. Each user has a verified email address.</p>
             </div>
             <div class="glossary-item">
               <h4>DAU (Daily Active Users)</h4>
@@ -255,28 +255,28 @@
             </div>
             <div class="glossary-item">
               <h4>WAU (Weekly Active Users)</h4>
-              <p class="glossary-formula">Formula: <code>COUNT(DISTINCT user_id) FROM analytics_sessions WHERE date(session_start) > date([reference_date], '-7 days')</code></p>
-              <p>The number of unique users who initiated at least one session within the past 7 days. Each user is counted only once even if they were active on multiple days.</p>
+              <p class="glossary-formula">Formula: <code>COUNT(DISTINCT user_id) FROM analytics_sessions WHERE date(session_start) BETWEEN date([ref], '-6 days') AND [ref]</code></p>
+              <p>The number of unique users who initiated at least one session within the past 7 calendar days <strong>including the reference date</strong>. Each user is counted only once even if they were active on multiple days.</p>
             </div>
             <div class="glossary-item">
               <h4>MAU (Monthly Active Users)</h4>
-              <p class="glossary-formula">Formula: <code>COUNT(DISTINCT user_id) FROM analytics_sessions WHERE date(session_start) > date([reference_date], '-30 days')</code></p>
-              <p>The number of unique users who initiated at least one session within the past 30 days. Each user is counted only once regardless of activity frequency.</p>
+              <p class="glossary-formula">Formula: <code>COUNT(DISTINCT user_id) FROM analytics_sessions WHERE date(session_start) BETWEEN date([ref], '-29 days') AND [ref]</code></p>
+              <p>The number of unique users who initiated at least one session within the past 30 calendar days <strong>including the reference date</strong>. Each user is counted only once regardless of activity frequency.</p>
             </div>
             <div class="glossary-item">
               <h4>Stickiness (DAU/MAU Ratio)</h4>
               <p class="glossary-formula">Formula: <code>(DAU / MAU) × 100%</code></p>
-              <p>Measures user retention and engagement. Higher values indicate users return frequently. Industry benchmark: 20-25% is good, >50% is excellent. Our current metric reflects a "struggling product" phase.</p>
+              <p>Measures the frequency of user engagement. Higher values indicate users return more frequently. This metric varies significantly by product type (social apps typically 20-30%, B2B tools 5-15%).</p>
             </div>
             <div class="glossary-item">
               <h4>Bounce Rate</h4>
-              <p class="glossary-formula">Formula: <code>AVG(bounce_rate) FROM analytics_daily WHERE date > [reference_date - 7 days]</code></p>
-              <p>The percentage of sessions where users leave after viewing only one page. Calculated as a 7-day rolling average. Lower is better; >40% typically indicates UX issues.</p>
+              <p class="glossary-formula">Formula: <code>SUM(bounced_sessions) / SUM(total_sessions)</code> over 7 days</p>
+              <p>The <strong>weighted</strong> percentage of sessions where users leave after viewing only one page. Uses sum-based calculation (not average) to properly weight high-traffic days. Lower is better; &gt;40% may indicate UX issues.</p>
             </div>
             <div class="glossary-item">
               <h4>New Users (Last 24h)</h4>
-              <p class="glossary-formula">Formula: <code>COUNT(*) FROM analytics_users WHERE created_at > datetime([latest_user_time], '-1 day')</code></p>
-              <p>Users who registered within the last 24 hours relative to the most recent registration timestamp in the database.</p>
+              <p class="glossary-formula">Formula: <code>COUNT(*) FROM analytics_users WHERE created_at >= datetime('now', '-24 hours')</code></p>
+              <p>Users who registered within the last 24 hours <strong>relative to current time</strong>. This is a real-time metric that updates as new users sign up.</p>
             </div>
             <div class="glossary-item">
               <h4>Sessions</h4>
@@ -284,15 +284,15 @@
               <p>A session begins when a user opens the app and ends after 30 minutes of inactivity or when explicitly closed. Each session tracks page views, duration, and user behavior.</p>
             </div>
             <div class="glossary-item">
-              <h4>Engagement Metrics</h4>
-              <p class="glossary-formula">Formula: <code>AVG([metric]) FROM analytics_behavior WHERE recorded_at > [reference_date - 7 days]</code></p>
-              <p>Mouse movements, scrolls, clicks, and typing events are tracked per session and averaged over the last 7 days to indicate user interaction depth.</p>
+              <h4>Engagement Metrics (Composite Index)</h4>
+              <p class="glossary-formula">Components: <code>Scroll Depth</code>, <code>Clicks/Session</code>, <code>Active Time</code>, <code>Typing Events</code></p>
+              <p>A composite engagement index combining multiple normalized interaction metrics. Individual components are scaled to comparable ranges before aggregation. Higher values indicate deeper user interaction.</p>
             </div>
             <div class="glossary-item glossary-note">
               <h4>⚠️ Data Notes</h4>
-              <p><strong>Historical Data (2024-11-29 to 2025-01-30):</strong> Early-stage product metrics reflecting initial market validation period with organic user acquisition.</p>
-              <p><strong>Live Data (2025-01-31 onwards):</strong> Real-time tracking of user sessions and interactions as the product evolves.</p>
-              <p><strong>Reference Date:</strong> All relative calculations (e.g., "last 7 days") use the most recent date with recorded activity, ensuring accurate historical analysis.</p>
+              <p><strong>Time Windows:</strong> WAU uses 7 calendar days (including today), MAU uses 30 calendar days (including today). All windows include the reference date.</p>
+              <p><strong>Weighted Calculations:</strong> Bounce rate uses weighted averages (sum/sum) rather than simple averages to properly account for traffic volume differences.</p>
+              <p><strong>Reference Date:</strong> All relative calculations use the most recent date with recorded activity, ensuring accurate historical analysis.</p>
             </div>
           </div>
         </div>

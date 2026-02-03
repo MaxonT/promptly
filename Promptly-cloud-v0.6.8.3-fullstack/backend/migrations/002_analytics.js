@@ -47,6 +47,7 @@ export function up() {
   db.exec(`
     CREATE TABLE IF NOT EXISTS analytics_users (
       id TEXT PRIMARY KEY,
+      email TEXT,
       source TEXT DEFAULT 'organic',
       timezone TEXT DEFAULT 'America/New_York',
       country TEXT DEFAULT 'US',
@@ -60,6 +61,7 @@ export function up() {
     
     CREATE INDEX IF NOT EXISTS idx_analytics_users_created ON analytics_users(created_at);
     CREATE INDEX IF NOT EXISTS idx_analytics_users_timezone ON analytics_users(timezone);
+    CREATE INDEX IF NOT EXISTS idx_analytics_users_email ON analytics_users(email);
   `);
   
   // Create analytics_sessions table

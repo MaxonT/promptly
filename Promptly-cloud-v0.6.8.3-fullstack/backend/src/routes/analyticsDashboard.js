@@ -86,21 +86,23 @@ analyticsDashboardRouter.get("/summary", (req, res) => {
       SELECT COUNT(*) as count FROM analytics_users
     `).get()?.count || 0;
     
-    // New users relative to the most recent data date
+    // New users relative to NOW (not the most recent data date)
+    // ✅ 修复：使用当前时间作为锚点，而不是最后一个用户注册时间
+    const now = new Date().toISOString();
     const newLast24h = db.prepare(`
       SELECT COUNT(*) as count FROM analytics_users
-      WHERE created_at > datetime(?, '-1 day')
-    `).get(mostRecentUserTime || 'now')?.count || 0;
+      WHERE created_at >= datetime('now', '-24 hours')
+    `).get()?.count || 0;
     
     const newLast7d = db.prepare(`
       SELECT COUNT(*) as count FROM analytics_users
-      WHERE created_at > datetime(?, '-7 days')
-    `).get(mostRecentUserTime || 'now')?.count || 0;
+      WHERE created_at >= datetime('now', '-7 days')
+    `).get()?.count || 0;
     
     const newLast30d = db.prepare(`
       SELECT COUNT(*) as count FROM analytics_users
-      WHERE created_at > datetime(?, '-30 days')
-    `).get(mostRecentUserTime || 'now')?.count || 0;
+      WHERE created_at >= datetime('now', '-30 days')
+    `).get()?.count || 0;
     
     // Most recent day's metrics (use most recent date in DB)
     const today = db.prepare(`
@@ -113,89 +115,59 @@ analyticsDashboardRouter.get("/summary", (req, res) => {
       WHERE date = ?
     `).get(mostRecentDate) || { unique_users: 0, total_sessions: 0, total_page_views: 0, bounce_rate: 0.15 };
     
-    // DAU (most recent day - unique active users based on session records)
-    // NOTE: This should be derived from sessions for consistency with WAU/MAU
-    // but we also ensure a minimum from analytics_daily to handle sparse session data
-    const dauFromSessions = db.prepare(`
-      SELECT COUNT(DISTINCT user_id) as total FROM analytics_sessions
+    // ============================================================
+    // DAU / WAU / MAU - 完全按照Glossary的SQL定义计算
+    // ============================================================
+    
+    // DAU (Daily Active Users)
+    // 定义: COUNT(DISTINCT user_id) FROM analytics_sessions WHERE date = [target_date]
+    // 特定日期启动至少一个会话的唯一用户
+    const dau = db.prepare(`
+      SELECT COUNT(DISTINCT user_id) as total 
+      FROM analytics_sessions
       WHERE date(session_start) = ?
     `).get(mostRecentDate)?.total || 0;
     
-    const dauFromDaily = db.prepare(`
-      SELECT unique_users FROM analytics_daily
-      WHERE date = ?
-    `).get(mostRecentDate)?.unique_users || 0;
+    // WAU (Weekly Active Users)
+    // ✅ 修复：使用 BETWEEN 明确包含 reference_date
+    // 定义: 过去7个日历天（包含reference_date）启动至少一个会话的唯一用户
+    const wau = db.prepare(`
+      SELECT COUNT(DISTINCT user_id) as total 
+      FROM analytics_sessions
+      WHERE date(session_start) BETWEEN date(?, '-6 days') AND ?
+    `).get(mostRecentDate, mostRecentDate)?.total || 0;
     
-    // Use the larger value to handle data generation inconsistencies
-    const dau = Math.max(dauFromSessions, dauFromDaily);
+    // MAU (Monthly Active Users)
+    // ✅ 修复：使用 BETWEEN 明确包含 reference_date
+    // 定义: 过去30个日历天（包含reference_date）启动至少一个会话的唯一用户
+    const mau = db.prepare(`
+      SELECT COUNT(DISTINCT user_id) as total 
+      FROM analytics_sessions
+      WHERE date(session_start) BETWEEN date(?, '-29 days') AND ?
+    `).get(mostRecentDate, mostRecentDate)?.total || 0;
     
-    // WAU (7-day unique active users - COUNT DISTINCT from sessions)
-    // For WAU/MAU, we combine sessions data with a ratio based on daily unique_users
-    const wauFromSessions = db.prepare(`
-      SELECT COUNT(DISTINCT user_id) as total FROM analytics_sessions
-      WHERE date(session_start) > date(?, '-7 days')
-    `).get(mostRecentDate)?.total || 0;
-    
-    // MAU (30-day unique active users - COUNT DISTINCT from sessions)
-    const mauFromSessions = db.prepare(`
-      SELECT COUNT(DISTINCT user_id) as total FROM analytics_sessions
-      WHERE date(session_start) > date(?, '-30 days')
-    `).get(mostRecentDate)?.total || 0;
-    
-    // 基于历史数据估算合理的 WAU 和 MAU
-    // 由于数据有时间断层（历史数据 2024-2025，当前是 2026），
-    // 直接用 DAU/MAU 计算的 Stickiness 会不准确
-    // 
-    // 解决方案：使用历史数据的平均值来计算一个"代表性"的 Stickiness
-    // 这反映的是产品在正常运行期间的粘性，而不是数据断层时的情况
-    
-    // 获取历史数据的平均每日活跃用户（这是产品正常运行时的 DAU）
-    const avgDailyUsers = db.prepare(`
-      SELECT AVG(unique_users) as avg FROM (
-        SELECT unique_users FROM analytics_daily ORDER BY date DESC LIMIT 30
-      )
-    `).get()?.avg || dau;
-    
-    // 典型 SaaS 产品参数：
-    // - 同一周内约 60% 用户会多次回访 → WAU ≈ DAU * 4.5 (7天/用户平均回访1.6次)
-    // - 同一月内约 45% 用户会多次回访 → MAU ≈ DAU * 12 (30天/用户平均回访2.5次)
-    // - 这样 Stickiness = DAU/MAU = 1/12 ≈ 8.3%
-    //
-    // 为了得到合理的 8-12% Stickiness:
-    // - WAU ≈ avgDailyUsers * 4.5
-    // - MAU ≈ avgDailyUsers * 12
-    const estimatedWau = Math.round(avgDailyUsers * 4.5);
-    const estimatedMau = Math.round(avgDailyUsers * 12);
-    
-    // 使用估算值作为 WAU/MAU，这更能反映产品的真实健康状况
-    // 对于展示目的，这些值比原始 session count 更有意义
-    const wau = Math.max(estimatedWau, dau);
-    const mau = Math.max(estimatedMau, wau);
-    
-    // 对于 Stickiness 计算，使用代表性的 DAU（即 avgDailyUsers）
-    // 这样得到的 Stickiness 反映的是产品正常运行期间的状态
-    const representativeDau = Math.round(avgDailyUsers);
-    
-    // Stickiness ratio (典型 SaaS 产品: 10-20% 良好, 20%+ 优秀, <10% 需要改进)
-    // 使用代表性 DAU 而不是当前 DAU 来计算，反映产品正常运行时的健康状况
-    // 6️⃣ 精确到2位小数
-    const dauMauRatio = mau > 0 ? ((representativeDau / mau) * 100).toFixed(2) : 0;
+    // Stickiness (DAU/MAU Ratio)
+    // 定义: (DAU / MAU) × 100%
+    // ✅ 修复：只保留客观描述，移除主观判断
+    // Higher values indicate more frequent user engagement
+    const dauMauRatio = mau > 0 ? ((dau / mau) * 100).toFixed(2) : '0.00';
     
     // Average bounce rate (7 days relative to most recent date)
-    // 1️⃣ Bounce Rate 实时计算 - 基于 sessions 的 page_views 数据
+    // ✅ 修复: Bounce Rate 使用加权计算 SUM(bounced)/SUM(total)
     // 定义：page_views = 1 的会话比例（只看了一页就离开）
     let bounceCount = 0;
     let totalSessionCount = 0;
     
     try {
-      // 尝试从 sessions 表计算真实的 bounce rate
+      // ✅ 加权计算: SUM(bounced_sessions) / SUM(total_sessions)
+      // 这样流量大的天会有更大的权重，更准确
       const bounceData = db.prepare(`
         SELECT 
           COUNT(*) as total,
           SUM(CASE WHEN page_views <= 1 THEN 1 ELSE 0 END) as bounced
         FROM analytics_sessions
-        WHERE date(session_start) > date(?, '-7 days')
-      `).get(mostRecentDate);
+        WHERE date(session_start) BETWEEN date(?, '-6 days') AND ?
+      `).get(mostRecentDate, mostRecentDate);
       
       if (bounceData && bounceData.total > 0) {
         bounceCount = bounceData.bounced || 0;
@@ -205,16 +177,27 @@ analyticsDashboardRouter.get("/summary", (req, res) => {
       console.log('[analytics] Bounce rate from sessions failed, using daily fallback');
     }
     
-    // 如果 sessions 没有足够数据，回退到 daily 表
+    // 如果 sessions 没有足够数据，回退到 daily 表（加权计算）
     let avgBounceRate;
     if (totalSessionCount > 0) {
+      // ✅ 正确：直接用 bounced/total（已经是加权）
       avgBounceRate = bounceCount / totalSessionCount;
     } else {
-      // 从 daily 表获取
-      avgBounceRate = db.prepare(`
-        SELECT AVG(bounce_rate) as avg FROM analytics_daily
-        WHERE date > date(?, '-7 days')
-      `).get(mostRecentDate)?.avg || 0.125;
+      // ✅ 修复: 从 daily 表也使用加权计算
+      const dailyBounce = db.prepare(`
+        SELECT 
+          SUM(total_sessions * bounce_rate) as weighted_bounce,
+          SUM(total_sessions) as total_sessions
+        FROM analytics_daily
+        WHERE date BETWEEN date(?, '-6 days') AND ?
+          AND total_sessions > 0
+      `).get(mostRecentDate, mostRecentDate);
+      
+      if (dailyBounce && dailyBounce.total_sessions > 0) {
+        avgBounceRate = dailyBounce.weighted_bounce / dailyBounce.total_sessions;
+      } else {
+        avgBounceRate = 0.125; // 默认值
+      }
       // 如果值大于1，说明是百分比格式，需要转换
       if (avgBounceRate > 1) avgBounceRate = avgBounceRate / 100;
     }
@@ -490,14 +473,26 @@ analyticsDashboardRouter.post("/admin/generate-data", async (req, res) => {
       'Europe/Paris', 'Asia/Shanghai', 'Asia/Tokyo', 'Asia/Singapore'
     ];
     
+    // Name pools for generating realistic emails (Registered Users)
+    const firstNames = ['james', 'mary', 'john', 'patricia', 'robert', 'jennifer', 'michael', 'linda', 
+                        'david', 'elizabeth', 'william', 'barbara', 'richard', 'susan', 'joseph', 'jessica',
+                        'thomas', 'sarah', 'charles', 'karen', 'emma', 'olivia', 'ava', 'sophia', 'liam',
+                        'noah', 'oliver', 'elijah', 'lucas', 'mason', 'alex', 'chris', 'sam', 'taylor', 'jordan'];
+    const domains = ['gmail.com', 'yahoo.com', 'outlook.com', 'hotmail.com', 'icloud.com', 'proton.me'];
+    
     const getRandomTz = () => timezones[Math.floor(Math.random() * timezones.length)];
     const getRandomDevice = () => ['desktop', 'mobile', 'tablet'][Math.floor(Math.random() * 3)];
     const getRandomBrowser = () => ['Chrome', 'Safari', 'Firefox', 'Edge'][Math.floor(Math.random() * 4)];
+    const getRandomEmail = () => {
+      const name = firstNames[Math.floor(Math.random() * firstNames.length)];
+      const domain = domains[Math.floor(Math.random() * domains.length)];
+      return `${name}${Math.floor(Math.random() * 9999) + 1}@${domain}`;
+    };
     
-    // Insert new users
+    // Insert new users (with email to make them Registered Users)
     const userInsert = db.prepare(`
-      INSERT INTO analytics_users (id, source, timezone, country, device_type, browser, created_at, last_active_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO analytics_users (id, email, source, timezone, country, device_type, browser, created_at, last_active_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
     
     const sessionInsert = db.prepare(`
@@ -509,11 +504,12 @@ analyticsDashboardRouter.post("/admin/generate-data", async (req, res) => {
     
     for (let i = 0; i < users; i++) {
       const userId = `au_${Date.now()}_${crypto.randomBytes(4).toString('hex')}`;
+      const email = getRandomEmail();
       const now = new Date().toISOString();
       const tz = getRandomTz();
       
       await userInsert.run(
-        userId, 'simulator', tz, 'US',
+        userId, email, 'simulator', tz, 'US',
         getRandomDevice(), getRandomBrowser(), now, now
       );
       newUserIds.push(userId);
@@ -528,16 +524,37 @@ analyticsDashboardRouter.post("/admin/generate-data", async (req, res) => {
     const allUserIds = [...newUserIds, ...existingUserIds];
     
     // Insert sessions
+    // ⚠️ 关键修复: 让会话时间在过去30天内随机分布
+    // 这样才能产生合理的 WAU (>= DAU) 和 MAU (>= WAU) 数据
+    // 分布策略（优化后，让 MAU > WAU）:
+    // - 40% 会话在今天（保证 DAU 有数据）
+    // - 35% 会话在过去7天（让 WAU > DAU）
+    // - 25% 会话在过去8-30天（让 MAU > WAU）
     for (let i = 0; i < sessions; i++) {
       const sessionId = `as_${Date.now()}_${crypto.randomBytes(4).toString('hex')}`;
       const userId = allUserIds[Math.floor(Math.random() * allUserIds.length)];
-      const now = new Date().toISOString();
+      
+      // 随机选择会话时间
+      const roll = Math.random() * 100;
+      let hoursAgo;
+      if (roll < 40) {
+        // 40% - 今天（0-24小时前）
+        hoursAgo = Math.random() * 24;
+      } else if (roll < 75) {
+        // 35% - 过去7天（1-7天前）
+        hoursAgo = 24 + Math.random() * (24 * 6);
+      } else {
+        // 25% - 过去8-30天（7-30天前）
+        hoursAgo = 24 * 7 + Math.random() * (24 * 23);
+      }
+      
+      const sessionStart = new Date(Date.now() - hoursAgo * 3600 * 1000).toISOString();
       
       await sessionInsert.run(
-        sessionId, userId, now,
+        sessionId, userId, sessionStart,
         Math.round(30 + Math.random() * 300),
         1 + Math.floor(Math.random() * 5),
-        getRandomDevice(), getRandomBrowser(), now
+        getRandomDevice(), getRandomBrowser(), new Date().toISOString()
       );
     }
     

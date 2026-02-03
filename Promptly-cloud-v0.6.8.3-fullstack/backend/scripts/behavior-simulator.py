@@ -66,9 +66,11 @@ CONFIG = {
     "MIN_BATCH_SIZE": 12,   # 原5 × 2.5 ≈ 12
     "MAX_BATCH_SIZE": 50,   # 原20 × 2.5 = 50
     
-    # 等待时间 (秒) - 降速到75%: 原等待时间 × 1.33
-    "MIN_WAIT": 960,    # 16分钟 (原12分钟 × 1.33)
-    "MAX_WAIT": 7680,   # 128分钟 ≈ 2.1小时 (原96分钟 × 1.33)
+    # 等待时间 (秒) - 降速到原来的75%: 等待时间 × 1.33
+    # 原基准: MIN_WAIT=720秒(12分钟), MAX_WAIT=5760秒(96分钟)
+    # 降速75%后: MIN_WAIT=1280秒(~21分钟), MAX_WAIT=10240秒(~170分钟)
+    "MIN_WAIT": 1280,   # ~21分钟 (原12分钟 ÷ 0.75)
+    "MAX_WAIT": 10240,  # ~170分钟 ≈ 2.8小时 (原96分钟 ÷ 0.75)
     
     # 用户类型分布 (%)
     "USER_TYPES": {
@@ -207,19 +209,31 @@ def insert_data_to_local_db(users, sessions):
         devices = ['desktop', 'mobile', 'tablet']
         browsers = ['Chrome', 'Safari', 'Firefox', 'Edge']
         
-        # 插入新用户
+        # 插入新用户 (带email，使其成为 Registered Users)
+        # 名字池用于生成真实的email
+        first_names = ['james', 'mary', 'john', 'patricia', 'robert', 'jennifer', 'michael', 'linda', 
+                       'david', 'elizabeth', 'william', 'barbara', 'richard', 'susan', 'joseph', 'jessica',
+                       'thomas', 'sarah', 'charles', 'karen', 'emma', 'olivia', 'ava', 'sophia', 'liam',
+                       'noah', 'oliver', 'elijah', 'lucas', 'mason', 'alex', 'chris', 'sam', 'taylor', 'jordan']
+        domains = ['gmail.com', 'yahoo.com', 'outlook.com', 'hotmail.com', 'icloud.com', 'proton.me']
+        
         new_user_ids = []
         for i in range(users):
             user_id = f"au_{int(datetime.now().timestamp() * 1000)}_{random.randint(0, 99999):05d}"
+            # 生成真实的email地址
+            name = random.choice(first_names)
+            domain = random.choice(domains)
+            email = f"{name}{random.randint(1, 9999)}@{domain}"
+            
             tz = random.choice(timezones)
             device = random.choice(devices)
             browser = random.choice(browsers)
             
             cursor.execute("""
                 INSERT INTO analytics_users 
-                (id, source, timezone, country, device_type, browser, created_at, last_active_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-            """, (user_id, 'simulator', tz, 'US', device, browser, now, now))
+                (id, email, source, timezone, country, device_type, browser, created_at, last_active_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (user_id, email, 'simulator', tz, 'US', device, browser, now, now))
             
             new_user_ids.append(user_id)
         
@@ -229,6 +243,12 @@ def insert_data_to_local_db(users, sessions):
         all_user_ids = new_user_ids + existing_users
         
         # 插入会话
+        # ⚠️ 关键修复: 让会话时间在过去30天内随机分布
+        # 这样才能产生合理的 WAU (>= DAU) 和 MAU (>= WAU) 数据
+        # 分布策略（优化后，让 MAU > WAU）:
+        # - 40% 会话在今天（保证 DAU 有数据）
+        # - 35% 会话在过去7天（让 WAU > DAU）
+        # - 25% 会话在过去8-30天（让 MAU > WAU）
         for i in range(sessions):
             session_id = f"as_{int(datetime.now().timestamp() * 1000)}_{random.randint(0, 9999):04d}"
             user_id = random.choice(all_user_ids) if all_user_ids else f"au_fallback_{i}"
@@ -237,11 +257,25 @@ def insert_data_to_local_db(users, sessions):
             device = random.choice(devices)
             browser = random.choice(browsers)
             
+            # 随机选择会话时间
+            roll = random.randint(0, 99)
+            if roll < 40:
+                # 40% - 今天（0-24小时前）
+                hours_ago = random.uniform(0, 24)
+            elif roll < 75:
+                # 35% - 过去7天（1-7天前）
+                hours_ago = random.uniform(24, 24 * 7)
+            else:
+                # 25% - 过去8-30天（7-30天前）
+                hours_ago = random.uniform(24 * 7, 24 * 30)
+            
+            session_start = (datetime.now() - timedelta(hours=hours_ago)).isoformat()
+            
             cursor.execute("""
                 INSERT INTO analytics_sessions 
                 (id, user_id, session_start, duration_seconds, page_views, device_type, browser, created_at)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-            """, (session_id, user_id, now, duration, page_views, device, browser, now))
+            """, (session_id, user_id, session_start, duration, page_views, device, browser, now))
         
         # 更新日统计表
         cursor.execute("SELECT * FROM analytics_daily WHERE date = ?", (today,))

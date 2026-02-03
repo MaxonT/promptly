@@ -24,6 +24,23 @@ const CONFIG = {
 };
 
 /**
+ * GET /api/analytics/dashboard/debug-tables
+ * Debug endpoint to check table existence
+ */
+analyticsDashboardRouter.get("/debug-tables", async (req, res) => {
+  try {
+    const tables = await db.all(`
+      SELECT table_name 
+      FROM information_schema.tables 
+      WHERE table_schema = 'public' AND table_name LIKE 'analytics%'
+    `);
+    res.json({ ok: true, tables, database: 'PostgreSQL' });
+  } catch (err) {
+    res.json({ ok: false, error: err.message, database: 'unknown' });
+  }
+});
+
+/**
  * GET /api/analytics/dashboard/summary
  * Returns comprehensive analytics summary for the dashboard
  */
@@ -557,7 +574,13 @@ analyticsDashboardRouter.post("/admin/generate-data", async (req, res) => {
     });
   } catch (err) {
     console.error('[analytics-dashboard] Generate error:', err);
-    res.status(500).json({ ok: false, error: 'Failed to generate data' });
+    console.error('[analytics-dashboard] Error stack:', err.stack);
+    res.status(500).json({ 
+      ok: false, 
+      error: 'Failed to generate data',
+      details: err.message,
+      stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
+    });
   }
 });
 

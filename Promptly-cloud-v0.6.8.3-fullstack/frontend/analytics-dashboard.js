@@ -398,6 +398,31 @@ function initParticles() {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 function setupEventHandlers() {
+  // Theme toggle
+  const themeToggle = document.getElementById('themeToggle');
+  const themeDarkIcon = themeToggle?.querySelector('.theme-icon-dark');
+  const themeLightIcon = themeToggle?.querySelector('.theme-icon-light');
+  
+  themeToggle?.addEventListener('click', () => {
+    const html = document.documentElement;
+    const currentTheme = html.getAttribute('data-theme');
+    const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+    
+    html.setAttribute('data-theme', newTheme);
+    localStorage.setItem('theme', newTheme);
+    
+    // Toggle icons
+    if (themeDarkIcon && themeLightIcon) {
+      if (newTheme === 'light') {
+        themeDarkIcon.style.display = 'none';
+        themeLightIcon.style.display = 'block';
+      } else {
+        themeDarkIcon.style.display = 'block';
+        themeLightIcon.style.display = 'none';
+      }
+    }
+  });
+  
   // Refresh button
   document.getElementById('refreshBtn')?.addEventListener('click', () => {
     refreshData();
@@ -436,6 +461,24 @@ function setupEventHandlers() {
 
 async function init() {
   console.log('[analytics-dashboard] Initializing...');
+  
+  // Initialize theme
+  const savedTheme = localStorage.getItem('theme') || 'dark';
+  document.documentElement.setAttribute('data-theme', savedTheme);
+  
+  // Update theme icons
+  const themeToggle = document.getElementById('themeToggle');
+  const themeDarkIcon = themeToggle?.querySelector('.theme-icon-dark');
+  const themeLightIcon = themeToggle?.querySelector('.theme-icon-light');
+  if (themeDarkIcon && themeLightIcon) {
+    if (savedTheme === 'light') {
+      themeDarkIcon.style.display = 'none';
+      themeLightIcon.style.display = 'block';
+    } else {
+      themeDarkIcon.style.display = 'block';
+      themeLightIcon.style.display = 'none';
+    }
+  }
   
   // Setup particles
   initParticles();

@@ -945,11 +945,97 @@
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════════
-   Light Theme - Additional Overrides
+   Light Theme - 明亮主题完整样式
    ═══════════════════════════════════════════════════════════════════════════════ */
+
+[data-theme="light"] {
+  --bg: #f8fafc;
+  --bg-soft: #e2e8f0;
+  --card: rgba(255, 255, 255, 0.9);
+  --text: #1e293b;
+  --muted: #64748b;
+  --border: rgba(0, 0, 0, 0.1);
+  --shadow: 0 20px 40px rgba(0, 0, 0, 0.08);
+}
+
+[data-theme="light"] .analytics-bg {
+  background: #f8fafc;
+}
+
+[data-theme="light"] .analytics-bg-gradient-1 {
+  background: radial-gradient(circle, rgba(59, 130, 246, 0.12), transparent 70%);
+}
+
+[data-theme="light"] .analytics-bg-gradient-2 {
+  background: radial-gradient(circle, rgba(139, 92, 246, 0.15), transparent 70%);
+}
+
+[data-theme="light"] .analytics-bg-grid {
+  opacity: 0.08;
+}
+
+[data-theme="light"] .particle {
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(139, 92, 246, 0.15));
+}
+
+[data-theme="light"] .analytics-topbar {
+  background: rgba(255, 255, 255, 0.9);
+  border-bottom-color: rgba(0, 0, 0, 0.1);
+}
+
+[data-theme="light"] .brand-badge {
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.1), rgba(59, 130, 246, 0.1));
+  border-color: rgba(139, 92, 246, 0.2);
+  color: #7c3aed;
+}
+
+[data-theme="light"] .control-btn {
+  background: rgba(255, 255, 255, 0.9);
+  border-color: rgba(0, 0, 0, 0.1);
+}
+
+[data-theme="light"] .control-btn:hover {
+  background: rgba(139, 92, 246, 0.08);
+  border-color: rgba(139, 92, 246, 0.3);
+}
+
+[data-theme="light"] .status-banner {
+  background: rgba(255, 255, 255, 0.9);
+  border-color: rgba(0, 0, 0, 0.08);
+}
+
+[data-theme="light"] .goal-card,
+[data-theme="light"] .chart-card,
+[data-theme="light"] .engagement-card {
+  background: rgba(255, 255, 255, 0.8);
+  border-color: rgba(0, 0, 0, 0.08);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+}
+
+[data-theme="light"] .metric-card {
+  background: rgba(255, 255, 255, 0.9);
+  border-color: rgba(0, 0, 0, 0.08);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+[data-theme="light"] .metric-card:hover {
+  box-shadow: 0 8px 24px rgba(139, 92, 246, 0.1);
+}
+
+[data-theme="light"] .chart-range-selector {
+  background: rgba(255, 255, 255, 0.9);
+  border-color: rgba(0, 0, 0, 0.1);
+  color: var(--text);
+}
+
+[data-theme="light"] .engagement-stat {
+  background: rgba(139, 92, 246, 0.08);
+  border-color: rgba(139, 92, 246, 0.15);
+}
 
 [data-theme="light"] .glossary-card {
   background: rgba(255, 255, 255, 0.95);
+  border-color: rgba(0, 0, 0, 0.08);
 }
 
 [data-theme="light"] .glossary-item {
@@ -957,6 +1043,65 @@
   border-color: rgba(0, 0, 0, 0.08);
 }
 
+[data-theme="light"] .glossary-item:hover {
+  background: rgba(139, 92, 246, 0.05);
+  border-color: rgba(139, 92, 246, 0.2);
+}
+
 [data-theme="light"] .glossary-formula {
   background: rgba(0, 0, 0, 0.05);
+}
+
+[data-theme="light"] .glossary-close {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+[data-theme="light"] .glossary-close:hover {
+  background: rgba(239, 68, 68, 0.15);
+}
+
+[data-theme="light"] .glossary-toggle {
+  border-color: rgba(0, 0, 0, 0.1);
+  color: var(--muted);
+}
+
+[data-theme="light"] .glossary-toggle:hover {
+  background: rgba(0, 0, 0, 0.05);
+  border-color: rgba(0, 0, 0, 0.2);
+}
+
+/* 主题切换按钮样式 */
+.theme-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.theme-toggle:hover {
+  background: rgba(139, 92, 246, 0.1);
+  border-color: rgba(139, 92, 246, 0.4);
+}
+
+.theme-toggle svg {
+  width: 16px;
+  height: 16px;
+}
+
+[data-theme="light"] .theme-toggle {
+  background: rgba(255, 255, 255, 0.9);
+  border-color: rgba(0, 0, 0, 0.1);
+}
+
+[data-theme="light"] .theme-toggle:hover {
+  background: rgba(139, 92, 246, 0.08);
+  border-color: rgba(139, 92, 246, 0.3);
 }

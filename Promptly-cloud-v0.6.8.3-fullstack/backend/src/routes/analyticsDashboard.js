@@ -544,8 +544,8 @@ analyticsDashboardRouter.post("/admin/generate-data", (req, res) => {
       
       db.prepare(`
         INSERT INTO analytics_daily (date, unique_users, new_users, total_sessions, cumulative_users, created_at)
-        VALUES (?, ?, ?, ?, ?, datetime('now'))
-      `).run(today, users, users, sessions, prevCumulative + users);
+        VALUES (?, ?, ?, ?, ?, ?)
+      `).run(today, users, users, sessions, prevCumulative + users, new Date().toISOString());
     }
     
     res.json({
@@ -573,10 +573,11 @@ analyticsDashboardRouter.post("/track-behavior", (req, res) => {
     
     db.prepare(`
       INSERT INTO analytics_behavior (user_id, session_id, recorded_at, mouse_movements, scrolls, clicks, typing_events, engagement_score)
-      VALUES (?, ?, datetime('now'), ?, ?, ?, ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       userId,
       sessionId || null,
+      new Date().toISOString(),
       mouseMovements || 0,
       scrolls || 0,
       clicks || 0,

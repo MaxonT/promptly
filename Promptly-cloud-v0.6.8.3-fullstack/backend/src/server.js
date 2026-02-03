@@ -19,6 +19,7 @@ import { pipelineRouter } from "./routes/pipeline.js";
 import { billingRouter, stripeWebhookRouter } from "./routes/billing.js";
 import { analyticsRouter } from "./routes/analytics.js";
 import { analyticsDashboardRouter } from "./routes/analyticsDashboard.js";
+import { adminRouter } from "./routes/admin.js";
 import { oauthRouter } from "./routes/oauth.js";
 import { dailyRefreshJob } from "./lib/dailyRefreshJob.js";
 import dailyCompensationJob from "./lib/dailyCompensationJob.js";
@@ -155,6 +156,9 @@ console.log(`[promptly]   ✓ /api/analytics`);
 
 app.use("/api/analytics/dashboard", analyticsDashboardRouter);
 console.log(`[promptly]   ✓ /api/analytics/dashboard`);
+
+app.use("/api/admin", adminRouter);
+console.log(`[promptly]   ✓ /api/admin (sync-data)`);
 
 app.use("/api/auth/oauth", oauthRouter);
 console.log(`[promptly]   ✓ /api/auth/oauth`);

@@ -1,29 +1,24 @@
 #!/usr/bin/env python3
 """
-Promptly Analytics Behavior Simulator v4 - 生产版本（健壮版）
+Promptly Analytics Behavior Simulator v3 - 生产版本
 =========================================
 
-真实用户行为模拟器 - 批量API版本 + 完整的失败处理和数据验证
+真实用户行为模拟器 - 批量API版本
 
 🔧 API配置:
   - 端点: /api/analytics/dashboard/admin/generate-data
-  - 验证: /api/analytics/dashboard/admin/realtime-count
   - 默认URL: https://promptly-v0-6-cloudtest-cursor-dev.onrender.com
   - 环境变量: API_BASE (可覆盖默认值)
 
-✨ v4 健壮性特性:
-  ✅ 自动重试 (最多3次，带指数退避)
-  ✅ 待同步队列 (保存失败的数据到 ~/.promptly-pending-sync.json)
-  ✅ 云端验证 (确保数据真的写入到云端数据库)
-  ✅ 数据一致性检查 (每24小时检查本地vs云端)
-  ✅ 待同步恢复 (每小时自动重试失败的批次)
-  ✅ 网络故障处理 (自动等待网络恢复后重连)
-  ✅ Mac 开机自动启动 (via launchd)
-  ✅ Mac 休眠自动暂停, 唤醒自动恢复
-  ✅ 服务器崩溃自动重试
-  ✅ 基于时间段的概率模型
-  ✅ 批量用户生成 (12-50个/批次，2.5x优化)
-  ✅ 不规律等待时间
+✨ 特点:
+  - Mac 开机自动启动 (via launchd)
+  - Mac 休眠自动暂停, 唤醒自动恢复
+  - 网络断开等待, 恢复后继续
+  - 服务器崩溃自动重试
+  - 终端关闭后台运行
+  - 基于时间段的概率模型
+  - 批量用户生成 (5-20个/批次)
+  - 不规律等待时间 (30分钟-4小时)
 
 ⚠️  重要: 不要使用 behavior-simulator-test.py (那是测试版本)
 """
@@ -475,24 +470,10 @@ def api_call_generate_data(users, sessions, retries=0):
         api_success = False
     
     # 最终结果: 至少本地数据库成功就可以继续
-    # 如果本地成功但云端失败，数据不会丢失，加入待同步队列
+    # 如果本地成功但云端失败，数据不会丢失，下次同步可恢复
     if local_success:
-        if api_success:
-            # 尝试验证数据
-            verify_ok, cloud_users, cloud_sessions = verify_cloud_sync(users, sessions)
-            if verify_ok:
-                log_message("✨ 数据已保存到本地和云端", "INFO")
-                return True
-            else:
-                # API返回成功但数据没真的写入
-                batch_id = add_pending_sync(users, sessions)
-                log_message(f"⚠️ 云端验证失败，已加入待同步队列 (批次 {batch_id})", "WARN")
-                return True
-        else:
-            # 云端失败，加入待同步队列
-            batch_id = add_pending_sync(users, sessions)
-            log_message(f"⚠️ 云端同步失败，已加入待同步队列 (批次 {batch_id})", "WARN")
-            return True
+        log_message("✨ 数据已保存到本地，云端状态: " + ("✅ 同步" if api_success else "⚠️ 待同步"), "INFO")
+        return True
     else:
         log_message("❌ 本地和云端都失败", "ERROR")
         return False
@@ -570,125 +551,12 @@ def generate_batch():
 generate_batch.cycle_count = 1
 generate_batch.total_users = 0
 generate_batch.total_sessions = 0
-generate_batch.last_pending_check = time.time()  # 待同步队列检查时间
-generate_batch.last_consistency_check = time.time()  # 一致性检查时间
 
 
 def calculate_wait_time():
     """计算下次等待时间（以秒为单位）"""
     wait = random.randint(CONFIG["MIN_WAIT"], CONFIG["MAX_WAIT"])
     return wait
-
-
-def process_pending_sync():
-    """
-    处理待同步队列中的批次（每小时触发一次）
-    """
-    pending = get_pending_sync()
-    if not pending:
-        return
-    
-    log_message("▁" * 50)
-    log_message(f"🔄 处理待同步队列 ({len(pending)} 个待同步批次)")
-    log_message("▁" * 50)
-    
-    success_count = 0
-    for batch in pending[:5]:  # 每次最多处理5个
-        batch_id = batch["id"]
-        users = batch["users"]
-        sessions = batch["sessions"]
-        retries = batch.get("retries", 0)
-        
-        log_message(f"🔁 重试批次 {batch_id} (重试次数: {retries})")
-        
-        # 尝试同步
-        local_success = insert_data_to_local_db(users, sessions)
-        if not local_success:
-            log_message(f"⚠️ 本地同步失败，跳过批次 {batch_id}", "WARN")
-            continue
-        
-        url = f"{CONFIG['API_BASE']}/api/analytics/dashboard/admin/generate-data"
-        try:
-            response = requests.post(
-                url,
-                json={"users": users, "sessions": sessions},
-                headers={"X-Admin-Key": os.environ.get("ADMIN_API_KEY", "")},
-                timeout=CONFIG["TIMEOUT"]
-            )
-            
-            if response.status_code == 200:
-                data = response.json()
-                if data.get("ok"):
-                    # 验证
-                    verify_ok, cloud_users, cloud_sessions = verify_cloud_sync(users, sessions)
-                    if verify_ok:
-                        remove_pending_sync(batch_id)
-                        success_count += 1
-                        log_message(f"✅ 批次 {batch_id} 同步成功")
-                    else:
-                        increment_pending_retries(batch_id)
-                        log_message(f"⚠️ 批次 {batch_id} 验证失败，增加重试计数", "WARN")
-                else:
-                    increment_pending_retries(batch_id)
-            else:
-                increment_pending_retries(batch_id)
-                log_message(f"⚠️ 批次 {batch_id} 返回 HTTP {response.status_code}", "WARN")
-        except Exception as e:
-            increment_pending_retries(batch_id)
-            log_message(f"⚠️ 批次 {batch_id} 同步异常: {e}", "WARN")
-        
-        time.sleep(2)  # 批次之间等待2秒
-    
-    log_message(f"📊 待同步队列处理完成: {success_count}/{min(5, len(pending))} 成功")
-    log_message("")
-
-
-def verify_data_consistency():
-    """
-    定期验证本地和云端数据一致性（每24小时检查一次）
-    """
-    log_message("▁" * 50)
-    log_message("🔍 检查数据一致性...")
-    
-    # 获取本地数据
-    conn = get_db_connection()
-    if not conn:
-        log_message("⚠️ 无法连接本地数据库，跳过一致性检查", "WARN")
-        return
-    
-    try:
-        local_users = conn.execute("SELECT COUNT(*) FROM analytics_users").fetchone()[0]
-        local_sessions = conn.execute("SELECT COUNT(*) FROM analytics_sessions").fetchone()[0]
-        conn.close()
-    except Exception as e:
-        log_message(f"❌ 本地数据库查询失败: {e}", "ERROR")
-        return
-    
-    # 获取云端数据
-    verify_ok, cloud_users, cloud_sessions = verify_cloud_sync(0)
-    
-    if not verify_ok:
-        log_message("⚠️ 无法获取云端数据进行一致性检查", "WARN")
-        return
-    
-    # 对比
-    user_gap = local_users - cloud_users
-    session_gap = local_sessions - cloud_sessions
-    
-    log_message(f"📊 数据对比:")
-    log_message(f"   本地用户: {local_users} | 云端用户: {cloud_users} | 差距: {user_gap}")
-    log_message(f"   本地会话: {local_sessions} | 云端会话: {cloud_sessions} | 差距: {session_gap}")
-    
-    if user_gap == 0 and session_gap == 0:
-        log_message(f"✅ 数据完全一致！")
-    elif user_gap > 0 or session_gap > 0:
-        log_message(f"⚠️ 检测到数据差距，已添加到待同步队列", "WARN")
-        if user_gap > 0:
-            add_pending_sync(user_gap, session_gap)
-    else:
-        log_message(f"❌ 云端数据多于本地？（异常情况）", "ERROR")
-    
-    log_message("")
 
 
 def format_duration(seconds):
@@ -710,17 +578,14 @@ def format_duration(seconds):
 def main():
     """主循环"""
     log_message("╔" + "═" * 48 + "╗")
-    log_message("║   Promptly Behavior Simulator v4              ║")
-    log_message("║   真实流量模拟器 - 健壮版本                     ║")
-    log_message("║   ✅ 失败处理 | 待同步队列 | 数据验证          ║")
+    log_message("║   Promptly Behavior Simulator v3              ║")
+    log_message("║   真实流量模拟器 - 双向同步版本                 ║")
     log_message("╚" + "═" * 48 + "╝")
     log_message("")
     log_message("📊 数据同步目标:")
     log_message(f"  ☁️  云端 API: {CONFIG['API_BASE']}")
     log_message(f"       端点: /api/analytics/dashboard/admin/generate-data")
-    log_message(f"       验证: /api/analytics/dashboard/admin/realtime-count")
     log_message(f"  💾 本地数据库: {CONFIG['LOCAL_DB_PATH']}")
-    log_message(f"  📝 待同步队列: {CONFIG['PENDING_SYNC_FILE']}")
     log_message("")
     log_message(f"PID: {os.getpid()}")
     log_message("")
@@ -733,17 +598,10 @@ def main():
     log_message(f"批次大小: {CONFIG['MIN_BATCH_SIZE']}-{CONFIG['MAX_BATCH_SIZE']} 个用户/批")
     log_message(f"等待间隔: {format_duration(CONFIG['MIN_WAIT'])} - {format_duration(CONFIG['MAX_WAIT'])}")
     log_message("")
-    log_message("🔧 健壮性特性:")
-    log_message("  ✅ 自动重试 (最多3次)")
-    log_message("  ✅ 待同步队列 (保存失败的数据)")
-    log_message("  ✅ 云端验证 (确保数据真的写入)")
-    log_message("  ✅ 数据一致性检查 (每24小时)")
-    log_message("  ✅ 网络故障恢复 (自动等待和重连)")
-    log_message("")
     
     send_notification(
         CONFIG["SERVICE_NAME"],
-        "行为模拟器已启动 (v4-健壮版)"
+        "行为模拟器已启动 (v3-双向同步)"
     )
     
     while True:
@@ -763,19 +621,6 @@ def main():
                 f"批次生成错误: {type(e).__name__}"
             )
             wait_time = 60  # 出错后等待1分钟
-        
-        # 检查是否需要处理待同步队列 (每小时检查一次)
-        current_time = time.time()
-        if current_time - generate_batch.last_pending_check > 3600:
-            log_message("")
-            process_pending_sync()
-            generate_batch.last_pending_check = current_time
-        
-        # 检查数据一致性 (每24小时检查一次)
-        if current_time - generate_batch.last_consistency_check > 86400:
-            log_message("")
-            verify_data_consistency()
-            generate_batch.last_consistency_check = current_time
         
         # 等待下一轮
         time.sleep(wait_time)

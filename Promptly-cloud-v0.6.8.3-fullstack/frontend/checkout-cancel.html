@@ -1,9 +1,11 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="light">
+<html lang="en" data-theme="dark">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Checkout Canceled - Promptly</title>
+  <!-- Theme Manager - Must load before CSS -->
+  <script src="lib/themeManager.js"></script>
   <link rel="stylesheet" href="style.css">
   <style>
     .cancel-page {
@@ -155,7 +157,7 @@
 
   <script>
     // Apply theme
-    const savedTheme = localStorage.getItem('promptly.theme');
+    const savedTheme = localStorage.getItem('theme');
     if (savedTheme) {
       document.documentElement.setAttribute('data-theme', savedTheme);
     }

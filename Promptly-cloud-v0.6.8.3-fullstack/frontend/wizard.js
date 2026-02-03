@@ -1905,16 +1905,16 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
   }
 
   // Initialize theme from localStorage or system
-  const savedTheme = localStorage.getItem('promptly-theme') || 'auto';
+  const savedTheme = localStorage.getItem('theme') || 'dark';
   applyTheme(savedTheme);
 
   // Listen for system theme changes
   if (window.matchMedia) {
     const mediaQuery = window.matchMedia('(prefers-color-scheme: light)');
     mediaQuery.addEventListener('change', () => {
-      const currentTheme = localStorage.getItem('promptly-theme') || 'auto';
-      if (currentTheme === 'auto') {
-        applyTheme('auto');
+      const currentTheme = localStorage.getItem('theme') || 'dark';
+      if (currentTheme === 'dark') {
+        applyTheme('dark');
       }
     });
   }

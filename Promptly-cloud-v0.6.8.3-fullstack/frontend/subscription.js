@@ -766,17 +766,27 @@ import { track, EVENTS } from './lib/analytics.js';
     if (!themeToggle) return;
     
     const themeIcon = themeToggle.querySelector('.theme-icon');
-    const currentTheme = document.documentElement.getAttribute('data-theme');
+    const currentTheme = window.themeManager?.get() || document.documentElement.getAttribute('data-theme');
     
     updateThemeIcon(themeIcon, currentTheme);
     
     themeToggle.addEventListener('click', () => {
-      const current = document.documentElement.getAttribute('data-theme');
-      const next = current === 'dark' ? 'light' : 'dark';
-      document.documentElement.setAttribute('data-theme', next);
-      localStorage.setItem('promptly.theme', next);
-      updateThemeIcon(themeIcon, next);
+      const newTheme = window.themeManager?.set() || setLocalTheme();
+      updateThemeIcon(themeIcon, newTheme);
     });
+    
+    // 监听来自其他页面的主题变化
+    document.addEventListener('themechange', (e) => {
+      updateThemeIcon(themeIcon, e.detail.theme);
+    });
+  }
+  
+  function setLocalTheme() {
+    const current = document.documentElement.getAttribute('data-theme');
+    const next = current === 'dark' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', next);
+    localStorage.setItem('theme', next);
+    return next;
   }
 
   function updateThemeIcon(icon, theme) {

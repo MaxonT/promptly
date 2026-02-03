@@ -1,6 +1,6 @@
 
 (function(){
-  const THEME_KEY="promptly.theme", LANG_KEY="promptly.lang", CONSENT_KEY="promptly.consent";
+  const THEME_KEY="theme", LANG_KEY="promptly.lang", CONSENT_KEY="promptly.consent";
   const prefersDark=window.matchMedia("(prefers-color-scheme: dark)");
   let lastMetrics = {}; // Store metrics for redraws
   

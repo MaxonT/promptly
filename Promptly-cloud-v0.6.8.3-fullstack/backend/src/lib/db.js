@@ -303,6 +303,16 @@ CREATE TABLE IF NOT EXISTS plan_usage (
 );
 
 CREATE INDEX IF NOT EXISTS idx_plan_usage_user_date ON plan_usage(user_id, date, feature_type);
+
+-- Timezone-aware daily refresh tracking
+CREATE TABLE IF NOT EXISTS user_daily_refresh_tracker (
+  user_id TEXT PRIMARY KEY,
+  last_daily_refresh_date TEXT NOT NULL,
+  updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+  CONSTRAINT fk_refresh_user FOREIGN KEY (user_id) REFERENCES users(id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_refresh_tracker_updated ON user_daily_refresh_tracker(updated_at);
 `);
 
   // SQLite helper functions

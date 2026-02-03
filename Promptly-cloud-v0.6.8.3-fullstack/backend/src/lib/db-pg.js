@@ -391,6 +391,16 @@ export async function initializeSchema() {
       CONSTRAINT fk_usage_user FOREIGN KEY (user_id) REFERENCES users(id)
     );
 
+    -- Timezone-aware daily refresh tracking
+    CREATE TABLE IF NOT EXISTS user_daily_refresh_tracker (
+      user_id VARCHAR(255) PRIMARY KEY,
+      last_daily_refresh_date VARCHAR(10) NOT NULL,
+      updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      CONSTRAINT fk_refresh_user FOREIGN KEY (user_id) REFERENCES users(id)
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_refresh_tracker_updated ON user_daily_refresh_tracker(updated_at);
+
     -- Analytics tables
     CREATE TABLE IF NOT EXISTS analytics_events (
       id SERIAL PRIMARY KEY,

@@ -815,3 +815,34 @@ analyticsDashboardRouter.post("/track/behavior", (req, res) => {
     res.status(500).json({ ok: false, error: 'Internal error' });
   }
 });
+/**
+ * GET /api/analytics/dashboard/admin/realtime-count
+ * Debug endpoint - returns real-time database counts
+ */
+analyticsDashboardRouter.get("/admin/realtime-count", async (req, res) => {
+  try {
+    const usersCount = await db.prepare(`SELECT COUNT(*) as count FROM analytics_users`).get();
+    const sessionsCount = await db.prepare(`SELECT COUNT(*) as count FROM analytics_sessions`).get();
+    const dailyCount = await db.prepare(`SELECT COUNT(*) as count FROM analytics_daily`).get();
+    const latestDaily = await db.prepare(`
+      SELECT date, cumulative_users, unique_users, new_users 
+      FROM analytics_daily 
+      ORDER BY date DESC 
+      LIMIT 1
+    `).get();
+    
+    res.json({
+      ok: true,
+      realtime: {
+        analytics_users: usersCount.count,
+        analytics_sessions: sessionsCount.count,
+        analytics_daily_records: dailyCount.count
+      },
+      latestDaily: latestDaily || null,
+      timestamp: new Date().toISOString()
+    });
+  } catch (err) {
+    console.error('[analytics] Realtime count error:', err);
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});

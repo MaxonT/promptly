@@ -449,7 +449,7 @@ analyticsDashboardRouter.get("/growth", (req, res) => {
  * POST /api/analytics/dashboard/admin/generate-data
  * Admin endpoint to generate simulated data (for behavior simulator)
  */
-analyticsDashboardRouter.post("/admin/generate-data", (req, res) => {
+analyticsDashboardRouter.post("/admin/generate-data", async (req, res) => {
   try {
     // Simple auth check via admin key
     const adminKey = req.headers['x-admin-key'] || req.body.adminKey;
@@ -495,7 +495,7 @@ analyticsDashboardRouter.post("/admin/generate-data", (req, res) => {
       const now = new Date().toISOString();
       const tz = getRandomTz();
       
-      userInsert.run(
+      await userInsert.run(
         userId, 'simulator', tz, 'US',
         getRandomDevice(), getRandomBrowser(), now, now
       );
@@ -503,11 +503,12 @@ analyticsDashboardRouter.post("/admin/generate-data", (req, res) => {
     }
     
     // Get existing users for sessions
-    const existingUsers = db.prepare(`
+    const existingUsers = await db.prepare(`
       SELECT id FROM analytics_users ORDER BY created_at DESC LIMIT 100
-    `).all().map(u => u.id);
+    `).all();
+    const existingUserIds = existingUsers.map(u => u.id);
     
-    const allUserIds = [...newUserIds, ...existingUsers];
+    const allUserIds = [...newUserIds, ...existingUserIds];
     
     // Insert sessions
     for (let i = 0; i < sessions; i++) {
@@ -515,7 +516,7 @@ analyticsDashboardRouter.post("/admin/generate-data", (req, res) => {
       const userId = allUserIds[Math.floor(Math.random() * allUserIds.length)];
       const now = new Date().toISOString();
       
-      sessionInsert.run(
+      await sessionInsert.run(
         sessionId, userId, now,
         Math.round(30 + Math.random() * 300),
         1 + Math.floor(Math.random() * 5),
@@ -524,12 +525,12 @@ analyticsDashboardRouter.post("/admin/generate-data", (req, res) => {
     }
     
     // Update daily aggregate
-    const existingDaily = db.prepare(`
+    const existingDaily = await db.prepare(`
       SELECT * FROM analytics_daily WHERE date = ?
     `).get(today);
     
     if (existingDaily) {
-      db.prepare(`
+      await db.prepare(`
         UPDATE analytics_daily
         SET unique_users = unique_users + ?,
             new_users = new_users + ?,
@@ -538,11 +539,12 @@ analyticsDashboardRouter.post("/admin/generate-data", (req, res) => {
         WHERE date = ?
       `).run(users, users, sessions, users, today);
     } else {
-      const prevCumulative = db.prepare(`
+      const prevDaily = await db.prepare(`
         SELECT cumulative_users FROM analytics_daily ORDER BY date DESC LIMIT 1
-      `).get()?.cumulative_users || 0;
+      `).get();
+      const prevCumulative = prevDaily?.cumulative_users || 0;
       
-      db.prepare(`
+      await db.prepare(`
         INSERT INTO analytics_daily (date, unique_users, new_users, total_sessions, cumulative_users, created_at)
         VALUES (?, ?, ?, ?, ?, ?)
       `).run(today, users, users, sessions, prevCumulative + users, new Date().toISOString());

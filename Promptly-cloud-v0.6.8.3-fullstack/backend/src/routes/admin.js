@@ -302,6 +302,74 @@ router.post('/sync-data', (req, res) => {
 });
 
 /**
+ * POST /api/admin/clear-analytics
+ * 清空所有analytics数据（用于全量同步前）
+ * 
+ * ⚠️ 危险操作：会删除所有数据
+ */
+router.post('/clear-analytics', (req, res) => {
+  try {
+    // 可选的授权检查
+    const syncToken = process.env.SYNC_TOKEN;
+    if (syncToken) {
+      const authHeader = req.headers.authorization || '';
+      const token = authHeader.replace('Bearer ', '');
+      if (token !== syncToken) {
+        return res.status(401).json({ 
+          ok: false, 
+          error: 'Unauthorized: Invalid sync token' 
+        });
+      }
+    }
+    
+    console.log('[admin/clear] ⚠️ 开始清空analytics数据...');
+    
+    // 记录清空前的数据量
+    let beforeCounts = {};
+    try {
+      beforeCounts = {
+        users: db.prepare('SELECT COUNT(*) as c FROM analytics_users').get()?.c || 0,
+        sessions: db.prepare('SELECT COUNT(*) as c FROM analytics_sessions').get()?.c || 0,
+        behavior: db.prepare('SELECT COUNT(*) as c FROM analytics_behavior').get()?.c || 0,
+        daily: db.prepare('SELECT COUNT(*) as c FROM analytics_daily').get()?.c || 0,
+      };
+      console.log('[admin/clear] 清空前数据量:', beforeCounts);
+    } catch (e) {
+      console.log('[admin/clear] 获取数据量失败，继续清空');
+    }
+    
+    // 清空所有表
+    db.exec('DELETE FROM analytics_users');
+    db.exec('DELETE FROM analytics_sessions');
+    db.exec('DELETE FROM analytics_behavior');
+    db.exec('DELETE FROM analytics_daily');
+    
+    // 强制WAL checkpoint
+    try {
+      db.exec('PRAGMA wal_checkpoint(RESTART);');
+    } catch (e) {
+      console.warn('[admin/clear] WAL checkpoint失败:', e.message);
+    }
+    
+    console.log('[admin/clear] ✅ 清空完成');
+    
+    res.json({
+      ok: true,
+      message: '所有analytics数据已清空',
+      cleared: beforeCounts,
+      timestamp: new Date().toISOString()
+    });
+    
+  } catch (error) {
+    console.error('[admin/clear] 错误:', error);
+    res.status(500).json({
+      ok: false,
+      error: error.message
+    });
+  }
+});
+
+/**
  * GET /api/admin/debug-daily
  * Debug endpoint to查看 daily 表的所有数据
  */

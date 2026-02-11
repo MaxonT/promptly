@@ -254,7 +254,7 @@ https://your-frontend-url/test-connection.html
 - 📖 完整文档: [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md)
 - 🔧 快速修复: [UPDATE_CONFIG.md](UPDATE_CONFIG.md)
 - 🧪 测试工具: `frontend/test-connection.html`
-- 📧 技术支持: ming.t.yang@vanderbilt.edu
+- 📧 技术支持: PromptlyGuli@gmail.com
 
 ---
 

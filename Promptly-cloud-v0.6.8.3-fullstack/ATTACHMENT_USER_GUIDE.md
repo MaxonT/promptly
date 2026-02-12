@@ -398,7 +398,7 @@ Promptly 现在支持在提示词增强过程中附加文件！您可以上传�
 ### 反馈和建议
 
 如果您有任何问题或建议，请联系：
-- 📧 Email: PromptlyGuli@gmail.com
+- 📧 Email: ming.t.yang@vanderbilt.edu
 - 💬 提供以下信息：
   - 操作步骤
   - 错误截图

@@ -499,7 +499,7 @@ curl -X POST http://localhost:8080/api/enhance/structure \
 ## 📞 支持和反馈
 
 ### 问题报告
-- 📧 Email: PromptlyGuli@gmail.com
+- 📧 Email: ming.t.yang@vanderbilt.edu
 - 📝 提供：错误信息、操作步骤、截图
 
 ### 功能建议

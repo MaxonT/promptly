@@ -119,6 +119,6 @@ echo "详细文档："
 echo "  - 完整部署指南: DEPLOYMENT_GUIDE.md"
 echo "  - 快速修复 404: UPDATE_CONFIG.md"
 echo ""
-echo "需要帮助？联系: PromptlyGuli@gmail.com"
+echo "需要帮助？联系: ming.t.yang@vanderbilt.edu"
 echo ""
 

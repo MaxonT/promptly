@@ -211,7 +211,7 @@ curl -X POST http://localhost:8080/api/enhance/structure \
 
 ## 📞 获取帮助
 
-- 📧 Email: PromptlyGuli@gmail.com
+- 📧 Email: ming.t.yang@vanderbilt.edu
 - 📖 完整文档: `ATTACHMENT_USER_GUIDE.md`
 - 🧪 测试脚本: `test_attachment_feature.sh`
 

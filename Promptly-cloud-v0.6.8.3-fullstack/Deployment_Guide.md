@@ -286,7 +286,7 @@ Access to fetch has been blocked by CORS policy
 1. 检查 Render 后端日志
 2. 查看浏览器控制台错误信息
 3. 确认所有环境变量设置正确
-4. 联系支持：PromptlyGuli@gmail.com
+4. 联系支持：ming.t.yang@vanderbilt.edu
 
 ---
 

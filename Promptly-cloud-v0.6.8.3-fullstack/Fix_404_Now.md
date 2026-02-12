@@ -95,7 +95,7 @@ curl https://your-backend-url.onrender.com/api/health
 3. 查看浏览器控制台 (F12) 的错误信息
 4. 运行检查脚本: `./check-deployment.sh`
 
-联系: PromptlyGuli@gmail.com
+联系: ming.t.yang@vanderbilt.edu
 
 ---
 

@@ -1099,7 +1099,7 @@ temperature: 0.5</textarea>
 
   <footer class="footer">
     <p>© Promptly v0.6.8.3 · <span data-i18n="footer.rights">No trackers. Preferences saved only after consent.</span> · <span data-i18n="footer.contact">Support</span>:
-      <a href="mailto:PromptlyGuli@gmail.com">PromptlyGuli@gmail.com</a></p>
+      <a href="mailto:ming.t.yang@vanderbilt.edu">ming.t.yang@vanderbilt.edu</a></p>
   </footer>
 
   <script src="core.js"></script>

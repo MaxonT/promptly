@@ -142,13 +142,13 @@ export const PIPELINE_CONFIG = Object.freeze({
 
 export const EVALUATION_WEIGHTS = Object.freeze({
   completeness: 0.20,  // Covers all spec requirements
-  clarity:      0.15,  // Clear, unambiguous language
+  clarity:      0.20,  // Clear, unambiguous language
   specificity:  0.15,  // Concrete, not generic
   structure:    0.12,  // Good formatting, sections, hierarchy
   coherence:    0.10,  // Logical flow and internal consistency
-  creativity:   0.08,  // Novel framing, smart approaches
+  creativity:   0.05,  // Novel framing, smart approaches
   safety:       0.10,  // Safe from misuse, no harmful patterns
-  efficiency:   0.10,  // Concise, no redundancy, good token economy
+  efficiency:   0.08,  // Concise, no redundancy, good token economy
 });
 
 // ─── Non-Pipeline Default ───────────────────────────────────────────────────

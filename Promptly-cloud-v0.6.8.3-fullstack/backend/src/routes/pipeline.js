@@ -270,6 +270,13 @@ async function executePipelineWithEvents(runId, userId, { idea, attachments, ski
   let totalInputTokens = 0;
   let totalOutputTokens = 0;
   
+  // Pipeline v2: Per-stage timing for observability
+  const stageTiming = {};
+  const stageTimer = (stageName) => {
+    const t0 = Date.now();
+    return () => { stageTiming[stageName] = Date.now() - t0; };
+  };
+
   // Pipeline v2: Metrics tracking for observability
   const pipelineMetrics = {
     calls_total: {
@@ -288,6 +295,7 @@ async function executePipelineWithEvents(runId, userId, { idea, attachments, ski
     // ============================================
     // Stage 1: Spec Builder
     // ============================================
+    const endSpecTimer = stageTimer("specBuilder");
     sendEvent(runId, "stage-start", {
       stage: "spec",
       message: "Starting Spec Builder...",
@@ -301,18 +309,20 @@ async function executePipelineWithEvents(runId, userId, { idea, attachments, ski
       details: { ideaLength: idea.length, attachmentsCount: attachments.length }
     });
 
-    // Pipeline v2: Enhanced 12-field spec extraction
-    const specSystem = `You are a prompt-engineering analyst. Given a raw idea, extract a comprehensive 12-field specification that will guide high-quality prompt generation.
+    // Pipeline v2: Enhanced 13-field spec extraction (incl. task_type for meta-prompt injection)
+    const specSystem = `You are a prompt-engineering analyst. Given a raw idea, extract a comprehensive specification that will guide high-quality prompt generation.
 
 RULES:
 1. userGoal MUST be rephrased and expanded — NEVER copy verbatim.
 2. Infer every field you can from context. Leave null only if truly unknowable.
 3. Transform vague ideas into concrete, actionable specifications.
 4. Think about edge cases, anti-patterns, and success criteria proactively.
+5. task_type MUST be one of: coding, writing, analysis, brainstorming, translation, extraction, summarization, instruction, creative, other.
 
 OUTPUT (JSON only, no markdown):
 {
   "userGoal":           "string — rephrased, expanded core objective",
+  "task_type":          "string — one of: coding|writing|analysis|brainstorming|translation|extraction|summarization|instruction|creative|other",
   "audience":           "string|null — who uses the prompt output",
   "domain":             "string|null — subject area / industry",
   "tone":               "string|null — communication style (professional, casual, technical…)",
@@ -332,7 +342,7 @@ OUTPUT (JSON only, no markdown):
       : "";
 
     // Concise user prompt with clear instruction
-    const specUserPrompt = `Analyze and extract a full 12-field spec. Rephrase the goal — do NOT copy verbatim:
+    const specUserPrompt = `Analyze and extract a full 13-field spec (including task_type). Rephrase the goal — do NOT copy verbatim:
 
 ${idea}${attachmentContext}`;
 
@@ -389,8 +399,10 @@ ${idea}${attachmentContext}`;
       details: { fields: Object.keys(specData || {}) }
     });
 
+    const VALID_TASK_TYPES = ["coding", "writing", "analysis", "brainstorming", "translation", "extraction", "summarization", "instruction", "creative", "other"];
     const normalizedSpec = {
       userGoal:           (specData.userGoal || idea).trim(),
+      task_type:          VALID_TASK_TYPES.includes(specData.task_type) ? specData.task_type : "other",
       audience:           specData.audience || null,
       domain:             specData.domain || null,
       tone:               specData.tone || null,
@@ -431,6 +443,7 @@ ${idea}${attachmentContext}`;
       message: "Spec Builder completed successfully",
       result: { specId, title, summary, ...normalizedSpec }
     });
+    endSpecTimer();
 
     // ============================================
     // Stage 2: Question Engine — REMOVED in Pipeline v2
@@ -448,6 +461,7 @@ ${idea}${attachmentContext}`;
     // ============================================
     // Stage 3: Candidate Generation (Pipeline v2 — 2 differentiated candidates)
     // ============================================
+    const endGenTimer = stageTimer("generation");
     sendEvent(runId, "stage-start", {
       stage: "agents",
       message: "Starting Differentiated Candidate Generation...",
@@ -515,6 +529,7 @@ OUTPUT: The complete prompt text only. No commentary, no explanation.`
     // Build rich spec context for generation
     const specContext = `=== SPECIFICATION ===
 Goal: ${normalizedSpec.userGoal}
+Task Type: ${normalizedSpec.task_type}
 ${normalizedSpec.audience ? `Audience: ${normalizedSpec.audience}` : ""}
 ${normalizedSpec.domain ? `Domain: ${normalizedSpec.domain}` : ""}
 ${normalizedSpec.tone ? `Tone: ${normalizedSpec.tone}` : ""}
@@ -526,6 +541,21 @@ ${normalizedSpec.contextAssumptions ? `Context/Input: ${normalizedSpec.contextAs
 ${normalizedSpec.outputExpectations ? `Output Expectations: ${normalizedSpec.outputExpectations}` : ""}
 ${normalizedSpec.edgeCases.length > 0 ? `Edge Cases:\n${normalizedSpec.edgeCases.map(c => `  - ${c}`).join("\n")}` : ""}
 ${normalizedSpec.examples.length > 0 ? `Examples:\n${normalizedSpec.examples.map(e => `  - ${e}`).join("\n")}` : ""}`;
+
+    // ── Task-type Meta-Prompt: condition generation style on task ──
+    const TASK_TYPE_HINTS = {
+      coding: "Include code fences with language tags, variable {{placeholders}}, and explicit input/output specifications. Mention error handling and edge cases.",
+      writing: "Focus on tone guidance, audience awareness, word-count expectations, and stylistic examples.",
+      analysis: "Emphasize structured reasoning steps, data source requirements, comparison criteria, and conclusion format.",
+      brainstorming: "Encourage divergent thinking, quantity targets, categorization of ideas, and evaluation criteria.",
+      translation: "Specify source/target languages, formality level, domain terminology, and handling of untranslatable terms.",
+      extraction: "Define input format, extraction schema, handling of missing fields, and output structure.",
+      summarization: "Specify compression ratio, key-point retention, format (bullet/prose), and what to omit.",
+      instruction: "Use numbered steps, prerequisite listing, expected outcomes per step, and troubleshooting notes.",
+      creative: "Encourage originality, provide genre/style anchors, set creative constraints, and define success aesthetically.",
+      other: "",
+    };
+    const taskTypeHint = TASK_TYPE_HINTS[normalizedSpec.task_type] || "";
 
     console.log(`[pipeline] [${runId}] Stage 3: Generating ${generators.length} differentiated candidates (${genModel.provider}/${genModel.model})...`);
     const failures = [];
@@ -543,7 +573,7 @@ ${normalizedSpec.examples.length > 0 ? `Examples:\n${normalizedSpec.examples.map
         });
 
         console.log(`[pipeline] [${runId}] Stage 3: Generating ${gen.name} candidate...`);
-        const genUserPrompt = `Transform this specification into a complete, production-ready prompt:\n\n${specContext}${exemplarBlock}`;
+        const genUserPrompt = `Transform this specification into a complete, production-ready prompt.${taskTypeHint ? `\n\nTASK-TYPE GUIDANCE (${normalizedSpec.task_type}):\n${taskTypeHint}` : ""}\n\n${specContext}${exemplarBlock}`;
         const { text: contentRaw, similarity, usage: agentUsage } = await chatText({
           system: gen.systemPrompt,
           user: genUserPrompt,
@@ -606,6 +636,7 @@ ${normalizedSpec.examples.length > 0 ? `Examples:\n${normalizedSpec.examples.map
       message: `Generated ${candidateIds.length} candidate prompts (${failures.length} failed)`,
       result: { candidateIds, count: candidateIds.length, failures: failures.length }
     });
+    endGenTimer();
 
     // ============================================
     // Stage 3b: Critique (Pipeline v2 — cross-model review)
@@ -614,6 +645,7 @@ ${normalizedSpec.examples.length > 0 ? `Examples:\n${normalizedSpec.examples.map
     // ============================================
     if (shouldRunStage(mode, "critique")) {
       const critiqueModel = getStageModel(mode, "critique");
+      const endCritiqueTimer = stageTimer("critique");
 
       sendEvent(runId, "stage-start", {
         stage: "critique",
@@ -621,17 +653,30 @@ ${normalizedSpec.examples.length > 0 ? `Examples:\n${normalizedSpec.examples.map
         timestamp: new Date().toISOString()
       });
 
-      const critiqueSystem = `You are an expert Prompt Critic. You receive a candidate prompt and its specification, then produce a structured critique.
+      const critiqueSystem = `You are an expert Prompt Critic. You receive a candidate prompt and its specification, then produce a structured 8-dimensional critique.
 
-EVALUATE against these axes:
-1. COMPLETENESS — Does it address every requirement in the spec?
-2. SPECIFICITY — Is it concrete enough, or too generic / vague?
-3. STRUCTURE — Is it well-organized and easy to follow?
-4. SAFETY — Does it handle edge cases and prevent misuse?
-5. EFFICIENCY — Is it concise without losing important detail?
+EVALUATE against ALL 8 dimensions (score each 0.0–1.0):
+1. COMPLETENESS (weight 0.20) — Does it address every requirement in the spec?
+2. CLARITY (weight 0.20) — Is the language clear and unambiguous?
+3. SPECIFICITY (weight 0.15) — Is it concrete enough, or too generic / vague?
+4. STRUCTURE (weight 0.12) — Is it well-organized with good hierarchy?
+5. COHERENCE (weight 0.10) — Does it flow logically and maintain internal consistency?
+6. CREATIVITY (weight 0.05) — Does it use novel framing or smart approaches?
+7. SAFETY (weight 0.10) — Does it handle edge cases and prevent misuse?
+8. EFFICIENCY (weight 0.08) — Is it concise without losing important detail?
+
+VERDICT RULES:
+- "pass" → ALL dimensions ≥ 0.8 and no critical weaknesses
+- "refine" → Some dimensions below 0.8, or actionable improvements exist
+- "fail" → Multiple dimensions below 0.5 or fundamental problems
 
 OUTPUT (JSON only):
 {
+  "scores": {
+    "completeness": 0.0, "clarity": 0.0, "specificity": 0.0, "structure": 0.0,
+    "coherence": 0.0, "creativity": 0.0, "safety": 0.0, "efficiency": 0.0
+  },
+  "verdict": "pass|refine|fail",
   "strengths": ["string — what works well"],
   "weaknesses": ["string — specific problems found"],
   "suggestions": ["string — actionable improvement instructions"],
@@ -639,7 +684,7 @@ OUTPUT (JSON only):
   "critiqueScore": 0.0-1.0
 }
 
-Be ruthlessly honest. Generic praise is not helpful.`;
+Be ruthlessly honest. Generic praise is not helpful. Differentiate scores — avoid "everything is 0.8".`;
 
       for (let i = 0; i < candidateIds.length; i++) {
         const candidateId = candidateIds[i];
@@ -678,10 +723,12 @@ Be ruthlessly honest. Generic praise is not helpful.`;
           sendEvent(runId, "stage-progress", {
             stage: "critique",
             step: `critiqued-${candidate.agent}`,
-            message: `${candidate.agent} critique complete`,
+            message: `${candidate.agent} critique complete (verdict: ${critiqueData?.verdict ?? "unknown"})`,
             details: {
               candidateId,
+              verdict: critiqueData?.verdict ?? null,
               critiqueScore: critiqueData?.critiqueScore ?? null,
+              scores: critiqueData?.scores ?? null,
               weaknessCount: critiqueData?.weaknesses?.length ?? 0,
               suggestionCount: critiqueData?.suggestions?.length ?? 0,
             }
@@ -702,12 +749,15 @@ Be ruthlessly honest. Generic praise is not helpful.`;
         message: `Critique completed for ${candidateIds.length} candidates`,
         result: { candidateIds }
       });
+      endCritiqueTimer();
 
       // ============================================
       // Stage 3c: Refine (Pipeline v2 — improve based on critique)
       // Uses the SAME model as generation (the author refines its own work).
+      // Only refines candidates whose critique verdict != 'pass'.
       // ============================================
       const refineModel = getStageModel(mode, "refine");
+      const endRefineTimer = stageTimer("refine");
 
       sendEvent(runId, "stage-start", {
         stage: "refine",
@@ -724,7 +774,7 @@ RULES:
 4. The refined version must be noticeably better than the original.
 5. Output ONLY the refined prompt text — no commentary.`;
 
-      // Refine each candidate in place (update content)
+      // Refine each candidate — ONLY if critique verdict != 'pass'
       const refinedCandidateIds = [];
 
       for (let i = 0; i < candidateIds.length; i++) {
@@ -736,17 +786,29 @@ RULES:
           const critiqueJson = candidate.metrics_json ? JSON.parse(candidate.metrics_json) : {};
           const critique = critiqueJson.critique || {};
 
+          // ── Verdict Gate: skip refine if critique passed ──
+          if (critique.verdict === "pass") {
+            console.log(`[pipeline] [${runId}] Refine: skipping ${candidate.agent} — critique verdict is 'pass'`);
+            sendEvent(runId, "stage-progress", {
+              stage: "refine",
+              step: `skipped-${candidate.agent}`,
+              message: `${candidate.agent} already passed critique — no refinement needed`,
+              details: { candidateId, agent: candidate.agent, verdict: "pass" }
+            });
+            continue;
+          }
+
           sendEvent(runId, "stage-progress", {
             stage: "refine",
             step: `refining-${candidate.agent}`,
-            message: `Refining ${candidate.agent} candidate...`,
-            details: { candidateId, agent: candidate.agent, progress: `${i + 1}/${candidateIds.length}` }
+            message: `Refining ${candidate.agent} candidate (verdict: ${critique.verdict || "unknown"})...`,
+            details: { candidateId, agent: candidate.agent, progress: `${i + 1}/${candidateIds.length}`, verdict: critique.verdict }
           });
 
-          console.log(`[pipeline] [${runId}] Refine: improving ${candidate.agent} candidate...`);
+          console.log(`[pipeline] [${runId}] Refine: improving ${candidate.agent} candidate (verdict=${critique.verdict})...`);
 
           const critiqueContext = critique.weaknesses?.length
-            ? `\n\n---CRITIQUE---\nWeaknesses:\n${critique.weaknesses.map(w => `  - ${w}`).join("\n")}\n\nSuggestions:\n${(critique.suggestions || []).map(s => `  - ${s}`).join("\n")}\n---END---`
+            ? `\n\n---CRITIQUE---\nVerdict: ${critique.verdict}\nWeaknesses:\n${critique.weaknesses.map(w => `  - ${w}`).join("\n")}\n\nSuggestions:\n${(critique.suggestions || []).map(s => `  - ${s}`).join("\n")}${critique.scores ? `\n\nScores: ${JSON.stringify(critique.scores)}` : ""}\n---END---`
             : "";
 
           const { text: refinedRaw, usage: refineUsage } = await chatText({
@@ -810,6 +872,7 @@ RULES:
         message: `Refinement completed — ${refinedCandidateIds.length} refined candidates added (${candidateIds.length} total in pool)`,
         result: { refinedCandidateIds, totalCandidates: candidateIds.length }
       });
+      endRefineTimer();
 
     } else {
       // Fast mode: skip critique & refine
@@ -827,6 +890,7 @@ RULES:
     // Stage 4: 8-Dimensional Weighted Evaluation (Pipeline v2)
     // Uses cross-model evaluator (different from generation model).
     // ============================================
+    const endEvalTimer = stageTimer("evaluation");
     const evalModel = getStageModel(mode, "evaluation");
 
     sendEvent(runId, "stage-start", {
@@ -947,10 +1011,89 @@ OUTPUT (JSON only):
       message: `Evaluation completed: ${candidateIds.length - evalFailures}/${candidateIds.length} scored successfully`,
       result: { candidateIds, count: candidateIds.length, failures: evalFailures }
     });
+    endEvalTimer();
+
+    // ============================================
+    // Stage 4b: Pairwise Comparison (standard/premium only)
+    // Head-to-head comparison of top-2 candidates for robust ranking.
+    // ============================================
+    let pairwiseResult = null;
+    if (mode !== "fast" && candidateIds.length >= 2) {
+      try {
+        checkTimeout();
+
+        // Pre-sort to find top-2 by composite score
+        const preSorted = candidateIds
+          .map(id => {
+            const row = db.prepare("SELECT * FROM candidate_prompts WHERE id = ?").get(id);
+            const m = row.metrics_json ? JSON.parse(row.metrics_json) : null;
+            return { id: row.id, agent: row.agent, content: row.content, compositeScore: m?.compositeScore ?? 0 };
+          })
+          .sort((a, b) => b.compositeScore - a.compositeScore);
+
+        const top2 = preSorted.slice(0, 2);
+
+        sendEvent(runId, "stage-progress", {
+          stage: "metrics",
+          step: "pairwise-comparison",
+          message: `Pairwise comparing top-2: ${top2[0].agent} vs ${top2[1].agent}...`,
+        });
+
+        console.log(`[pipeline] [${runId}] Pairwise: ${top2[0].agent} (${top2[0].compositeScore.toFixed(3)}) vs ${top2[1].agent} (${top2[1].compositeScore.toFixed(3)})`);
+
+        const pairwiseSystem = `You are an expert Prompt Judge. Compare two candidate prompts against a specification and determine which is better overall.
+
+RULES:
+1. Consider ALL quality dimensions: completeness, clarity, specificity, structure, coherence, creativity, safety, efficiency.
+2. Focus on which prompt would perform better in REAL usage, not which looks nicer.
+3. If they are very close, you may declare a tie.
+
+OUTPUT (JSON only):
+{
+  "winner": "A" | "B" | "tie",
+  "reasoning": "string — 2-3 sentence explanation of why",
+  "confidenceScore": 0.0-1.0
+}`;
+
+        const { data: pairData, usage: pairUsage } = await chatJson({
+          system: pairwiseSystem,
+          user: `Compare these two prompts against the specification.\n\n---CANDIDATE A (${top2[0].agent})---\n${top2[0].content}\n---END A---\n\n---CANDIDATE B (${top2[1].agent})---\n${top2[1].content}\n---END B---\n\n---SPECIFICATION---\n${specContext}\n---END---`,
+          model: evalModel.model,
+          provider: evalModel.provider,
+          temperature: 0,
+        });
+
+        if (pairUsage) {
+          totalInputTokens += pairUsage.prompt_tokens || 0;
+          totalOutputTokens += pairUsage.completion_tokens || 0;
+        }
+        pipelineMetrics.calls_total.evaluation++;
+
+        pairwiseResult = {
+          candidateA: top2[0].id,
+          candidateB: top2[1].id,
+          winner: pairData?.winner || "tie",
+          reasoning: pairData?.reasoning || "",
+          confidenceScore: pairData?.confidenceScore ?? 0.5,
+        };
+
+        console.log(`[pipeline] [${runId}] Pairwise result: winner=${pairwiseResult.winner}, confidence=${pairwiseResult.confidenceScore}`);
+        sendEvent(runId, "stage-progress", {
+          stage: "metrics",
+          step: "pairwise-result",
+          message: `Pairwise winner: ${pairwiseResult.winner === "A" ? top2[0].agent : pairwiseResult.winner === "B" ? top2[1].agent : "tie"}`,
+          details: pairwiseResult,
+        });
+      } catch (pairErr) {
+        console.warn(`[pipeline] [${runId}] Pairwise comparison failed — falling back to composite scores: ${pairErr.message}`);
+        // Non-fatal: composite scores are sufficient
+      }
+    }
 
     // ============================================
     // Stage 5: Outcome — Select best candidate (Pipeline v2)
     // ============================================
+    const endOutcomeTimer = stageTimer("outcome");
     sendEvent(runId, "stage-start", {
       stage: "outcome",
       message: "Selecting best candidate...",
@@ -966,18 +1109,33 @@ OUTPUT (JSON only):
       };
     });
 
-    // Sort by compositeScore, tie-break by safety → completeness
+    // Sort by compositeScore, tie-break by completeness → clarity → safety (plan spec)
     const sortedCandidates = candidates
       .filter(c => c.metrics && typeof c.metrics.compositeScore === "number")
       .sort((a, b) => {
         const diff = b.metrics.compositeScore - a.metrics.compositeScore;
         if (Math.abs(diff) > 0.001) return diff;
-        // Tie-breakers
-        if ((a.metrics.safety ?? 0) !== (b.metrics.safety ?? 0)) {
-          return (b.metrics.safety ?? 0) - (a.metrics.safety ?? 0);
-        }
-        return (b.metrics.completeness ?? 0) - (a.metrics.completeness ?? 0);
+        // Tie-breaker 1: completeness
+        const compDiff = (b.metrics.completeness ?? 0) - (a.metrics.completeness ?? 0);
+        if (Math.abs(compDiff) > 0.001) return compDiff;
+        // Tie-breaker 2: clarity
+        const clarDiff = (b.metrics.clarity ?? 0) - (a.metrics.clarity ?? 0);
+        if (Math.abs(clarDiff) > 0.001) return clarDiff;
+        // Tie-breaker 3: safety
+        return (b.metrics.safety ?? 0) - (a.metrics.safety ?? 0);
       });
+
+    // If pairwise comparison produced a clear winner and confidence is high,
+    // promote that candidate to first position
+    if (pairwiseResult && pairwiseResult.winner !== "tie" && pairwiseResult.confidenceScore >= 0.7) {
+      const winnerId = pairwiseResult.winner === "A" ? pairwiseResult.candidateA : pairwiseResult.candidateB;
+      const winnerIdx = sortedCandidates.findIndex(c => c.id === winnerId);
+      if (winnerIdx > 0) {
+        console.log(`[pipeline] [${runId}] Pairwise override: promoting ${sortedCandidates[winnerIdx].agent} from rank ${winnerIdx + 1} to #1`);
+        const [winner] = sortedCandidates.splice(winnerIdx, 1);
+        sortedCandidates.unshift(winner);
+      }
+    }
 
     // Prefer refined candidates; fallback to originals
     const bestCandidate = sortedCandidates[0] || (candidates.length > 0 ? {
@@ -1020,11 +1178,14 @@ OUTPUT (JSON only):
       bestCandidate.id,
       JSON.stringify({
         pipelineVersion: 2,
-        reasoning: `Selected ${bestCandidate.agent} (composite ${bestCandidate.metrics.compositeScore.toFixed(3)})`,
+        selectionMethod: pairwiseResult ? "pairwise+composite" : "composite-sort",
+        reasoning: `Selected ${bestCandidate.agent} (composite ${bestCandidate.metrics.compositeScore.toFixed(3)})${pairwiseResult ? ` | Pairwise: ${pairwiseResult.reasoning}` : ""}`,
+        pairwise: pairwiseResult || null,
         ranking,
         bestCandidate: {
           id: bestCandidate.id,
           agent: bestCandidate.agent,
+          source: bestCandidate.agent.includes("_refined") ? "refined" : "original",
           metrics: bestCandidate.metrics
         }
       }),
@@ -1038,10 +1199,12 @@ OUTPUT (JSON only):
         outcomeId,
         selectedCandidateId: bestCandidate.id,
         agent: bestCandidate.agent,
+        source: bestCandidate.agent.includes("_refined") ? "refined" : "original",
         compositeScore: bestCandidate.metrics.compositeScore,
         content: bestCandidate.content
       }
     });
+    endOutcomeTimer();
 
     // Query historical runs for this user to build history and contributions
     // Note: outcome_runs doesn't have user_id, so we JOIN through specs table
@@ -1141,8 +1304,17 @@ OUTPUT (JSON only):
         total: totalInputTokens + totalOutputTokens
       },
       stages_executed: getStageList(mode),
+      stageTiming,  // per-stage duration in ms
       bestScore: bestCandidate.metrics?.compositeScore ?? null,
+      bestAgent: bestCandidate.agent,
+      bestSource: bestCandidate.agent.includes("_refined") ? "refined" : "original",
       candidateCount: candidateIds.length,
+      evalFailures,
+      pairwise: pairwiseResult ? {
+        winner: pairwiseResult.winner,
+        confidence: pairwiseResult.confidenceScore,
+      } : null,
+      specBuilderDegraded,
       durationMs: Date.now() - startTime,
     };
     console.log(`[pipeline] [${runId}] Pipeline v2 Metrics:`, JSON.stringify(metricsSummary, null, 2));

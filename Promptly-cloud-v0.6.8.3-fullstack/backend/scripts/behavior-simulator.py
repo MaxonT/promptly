@@ -532,46 +532,42 @@ def api_call_generate_data(users, sessions, retries=0):
             log_message(f"🔄 {CONFIG['RETRY_DELAY']}秒后重试 ({retries+1}/{CONFIG['MAX_RETRIES']})", "WARN")
             time.sleep(CONFIG["RETRY_DELAY"])
             return api_call_generate_data(users, sessions, retries + 1)
-        else本地和云端都要成功
-    if local_success:
-        if api_success:
-            # 必须验证数据真的写入了（验证增量）
-            verify_ok, cloud_users, cloud_sessions = verify_cloud_sync(
-                users, sessions, before_users, before_sessions
-            )
-            if verify_ok:
+        else:
+            log_message(f"❌ 达到最大重试次数 ({CONFIG['MAX_RETRIES']})", "ERROR")
+            api_success = False
+
+    except requests.exceptions.Timeout as e:
+        log_message(f"⏰ 云端请求超时: {e}", "ERROR")
+        api_success = False
+
+    except Exception as e:
+        log_message(f"❌ 云端请求异常: {e}", "ERROR")
+        api_success = False
+
+    # ✅ 修复: 云端成功即视为成功（本地数据库故障不应阻止云端同步）
+    if api_success:
+        # 验证云端数据是否真的写入
+        verify_ok, cloud_users, cloud_sessions = verify_cloud_sync(
+            users, sessions, before_users, before_sessions
+        )
+        if verify_ok:
+            if local_success:
                 log_message("✨ 数据已保存到本地和云端（已验证）", "INFO")
-                return True
             else:
-                # API返回成功但数据没真的写入（或增量不对）
-                batch_id = add_pending_sync(users, sessions)
-                log_message(f"⚠️ 云端验证失败（数据未写入或增量异常），已加入待同步队列 (批次 {batch_id})", "WARN")
-                # ⚠️ 返回False，因为云端同步实际失败了
-                return False
-        else:
-            # 云端API调用失败
-            batch_id = add_pending_sync(users, sessions)
-            log_message(f"⚠️ 云端API调用失败，已加入待同步队列 (批次 {batch_id})", "WARN")
-            # ⚠️ 返回False，因为虽然本地成功但云端失败了
-            return False
-    else:
-        # 本地数据库失败
-        log_message("❌ 本地数据库插入失败", "ERROR")
-        if api_success:
-            log_message("⚠️ 但云端API成功了（数据不一致！需要手动检查）", "WARN
-                log_message("✨ 数据已保存到本地和云端", "INFO")
-                return True
-            else:
-                # API返回成功但数据没真的写入
-                batch_id = add_pending_sync(users, sessions)
-                log_message(f"⚠️ 云端验证失败，已加入待同步队列 (批次 {batch_id})", "WARN")
-                return True
-        else:
-            # 云端失败，加入待同步队列
-            batch_id = add_pending_sync(users, sessions)
-            log_message(f"⚠️ 云端同步失败，已加入待同步队列 (批次 {batch_id})", "WARN")
+                log_message("✨ 数据已保存到云端（已验证，本地数据库不可用）", "INFO")
             return True
+        else:
+            # API返回成功但验证失败
+            batch_id = add_pending_sync(users, sessions)
+            log_message(f"⚠️ 云端验证失败，已加入待同步队列 (批次 {batch_id})", "WARN")
+            return local_success  # 本地成功也算部分成功
+    elif local_success:
+        # 云端失败但本地成功
+        batch_id = add_pending_sync(users, sessions)
+        log_message(f"⚠️ 云端同步失败，本地已保存，已加入待同步队列 (批次 {batch_id})", "WARN")
+        return True
     else:
+        # 本地和云端都失败
         log_message("❌ 本地和云端都失败", "ERROR")
         return False
 

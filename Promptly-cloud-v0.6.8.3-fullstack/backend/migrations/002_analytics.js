@@ -8,17 +8,24 @@
  * - analytics_daily: Daily aggregated metrics (DAU/MAU/WAU)
  * 
  * Data normalization: 
- * - Period: 2024-11-29 to 2025-01-30
- * - Target users: 2123
+ * - Period: dynamically calculated (today - 63 days) to today
+ * - Target users: 1850
  * - S-curve growth algorithm applied
  */
 
 import { db } from '../src/lib/db.js';
 
 // Configuration - "Struggling Product" metrics (更真实的失败产品数据)
+// 产品63天前发布，日期动态计算确保每次 migration 都生成到当前日期的数据
+const todayDate = new Date();
+const todayStr = todayDate.toISOString().split('T')[0];
+const launchDate = new Date(todayDate);
+launchDate.setDate(launchDate.getDate() - 63);
+const launchStr = launchDate.toISOString().split('T')[0];
+
 const CONFIG = {
-  projectStartDate: '2024-11-29',
-  dataEndDate: '2025-01-30',
+  projectStartDate: launchStr,     // ✅ 动态：63天前
+  dataEndDate: todayStr,           // ✅ 动态：始终到今天
   targetUsers: 1850,  // 降低目标用户数
   targetDAU: 80,      // 非常低的DAU目标，显示产品严重挣扎
   sGrowthK: 0.06,     // 更慢的增长率
@@ -136,8 +143,8 @@ export function up() {
 
 /**
  * Generate historical data using S-curve growth algorithm
- * Period: 2024-11-29 to 2025-01-30
- * Target: 2123 users
+ * Period: dynamically (today - 63 days) to today
+ * Target: 1850 users
  */
 function generateHistoricalData() {
   console.log('[migration 002] Generating S-curve historical data...');

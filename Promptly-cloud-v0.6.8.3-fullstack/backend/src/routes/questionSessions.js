@@ -152,7 +152,7 @@ function resolveModelChoice(modelId) {
   const selected = isValidModel(modelId) ? modelId : "promptly";
   const targetModel = resolveModelName(selected) || fallback || null;
   const config = getModelConfig(selected);
-  const provider = config?.provider || 'openai';
+  const provider = config?.provider || NON_PIPELINE_DEFAULT.provider;
   
   // Log model resolution for debugging
   if (selected !== modelId) {

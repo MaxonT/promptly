@@ -59,7 +59,7 @@ promptsRouter.post("/generate-candidates", async (req, res) => {
     const resolvedModel = model && isValidModel(model) ? model : 'promptly-mini';
     const modelConfig = getModelConfig(resolvedModel);
     const usedModel = resolveModelName(resolvedModel);
-    const provider = modelConfig?.provider || 'openai';
+    const provider = modelConfig?.provider || NON_PIPELINE_DEFAULT.provider;
 
     console.log(`[promptly] Using model: ${resolvedModel} -> ${usedModel} (${provider})`);
 

@@ -472,6 +472,7 @@ ${idea}${attachmentContext}`;
 
     // ── Exemplar Bank: retrieve few-shot references ──
     let exemplarBlock = "";
+    let exemplarsFound = 0;
     try {
       const exemplars = searchExemplars({
         userId,
@@ -480,6 +481,7 @@ ${idea}${attachmentContext}`;
         topK: 3,
         minScore: 75,
       });
+      exemplarsFound = exemplars.length;
       if (exemplars.length > 0) {
         exemplarBlock = formatExemplarBlock(exemplars);
         console.log(`[pipeline] [${runId}] Exemplar Bank: injecting ${exemplars.length} exemplar(s) as few-shot context`);
@@ -1315,6 +1317,11 @@ OUTPUT (JSON only):
         confidence: pairwiseResult.confidenceScore,
       } : null,
       specBuilderDegraded,
+      exemplars_found: exemplarsFound,
+      critique_verdicts: candidateIds.map(cId => {
+        const c = candidateStore.get(cId);
+        return { agent: c?.agent, verdict: c?.critique?.verdict ?? null };
+      }),
       durationMs: Date.now() - startTime,
     };
     console.log(`[pipeline] [${runId}] Pipeline v2 Metrics:`, JSON.stringify(metricsSummary, null, 2));

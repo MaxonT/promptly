@@ -6,6 +6,7 @@ import { compileSpecToPrompt } from "../lib/specCompiler.js";
 import { evaluatePrompt } from "../lib/evaluationEngine.js";
 import { chatJson, LlmDisabledError } from "../lib/llmRouter.js";
 import { requireAuth } from "./auth.js";
+import { NON_PIPELINE_DEFAULT } from "../lib/modelConfig.js";
 
 export const specsRouter = Router();
 specsRouter.use(requireAuth);
@@ -555,10 +556,9 @@ ${idea}${attachmentContext}`;
 
     // Call LLM to generate structured spec
     const { data, model: modelUsed, completionId } = await chatJson({
-      provider: 'openai',
+      ...NON_PIPELINE_DEFAULT,
       system,
       user: userPrompt,
-      provider: 'openai' // STRICT CONTRACT: Explicitly set provider
     });
 
     console.log(`[promptly] ✅ Received spec from LLM`);

@@ -14,7 +14,8 @@ import { nanoid } from "nanoid";
 import { z } from "zod";
 import { db, ensureUser } from "../lib/db.js";
 import { chatText, chatJson, LlmDisabledError } from "../lib/llmRouter.js";
-import { getModePolicy } from "../lib/modePolicies.js";
+import { getStageModel, getStageList, shouldRunStage, computeCompositeScore, EVALUATION_WEIGHTS, PIPELINE_STAGES, PIPELINE_CONFIG } from "../lib/modelConfig.js";
+import { searchExemplars, formatExemplarBlock, harvestExemplar } from "../lib/exemplarService.js";
 import { spendTokensForRun, getTokenStatus } from "../lib/tokenUsage.js";
 import { FEATURES } from "../lib/subscriptionConfig.js";
 import { checkPromptOptimizationLimit, recordUsage, canUseMode } from "../lib/planLimits.js";
@@ -218,9 +219,9 @@ async function executePipelineWithEvents(runId, userId, { idea, attachments, ski
     return;
   }
   
-  const policy = getModePolicy(mode);
-  console.log(`[pipeline] [${runId}] Executing with policy: ${policy.name} (${policy.id})`);
-  console.log(`[pipeline] [${runId}] Policy Details: Spec=${policy.specBuilder.model}, QEngine=${policy.questionEngine.enabled}, Gen=${policy.generation.model}`);
+  const pipelineConfig = PIPELINE_CONFIG[mode] || PIPELINE_CONFIG.fast;
+  console.log(`[pipeline] [${runId}] Pipeline v2 mode=${mode}, stages=[${getStageList(mode).join(",")}]`);
+  console.log(`[pipeline] [${runId}] Models: Spec=${getStageModel(mode, "specBuilder").model}, Gen=${getStageModel(mode, "generation").model}, Eval=${getStageModel(mode, "evaluation").model}`);
   
   // 1. Wait for client to connect (max 10 seconds)
   // This prevents the race condition where events are sent before the client connects
@@ -269,19 +270,18 @@ async function executePipelineWithEvents(runId, userId, { idea, attachments, ski
   let totalInputTokens = 0;
   let totalOutputTokens = 0;
   
-  // Token Hardening: Metrics tracking for observability
+  // Pipeline v2: Metrics tracking for observability
   const pipelineMetrics = {
     calls_total: {
       spec_builder: 0,
-      question_engine: 0,
       generation: 0,
-      scoring: 0,
+      critique: 0,
+      refine: 0,
+      evaluation: 0,
       outcome_runner: 0
     },
     retries_total: 0,
-    qe_rounds: 0,
-    generation_retries: 0, // Track generation similarity retries separately
-    score_calls: 0
+    generation_retries: 0,
   };
 
   try {
@@ -301,57 +301,86 @@ async function executePipelineWithEvents(runId, userId, { idea, attachments, ski
       details: { ideaLength: idea.length, attachmentsCount: attachments.length }
     });
 
-    // Enhanced: Strong system prompt to ensure transformation
-    const specSystem = `Extract structured spec from raw idea.
+    // Pipeline v2: Enhanced 12-field spec extraction
+    const specSystem = `You are a prompt-engineering analyst. Given a raw idea, extract a comprehensive 12-field specification that will guide high-quality prompt generation.
 
-CRITICAL REQUIREMENTS:
-1. userGoal MUST be rephrased and expanded, NEVER copied verbatim
-2. Infer missing details: audience, constraints, tone, format, domain, examples
-3. Transform vague ideas into concrete, actionable specifications
-4. If input is very specific, expand it with additional context
+RULES:
+1. userGoal MUST be rephrased and expanded — NEVER copy verbatim.
+2. Infer every field you can from context. Leave null only if truly unknowable.
+3. Transform vague ideas into concrete, actionable specifications.
+4. Think about edge cases, anti-patterns, and success criteria proactively.
 
-OUTPUT FORMAT:
-JSON only: {"userGoal": "rephrased and expanded", "audience": "string|null", "constraints": ["string"], "tone": "string|null", "format": "string|null", "domain": "string|null", "examples": ["string"]}
-
-REQUIREMENT: userGoal must differ substantially from input. If too similar, append "> needs more change".`;
+OUTPUT (JSON only, no markdown):
+{
+  "userGoal":           "string — rephrased, expanded core objective",
+  "audience":           "string|null — who uses the prompt output",
+  "domain":             "string|null — subject area / industry",
+  "tone":               "string|null — communication style (professional, casual, technical…)",
+  "format":             "string|null — expected output format (markdown, JSON, list, prose…)",
+  "constraints":        ["string"] — hard requirements or limitations",
+  "examples":           ["string"] — illustrative input/output pairs",
+  "successCriteria":    ["string"] — measurable indicators the prompt works well",
+  "antiPatterns":       ["string"] — things to explicitly avoid",
+  "contextAssumptions": "string|null — what input/context the prompt will receive",
+  "outputExpectations": "string|null — detailed output structure or length expectations",
+  "edgeCases":          ["string"] — boundary conditions the prompt should handle"
+}`;
 
     // Build attachment context
     const attachmentContext = attachments.length > 0
       ? `\n\n[ATTACHMENT_METADATA_START]\n${attachments.map(a => `- ${a.name} (${a.type}, ${a.size} bytes)`).join("\n")}\n[ATTACHMENT_METADATA_END]`
       : "";
 
-    // Concise user prompt - key instruction right before content
-    const specUserPrompt = `Extract structured spec. userGoal MUST be rephrased:
+    // Concise user prompt with clear instruction
+    const specUserPrompt = `Analyze and extract a full 12-field spec. Rephrase the goal — do NOT copy verbatim:
 
 ${idea}${attachmentContext}`;
+
+    const specModel = getStageModel(mode, "specBuilder");
 
     sendEvent(runId, "stage-progress", {
       stage: "spec",
       step: "llm-call",
       message: "Calling LLM to generate structured spec...",
-      details: { model: policy.specBuilder.model, provider: policy.specBuilder.provider, ideaLength: idea.length }
+      details: { model: specModel.model, provider: specModel.provider, ideaLength: idea.length }
     });
 
     checkTimeout(); // Check timeout before LLM call
-    console.log(`[pipeline] [${runId}] Stage 1: Calling Spec Builder LLM (${policy.specBuilder.provider}/${policy.specBuilder.model})...`);
-    const { data: rawSpecData, usage: specUsage } = await chatJson({
-      system: specSystem,
-      user: specUserPrompt,
-      model: policy.specBuilder.model,
-      provider: policy.specBuilder.provider
-    });
-    
-    // Track token usage for spec builder
-    if (specUsage) {
-      totalInputTokens += specUsage.prompt_tokens || 0;
-      totalOutputTokens += specUsage.completion_tokens || 0;
+    console.log(`[pipeline] [${runId}] Stage 1: Calling Spec Builder LLM (${specModel.provider}/${specModel.model})...`);
+
+    let specData = {};
+    let specBuilderDegraded = false;
+
+    try {
+      const { data: rawSpecData, usage: specUsage } = await chatJson({
+        system: specSystem,
+        user: specUserPrompt,
+        model: specModel.model,
+        provider: specModel.provider
+      });
+      
+      // Track token usage for spec builder
+      if (specUsage) {
+        totalInputTokens += specUsage.prompt_tokens || 0;
+        totalOutputTokens += specUsage.completion_tokens || 0;
+      }
+      
+      // Token Hardening: Track spec builder call
+      pipelineMetrics.calls_total.spec_builder = 1;
+      
+      specData = rawSpecData || {};
+      console.log(`[pipeline] [${runId}] Stage 1: Spec Builder completed, extracted ${Object.keys(specData).length} fields`);
+    } catch (specErr) {
+      // Graceful degradation: use raw idea as minimal spec
+      console.warn(`[pipeline] [${runId}] Stage 1: Spec Builder LLM failed — degrading to raw input. Error: ${specErr.message}`);
+      specBuilderDegraded = true;
+      specData = { userGoal: idea };
+      sendEvent(runId, "stage-warning", {
+        stage: "spec",
+        message: "Spec Builder LLM failed — using raw input as fallback spec",
+        details: { error: specErr.message }
+      });
     }
-    
-    // Token Hardening: Track spec builder call
-    pipelineMetrics.calls_total.spec_builder = 1;
-    
-    const specData = rawSpecData || {};
-    console.log(`[pipeline] [${runId}] Stage 1: Spec Builder completed, extracted ${Object.keys(specData).length} fields`);
 
     sendEvent(runId, "stage-progress", {
       stage: "spec",
@@ -361,13 +390,18 @@ ${idea}${attachmentContext}`;
     });
 
     const normalizedSpec = {
-      userGoal: (specData.userGoal || idea).trim(),
-      audience: specData.audience || null,
-      constraints: Array.isArray(specData.constraints) ? specData.constraints.filter(Boolean) : [],
-      tone: specData.tone || null,
-      format: specData.format || null,
-      domain: specData.domain || null,
-      examples: Array.isArray(specData.examples) ? specData.examples.filter(Boolean) : []
+      userGoal:           (specData.userGoal || idea).trim(),
+      audience:           specData.audience || null,
+      domain:             specData.domain || null,
+      tone:               specData.tone || null,
+      format:             specData.format || null,
+      constraints:        Array.isArray(specData.constraints) ? specData.constraints.filter(Boolean) : [],
+      examples:           Array.isArray(specData.examples) ? specData.examples.filter(Boolean) : [],
+      successCriteria:    Array.isArray(specData.successCriteria) ? specData.successCriteria.filter(Boolean) : [],
+      antiPatterns:       Array.isArray(specData.antiPatterns) ? specData.antiPatterns.filter(Boolean) : [],
+      contextAssumptions: specData.contextAssumptions || null,
+      outputExpectations: specData.outputExpectations || null,
+      edgeCases:          Array.isArray(specData.edgeCases) ? specData.edgeCases.filter(Boolean) : [],
     };
 
     const rawTitle = normalizedSpec.userGoal || idea;
@@ -399,270 +433,137 @@ ${idea}${attachmentContext}`;
     });
 
     // ============================================
-    // Stage 2: Question Engine (Q1-Q3 Loop)
+    // Stage 2: Question Engine — REMOVED in Pipeline v2
     // ============================================
-    // Check policy enablement AND user skip preference
-    const shouldRunQuestions = !skipQuestions && policy.questionEngine.enabled;
-    
-    if (shouldRunQuestions) {
-      sendEvent(runId, "stage-start", {
-        stage: "question",
-        message: "Starting Question Engine (Q1-Q3)...",
-        timestamp: new Date().toISOString()
-      });
-
-      // Enhanced: Question engine prompt with stronger requirements
-      const questionSystem = `You are a Question Engine. Ask ONE high-value clarifying question to improve spec completeness.
-
-REQUIREMENTS:
-- Ask a specific, actionable question (not generic)
-- Focus on missing critical information
-- Stop if spec is already complete enough (estimatedCompleteness >= 0.9)
-- Maximum 3 questions (Q1-Q3)
-
-OUTPUT FORMAT (JSON only):
-{"question": "specific clarifying question", "shouldStop": false, "estimatedCompleteness": 0.8, "missingFields": ["field1", "field2"]}
-
-CRITICAL: Question must be specific and valuable. If too generic, append "> needs more change".`;
-
-      sessionId = `session_${nanoid(12)}`;
-      const questionsAsked = [];
-      const answers = [];
-      let currentStep = 0;
-      let shouldStop = false;
-      let finalCompletenessScore = 0.0;
-
-      // Token Hardening: Use policy.max_rounds instead of hardcoded 3
-      // Feature Flag: QE_STRICT_MAX_ROUNDS (default: true, can disable via env)
-      const useStrictQERounds = process.env.QE_STRICT_MAX_ROUNDS !== 'false';
-      const maxQERounds = useStrictQERounds 
-        ? (policy.questionEngine?.max_rounds ?? 3)  // Use policy config (Standard=2, Premium=3)
-        : 3; // Fallback to 3 if feature flag disabled (old behavior)
-      
-      console.log(`[pipeline] [${runId}] QE Loop: max_rounds=${maxQERounds} (from policy: ${policy.questionEngine?.max_rounds ?? 'not set'}, feature flag: ${useStrictQERounds})`);
-
-      // Q1-Q3 Loop: Ask questions sequentially (up to max_rounds)
-      while (currentStep < maxQERounds && !shouldStop) {
-        checkTimeout(); // Check timeout before each question
-        
-        currentStep++;
-        sendEvent(runId, "stage-progress", {
-          stage: "question",
-          step: `q${currentStep}-analyzing`,
-          message: `Analyzing spec for Q${currentStep}...`,
-          details: { specId, step: currentStep, previousQuestions: questionsAsked.length }
-        });
-
-        // Build context with previous Q&A
-        let qaContext = `Specification:\n${JSON.stringify(specData, null, 2)}`;
-        if (questionsAsked.length > 0) {
-          qaContext += "\n\nPrevious Questions & Answers:";
-          for (let i = 0; i < questionsAsked.length; i++) {
-            qaContext += `\nQ${i + 1}: ${questionsAsked[i]}`;
-            if (answers[i]) {
-              qaContext += `\nA${i + 1}: ${answers[i]}`;
-            }
-          }
-        }
-
-        // Generate next question
-        console.log(`[pipeline] [${runId}] Stage 2: Generating Q${currentStep}...`);
-        const { data: qData, usage: qUsage } = await chatJson({
-          system: questionSystem,
-          user: `Generate Q${currentStep} for:\n${qaContext}`,
-          model: policy.questionEngine.model,
-          provider: policy.questionEngine.provider
-        });
-        
-        // Track token usage for question engine
-        if (qUsage) {
-          totalInputTokens += qUsage.prompt_tokens || 0;
-          totalOutputTokens += qUsage.completion_tokens || 0;
-        }
-        
-        // Token Hardening: Track QE call
-        pipelineMetrics.calls_total.question_engine++;
-        pipelineMetrics.qe_rounds = currentStep;
-        
-        console.log(`[pipeline] [${runId}] Stage 2: Q${currentStep} generated, shouldStop: ${qData?.shouldStop || false}`);
-
-        if (!qData || qData.shouldStop) {
-          shouldStop = true;
-          finalCompletenessScore = qData?.estimatedCompleteness || Math.min(0.9, 0.5 + currentStep * 0.15);
-          sendEvent(runId, "stage-progress", {
-            stage: "question",
-            step: `q${currentStep}-stopped`,
-            message: `Q${currentStep} stopped early (spec complete enough)`,
-            details: { step: currentStep, completenessScore: finalCompletenessScore }
-          });
-          break;
-        }
-
-        const question = qData.question || "";
-        const missingFields = Array.isArray(qData.missingFields) ? qData.missingFields : [];
-        questionsAsked.push(question);
-        // For pipeline mode, we simulate answers (in real wizard, user would answer)
-        // Here we'll use empty answers and let the spec proceed
-        answers.push(""); // Empty answer for pipeline mode
-
-        sendEvent(runId, "stage-progress", {
-          stage: "question",
-          step: `q${currentStep}-generated`,
-          message: `Q${currentStep} generated`,
-          details: { 
-            question, 
-            step: currentStep, 
-            missingFields,
-            estimatedCompleteness: qData.estimatedCompleteness || 0.0
-          }
-        });
-
-        // Update completeness score after each question
-        finalCompletenessScore = qData.estimatedCompleteness || Math.min(0.95, 0.5 + currentStep * 0.15);
-        db.prepare("UPDATE specs SET completeness_score = ? WHERE id = ?")
-          .run(finalCompletenessScore, specId);
-
-        // Small delay between questions
-        await new Promise(resolve => setTimeout(resolve, 500));
-      }
-
-      // Save question session to database
-      const sessionDescription = normalizedSpec.userGoal || idea;
-      const sessionNow = new Date().toISOString();
-      db.prepare(`
-        INSERT INTO question_sessions (id, owner_id, spec_id, initial_description, step, is_complete, status, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `).run(
-        sessionId,
-        userId,
-        specId,
-        sessionDescription,
-        currentStep,
-        shouldStop ? 1 : 0,
-        "completed",
-        sessionNow,
-        sessionNow
-      );
-
-      sendEvent(runId, "stage-complete", {
-        stage: "question",
-        message: `Question Engine completed (${currentStep} questions asked)`,
-        result: { 
-          sessionId, 
-          questionsAsked, 
-          step: currentStep, 
-          completenessScore: finalCompletenessScore,
-          stoppedEarly: shouldStop
-        }
-      });
-    } else {
-      sendEvent(runId, "stage-skipped", {
-        stage: "question",
-        message: "Question Engine skipped by user request"
-      });
-    }
+    // The old QE asked up to 3 questions and pushed empty-string answers,
+    // consuming LLM tokens without improving spec quality.
+    // Pipeline v2 relies on the enhanced 12-field Spec Builder instead.
+    // The Question Wizard (llmAgents.js) remains available as a separate
+    // interactive flow outside the pipeline.
+    sendEvent(runId, "stage-skipped", {
+      stage: "question",
+      message: "Question Engine removed in Pipeline v2 (spec completeness handled by enhanced Spec Builder)",
+    });
 
     // ============================================
-    // Stage 3: LLM Agents - Candidate Generation
+    // Stage 3: Candidate Generation (Pipeline v2 — 2 differentiated candidates)
     // ============================================
     sendEvent(runId, "stage-start", {
       stage: "agents",
-      message: "Starting Multi-Agent Candidate Generation...",
+      message: "Starting Differentiated Candidate Generation...",
       timestamp: new Date().toISOString()
     });
 
-      // Enhanced: Strong agent prompts to ensure transformation
-      const agents = [
-        {
-          name: "architect",
-          systemPrompt: `You are an Architect agent. Transform the specification into a complete, structured prompt.
+    const genModel = getStageModel(mode, "generation");
 
-REQUIREMENTS:
-- Add clear sections with headings (##)
-- Include variables/placeholders for dynamic content
-- Structure instructions step-by-step
-- Add explicit formatting rules
-- Output MUST be substantially different from the input spec
+    // ── Exemplar Bank: retrieve few-shot references ──
+    let exemplarBlock = "";
+    try {
+      const exemplars = searchExemplars({
+        userId,
+        keywords: normalizedSpec.userGoal,
+        taskDomain: normalizedSpec.domain || null,
+        topK: 3,
+        minScore: 75,
+      });
+      if (exemplars.length > 0) {
+        exemplarBlock = formatExemplarBlock(exemplars);
+        console.log(`[pipeline] [${runId}] Exemplar Bank: injecting ${exemplars.length} exemplar(s) as few-shot context`);
+        sendEvent(runId, "stage-progress", {
+          stage: "agents",
+          step: "exemplars-loaded",
+          message: `Found ${exemplars.length} high-quality exemplar(s) for reference`,
+        });
+      }
+    } catch (exErr) {
+      // Non-critical — pipeline continues without exemplars
+      console.warn(`[pipeline] [${runId}] Exemplar search skipped: ${exErr.message}`);
+    }
 
-CRITICAL: If output mirrors input, append "> needs more change" to signal insufficient transformation.`
-        },
-        {
-          name: "editor",
-          systemPrompt: `You are an Editor agent. Polish and enhance the prompt language.
+    // Two candidates with fundamentally different generation strategies
+    const generators = [
+      {
+        name: "structured",
+        systemPrompt: `You are a Structured Prompt Engineer. Transform a specification into a well-organized, hierarchical prompt.
 
-REQUIREMENTS:
-- Improve sentence structure and flow
-- Enhance clarity and precision
-- Refine word choices for impact
-- Optimize readability
-- Output MUST be substantially improved from input
+YOUR STYLE:
+- Use clear section headers (## Role, ## Task, ## Rules, ## Output Format)
+- Number instructions and sub-steps explicitly
+- Include {{placeholders}} for all dynamic inputs
+- Add explicit constraints, guardrails, and edge-case handling
+- Provide a deterministic output schema (JSON, table, or template)
+- Prioritize precision and reproducibility over elegance
 
-CRITICAL: If output is too similar to input, append "> needs more change" to signal insufficient enhancement.`
-        },
-        {
-          name: "judge",
-          systemPrompt: `You are a Judge agent. Add safety, robustness, and edge case handling.
+OUTPUT: The complete prompt text only. No commentary, no explanation.`
+      },
+      {
+        name: "fluent",
+        systemPrompt: `You are a Fluent Prompt Engineer. Transform a specification into a natural, expressive prompt.
 
-REQUIREMENTS:
-- Add explicit safety constraints
-- Include guardrails for misuse
-- Handle edge cases and error scenarios
-- Add validation rules
-- Output MUST include substantial safety enhancements
+YOUR STYLE:
+- Write in flowing, conversational prose — no bullet lists or numbered steps
+- Embed instructions naturally within context-setting paragraphs
+- Use vivid examples and analogies to convey intent
+- Guide the AI through narrative rather than rigid structure
+- Prioritize clarity through context, not through formatting
+- Make the prompt feel like expert instructions from a mentor
 
-CRITICAL: If output lacks safety improvements, append "> needs more change" to signal insufficient additions.`
-        }
-      ];
+OUTPUT: The complete prompt text only. No commentary, no explanation.`
+      },
+    ];
 
-    const baseContext = `Specification:
-${JSON.stringify(specData, null, 2)}`;
+    // Build rich spec context for generation
+    const specContext = `=== SPECIFICATION ===
+Goal: ${normalizedSpec.userGoal}
+${normalizedSpec.audience ? `Audience: ${normalizedSpec.audience}` : ""}
+${normalizedSpec.domain ? `Domain: ${normalizedSpec.domain}` : ""}
+${normalizedSpec.tone ? `Tone: ${normalizedSpec.tone}` : ""}
+${normalizedSpec.format ? `Output Format: ${normalizedSpec.format}` : ""}
+${normalizedSpec.constraints.length > 0 ? `Constraints:\n${normalizedSpec.constraints.map(c => `  - ${c}`).join("\n")}` : ""}
+${normalizedSpec.successCriteria.length > 0 ? `Success Criteria:\n${normalizedSpec.successCriteria.map(c => `  - ${c}`).join("\n")}` : ""}
+${normalizedSpec.antiPatterns.length > 0 ? `Anti-Patterns (avoid):\n${normalizedSpec.antiPatterns.map(c => `  - ${c}`).join("\n")}` : ""}
+${normalizedSpec.contextAssumptions ? `Context/Input: ${normalizedSpec.contextAssumptions}` : ""}
+${normalizedSpec.outputExpectations ? `Output Expectations: ${normalizedSpec.outputExpectations}` : ""}
+${normalizedSpec.edgeCases.length > 0 ? `Edge Cases:\n${normalizedSpec.edgeCases.map(c => `  - ${c}`).join("\n")}` : ""}
+${normalizedSpec.examples.length > 0 ? `Examples:\n${normalizedSpec.examples.map(e => `  - ${e}`).join("\n")}` : ""}`;
 
-    // Serial execution to guarantee stability
-    console.log(`[pipeline] [${runId}] Stage 3: Generating candidates with ${agents.length} agents sequentially...`);
+    console.log(`[pipeline] [${runId}] Stage 3: Generating ${generators.length} differentiated candidates (${genModel.provider}/${genModel.model})...`);
     const failures = [];
 
-    for (let i = 0; i < agents.length; i++) {
-      const agent = agents[i];
+    for (let i = 0; i < generators.length; i++) {
+      const gen = generators[i];
       try {
         checkTimeout();
 
         sendEvent(runId, "stage-progress", {
           stage: "agents",
-          step: `generating-${agent.name}`,
-          message: `Generating candidate with ${agent.name} agent...`,
-          details: { agent: agent.name, progress: `${i + 1}/${agents.length}` }
+          step: `generating-${gen.name}`,
+          message: `Generating ${gen.name} candidate...`,
+          details: { agent: gen.name, progress: `${i + 1}/${generators.length}` }
         });
 
-        console.log(`[pipeline] [${runId}] Stage 3: Generating candidate with ${agent.name} agent...`);
-        // Enable similarity check with retry (lowered threshold for better change detection)
+        console.log(`[pipeline] [${runId}] Stage 3: Generating ${gen.name} candidate...`);
+        const genUserPrompt = `Transform this specification into a complete, production-ready prompt:\n\n${specContext}${exemplarBlock}`;
         const { text: contentRaw, similarity, usage: agentUsage } = await chatText({
-          system: agent.systemPrompt,
-          user: `Generate optimized prompt. The output MUST be substantially different from the spec. Transform and enhance it:\n\n${baseContext}`,
-          model: policy.generation.model, // Pass the policy model
-          provider: policy.generation.provider, // Pass the policy provider
+          system: gen.systemPrompt,
+          user: genUserPrompt,
+          model: genModel.model,
+          provider: genModel.provider,
           minSimilarity: 0.75,
           maxRetries: 2
         });
-        
-        // Track token usage for agent generation
+
         if (agentUsage) {
           totalInputTokens += agentUsage.prompt_tokens || 0;
           totalOutputTokens += agentUsage.completion_tokens || 0;
         }
-        
-        // Token Hardening: Track generation call
+
         pipelineMetrics.calls_total.generation++;
-        // Note: similarity retries are tracked in chatText/openaiClient (will add later if needed)
 
         const content = stripThinkBlocks(contentRaw);
+        console.log(`[pipeline] [${runId}] Stage 3: ${gen.name} completed — similarity: ${similarity?.toFixed(3) ?? "N/A"}, length: ${content.length}`);
 
-        // Log similarity for debugging
-        console.log(`[pipeline] [${runId}] Stage 3: ${agent.name} completed - similarity: ${similarity.toFixed(3)}, length: ${content.length}`);
-        if (similarity > 0.7) {
-          console.warn(`[pipeline] [${runId}] ⚠️ ${agent.name} output similarity is high: ${similarity.toFixed(3)}`);
-        }
-
-        const candidateId = `candidate_${nanoid(12)}`;
+        const candidateId = `cand_${nanoid(12)}`;
 
         db.prepare(`
           INSERT INTO candidate_prompts (id, spec_id, session_id, agent, model, content, created_at)
@@ -671,33 +572,33 @@ ${JSON.stringify(specData, null, 2)}`;
           candidateId,
           specId,
           sessionId,
-          agent.name,
-          policy.generation.model, // Log correct model from policy
+          gen.name,
+          genModel.model,
           content,
           now
         );
 
         sendEvent(runId, "stage-progress", {
           stage: "agents",
-          step: `completed-${agent.name}`,
-          message: `${agent.name} agent completed`,
-          details: { candidateId, agent: agent.name, contentLength: content.length }
+          step: `completed-${gen.name}`,
+          message: `${gen.name} candidate generated`,
+          details: { candidateId, agent: gen.name, contentLength: content.length }
         });
 
         candidateIds.push(candidateId);
-        
-        // Small delay between agents to ensure system stability
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        
+
+        // Brief pause between candidates for system stability
+        if (i < generators.length - 1) {
+          await new Promise(resolve => setTimeout(resolve, 500));
+        }
       } catch (err) {
-        console.error(`[pipeline] [${runId}] Agent ${agent.name} failed:`, err);
-        failures.push({ agent: agent.name, error: err.message });
-        // Continue to next agent even if one fails
+        console.error(`[pipeline] [${runId}] Generator ${gen.name} failed:`, err);
+        failures.push({ agent: gen.name, error: err.message });
       }
     }
 
     if (candidateIds.length === 0) {
-      throw new Error(`All ${agents.length} agents failed to generate candidates. Check logs for details.`);
+      throw new Error(`All generators failed to produce candidates. Errors: ${failures.map(f => f.error).join("; ")}`);
     }
 
     sendEvent(runId, "stage-complete", {
@@ -707,94 +608,299 @@ ${JSON.stringify(specData, null, 2)}`;
     });
 
     // ============================================
-    // Stage 4: Metrics & Scoring
+    // Stage 3b: Critique (Pipeline v2 — cross-model review)
+    // Skipped in fast mode for cost savings.
+    // Uses a DIFFERENT model than generation to avoid self-evaluation bias.
     // ============================================
+    if (shouldRunStage(mode, "critique")) {
+      const critiqueModel = getStageModel(mode, "critique");
+
+      sendEvent(runId, "stage-start", {
+        stage: "critique",
+        message: "Starting cross-model Critique...",
+        timestamp: new Date().toISOString()
+      });
+
+      const critiqueSystem = `You are an expert Prompt Critic. You receive a candidate prompt and its specification, then produce a structured critique.
+
+EVALUATE against these axes:
+1. COMPLETENESS — Does it address every requirement in the spec?
+2. SPECIFICITY — Is it concrete enough, or too generic / vague?
+3. STRUCTURE — Is it well-organized and easy to follow?
+4. SAFETY — Does it handle edge cases and prevent misuse?
+5. EFFICIENCY — Is it concise without losing important detail?
+
+OUTPUT (JSON only):
+{
+  "strengths": ["string — what works well"],
+  "weaknesses": ["string — specific problems found"],
+  "suggestions": ["string — actionable improvement instructions"],
+  "overallAssessment": "string — one-paragraph summary",
+  "critiqueScore": 0.0-1.0
+}
+
+Be ruthlessly honest. Generic praise is not helpful.`;
+
+      for (let i = 0; i < candidateIds.length; i++) {
+        const candidateId = candidateIds[i];
+        try {
+          checkTimeout();
+
+          const candidate = db.prepare("SELECT * FROM candidate_prompts WHERE id = ?").get(candidateId);
+
+          sendEvent(runId, "stage-progress", {
+            stage: "critique",
+            step: `critiquing-${candidate.agent}`,
+            message: `Critiquing ${candidate.agent} candidate...`,
+            details: { candidateId, agent: candidate.agent, progress: `${i + 1}/${candidateIds.length}` }
+          });
+
+          console.log(`[pipeline] [${runId}] Critique: reviewing ${candidate.agent} candidate with ${critiqueModel.provider}/${critiqueModel.model}...`);
+
+          const { data: critiqueData, usage: critiqueUsage } = await chatJson({
+            system: critiqueSystem,
+            user: `Critique this candidate prompt:\n\n---CANDIDATE---\n${candidate.content}\n---END---\n\n---SPECIFICATION---\n${specContext}\n---END---`,
+            model: critiqueModel.model,
+            provider: critiqueModel.provider,
+          });
+
+          if (critiqueUsage) {
+            totalInputTokens += critiqueUsage.prompt_tokens || 0;
+            totalOutputTokens += critiqueUsage.completion_tokens || 0;
+          }
+          pipelineMetrics.calls_total.critique++;
+
+          // Store critique as JSON in metrics_json (will be overwritten later by evaluation scores)
+          // We store it temporarily so the Refine stage can read it
+          db.prepare("UPDATE candidate_prompts SET metrics_json = ? WHERE id = ?")
+            .run(JSON.stringify({ critique: critiqueData }), candidateId);
+
+          sendEvent(runId, "stage-progress", {
+            stage: "critique",
+            step: `critiqued-${candidate.agent}`,
+            message: `${candidate.agent} critique complete`,
+            details: {
+              candidateId,
+              critiqueScore: critiqueData?.critiqueScore ?? null,
+              weaknessCount: critiqueData?.weaknesses?.length ?? 0,
+              suggestionCount: critiqueData?.suggestions?.length ?? 0,
+            }
+          });
+
+          // Brief pause between critiques
+          if (i < candidateIds.length - 1) {
+            await new Promise(resolve => setTimeout(resolve, 300));
+          }
+        } catch (err) {
+          console.error(`[pipeline] [${runId}] Critique failed for candidate ${candidateId}:`, err);
+          // Non-fatal: candidate proceeds to refine without critique
+        }
+      }
+
+      sendEvent(runId, "stage-complete", {
+        stage: "critique",
+        message: `Critique completed for ${candidateIds.length} candidates`,
+        result: { candidateIds }
+      });
+
+      // ============================================
+      // Stage 3c: Refine (Pipeline v2 — improve based on critique)
+      // Uses the SAME model as generation (the author refines its own work).
+      // ============================================
+      const refineModel = getStageModel(mode, "refine");
+
+      sendEvent(runId, "stage-start", {
+        stage: "refine",
+        message: "Starting Refinement based on critique...",
+        timestamp: new Date().toISOString()
+      });
+
+      const refineSystem = `You are a Prompt Refiner. You receive a candidate prompt plus a structured critique, and produce an improved version.
+
+RULES:
+1. Address EVERY weakness and suggestion from the critique.
+2. Preserve the candidate's strengths and original style.
+3. Do NOT add content that contradicts the specification.
+4. The refined version must be noticeably better than the original.
+5. Output ONLY the refined prompt text — no commentary.`;
+
+      // Refine each candidate in place (update content)
+      const refinedCandidateIds = [];
+
+      for (let i = 0; i < candidateIds.length; i++) {
+        const candidateId = candidateIds[i];
+        try {
+          checkTimeout();
+
+          const candidate = db.prepare("SELECT * FROM candidate_prompts WHERE id = ?").get(candidateId);
+          const critiqueJson = candidate.metrics_json ? JSON.parse(candidate.metrics_json) : {};
+          const critique = critiqueJson.critique || {};
+
+          sendEvent(runId, "stage-progress", {
+            stage: "refine",
+            step: `refining-${candidate.agent}`,
+            message: `Refining ${candidate.agent} candidate...`,
+            details: { candidateId, agent: candidate.agent, progress: `${i + 1}/${candidateIds.length}` }
+          });
+
+          console.log(`[pipeline] [${runId}] Refine: improving ${candidate.agent} candidate...`);
+
+          const critiqueContext = critique.weaknesses?.length
+            ? `\n\n---CRITIQUE---\nWeaknesses:\n${critique.weaknesses.map(w => `  - ${w}`).join("\n")}\n\nSuggestions:\n${(critique.suggestions || []).map(s => `  - ${s}`).join("\n")}\n---END---`
+            : "";
+
+          const { text: refinedRaw, usage: refineUsage } = await chatText({
+            system: refineSystem,
+            user: `Refine this prompt based on the critique:\n\n---ORIGINAL---\n${candidate.content}\n---END---${critiqueContext}\n\n---SPECIFICATION---\n${specContext}\n---END---`,
+            model: refineModel.model,
+            provider: refineModel.provider,
+          });
+
+          if (refineUsage) {
+            totalInputTokens += refineUsage.prompt_tokens || 0;
+            totalOutputTokens += refineUsage.completion_tokens || 0;
+          }
+          pipelineMetrics.calls_total.refine++;
+
+          const refinedContent = stripThinkBlocks(refinedRaw);
+
+          // Create a new "refined" candidate row linked to the original
+          const refinedId = `cand_${nanoid(12)}`;
+          db.prepare(`
+            INSERT INTO candidate_prompts (id, spec_id, session_id, agent, model, content, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+          `).run(
+            refinedId,
+            specId,
+            sessionId,
+            `${candidate.agent}_refined`,
+            refineModel.model,
+            refinedContent,
+            now
+          );
+
+          refinedCandidateIds.push(refinedId);
+
+          sendEvent(runId, "stage-progress", {
+            stage: "refine",
+            step: `refined-${candidate.agent}`,
+            message: `${candidate.agent} candidate refined`,
+            details: {
+              originalId: candidateId,
+              refinedId,
+              originalLength: candidate.content.length,
+              refinedLength: refinedContent.length,
+            }
+          });
+
+          if (i < candidateIds.length - 1) {
+            await new Promise(resolve => setTimeout(resolve, 300));
+          }
+        } catch (err) {
+          console.error(`[pipeline] [${runId}] Refine failed for candidate ${candidateId}:`, err);
+          // Non-fatal: original candidate proceeds to evaluation unrefined
+        }
+      }
+
+      // Add refined candidates to the pool for evaluation
+      candidateIds.push(...refinedCandidateIds);
+
+      sendEvent(runId, "stage-complete", {
+        stage: "refine",
+        message: `Refinement completed — ${refinedCandidateIds.length} refined candidates added (${candidateIds.length} total in pool)`,
+        result: { refinedCandidateIds, totalCandidates: candidateIds.length }
+      });
+
+    } else {
+      // Fast mode: skip critique & refine
+      sendEvent(runId, "stage-skipped", {
+        stage: "critique",
+        message: "Critique skipped (fast mode)"
+      });
+      sendEvent(runId, "stage-skipped", {
+        stage: "refine",
+        message: "Refine skipped (fast mode)"
+      });
+    }
+
+    // ============================================
+    // Stage 4: 8-Dimensional Weighted Evaluation (Pipeline v2)
+    // Uses cross-model evaluator (different from generation model).
+    // ============================================
+    const evalModel = getStageModel(mode, "evaluation");
+
     sendEvent(runId, "stage-start", {
       stage: "metrics",
-      message: "Starting Metrics & Scoring in parallel...",
+      message: `Evaluating ${candidateIds.length} candidates across 8 dimensions...`,
       timestamp: new Date().toISOString()
     });
 
-    const scoringPromises = candidateIds.map(async (candidateId, i) => {
+    // Build dimension descriptions from EVALUATION_WEIGHTS for the prompt
+    const dimensionDescriptions = Object.entries(EVALUATION_WEIGHTS)
+      .map(([dim, w]) => {
+        const desc = {
+          completeness: "Covers all spec requirements",
+          clarity:      "Clear and unambiguous language",
+          specificity:  "Concrete and detailed, not generic",
+          structure:    "Well-organized, good hierarchy",
+          coherence:    "Logical flow, internally consistent",
+          creativity:   "Novel framing, smart approaches",
+          safety:       "Safe from misuse, handles edge cases",
+          efficiency:   "Concise, no redundancy",
+        }[dim] || dim;
+        return `- ${dim} (weight ${w}): ${desc}`;
+      })
+      .join("\n");
+
+    const evalSystem = `You are an expert Prompt Evaluator. Score each dimension 0.0–1.0 with honest, differentiated scores.
+
+DIMENSIONS (with weights):
+${dimensionDescriptions}
+
+RULES:
+1. Compare the candidate prompt AGAINST the specification — not against some imaginary ideal.
+2. Be ruthlessly honest. Avoid "everything is 0.85" syndrome.
+3. If a dimension is clearly weak, score it below 0.5.
+4. If a dimension is genuinely excellent, score it above 0.9.
+
+OUTPUT (JSON only):
+{"completeness":0.0,"clarity":0.0,"specificity":0.0,"structure":0.0,"coherence":0.0,"creativity":0.0,"safety":0.0,"efficiency":0.0}`;
+
+    let evalFailures = 0;
+    const evaluationPromises = candidateIds.map(async (candidateId, i) => {
       try {
         checkTimeout();
-        
+
         sendEvent(runId, "stage-progress", {
           stage: "metrics",
           step: `scoring-${candidateId}`,
-          message: `Scoring candidate ${i + 1}/${candidateIds.length}...`,
+          message: `Evaluating candidate ${i + 1}/${candidateIds.length}...`,
           details: { candidateId, progress: `${i + 1}/${candidateIds.length}` }
         });
 
         const candidate = db.prepare("SELECT * FROM candidate_prompts WHERE id = ?").get(candidateId);
-        
-        // Token Hardening: Spec minification for scoring (feature flag controlled)
-        const useSpecMinify = process.env.SCORING_SPEC_MINIFY === 'true';
-        let scoringSpec;
-        if (useSpecMinify) {
-          // Only include fields needed for scoring evaluation
-          scoringSpec = {
-            userGoal: specData.userGoal,
-            tone: specData.tone,
-            format: specData.format,
-            audience: specData.audience
-            // Omit: examples, constraints (details), domain (if not needed for scoring)
-          };
-          console.log(`[pipeline] [${runId}] Scoring spec minified: ${JSON.stringify(specData).length} -> ${JSON.stringify(scoringSpec).length} chars`);
-        } else {
-          scoringSpec = specData;
-        }
-        
-        // Enhanced: Metrics evaluator prompt with detailed criteria
-        const metricsSystem = `Evaluate the candidate prompt and provide scores (0-1 scale).
 
-SCORING CRITERIA:
-- clarity: How clear and understandable is the prompt? (0-1)
-- coherence: How well does it flow and make logical sense? (0-1)
-- styleMatch: How well does it match the specified style/tone? (0-1)
-- safety: How safe is it from misuse/abuse? (0-1, higher = safer)
-- risk: What is the risk level? (0-1, higher = more risky)
-
-OUTPUT FORMAT (JSON only):
-{"clarity": 0.85, "coherence": 0.90, "styleMatch": 0.80, "safety": 0.95, "risk": 0.10}
-
-Provide honest, objective scores based on the criteria.`;
-
-        const { data: metricsData, usage: metricsUsage } = await chatJson({
-          system: metricsSystem,
-          user: `Evaluate this candidate prompt:\n\n${candidate.content}\n\nSpec:\n${JSON.stringify(scoringSpec, null, 2)}`,
-          model: policy.scoring.model,
-          provider: policy.scoring.provider,
-          temperature: policy.scoring.temperature
+        const { data: evalData, usage: evalUsage } = await chatJson({
+          system: evalSystem,
+          user: `Evaluate this candidate prompt against the specification.\n\n---CANDIDATE---\n${candidate.content}\n---END---\n\n---SPECIFICATION---\n${specContext}\n---END---`,
+          model: evalModel.model,
+          provider: evalModel.provider,
+          temperature: evalModel.temperature ?? 0,
         });
-        
-        // Track token usage for metrics evaluation
-        if (metricsUsage) {
-          totalInputTokens += metricsUsage.prompt_tokens || 0;
-          totalOutputTokens += metricsUsage.completion_tokens || 0;
-        }
-        
-        // Token Hardening: Track scoring call
-        pipelineMetrics.calls_total.scoring++;
-        pipelineMetrics.score_calls++;
 
-        // Estimate token cost (simplified)
-        const tokenCost = Math.ceil(candidate.content.length / 4);
-        const normalizedToken = Math.min(1, 1000 / tokenCost);
-        
-        const compositeScore = (
-          metricsData.clarity +
-          metricsData.coherence +
-          metricsData.styleMatch +
-          metricsData.safety +
-          (1 - metricsData.risk) +
-          normalizedToken
-        ) / 6;
+        if (evalUsage) {
+          totalInputTokens += evalUsage.prompt_tokens || 0;
+          totalOutputTokens += evalUsage.completion_tokens || 0;
+        }
+        pipelineMetrics.calls_total.evaluation++;
+
+        // Compute weighted composite score using the centralized function
+        const composite = computeCompositeScore(evalData);
 
         const metricsJson = JSON.stringify({
-          ...metricsData,
-          tokenCost,
-          compositeScore
+          ...evalData,
+          compositeScore: composite,
+          weights: EVALUATION_WEIGHTS,
         });
 
         db.prepare(`
@@ -807,39 +913,51 @@ Provide honest, objective scores based on the criteria.`;
           stage: "metrics",
           step: `scored-${candidateId}`,
           message: `Candidate ${i + 1} scored`,
-          details: { candidateId, compositeScore: compositeScore.toFixed(3), metrics: metricsData }
+          details: { candidateId, compositeScore: composite.toFixed(3), metrics: evalData }
         });
       } catch (err) {
-        console.error(`[pipeline] [${runId}] Failed to score candidate ${candidateId}:`, err);
-        // Don't throw, just let this candidate be unscored (will be filtered out in selection)
+        evalFailures++;
+        console.error(`[pipeline] [${runId}] Failed to evaluate candidate ${candidateId}:`, err);
+        sendEvent(runId, "stage-progress", {
+          stage: "metrics",
+          step: `eval-failed-${candidateId}`,
+          message: `Evaluation failed for candidate ${i + 1} — will use fallback score`,
+          details: { candidateId, error: err.message }
+        });
       }
     });
 
-    await Promise.all(scoringPromises);
+    await Promise.all(evaluationPromises);
+
+    if (evalFailures > 0 && evalFailures < candidateIds.length) {
+      sendEvent(runId, "stage-warning", {
+        stage: "metrics",
+        message: `${evalFailures}/${candidateIds.length} evaluations failed — proceeding with available scores`,
+      });
+    } else if (evalFailures === candidateIds.length) {
+      console.warn(`[pipeline] [${runId}] ALL evaluations failed — outcome will use fallback scoring`);
+      sendEvent(runId, "stage-warning", {
+        stage: "metrics",
+        message: "All evaluations failed — using fallback scoring for outcome selection",
+      });
+    }
 
     sendEvent(runId, "stage-complete", {
       stage: "metrics",
-      message: `Scoring completed`,
-      result: { candidateIds, count: candidateIds.length }
+      message: `Evaluation completed: ${candidateIds.length - evalFailures}/${candidateIds.length} scored successfully`,
+      result: { candidateIds, count: candidateIds.length, failures: evalFailures }
     });
 
     // ============================================
-    // Stage 5: Outcome Runner
+    // Stage 5: Outcome — Select best candidate (Pipeline v2)
     // ============================================
     sendEvent(runId, "stage-start", {
       stage: "outcome",
-      message: "Starting Outcome Runner...",
+      message: "Selecting best candidate...",
       timestamp: new Date().toISOString()
     });
 
-    sendEvent(runId, "stage-progress", {
-      stage: "outcome",
-      step: "selecting",
-      message: "Selecting best candidate...",
-      details: { candidateCount: candidateIds.length }
-    });
-
-    // Load all candidates with metrics
+    // Load all candidates with parsed metrics
     const candidates = candidateIds.map(id => {
       const row = db.prepare("SELECT * FROM candidate_prompts WHERE id = ?").get(id);
       return {
@@ -848,41 +966,30 @@ Provide honest, objective scores based on the criteria.`;
       };
     });
 
-    // Select best candidate by composite score
+    // Sort by compositeScore, tie-break by safety → completeness
     const sortedCandidates = candidates
-      .filter(c => c.metrics)
+      .filter(c => c.metrics && typeof c.metrics.compositeScore === "number")
       .sort((a, b) => {
-        const scoreA = a.metrics.compositeScore;
-        const scoreB = b.metrics.compositeScore;
-        if (Math.abs(scoreA - scoreB) < 0.001) {
-          // Tie-breaker: prefer higher safety, lower token cost
-          if (a.metrics.safety !== b.metrics.safety) {
-            return b.metrics.safety - a.metrics.safety;
-          }
-          return a.metrics.tokenCost - b.metrics.tokenCost;
+        const diff = b.metrics.compositeScore - a.metrics.compositeScore;
+        if (Math.abs(diff) > 0.001) return diff;
+        // Tie-breakers
+        if ((a.metrics.safety ?? 0) !== (b.metrics.safety ?? 0)) {
+          return (b.metrics.safety ?? 0) - (a.metrics.safety ?? 0);
         }
-        return scoreB - scoreA;
+        return (b.metrics.completeness ?? 0) - (a.metrics.completeness ?? 0);
       });
 
+    // Prefer refined candidates; fallback to originals
     const bestCandidate = sortedCandidates[0] || (candidates.length > 0 ? {
       ...candidates[0],
-      metrics: {
-        compositeScore: 0.1, // Low score to indicate fallback
-        clarity: 0.5,
-        coherence: 0.5,
-        styleMatch: 0.5,
-        safety: 0.5,
-        risk: 0.5,
-        tokenCost: 0
-      }
+      metrics: { compositeScore: 0.1 }
     } : null);
 
     if (!bestCandidate) {
-      throw new Error("No candidates available for selection (all agents failed or no output generated).");
+      throw new Error("No candidates available for selection.");
     }
 
-    // Optional: Add Fast Mode specific flags
-    if (mode === 'fast') {
+    if (mode === "fast") {
       bestCandidate.metrics = {
         ...bestCandidate.metrics,
         assumptions_used: true,
@@ -892,20 +999,29 @@ Provide honest, objective scores based on the criteria.`;
 
     const outcomeId = `outcome_${nanoid(12)}`;
 
-    // Store outcome in outcome_runs table (matching actual schema)
+    // Build ranking summary for result_json
+    const ranking = sortedCandidates.slice(0, 6).map((c, idx) => ({
+      rank: idx + 1,
+      id: c.id,
+      agent: c.agent,
+      compositeScore: c.metrics.compositeScore,
+    }));
+
     db.prepare(`
       INSERT INTO outcome_runs (id, spec_id, task, n, model, status, best_candidate_id, result_json, created_at)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       outcomeId,
       specId,
-      idea.substring(0, 500), // Use first 500 chars of idea as task
+      idea.substring(0, 500),
       candidateIds.length,
-      policy.outcomeRunner.model || "sorting-only", // No LLM call, only sorting by composite score
+      "composite-sort-v2",
       "completed",
       bestCandidate.id,
       JSON.stringify({
-        reasoning: `Selected ${bestCandidate.agent} candidate with compositeScore = ${bestCandidate.metrics.compositeScore.toFixed(3)}`,
+        pipelineVersion: 2,
+        reasoning: `Selected ${bestCandidate.agent} (composite ${bestCandidate.metrics.compositeScore.toFixed(3)})`,
+        ranking,
         bestCandidate: {
           id: bestCandidate.id,
           agent: bestCandidate.agent,
@@ -1010,28 +1126,45 @@ Provide honest, objective scores based on the criteria.`;
     }
     
     // ============================================
-    // Token Hardening: Pipeline Metrics Summary
+    // Pipeline v2: Metrics Summary
     // ============================================
-    pipelineMetrics.calls_total.outcome_runner = 0; // No LLM call
+    pipelineMetrics.calls_total.outcome_runner = 0; // No LLM call in outcome
     const metricsSummary = {
       runId,
       mode,
+      pipelineVersion: 2,
       calls_total: pipelineMetrics.calls_total,
       retries_total: pipelineMetrics.retries_total,
-      qe_rounds: pipelineMetrics.qe_rounds,
-      generation_retries: pipelineMetrics.generation_retries,
-      score_calls: pipelineMetrics.score_calls,
-      tokens_estimated: {
+      tokens: {
         input: totalInputTokens,
         output: totalOutputTokens,
         total: totalInputTokens + totalOutputTokens
       },
-      feature_flags: {
-        QE_STRICT_MAX_ROUNDS: process.env.QE_STRICT_MAX_ROUNDS !== 'false',
-        SCORING_SPEC_MINIFY: process.env.SCORING_SPEC_MINIFY === 'true'
-      }
+      stages_executed: getStageList(mode),
+      bestScore: bestCandidate.metrics?.compositeScore ?? null,
+      candidateCount: candidateIds.length,
+      durationMs: Date.now() - startTime,
     };
-    console.log(`[pipeline] [${runId}] 🔍 Token Hardening Metrics Summary:`, JSON.stringify(metricsSummary, null, 2));
+    console.log(`[pipeline] [${runId}] Pipeline v2 Metrics:`, JSON.stringify(metricsSummary, null, 2));
+
+    // Persist run record to `runs` table for analytics dashboard
+    try {
+      db.prepare(`
+        INSERT OR REPLACE INTO runs (id, spec_id, model, status, input_blocks, raw_output, completed_at, metrics_json, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, datetime('now'), ?, ?)
+      `).run(
+        runId,
+        specId,
+        `pipeline-v2/${mode}`,
+        "completed",
+        JSON.stringify({ idea: idea.substring(0, 500), mode }),
+        bestCandidate.content?.substring(0, 2000) || null,
+        JSON.stringify(metricsSummary),
+        now
+      );
+    } catch (runInsertErr) {
+      console.warn(`[pipeline] [${runId}] Failed to persist run record: ${runInsertErr.message}`);
+    }
     
     // Final completion event with historical data and token usage
     sendEvent(runId, "complete", {
@@ -1062,11 +1195,51 @@ Provide honest, objective scores based on the criteria.`;
     recordUsage(userId, 'prompt_optimization');
     console.log(`[pipeline] [${runId}] Usage recorded successfully`);
 
+    // ── Auto-harvest: store high-scoring candidates in Exemplar Bank ──
+    try {
+      for (const c of sortedCandidates) {
+        if (!c.metrics || typeof c.metrics.compositeScore !== "number") continue;
+        const harvest = harvestExemplar({
+          userId,
+          specId,
+          runId,
+          candidateId: c.id,
+          mode,
+          promptText: c.content,
+          taskDomain: normalizedSpec.domain || null,
+          specSummary: normalizedSpec.userGoal?.substring(0, 200) || null,
+          language: normalizedSpec.language || "en",
+          metrics: c.metrics,
+        });
+        if (harvest.harvested) {
+          console.log(`[pipeline] [${runId}] Exemplar harvested: ${harvest.id} (agent=${c.agent}, score=${c.metrics.compositeScore})`);
+        }
+      }
+    } catch (harvestErr) {
+      // Non-critical — pipeline continues
+      console.warn(`[pipeline] [${runId}] Exemplar harvest error: ${harvestErr.message}`);
+    }
+
   } catch (err) {
     console.error(`[pipeline] ❌ Error in pipeline execution for ${runId}:`, err);
     console.error(`[pipeline] Error stack:`, err.stack);
     const errorMessage = err.message || "Pipeline execution failed";
     const isTimeout = errorMessage.includes("timeout");
+
+    // Persist failed run for analytics
+    try {
+      db.prepare(`
+        INSERT OR IGNORE INTO runs (id, spec_id, model, status, input_blocks, completed_at, metrics_json, created_at)
+        VALUES (?, ?, ?, ?, ?, datetime('now'), ?, datetime('now'))
+      `).run(
+        runId,
+        null,
+        `pipeline-v2/${mode}`,
+        isTimeout ? "timeout" : "failed",
+        JSON.stringify({ idea: idea?.substring(0, 500), mode }),
+        JSON.stringify({ error: errorMessage, durationMs: Date.now() - startTime })
+      );
+    } catch (_) { /* best-effort */ }
     
     // Send detailed error event
     sendEvent(runId, "error", {

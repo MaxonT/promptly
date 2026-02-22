@@ -17,6 +17,7 @@ import { db, ensureUser } from "../lib/db.js";
 import { chatText, chatJson, LlmDisabledError } from "../lib/llmRouter.js";
 import { getModelConfig, resolveModelName, isValidModel } from "../lib/modelRegistry.js";
 import { requireAuth } from "./auth.js";
+import { NON_PIPELINE_DEFAULT } from "../lib/modelConfig.js";
 
 export const promptsRouter = Router();
 promptsRouter.use(requireAuth);
@@ -277,7 +278,7 @@ Please evaluate this candidate prompt and return the scores as JSON.`;
         const { data: scores } = await chatJson({
           system: systemPrompt,
           user: userPrompt,
-          provider: 'openai' // STRICT CONTRACT: Explicitly set provider
+          ...NON_PIPELINE_DEFAULT,
         });
 
         const clarity = Math.max(0, Math.min(1, scores.clarity || 0.5));

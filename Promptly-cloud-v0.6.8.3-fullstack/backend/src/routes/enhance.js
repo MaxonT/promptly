@@ -86,6 +86,7 @@ import express from "express";
 import { chatJson, chatText, LlmDisabledError } from "../lib/llmRouter.js";
 import { checkPromptOptimizationLimit, recordUsage } from "../lib/planLimits.js";
 import { requireAuth } from "./auth.js";
+import { NON_PIPELINE_DEFAULT } from "../lib/modelConfig.js";
 
 const enhanceRouter = express.Router();
 enhanceRouter.use(requireAuth);
@@ -334,13 +335,12 @@ Required Format:
     // Optimization: Use temp 0.5 to encourage divergence in the first shot, reducing the need for retries.
     // We KEEP the retry mechanism (maxRetries: 1) as a safety net, but it should trigger less often.
     const { text: enhanced, model: modelUsed, completionId, similarity } = await chatText({ 
-      provider: 'openai',
+      ...NON_PIPELINE_DEFAULT,
       system, 
       user: fullPrompt,
-      provider: 'openai', // STRICT CONTRACT: Explicitly set provider
-      temperature: 0.5,     // Increased from default 0.2 to reduce retry probability
-      minSimilarity: 0.85,  // Keep quality check
-      maxRetries: 1         // Keep safety net
+      temperature: 0.5,
+      minSimilarity: 0.85,
+      maxRetries: 1
     });
     
     console.log(`[promptly] ✅ Received enhanced prompt from LLM, length: ${enhanced?.length || 0} chars`);
@@ -411,11 +411,10 @@ Output: Enhanced prompt only.`;
 
     // Optimization: Use temp 0.5 to encourage divergence in the first shot
     const { text: enhanced, model: modelUsed, completionId, similarity } = await chatText({ 
-      provider: 'openai',
+      ...NON_PIPELINE_DEFAULT,
       system, 
       user: fullPrompt,
-      provider: 'openai', // STRICT CONTRACT: Explicitly set provider
-      temperature: 0.5,     // Increased from default 0.2
+      temperature: 0.5,
       minSimilarity: 0.85,
       maxRetries: 1
     });
@@ -479,11 +478,10 @@ Output: Simplified prompt only.`;
 
     // Optimization: Use temp 0.5 to encourage divergence in the first shot
     const { text: enhanced, model: modelUsed, completionId, similarity } = await chatText({ 
-      provider: 'openai',
+      ...NON_PIPELINE_DEFAULT,
       system, 
       user: fullPrompt,
-      provider: 'openai', // STRICT CONTRACT: Explicitly set provider
-      temperature: 0.5,     // Increased from default 0.2
+      temperature: 0.5,
       minSimilarity: 0.85,
       maxRetries: 1
     });
@@ -547,9 +545,9 @@ Return ONLY a JSON object in this exact format:
 }`;
 
     const { data: result, model: modelUsed, completionId } = await chatJson({ 
+      ...NON_PIPELINE_DEFAULT,
       system, 
       user: fullPrompt,
-      provider: 'openai' // STRICT CONTRACT: Explicitly set provider
     });
     logModelUsage("/enhance/score", modelUsed, completionId);
 
@@ -607,9 +605,9 @@ Return ONLY a JSON object in this exact format:
 If no issues found, return {"issues": []}`;
 
     const { data: result, model: modelUsed, completionId } = await chatJson({ 
+      ...NON_PIPELINE_DEFAULT,
       system, 
       user: fullPrompt,
-      provider: 'openai' // STRICT CONTRACT: Explicitly set provider
     });
     logModelUsage("/enhance/validate", modelUsed, completionId);
 

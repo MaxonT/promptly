@@ -9,6 +9,7 @@ import {
 } from "../lib/llmAgents.js";
 import { compileSpecToPrompt } from "../lib/specCompiler.js";
 import { chatJson, LlmDisabledError } from "../lib/llmRouter.js";
+import { NON_PIPELINE_DEFAULT } from "../lib/modelConfig.js";
 import { goBack, skipQuestion } from "../lib/questionNavigator.js";
 import { getModelIds, resolveModelName, isValidModel, getModelConfig } from "../lib/modelRegistry.js";
 import { INFERENCE_PROFILES } from "../lib/inferenceProfiles.js";
@@ -1280,7 +1281,7 @@ Based on this specification and Q&A history, generate the next clarifying questi
 
     // 6. Call LLM to generate next question
     const { data: llmResponse } = await chatJson({
-      provider: 'openai',
+      ...NON_PIPELINE_DEFAULT,
       system: systemPrompt,
       user: userPrompt
     });

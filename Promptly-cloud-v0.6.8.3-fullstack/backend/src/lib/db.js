@@ -313,6 +313,38 @@ CREATE TABLE IF NOT EXISTS user_daily_refresh_tracker (
 );
 
 CREATE INDEX IF NOT EXISTS idx_refresh_tracker_updated ON user_daily_refresh_tracker(updated_at);
+
+-- ─── Exemplar Bank (Pipeline v2) ─────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS exemplar_bank (
+  id              TEXT PRIMARY KEY,
+  user_id         TEXT NOT NULL,
+  spec_id         TEXT,
+  run_id          TEXT,
+  candidate_id    TEXT,
+  mode            TEXT NOT NULL DEFAULT 'standard',
+  prompt_text     TEXT NOT NULL,
+  task_domain     TEXT,
+  spec_summary    TEXT,
+  language        TEXT DEFAULT 'en',
+  composite_score REAL NOT NULL,
+  completeness    REAL,
+  clarity         REAL,
+  specificity     REAL,
+  structure       REAL,
+  coherence       REAL,
+  creativity      REAL,
+  safety          REAL,
+  efficiency      REAL,
+  usage_count     INTEGER DEFAULT 0,
+  created_at      TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at      TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_exemplar_user    ON exemplar_bank(user_id);
+CREATE INDEX IF NOT EXISTS idx_exemplar_domain  ON exemplar_bank(task_domain);
+CREATE INDEX IF NOT EXISTS idx_exemplar_score   ON exemplar_bank(composite_score DESC);
+CREATE INDEX IF NOT EXISTS idx_exemplar_mode    ON exemplar_bank(mode);
+CREATE INDEX IF NOT EXISTS idx_exemplar_created ON exemplar_bank(created_at);
 `);
 
   // SQLite helper functions
@@ -341,6 +373,40 @@ CREATE INDEX IF NOT EXISTS idx_refresh_tracker_updated ON user_daily_refresh_tra
   ensureColumn("runs", "completed_at", "TEXT");
   ensureColumn("runs", "metrics_json", "TEXT");
   ensureColumn("evaluations", "metrics_json", "TEXT");
+
+  // ─── Exemplar FTS5 (separate exec for VIRTUAL TABLE compat) ──────────
+  try {
+    sqliteDb.exec(`
+      CREATE VIRTUAL TABLE IF NOT EXISTS exemplar_fts USING fts5(
+        id UNINDEXED,
+        prompt_text,
+        spec_summary,
+        task_domain,
+        content='exemplar_bank',
+        content_rowid='rowid'
+      );
+
+      CREATE TRIGGER IF NOT EXISTS exemplar_fts_insert AFTER INSERT ON exemplar_bank BEGIN
+        INSERT INTO exemplar_fts(rowid, id, prompt_text, spec_summary, task_domain)
+        VALUES (new.rowid, new.id, new.prompt_text, new.spec_summary, new.task_domain);
+      END;
+
+      CREATE TRIGGER IF NOT EXISTS exemplar_fts_delete AFTER DELETE ON exemplar_bank BEGIN
+        INSERT INTO exemplar_fts(exemplar_fts, rowid, id, prompt_text, spec_summary, task_domain)
+        VALUES ('delete', old.rowid, old.id, old.prompt_text, old.spec_summary, old.task_domain);
+      END;
+
+      CREATE TRIGGER IF NOT EXISTS exemplar_fts_update AFTER UPDATE ON exemplar_bank BEGIN
+        INSERT INTO exemplar_fts(exemplar_fts, rowid, id, prompt_text, spec_summary, task_domain)
+        VALUES ('delete', old.rowid, old.id, old.prompt_text, old.spec_summary, old.task_domain);
+        INSERT INTO exemplar_fts(rowid, id, prompt_text, spec_summary, task_domain)
+        VALUES (new.rowid, new.id, new.prompt_text, new.spec_summary, new.task_domain);
+      END;
+    `);
+  } catch (ftsErr) {
+    // FTS5 may not be available in all SQLite builds — log but don't crash
+    console.warn("[promptly] FTS5 setup skipped (not critical):", ftsErr.message);
+  }
 
   // Ensure demo user exists
   try {

@@ -290,7 +290,7 @@ function renderCharts() {
     });
   }
   
-  // Cumulative Users Chart (保持不变)
+  // Cumulative Page Views Chart (保持不变)
   const cumulativeCtx = document.getElementById('cumulativeChart')?.getContext('2d');
   if (cumulativeCtx) {
     if (state.charts.cumulative) {
@@ -306,7 +306,7 @@ function renderCharts() {
       data: {
         labels: cumulativeData.map(d => d.label),
         datasets: [{
-          label: 'Total Users',
+          label: 'Total Page Views',
           data: cumulativeData.map(d => d.cumulativeUsers),
           borderColor: '#8b5cf6',
           backgroundColor: 'rgba(139, 92, 246, 0.15)',
@@ -331,7 +331,7 @@ function renderCharts() {
             padding: 12,
             cornerRadius: 8,
             callbacks: {
-              label: (ctx) => `Total Users: ${formatNumber(ctx.raw)}`
+              label: (ctx) => `Total Page Views: ${formatNumber(ctx.raw)}`
             }
           }
         },

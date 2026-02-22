@@ -164,7 +164,7 @@ Access to fetch at '...' has been blocked by CORS policy
 4. 浏览器控制台的完整错误信息
 5. Render 后端日志的相关部分
 
-联系方式：ming.t.yang@vanderbilt.edu
+联系方式：PromptlyGuli@gmail.com
 
 ---
 

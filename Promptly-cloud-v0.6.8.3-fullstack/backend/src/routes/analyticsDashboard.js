@@ -81,10 +81,17 @@ analyticsDashboardRouter.get("/summary", (req, res) => {
       SELECT MAX(created_at) as maxTime FROM analytics_users
     `).get()?.maxTime;
 
-    // Total users
-    const totalUsers = db.prepare(`
+    // Total users - 使用 analytics_daily 的 cumulative_users（最可靠的指标）
+    // 因为 analytics_users 表记录可能因服务器重启而丢失，
+    // 但 cumulative_users 是线性累加的，更能反映真实增长
+    const cumulativeFromDaily = db.prepare(`
+      SELECT cumulative_users FROM analytics_daily ORDER BY date DESC LIMIT 1
+    `).get()?.cumulative_users || 0;
+    const countFromUsers = db.prepare(`
       SELECT COUNT(*) as count FROM analytics_users
     `).get()?.count || 0;
+    // 使用两者中较大的值，确保不因数据库重置而丢失已有增长
+    const totalUsers = Math.max(cumulativeFromDaily, countFromUsers);
     
     // New users relative to NOW (not the most recent data date)
     // ✅ 修复：使用当前时间作为锚点，而不是最后一个用户注册时间
@@ -832,6 +839,62 @@ analyticsDashboardRouter.post("/track/behavior", (req, res) => {
     res.status(500).json({ ok: false, error: 'Internal error' });
   }
 });
+/**
+ * POST /api/analytics/dashboard/admin/backfill-daily
+ * Admin endpoint to backfill historical analytics_daily records
+ * Used to fill gaps in the timeline (e.g., after server hibernation)
+ */
+analyticsDashboardRouter.post("/admin/backfill-daily", async (req, res) => {
+  try {
+    const adminKey = req.headers['x-admin-key'] || req.body.adminKey;
+    const expectedKey = process.env.ADMIN_API_KEY;
+    if (expectedKey && adminKey !== expectedKey) {
+      return res.status(401).json({ ok: false, error: 'Unauthorized' });
+    }
+
+    const { records } = req.body;
+    if (!Array.isArray(records) || records.length === 0) {
+      return res.status(400).json({ ok: false, error: 'records array required' });
+    }
+
+    let inserted = 0;
+    let skipped = 0;
+
+    const insertStmt = db.prepare(`
+      INSERT OR IGNORE INTO analytics_daily 
+        (date, unique_users, new_users, returning_users, total_sessions, 
+         total_page_views, avg_session_duration, bounce_rate, cumulative_users, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+    `);
+
+    for (const r of records) {
+      if (!r.date) continue;
+      try {
+        const result = insertStmt.run(
+          r.date,
+          r.unique_users || r.uniqueUsers || 0,
+          r.new_users || r.newUsers || 0,
+          r.returning_users || r.returningUsers || 0,
+          r.total_sessions || r.totalSessions || 0,
+          r.total_page_views || r.totalPageViews || 0,
+          r.avg_session_duration || r.avgSessionDuration || 0,
+          r.bounce_rate || r.bounceRate || 0.15,
+          r.cumulative_users || r.cumulativeUsers || 0
+        );
+        if (result.changes > 0) inserted++;
+        else skipped++;
+      } catch (e) {
+        skipped++;
+      }
+    }
+
+    res.json({ ok: true, inserted, skipped, total: records.length });
+  } catch (err) {
+    console.error('[analytics-dashboard] Backfill error:', err);
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
 /**
  * GET /api/analytics/dashboard/admin/realtime-count
  * Debug endpoint - returns real-time database counts

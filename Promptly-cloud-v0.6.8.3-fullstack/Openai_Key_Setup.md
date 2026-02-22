@@ -243,7 +243,7 @@ PORT=10000
 1. **查看 Render 日志**（复制完整错误）
 2. **测试 API Key**（使用上面的 curl 命令）
 3. **检查 OpenAI 状态**：https://status.openai.com/
-4. **联系支持**：ming.t.yang@vanderbilt.edu
+4. **联系支持**：PromptlyGuli@gmail.com
 
 提供以下信息：
 - Render 后端 URL

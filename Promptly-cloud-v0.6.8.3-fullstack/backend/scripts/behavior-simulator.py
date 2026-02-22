@@ -415,9 +415,16 @@ def wait_for_network():
     )
 
 
-def verify_cloud_sync(users, sessions, max_retries=3):
+def verify_cloud_sync(expected_users_increment, expected_sessions_increment, before_users, before_sessions, max_retries=3):
     """
     验证云端是否真的接收并写入了数据
+    
+    参数:
+        expected_users_increment: 预期增加的用户数
+        expected_sessions_increment: 预期增加的会话数
+        before_users: 写入前的用户总数
+        before_sessions: 写入前的会话总数
+        max_retries: 最大重试次数
     
     返回: (success: bool, cloud_total_users: int, cloud_total_sessions: int)
     """
@@ -431,8 +438,25 @@ def verify_cloud_sync(users, sessions, max_retries=3):
                 if data.get("ok"):
                     cloud_users = data.get("realtime", {}).get("analytics_users", 0)
                     cloud_sessions = data.get("realtime", {}).get("analytics_sessions", 0)
-                    log_message(f"🔍 云端验证: {cloud_users} 用户, {cloud_sessions} 会话")
-                    return True, cloud_users, cloud_sessions
+                    
+                    # 验证增量是否符合预期
+                    actual_users_increment = cloud_users - before_users
+                    actual_sessions_increment = cloud_sessions - before_sessions
+                    
+                    log_message(f"🔍 云端验证: {cloud_users} 用户 (+{actual_users_increment}), {cloud_sessions} 会话 (+{actual_sessions_increment})")
+                    
+                    # 允许一定的误差（因为可能有其他实例在写入）
+                    # 只要增量>=预期的80%就认为成功
+                    users_ok = actual_users_increment >= expected_users_increment * 0.8
+                    sessions_ok = actual_sessions_increment >= expected_sessions_increment * 0.8
+                    
+                    if users_ok and sessions_ok:
+                        return True, cloud_users, cloud_sessions
+                    else:
+                        log_message(f"⚠️ 云端增量不符合预期: 用户 {actual_users_increment}/{expected_users_increment}, 会话 {actual_sessions_increment}/{expected_sessions_increment}", "WARN")
+                        if attempt < max_retries - 1:
+                            time.sleep(5)
+                            continue
         except Exception as e:
             log_message(f"⚠️ 验证请求失败 (尝试 {attempt+1}/{max_retries}): {e}", "WARN")
             if attempt < max_retries - 1:
@@ -442,16 +466,30 @@ def verify_cloud_sync(users, sessions, max_retries=3):
 
 
 def api_call_generate_data(users, sessions, retries=0):
-
     """
     发送数据到云端和本地数据库
     
     执行流程:
-    1. 先插入到本地 SQLite 数据库 ✅
-    2. 同时发送到云端 API ☁️
-    3. 两个目标都成功才算成功
+    1. 先获取云端当前数据量（用于验证）
+    2. 插入到本地 SQLite 数据库 ✅
+    3. 同时发送到云端 API ☁️
+    4. 验证云端数据是否真的增加了
+    5. 两个目标都成功才算成功
     """
     log_message(f"📦 准备插入数据: {users} 用户, {sessions} 会话")
+    
+    # 步骤 0: 获取云端当前数据量（用于后续验证）
+    before_users, before_sessions = 0, 0
+    try:
+        response = requests.get(f"{CONFIG['API_BASE']}/api/analytics/dashboard/admin/realtime-count", timeout=10)
+        if response.status_code == 200:
+            data = response.json()
+            if data.get("ok"):
+                before_users = data.get("realtime", {}).get("analytics_users", 0)
+                before_sessions = data.get("realtime", {}).get("analytics_sessions", 0)
+                log_message(f"📊 云端当前状态: {before_users} 用户, {before_sessions} 会话")
+    except Exception as e:
+        log_message(f"⚠️ 无法获取云端状态: {e}", "WARN")
     
     # 步骤 1: 插入到本地数据库
     local_success = insert_data_to_local_db(users, sessions)
@@ -494,27 +532,33 @@ def api_call_generate_data(users, sessions, retries=0):
             log_message(f"🔄 {CONFIG['RETRY_DELAY']}秒后重试 ({retries+1}/{CONFIG['MAX_RETRIES']})", "WARN")
             time.sleep(CONFIG["RETRY_DELAY"])
             return api_call_generate_data(users, sessions, retries + 1)
-        else:
-            wait_for_network()
-            return api_call_generate_data(users, sessions, 0)
-    
-    except requests.exceptions.Timeout:
-        log_message(f"⏱️ 云端请求超时", "WARN")
-        api_success = False
-    
-    except Exception as e:
-        log_message(f"❌ 云端 API 错误: {type(e).__name__}: {e}", "ERROR")
-        import traceback
-        log_message(f"📋 堆栈跟踪:\n{traceback.format_exc()}", "ERROR")
-        api_success = False
-    
-    # 最终结果: 至少本地数据库成功就可以继续
-    # 如果本地成功但云端失败，数据不会丢失，加入待同步队列
+        else本地和云端都要成功
     if local_success:
         if api_success:
-            # 尝试验证数据
-            verify_ok, cloud_users, cloud_sessions = verify_cloud_sync(users, sessions)
+            # 必须验证数据真的写入了（验证增量）
+            verify_ok, cloud_users, cloud_sessions = verify_cloud_sync(
+                users, sessions, before_users, before_sessions
+            )
             if verify_ok:
+                log_message("✨ 数据已保存到本地和云端（已验证）", "INFO")
+                return True
+            else:
+                # API返回成功但数据没真的写入（或增量不对）
+                batch_id = add_pending_sync(users, sessions)
+                log_message(f"⚠️ 云端验证失败（数据未写入或增量异常），已加入待同步队列 (批次 {batch_id})", "WARN")
+                # ⚠️ 返回False，因为云端同步实际失败了
+                return False
+        else:
+            # 云端API调用失败
+            batch_id = add_pending_sync(users, sessions)
+            log_message(f"⚠️ 云端API调用失败，已加入待同步队列 (批次 {batch_id})", "WARN")
+            # ⚠️ 返回False，因为虽然本地成功但云端失败了
+            return False
+    else:
+        # 本地数据库失败
+        log_message("❌ 本地数据库插入失败", "ERROR")
+        if api_success:
+            log_message("⚠️ 但云端API成功了（数据不一致！需要手动检查）", "WARN
                 log_message("✨ 数据已保存到本地和云端", "INFO")
                 return True
             else:

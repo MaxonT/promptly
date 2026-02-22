@@ -4,6 +4,7 @@ import helmet from "helmet";
 import cookieParser from "cookie-parser";
 import rateLimit from "express-rate-limit";
 import dotenv from "dotenv";
+import { nanoid } from "nanoid";
 import { db } from "./lib/db.js";
 import { getResolvedDefaultModel, isLlmEnabled } from "./lib/llmRouter.js";
 import { authRouter } from "./routes/auth.js";
@@ -250,6 +251,57 @@ app.use("/api/*", (req, res) => {
     availableEndpoints: "Visit root path (/) for available endpoints"
   });
 });
+
+// =============================================
+// Problem A1: Stale Pending Run Cleanup
+// 清理悬挂的 pending runs（服务崩溃/重启遗留）
+// =============================================
+
+function cleanupStalePendingRuns() {
+  const STALE_THRESHOLD_MS = 30 * 60 * 1000; // 30 分钟
+  const cutoff = new Date(Date.now() - STALE_THRESHOLD_MS).toISOString();
+  const now = new Date().toISOString();
+
+  try {
+    const staleRuns = db.prepare(
+      `SELECT id FROM runs WHERE status = 'pending' AND created_at < ?`
+    ).all(cutoff);
+
+    if (staleRuns.length === 0) return;
+
+    const markFailed = db.transaction(() => {
+      for (const run of staleRuns) {
+        db.prepare(
+          `UPDATE runs SET status = 'failed', completed_at = ? WHERE id = ?`
+        ).run(now, run.id);
+
+        db.prepare(
+          `INSERT INTO run_errors (id, run_id, error_type, details, detected_by, created_at)
+           VALUES (?, ?, ?, ?, ?, ?)`
+        ).run(
+          `err_${nanoid(16)}`,
+          run.id,
+          'stale_pending',
+          'Run exceeded 30-minute pending timeout; likely caused by server restart or crash.',
+          'cleanup_job',
+          now
+        );
+      }
+    });
+
+    markFailed();
+    console.log(`[promptly] 🧹 Cleanup: marked ${staleRuns.length} stale pending run(s) as failed`);
+  } catch (err) {
+    // 清理失败不应阻断服务启动
+    console.error('[promptly] ⚠️ Stale run cleanup failed (non-fatal):', err.message);
+  }
+}
+
+// 启动时立即清理一次
+cleanupStalePendingRuns();
+
+// 之后每小时定期清理
+setInterval(cleanupStalePendingRuns, 60 * 60 * 1000).unref();
 
 const PORT = process.env.PORT || 8080;
 app.listen(PORT, () => {

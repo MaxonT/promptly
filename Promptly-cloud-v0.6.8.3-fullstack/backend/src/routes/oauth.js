@@ -12,7 +12,14 @@ import { nanoid } from "nanoid";
 export const oauthRouter = Router();
 
 // OAuth Configuration
-const TOKEN_SECRET = process.env.JWT_SECRET || "dev";
+// Problem C: JWT_SECRET 必须显式设置，任何环境均不允许使用默认弱密钥
+const TOKEN_SECRET = process.env.JWT_SECRET;
+if (!TOKEN_SECRET) {
+  throw new Error(
+    "[promptly] FATAL: JWT_SECRET environment variable must be set. " +
+    "OAuth authentication cannot start without a secure secret."
+  );
+}
 const TOKEN_EXPIRES_IN = process.env.JWT_EXPIRES_IN || "7d";
 
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;

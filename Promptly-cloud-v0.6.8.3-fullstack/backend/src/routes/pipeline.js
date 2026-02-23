@@ -20,6 +20,7 @@ import { spendTokensForRun, getTokenStatus } from "../lib/tokenUsage.js";
 import { FEATURES } from "../lib/subscriptionConfig.js";
 import { checkPromptOptimizationLimit, recordUsage, canUseMode } from "../lib/planLimits.js";
 import { validatePromptInput } from "../lib/inputValidator.js";
+import { detectAmbiguity } from "../lib/ambiguityDetector.js";
 import { requireAuth } from "./auth.js";
 
 export const pipelineRouter = Router();
@@ -143,7 +144,8 @@ const PipelineRunRequestSchema = z.object({
     size: z.number()
   })).optional(),
   skipQuestions: z.boolean().optional(),
-  model: z.string().optional()
+  model: z.string().optional(),
+  clarificationsProvided: z.boolean().optional(),
 });
 
 pipelineRouter.post("/run", requireAuth, async (req, res) => {
@@ -157,7 +159,7 @@ pipelineRouter.post("/run", requireAuth, async (req, res) => {
     return res.status(400).json({ ok: false, error: parsed.error.flatten() });
   }
 
-  const { idea, attachments = [], skipQuestions = false, model: modeInput = null } = parsed.data;
+  const { idea, attachments = [], skipQuestions = false, model: modeInput = null, clarificationsProvided = false } = parsed.data;
   const mode = modeInput || 'fast';
   
   // Check plan limits
@@ -188,7 +190,7 @@ pipelineRouter.post("/run", requireAuth, async (req, res) => {
 
   // Execute pipeline asynchronously and send events
   // Note: recordUsage is now called inside executePipelineWithEvents on success
-  executePipelineWithEvents(runId, userId, { idea, attachments, skipQuestions, modeInput })
+  executePipelineWithEvents(runId, userId, { idea, attachments, skipQuestions, modeInput, clarificationsProvided })
     .catch((err) => {
       console.error(`[pipeline] Pipeline execution failed for ${runId}:`, err);
       sendEvent(runId, "error", {
@@ -203,7 +205,7 @@ pipelineRouter.post("/run", requireAuth, async (req, res) => {
  * Execute full pipeline and send SSE events
  * With timeout protection (default: 5 minutes)
  */
-async function executePipelineWithEvents(runId, userId, { idea, attachments, skipQuestions, modeInput }) {
+async function executePipelineWithEvents(runId, userId, { idea, attachments, skipQuestions, modeInput, clarificationsProvided = false }) {
   const PIPELINE_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
   const startTime = Date.now();
   
@@ -320,6 +322,26 @@ async function executePipelineWithEvents(runId, userId, { idea, attachments, ski
     }
 
     sendEvent(runId, "stage-complete", { stage: "validation" });
+
+    // ============================================
+    // Stage 0.5: Ambiguity Detection Gate
+    // Asks the user for critical missing context BEFORE any generation.
+    // Skipped when user has already provided clarifications on re-submission.
+    // Fail-open: any error continues directly to Stage 1.
+    // Quality mandate: never hallucinate missing context — always ask first.
+    // ============================================
+    if (!clarificationsProvided) {
+      const ambiguity = await detectAmbiguity(idea);
+      if (ambiguity.needsClarification) {
+        console.log(`[pipeline] [${runId}] Ambiguity detected (score=${ambiguity.ambiguityScore.toFixed(2)}) — requesting clarification`);
+        sendEvent(runId, "pipeline-clarification-needed", {
+          questions: ambiguity.questions,
+          ambiguityScore: ambiguity.ambiguityScore,
+        });
+        sendEvent(runId, "complete", { success: false, needsClarification: true });
+        return;
+      }
+    }
 
     // ============================================
     // Stage 1: Spec Builder

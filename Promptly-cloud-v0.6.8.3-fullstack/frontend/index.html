@@ -2907,6 +2907,24 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         break;
 
+      case 'pipeline-clarification-needed': {
+        // Input is valid but too vague to optimize without hallucinating.
+        // Show a targeted questions panel. Pipeline will resume on re-submit.
+        stopPipelineTimeline('More context needed');
+        if (pipelineContainer) pipelineContainer.classList.remove('is-processing');
+        if (bestPromptEl) {
+          bestPromptEl.classList.remove('processing-animation', 'success-highlight');
+          bestPromptEl.style.borderColor = '#7C3AED';
+          const isCh = data.questions?.[0]?.question && /[\u4e00-\u9fa5]/.test(data.questions[0].question);
+          const qLines = (data.questions || []).map((q, i) => `${i + 1}. ${q.question}`).join('\n');
+          bestPromptEl.value = isCh
+            ? `❓ 优化这个请求需要多一点上下文。\n\n${qLines}\n\n在下旹面板中回答，然后点「补充完成，开始优化 →」`
+            : `❓ A bit more context will prevent hallucination.\n\n${qLines}\n\nAnswer in the panel below, then click "Refine & Run →".`;
+        }
+        showClarificationPanel(data.questions || []);
+        break;
+      }
+
       case 'pipeline-rejected': {
         // Input validation failed — show helpful guidance, not an error state
         stopPipelineTimeline('Input not accepted');
@@ -2973,6 +2991,8 @@ document.addEventListener('DOMContentLoaded', () => {
           }
             } else if (data.rejected) {
           // Clean rejection — already handled by pipeline-rejected event, no-op here
+        } else if (data.needsClarification) {
+          // Clarification panel already shown by pipeline-clarification-needed — no-op here
         } else {
           updateBestPromptLiveTrace('⚠️ Pipeline completed with errors');
           stopPipelineTimeline('Pipeline completed with errors');
@@ -2982,6 +3002,98 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
   
+  // ─── Clarification Panel ────────────────────────────────────────────────────
+  // Shown when the ambiguity detector determines the input lacks critical context.
+  // The user answers 1-3 targeted questions, then re-submits with enriched input.
+  function showClarificationPanel(questions) {
+    const existing = document.getElementById('promptly-clarification-panel');
+    if (existing) existing.remove();
+    if (!questions || questions.length === 0) return;
+
+    const isCh = /[\u4e00-\u9fa5]/.test(questions[0]?.question || '');
+    const labels = {
+      title:  isCh ? '再补充一点上下文，优化质量会显著提升' : 'A bit more context — significantly better results',
+      sub:    isCh ? 'Promptly 已确认你的请求有效，但以下信息对最终输出影响重大。' : 'Your request is valid. These details prevent hallucination and keep the output on-target.',
+      submit: isCh ? '补充完成，开始优化 →' : 'Refine & Run →',
+      skip:   isCh ? '跳过' : 'Skip',
+      hint:   isCh ? '跳过后仍会优化，但结果可能不够精准' : 'Skipping is fine — Promptly will still optimize, but results may be less targeted',
+      ph:     isCh ? '你的回答…' : 'Your answer...',
+    };
+
+    const qHTML = questions.map((q, i) => `
+      <div style="margin-bottom:16px">
+        <label style="display:block;font-size:13px;font-weight:600;color:#CBD5E1;margin-bottom:6px;line-height:1.4">${i + 1}. ${q.question}</label>
+        <input id="clarify-ans-${i}" type="text" placeholder="${labels.ph}"
+          autocomplete="off"
+          style="width:100%;padding:9px 12px;background:#1E293B;border:1px solid #475569;border-radius:8px;color:#F1F5F9;font-size:14px;box-sizing:border-box;outline:none;transition:border-color .15s"
+          onfocus="this.style.borderColor='#7C3AED'" onblur="this.style.borderColor='#475569'"
+          onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();document.getElementById('clarify-submit').click()}">
+      </div>`).join('');
+
+    const panel = document.createElement('div');
+    panel.id = 'promptly-clarification-panel';
+    panel.setAttribute('role', 'dialog');
+    panel.setAttribute('aria-modal', 'true');
+    panel.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.65);z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(2px)';
+    panel.innerHTML = `
+      <div style="background:#0F172A;border:1px solid #334155;border-radius:16px;padding:28px 30px;max-width:520px;width:100%;box-shadow:0 25px 60px rgba(0,0,0,0.6)">
+        <div style="display:flex;align-items:flex-start;gap:12px;margin-bottom:6px">
+          <span style="font-size:22px;line-height:1;margin-top:1px">❓</span>
+          <h3 style="margin:0;font-size:16px;font-weight:700;color:#F1F5F9;line-height:1.3">${labels.title}</h3>
+        </div>
+        <p style="margin:0 0 20px 34px;font-size:13px;color:#94A3B8;line-height:1.6">${labels.sub}</p>
+        ${qHTML}
+        <div style="display:flex;gap:10px;margin-top:20px">
+          <button id="clarify-submit"
+            style="flex:1;padding:11px 16px;background:#7C3AED;color:white;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;transition:background .15s"
+            onmouseover="this.style.background='#6D28D9'" onmouseout="this.style.background='#7C3AED'">
+            ${labels.submit}
+          </button>
+          <button id="clarify-skip"
+            style="padding:11px 20px;background:transparent;color:#94A3B8;border:1px solid #334155;border-radius:8px;font-size:13px;cursor:pointer">
+            ${labels.skip}
+          </button>
+        </div>
+        <p style="margin:10px 0 0;font-size:11px;color:#475569;text-align:center">${labels.hint}</p>
+      </div>`;
+
+    document.body.appendChild(panel);
+    setTimeout(() => document.getElementById('clarify-ans-0')?.focus(), 80);
+
+    // "Refine & Run" — append answers to task input and re-submit
+    document.getElementById('clarify-submit').addEventListener('click', () => {
+      const answers = questions.map((q, i) => {
+        const val = (document.getElementById(`clarify-ans-${i}`)?.value || '').trim();
+        return val ? `${q.question}: ${val}` : null;
+      }).filter(Boolean);
+
+      panel.remove();
+      const tEl = document.getElementById('task');
+      if (tEl && answers.length > 0) {
+        const sep = isCh ? '\n\n[补充信息]\n' : '\n\n[Additional context]\n';
+        tEl.value = tEl.value.trimEnd() + sep + answers.join('\n');
+      }
+      window._clarificationsProvided = true;
+      document.getElementById('runBtn').click();
+    });
+
+    // "Skip" — re-submit as-is but mark clarifications as provided to skip the check
+    document.getElementById('clarify-skip').addEventListener('click', () => {
+      panel.remove();
+      window._clarificationsProvided = true;
+      document.getElementById('runBtn').click();
+    });
+
+    // Dismiss on backdrop click
+    panel.addEventListener('click', (e) => {
+      if (e.target === panel) {
+        panel.remove();
+        window._clarificationsProvided = true;
+        document.getElementById('runBtn').click();
+      }
+    });
+  }
+
   // P4.3: Show AI reasoning chain (Chain-of-Thought style)
   function showAIReasoningChain(stage, lines) {
     const logEl = document.getElementById(`node-log-${stage}`);
@@ -3190,6 +3302,10 @@ document.addEventListener('DOMContentLoaded', () => {
         throw new Error('Please log in first');
       }
 
+      // Capture and clear the clarifications flag (set by showClarificationPanel on re-submit)
+      const _clarificationsProvided = window._clarificationsProvided === true;
+      window._clarificationsProvided = false;
+
       const response = await window.authGuard.fetchWithAuth(pipelineUrl, {
         method: 'POST',
         headers: {
@@ -3199,7 +3315,8 @@ document.addEventListener('DOMContentLoaded', () => {
           idea: task,
           attachments: [],
           skipQuestions: false,
-          model: currentModel
+          model: currentModel,
+          clarificationsProvided: _clarificationsProvided,
         })
       });
 
@@ -3237,7 +3354,7 @@ document.addEventListener('DOMContentLoaded', () => {
       };
 
       // Handle all event types
-      const eventTypes = ['connected', 'stage-start', 'stage-progress', 'stage-complete', 'stage-skipped', 'error', 'complete', 'pipeline-rejected'];
+      const eventTypes = ['connected', 'stage-start', 'stage-progress', 'stage-complete', 'stage-skipped', 'error', 'complete', 'pipeline-rejected', 'pipeline-clarification-needed'];
       eventTypes.forEach(eventType => {
         currentPipelineEventSource.addEventListener(eventType, (e) => {
           try {

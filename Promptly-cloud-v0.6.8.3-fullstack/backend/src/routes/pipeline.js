@@ -866,13 +866,70 @@ RULES:
         }
       }
 
-      // Add refined candidates to the pool for evaluation
-      candidateIds.push(...refinedCandidateIds);
+      // ── Refine Validation: verify refined candidates are actually better ──
+      const validRefinedIds = [];
+      for (const refinedId of refinedCandidateIds) {
+        try {
+          const refinedRow = db.prepare("SELECT * FROM candidate_prompts WHERE id = ?").get(refinedId);
+          // Find the original candidate this was refined from
+          const originalAgent = refinedRow.agent.replace("_refined", "");
+          const originalRow = candidateIds
+            .map(id => db.prepare("SELECT * FROM candidate_prompts WHERE id = ?").get(id))
+            .find(r => r && r.agent === originalAgent);
+
+          if (!originalRow) {
+            validRefinedIds.push(refinedId);
+            continue;
+          }
+
+          const { data: validationData, usage: validationUsage } = await chatJson({
+            system: `You compare an ORIGINAL prompt vs its REFINED version to determine if the refinement improved quality.
+
+Output JSON:
+{
+  "verdict": "improved" | "unchanged" | "degraded",
+  "addressed_ratio": 0.0-1.0,
+  "reasoning": "1-2 sentence explanation"
+}`,
+            user: `---ORIGINAL---\n${originalRow.content}\n---END---\n\n---REFINED---\n${refinedRow.content}\n---END---\n\n---SPECIFICATION---\n${specContext}\n---END---`,
+            model: refineModel.model,
+            provider: refineModel.provider,
+            temperature: 0,
+          });
+
+          if (validationUsage) {
+            totalInputTokens += validationUsage.prompt_tokens || 0;
+            totalOutputTokens += validationUsage.completion_tokens || 0;
+          }
+          pipelineMetrics.calls_total.refine++;
+
+          if (validationData?.verdict === "degraded") {
+            console.warn(`[pipeline] [${runId}] Refine validation: ${refinedRow.agent} DEGRADED — dropping refined candidate`);
+            sendEvent(runId, "stage-progress", {
+              stage: "refine",
+              step: `validation-failed-${originalAgent}`,
+              message: `Refined ${originalAgent} was worse than original — reverting`,
+              details: { refinedId, verdict: "degraded", reasoning: validationData.reasoning }
+            });
+            // Don't add to pool — original stays
+          } else {
+            validRefinedIds.push(refinedId);
+            console.log(`[pipeline] [${runId}] Refine validation: ${refinedRow.agent} ${validationData?.verdict ?? "improved"} (addressed ${((validationData?.addressed_ratio ?? 1) * 100).toFixed(0)}%)`);
+          }
+        } catch (valErr) {
+          // Validation failure is non-fatal — keep the refined candidate
+          console.warn(`[pipeline] [${runId}] Refine validation failed (non-fatal): ${valErr.message}`);
+          validRefinedIds.push(refinedId);
+        }
+      }
+
+      // Add only validated refined candidates to the pool for evaluation
+      candidateIds.push(...validRefinedIds);
 
       sendEvent(runId, "stage-complete", {
         stage: "refine",
-        message: `Refinement completed — ${refinedCandidateIds.length} refined candidates added (${candidateIds.length} total in pool)`,
-        result: { refinedCandidateIds, totalCandidates: candidateIds.length }
+        message: `Refinement completed — ${validRefinedIds.length}/${refinedCandidateIds.length} refined candidates passed validation (${candidateIds.length} total in pool)`,
+        result: { refinedCandidateIds, validRefinedIds, totalCandidates: candidateIds.length }
       });
       endRefineTimer();
 
@@ -889,15 +946,17 @@ RULES:
     }
 
     // ============================================
-    // Stage 4: 8-Dimensional Weighted Evaluation (Pipeline v2)
+    // Stage 4: Batch Evaluation + Pairwise (Pipeline v2.1)
+    // Single LLM call: evaluates ALL candidates + pairwise comparison.
     // Uses cross-model evaluator (different from generation model).
+    // Cost: 1× 70b call instead of N+1 (saves 60-75% of eval cost).
     // ============================================
     const endEvalTimer = stageTimer("evaluation");
     const evalModel = getStageModel(mode, "evaluation");
 
     sendEvent(runId, "stage-start", {
       stage: "metrics",
-      message: `Evaluating ${candidateIds.length} candidates across 8 dimensions...`,
+      message: `Batch-evaluating ${candidateIds.length} candidates across 8 dimensions...`,
       timestamp: new Date().toISOString()
     });
 
@@ -918,82 +977,220 @@ RULES:
       })
       .join("\n");
 
-    const evalSystem = `You are an expert Prompt Evaluator. Score each dimension 0.0–1.0 with honest, differentiated scores.
+    // Load all candidate texts for batch evaluation
+    const evalCandidates = candidateIds.map((id, i) => {
+      const row = db.prepare("SELECT * FROM candidate_prompts WHERE id = ?").get(id);
+      return { id, index: i, agent: row.agent, content: row.content };
+    });
+
+    let evalFailures = 0;
+    let pairwiseResult = null;
+
+    const includePairwise = mode !== "fast" && evalCandidates.length >= 2;
+
+    const batchEvalSystem = `You are an expert Prompt Evaluator comparing multiple candidates simultaneously.
+
+TASK 1: Score EACH candidate on 8 dimensions (0.0–1.0).
+TASK 2: ${includePairwise ? "Perform a head-to-head pairwise comparison of the two BEST candidates." : "Skip pairwise (single candidate)."}
 
 DIMENSIONS (with weights):
 ${dimensionDescriptions}
 
-RULES:
-1. Compare the candidate prompt AGAINST the specification — not against some imaginary ideal.
+SCORING RULES:
+1. Compare each candidate AGAINST the specification — not against each other (that's what pairwise is for).
 2. Be ruthlessly honest. Avoid "everything is 0.85" syndrome.
 3. If a dimension is clearly weak, score it below 0.5.
 4. If a dimension is genuinely excellent, score it above 0.9.
+5. Differentiate — candidates MUST NOT all get similar scores unless they truly are similar.
+
+${includePairwise ? `PAIRWISE RULES:
+1. After scoring all candidates, identify the top-2 by overall quality.
+2. Compare them head-to-head considering ALL dimensions.
+3. Focus on which prompt would perform better in REAL usage.
+4. If they are very close, you may declare a tie.
+5. "candidateA" is the higher-scoring one, "candidateB" is the second.` : ""}
 
 OUTPUT (JSON only):
-{"completeness":0.0,"clarity":0.0,"specificity":0.0,"structure":0.0,"coherence":0.0,"creativity":0.0,"safety":0.0,"efficiency":0.0}`;
+{
+  "evaluations": [
+    {"candidateIndex": 0, "scores": {"completeness":0.0,"clarity":0.0,"specificity":0.0,"structure":0.0,"coherence":0.0,"creativity":0.0,"safety":0.0,"efficiency":0.0}},
+    ...one per candidate
+  ]${includePairwise ? `,
+  "pairwise": {
+    "candidateA_index": 0,
+    "candidateB_index": 1,
+    "winner": "A" | "B" | "tie",
+    "reasoning": "2-3 sentence explanation",
+    "confidenceScore": 0.0-1.0
+  }` : ""}
+}`;
 
-    let evalFailures = 0;
-    const evaluationPromises = candidateIds.map(async (candidateId, i) => {
-      try {
-        checkTimeout();
+    // Build the user prompt with all candidates
+    const candidateBlocks = evalCandidates
+      .map((c, i) => `---CANDIDATE ${i + 1} (${c.agent})---\n${c.content}\n---END ${i + 1}---`)
+      .join("\n\n");
 
-        sendEvent(runId, "stage-progress", {
-          stage: "metrics",
-          step: `scoring-${candidateId}`,
-          message: `Evaluating candidate ${i + 1}/${candidateIds.length}...`,
-          details: { candidateId, progress: `${i + 1}/${candidateIds.length}` }
-        });
+    try {
+      checkTimeout();
 
-        const candidate = db.prepare("SELECT * FROM candidate_prompts WHERE id = ?").get(candidateId);
+      console.log(`[pipeline] [${runId}] Batch eval: ${evalCandidates.length} candidates in 1 call (${evalModel.provider}/${evalModel.model})${includePairwise ? " + pairwise" : ""}`);
 
-        const { data: evalData, usage: evalUsage } = await chatJson({
-          system: evalSystem,
-          user: `Evaluate this candidate prompt against the specification.\n\n---CANDIDATE---\n${candidate.content}\n---END---\n\n---SPECIFICATION---\n${specContext}\n---END---`,
-          model: evalModel.model,
-          provider: evalModel.provider,
-          temperature: evalModel.temperature ?? 0,
-        });
+      // Schema for batch evaluation response
+      const evalScoresSchema = z.object({
+        completeness: z.number(),
+        clarity: z.number(),
+        specificity: z.number(),
+        structure: z.number(),
+        coherence: z.number(),
+        creativity: z.number(),
+        safety: z.number(),
+        efficiency: z.number(),
+      });
 
-        if (evalUsage) {
-          totalInputTokens += evalUsage.prompt_tokens || 0;
-          totalOutputTokens += evalUsage.completion_tokens || 0;
+      const batchEvalSchema = z.object({
+        evaluations: z.array(z.object({
+          candidateIndex: z.number(),
+          scores: evalScoresSchema,
+        })),
+        pairwise: z.object({
+          candidateA_index: z.number(),
+          candidateB_index: z.number(),
+          winner: z.enum(["A", "B", "tie"]),
+          reasoning: z.string().optional().default(""),
+          confidenceScore: z.number().optional().default(0.5),
+        }).optional().nullable(),
+      });
+
+      const { data: batchDataRaw, usage: batchUsage } = await chatJson({
+        system: batchEvalSystem,
+        user: `Evaluate all candidate prompts against the specification.\n\n${candidateBlocks}\n\n---SPECIFICATION---\n${specContext}\n---END---`,
+        model: evalModel.model,
+        provider: evalModel.provider,
+        temperature: evalModel.temperature ?? 0,
+      });
+
+      // Validate the raw LLM response against schema
+      const batchParsed = batchEvalSchema.safeParse(batchDataRaw);
+      if (!batchParsed.success) {
+        console.warn(`[pipeline] [${runId}] Batch eval schema validation failed:`, batchParsed.error.message);
+        // Attempt lenient extraction — evaluations array may still be usable
+      }
+      const batchData = batchParsed.success ? batchParsed.data : batchDataRaw;
+
+      if (batchUsage) {
+        totalInputTokens += batchUsage.prompt_tokens || 0;
+        totalOutputTokens += batchUsage.completion_tokens || 0;
+      }
+      pipelineMetrics.calls_total.evaluation = 1; // Single batch call
+
+      // Process each evaluation result
+      const evaluations = batchData?.evaluations || [];
+      for (const evalItem of evaluations) {
+        const idx = evalItem.candidateIndex;
+        const cand = evalCandidates[idx];
+        if (!cand) {
+          console.warn(`[pipeline] [${runId}] Batch eval returned unknown candidateIndex: ${idx}`);
+          continue;
         }
-        pipelineMetrics.calls_total.evaluation++;
 
-        // Compute weighted composite score using the centralized function
-        const composite = computeCompositeScore(evalData);
+        const scores = evalItem.scores;
+        const composite = computeCompositeScore(scores);
 
         const metricsJson = JSON.stringify({
-          ...evalData,
+          ...scores,
           compositeScore: composite,
           weights: EVALUATION_WEIGHTS,
         });
 
-        db.prepare(`
-          UPDATE candidate_prompts
-          SET metrics_json = ?
-          WHERE id = ?
-        `).run(metricsJson, candidateId);
+        db.prepare(`UPDATE candidate_prompts SET metrics_json = ? WHERE id = ?`).run(metricsJson, cand.id);
 
         sendEvent(runId, "stage-progress", {
           stage: "metrics",
-          step: `scored-${candidateId}`,
-          message: `Candidate ${i + 1} scored`,
-          details: { candidateId, compositeScore: composite.toFixed(3), metrics: evalData }
-        });
-      } catch (err) {
-        evalFailures++;
-        console.error(`[pipeline] [${runId}] Failed to evaluate candidate ${candidateId}:`, err);
-        sendEvent(runId, "stage-progress", {
-          stage: "metrics",
-          step: `eval-failed-${candidateId}`,
-          message: `Evaluation failed for candidate ${i + 1} — will use fallback score`,
-          details: { candidateId, error: err.message }
+          step: `scored-${cand.id}`,
+          message: `${cand.agent} scored (${composite.toFixed(3)})`,
+          details: { candidateId: cand.id, compositeScore: composite.toFixed(3), metrics: scores }
         });
       }
-    });
 
-    await Promise.all(evaluationPromises);
+      // Check for candidates that didn't get evaluated
+      const evaluatedIndices = new Set(evaluations.map(e => e.candidateIndex));
+      for (const cand of evalCandidates) {
+        if (!evaluatedIndices.has(cand.index)) {
+          evalFailures++;
+          console.warn(`[pipeline] [${runId}] Candidate ${cand.agent} (index ${cand.index}) missing from batch eval response`);
+        }
+      }
+
+      // Process pairwise result
+      if (includePairwise && batchData?.pairwise) {
+        const pw = batchData.pairwise;
+        const candA = evalCandidates[pw.candidateA_index];
+        const candB = evalCandidates[pw.candidateB_index];
+
+        if (candA && candB) {
+          pairwiseResult = {
+            candidateA: candA.id,
+            candidateB: candB.id,
+            winner: pw.winner || "tie",
+            reasoning: pw.reasoning || "",
+            confidenceScore: pw.confidenceScore ?? 0.5,
+          };
+
+          console.log(`[pipeline] [${runId}] Pairwise: ${candA.agent} vs ${candB.agent} → winner=${pw.winner}, confidence=${pw.confidenceScore}`);
+          sendEvent(runId, "stage-progress", {
+            stage: "metrics",
+            step: "pairwise-result",
+            message: `Pairwise: ${pw.winner === "A" ? candA.agent : pw.winner === "B" ? candB.agent : "tie"} (confidence ${(pw.confidenceScore ?? 0.5).toFixed(2)})`,
+            details: pairwiseResult,
+          });
+        }
+      }
+
+    } catch (batchEvalErr) {
+      // ── Fallback: if batch eval fails, try individual evaluation ──
+      console.error(`[pipeline] [${runId}] Batch evaluation failed — falling back to individual eval: ${batchEvalErr.message}`);
+      sendEvent(runId, "stage-warning", {
+        stage: "metrics",
+        message: "Batch evaluation failed — falling back to individual scoring...",
+      });
+
+      // Individual fallback (original per-candidate approach)
+      for (let i = 0; i < evalCandidates.length; i++) {
+        const cand = evalCandidates[i];
+        try {
+          checkTimeout();
+          const { data: evalData, usage: evalUsage } = await chatJson({
+            system: `You are an expert Prompt Evaluator. Score each dimension 0.0–1.0.\n\nDIMENSIONS:\n${dimensionDescriptions}\n\nOUTPUT JSON:\n{"completeness":0.0,"clarity":0.0,"specificity":0.0,"structure":0.0,"coherence":0.0,"creativity":0.0,"safety":0.0,"efficiency":0.0}`,
+            user: `Evaluate this candidate prompt against the specification.\n\n---CANDIDATE---\n${cand.content}\n---END---\n\n---SPECIFICATION---\n${specContext}\n---END---`,
+            model: evalModel.model,
+            provider: evalModel.provider,
+            temperature: evalModel.temperature ?? 0,
+          });
+
+          if (evalUsage) {
+            totalInputTokens += evalUsage.prompt_tokens || 0;
+            totalOutputTokens += evalUsage.completion_tokens || 0;
+          }
+          pipelineMetrics.calls_total.evaluation++;
+
+          const composite = computeCompositeScore(evalData);
+          db.prepare(`UPDATE candidate_prompts SET metrics_json = ? WHERE id = ?`).run(
+            JSON.stringify({ ...evalData, compositeScore: composite, weights: EVALUATION_WEIGHTS }),
+            cand.id
+          );
+
+          sendEvent(runId, "stage-progress", {
+            stage: "metrics",
+            step: `scored-${cand.id}`,
+            message: `${cand.agent} scored (fallback) — ${composite.toFixed(3)}`,
+            details: { candidateId: cand.id, compositeScore: composite.toFixed(3) }
+          });
+        } catch (fallbackErr) {
+          evalFailures++;
+          console.error(`[pipeline] [${runId}] Fallback eval failed for ${cand.agent}: ${fallbackErr.message}`);
+        }
+      }
+    }
 
     if (evalFailures > 0 && evalFailures < candidateIds.length) {
       sendEvent(runId, "stage-warning", {
@@ -1010,87 +1207,10 @@ OUTPUT (JSON only):
 
     sendEvent(runId, "stage-complete", {
       stage: "metrics",
-      message: `Evaluation completed: ${candidateIds.length - evalFailures}/${candidateIds.length} scored successfully`,
-      result: { candidateIds, count: candidateIds.length, failures: evalFailures }
+      message: `Batch evaluation completed: ${candidateIds.length - evalFailures}/${candidateIds.length} scored${pairwiseResult ? " + pairwise" : ""}`,
+      result: { candidateIds, count: candidateIds.length, failures: evalFailures, batchMode: true }
     });
     endEvalTimer();
-
-    // ============================================
-    // Stage 4b: Pairwise Comparison (standard/premium only)
-    // Head-to-head comparison of top-2 candidates for robust ranking.
-    // ============================================
-    let pairwiseResult = null;
-    if (mode !== "fast" && candidateIds.length >= 2) {
-      try {
-        checkTimeout();
-
-        // Pre-sort to find top-2 by composite score
-        const preSorted = candidateIds
-          .map(id => {
-            const row = db.prepare("SELECT * FROM candidate_prompts WHERE id = ?").get(id);
-            const m = row.metrics_json ? JSON.parse(row.metrics_json) : null;
-            return { id: row.id, agent: row.agent, content: row.content, compositeScore: m?.compositeScore ?? 0 };
-          })
-          .sort((a, b) => b.compositeScore - a.compositeScore);
-
-        const top2 = preSorted.slice(0, 2);
-
-        sendEvent(runId, "stage-progress", {
-          stage: "metrics",
-          step: "pairwise-comparison",
-          message: `Pairwise comparing top-2: ${top2[0].agent} vs ${top2[1].agent}...`,
-        });
-
-        console.log(`[pipeline] [${runId}] Pairwise: ${top2[0].agent} (${top2[0].compositeScore.toFixed(3)}) vs ${top2[1].agent} (${top2[1].compositeScore.toFixed(3)})`);
-
-        const pairwiseSystem = `You are an expert Prompt Judge. Compare two candidate prompts against a specification and determine which is better overall.
-
-RULES:
-1. Consider ALL quality dimensions: completeness, clarity, specificity, structure, coherence, creativity, safety, efficiency.
-2. Focus on which prompt would perform better in REAL usage, not which looks nicer.
-3. If they are very close, you may declare a tie.
-
-OUTPUT (JSON only):
-{
-  "winner": "A" | "B" | "tie",
-  "reasoning": "string — 2-3 sentence explanation of why",
-  "confidenceScore": 0.0-1.0
-}`;
-
-        const { data: pairData, usage: pairUsage } = await chatJson({
-          system: pairwiseSystem,
-          user: `Compare these two prompts against the specification.\n\n---CANDIDATE A (${top2[0].agent})---\n${top2[0].content}\n---END A---\n\n---CANDIDATE B (${top2[1].agent})---\n${top2[1].content}\n---END B---\n\n---SPECIFICATION---\n${specContext}\n---END---`,
-          model: evalModel.model,
-          provider: evalModel.provider,
-          temperature: 0,
-        });
-
-        if (pairUsage) {
-          totalInputTokens += pairUsage.prompt_tokens || 0;
-          totalOutputTokens += pairUsage.completion_tokens || 0;
-        }
-        pipelineMetrics.calls_total.evaluation++;
-
-        pairwiseResult = {
-          candidateA: top2[0].id,
-          candidateB: top2[1].id,
-          winner: pairData?.winner || "tie",
-          reasoning: pairData?.reasoning || "",
-          confidenceScore: pairData?.confidenceScore ?? 0.5,
-        };
-
-        console.log(`[pipeline] [${runId}] Pairwise result: winner=${pairwiseResult.winner}, confidence=${pairwiseResult.confidenceScore}`);
-        sendEvent(runId, "stage-progress", {
-          stage: "metrics",
-          step: "pairwise-result",
-          message: `Pairwise winner: ${pairwiseResult.winner === "A" ? top2[0].agent : pairwiseResult.winner === "B" ? top2[1].agent : "tie"}`,
-          details: pairwiseResult,
-        });
-      } catch (pairErr) {
-        console.warn(`[pipeline] [${runId}] Pairwise comparison failed — falling back to composite scores: ${pairErr.message}`);
-        // Non-fatal: composite scores are sufficient
-      }
-    }
 
     // ============================================
     // Stage 5: Outcome — Select best candidate (Pipeline v2)
@@ -1319,8 +1439,9 @@ OUTPUT (JSON only):
       specBuilderDegraded,
       exemplars_found: exemplarsFound,
       critique_verdicts: candidateIds.map(cId => {
-        const c = candidateStore.get(cId);
-        return { agent: c?.agent, verdict: c?.critique?.verdict ?? null };
+        const row = db.prepare("SELECT agent, metrics_json FROM candidate_prompts WHERE id = ?").get(cId);
+        const m = row?.metrics_json ? JSON.parse(row.metrics_json) : {};
+        return { agent: row?.agent, verdict: m?.critique?.verdict ?? null };
       }),
       durationMs: Date.now() - startTime,
     };

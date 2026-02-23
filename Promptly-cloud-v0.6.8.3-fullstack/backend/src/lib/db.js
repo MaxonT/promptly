@@ -372,6 +372,7 @@ CREATE INDEX IF NOT EXISTS idx_exemplar_created ON exemplar_bank(created_at);
   ensureColumn("users", "timezone_updated_at", "TEXT");
   ensureColumn("runs", "completed_at", "TEXT");
   ensureColumn("runs", "metrics_json", "TEXT");
+  ensureColumn("runs", "rejection_reason", "TEXT");
   ensureColumn("evaluations", "metrics_json", "TEXT");
 
   // ─── Exemplar FTS5 (separate exec for VIRTUAL TABLE compat) ──────────

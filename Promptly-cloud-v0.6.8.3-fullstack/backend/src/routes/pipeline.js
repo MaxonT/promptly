@@ -19,6 +19,7 @@ import { searchExemplars, formatExemplarBlock, harvestExemplar } from "../lib/ex
 import { spendTokensForRun, getTokenStatus } from "../lib/tokenUsage.js";
 import { FEATURES } from "../lib/subscriptionConfig.js";
 import { checkPromptOptimizationLimit, recordUsage, canUseMode } from "../lib/planLimits.js";
+import { validatePromptInput } from "../lib/inputValidator.js";
 import { requireAuth } from "./auth.js";
 
 export const pipelineRouter = Router();
@@ -292,6 +293,34 @@ async function executePipelineWithEvents(runId, userId, { idea, attachments, ski
   };
 
   try {
+    // ============================================
+    // Stage 0: Input Validation Gate
+    // Rejects inputs that are not prompt optimization requests.
+    // Runs before any LLM call. Fail-open on validator error.
+    // ============================================
+    sendEvent(runId, "stage-start", { stage: "validation", message: "Validating input..." });
+
+    const validation = await validatePromptInput(idea);
+
+    if (!validation.isValid) {
+      console.warn(`[pipeline] [${runId}] Input rejected: ${validation.rejectReason}`);
+      sendEvent(runId, "pipeline-rejected", {
+        reason: validation.rejectReason,
+        message: validation.rejectMessage,
+      });
+      sendEvent(runId, "complete", { success: false, rejected: true });
+      // Record rejected run for analytics
+      try {
+        db.prepare(`
+          INSERT OR IGNORE INTO runs (id, spec_id, model, status, input_blocks, rejection_reason, created_at)
+          VALUES (?, NULL, ?, 'rejected', ?, ?, datetime('now'))
+        `).run(runId, `pipeline-v2/${mode}`, JSON.stringify({ idea: idea.substring(0, 500), mode }), validation.rejectReason);
+      } catch (_) { /* best-effort */ }
+      return;
+    }
+
+    sendEvent(runId, "stage-complete", { stage: "validation" });
+
     // ============================================
     // Stage 1: Spec Builder
     // ============================================

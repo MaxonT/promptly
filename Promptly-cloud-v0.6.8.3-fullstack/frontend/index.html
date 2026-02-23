@@ -2727,9 +2727,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
       case 'stage-start':
         // SSE-driven stage activation (no more timer-based progression!)
-        activatePipelineStage(data.stage, 'info');
+        // Skip visual activation for the validation pre-stage (no DOM node for it)
+        if (data.stage !== 'validation') {
+          activatePipelineStage(data.stage, 'info');
+        }
         
         const stageNames = {
+          validation: 'Input Validator',
           spec: 'Spec Builder',
           question: 'Question Engine',
           agents: 'LLM Agents',
@@ -2903,6 +2907,21 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         break;
 
+      case 'pipeline-rejected':
+        // Input validation failed — show helpful guidance, not an error state
+        updateBestPromptLiveTrace(`💡 ${data.message || 'Input not recognized as a prompt request'}`);
+        stopPipelineTimeline('Input not accepted');
+        clearBestPromptTrace();
+        if (bestPromptEl) {
+          bestPromptEl.classList.remove('processing-animation', 'success-highlight');
+          bestPromptEl.style.borderColor = '';
+        }
+        if (pipelineContainer) {
+          pipelineContainer.classList.remove('is-processing');
+        }
+        showToast(`💡 ${data.message || 'Please describe what you want AI to do'}`, 'info');
+        break;
+
       case 'complete':
         if (data.success && data.bestCandidate) {
           completePipelineTimeline();
@@ -2932,7 +2951,9 @@ document.addEventListener('DOMContentLoaded', () => {
           if (window.refreshPlanBanner) {
             setTimeout(window.refreshPlanBanner, 500);
           }
-            } else {
+            } else if (data.rejected) {
+          // Clean rejection — already handled by pipeline-rejected event, no-op here
+        } else {
           updateBestPromptLiveTrace('⚠️ Pipeline completed with errors');
           stopPipelineTimeline('Pipeline completed with errors');
           showToast('⚠ Pipeline completed with errors', 'error');
@@ -3196,15 +3217,15 @@ document.addEventListener('DOMContentLoaded', () => {
       };
 
       // Handle all event types
-      const eventTypes = ['connected', 'stage-start', 'stage-progress', 'stage-complete', 'stage-skipped', 'error', 'complete'];
+      const eventTypes = ['connected', 'stage-start', 'stage-progress', 'stage-complete', 'stage-skipped', 'error', 'complete', 'pipeline-rejected'];
       eventTypes.forEach(eventType => {
         currentPipelineEventSource.addEventListener(eventType, (e) => {
           try {
             const data = JSON.parse(e.data);
             handlePipelineEvent(runId, eventType, data);
             
-            // Close connection on completion
-            if (eventType === 'complete') {
+            // Close connection on completion or rejection
+            if (eventType === 'complete' || eventType === 'pipeline-rejected') {
               if (currentPipelineEventSource) {
                 currentPipelineEventSource.close();
                 currentPipelineEventSource = null;

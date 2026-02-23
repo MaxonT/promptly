@@ -1096,7 +1096,11 @@ OUTPUT (JSON only):
         const scores = evalItem.scores;
         const composite = computeCompositeScore(scores);
 
+        // Merge with existing metrics_json to preserve critique data from Stage 3b
+        const existingRow = db.prepare("SELECT metrics_json FROM candidate_prompts WHERE id = ?").get(cand.id);
+        const existingMetrics = existingRow?.metrics_json ? JSON.parse(existingRow.metrics_json) : {};
         const metricsJson = JSON.stringify({
+          ...existingMetrics,  // preserve critique, etc.
           ...scores,
           compositeScore: composite,
           weights: EVALUATION_WEIGHTS,
@@ -1174,8 +1178,11 @@ OUTPUT (JSON only):
           pipelineMetrics.calls_total.evaluation++;
 
           const composite = computeCompositeScore(evalData);
+          // Merge with existing metrics_json to preserve critique data from Stage 3b
+          const existingRow = db.prepare("SELECT metrics_json FROM candidate_prompts WHERE id = ?").get(cand.id);
+          const existingMetrics = existingRow?.metrics_json ? JSON.parse(existingRow.metrics_json) : {};
           db.prepare(`UPDATE candidate_prompts SET metrics_json = ? WHERE id = ?`).run(
-            JSON.stringify({ ...evalData, compositeScore: composite, weights: EVALUATION_WEIGHTS }),
+            JSON.stringify({ ...existingMetrics, ...evalData, compositeScore: composite, weights: EVALUATION_WEIGHTS }),
             cand.id
           );
 

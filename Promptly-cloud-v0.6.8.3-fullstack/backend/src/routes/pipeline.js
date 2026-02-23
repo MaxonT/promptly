@@ -1010,11 +1010,13 @@ ${includePairwise ? `PAIRWISE RULES:
 4. If they are very close, you may declare a tie.
 5. "candidateA" is the higher-scoring one, "candidateB" is the second.` : ""}
 
+IMPORTANT: candidateIndex values are 0-based integers. CANDIDATE 0 → candidateIndex 0, CANDIDATE 1 → candidateIndex 1, etc.
+
 OUTPUT (JSON only):
 {
   "evaluations": [
     {"candidateIndex": 0, "scores": {"completeness":0.0,"clarity":0.0,"specificity":0.0,"structure":0.0,"coherence":0.0,"creativity":0.0,"safety":0.0,"efficiency":0.0}},
-    ...one per candidate
+    {"candidateIndex": 1, "scores": {"completeness":0.0,"clarity":0.0,"specificity":0.0,"structure":0.0,"coherence":0.0,"creativity":0.0,"safety":0.0,"efficiency":0.0}}
   ]${includePairwise ? `,
   "pairwise": {
     "candidateA_index": 0,
@@ -1025,9 +1027,9 @@ OUTPUT (JSON only):
   }` : ""}
 }`;
 
-    // Build the user prompt with all candidates
+    // Build the user prompt with all candidates (0-based to match JSON schema candidateIndex)
     const candidateBlocks = evalCandidates
-      .map((c, i) => `---CANDIDATE ${i + 1} (${c.agent})---\n${c.content}\n---END ${i + 1}---`)
+      .map((c, i) => `---CANDIDATE ${i} (${c.agent})---\n${c.content}\n---END CANDIDATE ${i}---`)
       .join("\n\n");
 
     try {

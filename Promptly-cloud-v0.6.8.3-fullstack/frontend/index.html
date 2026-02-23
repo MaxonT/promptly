@@ -2915,28 +2915,30 @@ document.addEventListener('DOMContentLoaded', () => {
           pipelineContainer.classList.remove('is-processing');
         }
 
-        // Reason-specific labels (detect language from message content)
+        // Category label (short header, always shown)
         const isChinese = data.message && /[\u4e00-\u9fa5]/.test(data.message);
         const reasonLabels = {
-          pure_emotion:     isChinese ? '❌ 问题：这是情绪表达，不是 AI 任务描述' : '❌ Issue: Looks like an emotional expression, not an AI task',
-          keyword_fragment: isChinese ? '❌ 问题：这是关键词堆砌，请用完整句子描述任务' : '❌ Issue: Scattered keywords — please write a full task description',
-          no_action_intent: isChinese ? '❌ 问题：没有识别到具体的 AI 任务意图' : '❌ Issue: No clear AI task intent detected',
-          abstract_feeling: isChinese ? '❌ 问题：这是在描述一种感受，不是具体任务' : '❌ Issue: Describes a feeling or state, not a concrete task',
-          product_idea:     isChinese ? '❌ 问题：这是产品构想，不是 Prompt 优化请求' : '❌ Issue: This is a product idea, not a prompt optimization request',
-          empty_input:      isChinese ? '❌ 问题：输入内容为空' : '❌ Issue: Input is empty',
+          pure_emotion:     isChinese ? '这是情绪表达，不是 AI 任务' : 'Emotional expression — not an AI task',
+          keyword_fragment: isChinese ? '这是关键词堆砌，不是完整任务描述' : 'Scattered keywords — not a task description',
+          no_action_intent: isChinese ? '未找到具体的 AI 任务意图' : 'No clear AI task intent',
+          abstract_feeling: isChinese ? '这是在描述感受，不是具体任务' : 'Describes a feeling, not a task',
+          product_idea:     isChinese ? '这是产品构想，不是 Prompt 优化请求' : 'Product idea — not a prompt request',
+          empty_input:      isChinese ? '输入内容为空' : 'Input is empty',
         };
-        const reasonLabel = reasonLabels[data.reason] || (isChinese ? '❌ 未识别为有效的 Prompt 请求' : '❌ Not recognized as a valid prompt request');
-        const guidanceMsg = data.message || (isChinese ? '请描述你想让 AI 做什么' : 'Please describe what you want AI to do');
+        const reasonLabel = reasonLabels[data.reason] || (isChinese ? '未识别为有效的 Prompt 请求' : 'Not a valid prompt request');
+
+        // data.message is now a specific LLM-generated explanation referencing the user's actual input
+        const specificMsg = data.message || (isChinese ? '请描述你想让 AI 做什么' : 'Please describe what you want AI to do');
 
         // Show in the result textarea so user can read at leisure
         if (bestPromptEl) {
-          bestPromptEl.value = `${reasonLabel}\n\n💡 ${guidanceMsg}`;
+          bestPromptEl.value = `❌ ${reasonLabel}\n\n${specificMsg}`;
           bestPromptEl.classList.remove('processing-animation', 'success-highlight');
           bestPromptEl.style.borderColor = '#F59E0B'; // amber — informational, not error-red
         }
 
-        // Toast stays longer (9s) so user has time to read
-        showToast(`${reasonLabel}`, 'info', 9000);
+        // Toast: category label (short) + 9s so user has time to read
+        showToast(`❌ ${reasonLabel}`, 'info', 9000);
         break;
       }
 

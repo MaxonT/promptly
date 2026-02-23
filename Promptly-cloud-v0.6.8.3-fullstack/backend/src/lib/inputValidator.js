@@ -77,11 +77,25 @@ INVALID examples (reject ALL of these):
 
 Detect the primary language: "en", "zh", "mixed", or "other".
 
+When rejecting, write a "reject_message" that:
+- Is in the SAME LANGUAGE as the user's input
+- Directly quotes or paraphrases the SPECIFIC part of THEIR input that caused the rejection
+- Explains in 1-2 sentences WHY that specific text is not a valid AI task
+- Ends with ONE concrete rewrite example showing how to turn this into a valid request
+- Is friendly and constructive, not condescending
+
+Example reject_message for "完了我明天要presentation脑子一团浆糊":
+  "你说的「明天presentation脑子一团浆糊」看起来是情绪宣泄，没有说明你希望AI具体做什么。可以改成：「帮我写一份5分钟presentation的开场白，主题是XX」。"
+
+Example reject_message for "internship cs remote no sponsor maybe startup":
+  "'internship cs remote no sponsor' are scattered keywords, not a task for AI. Try: 'Help me write a cold email to a startup for a remote CS internship, no sponsorship needed'."
+
 Output JSON only — no explanation, no markdown:
 {
   "is_valid": true | false,
   "language": "en" | "zh" | "mixed" | "other",
-  "reject_reason": null | "pure_emotion" | "keyword_fragment" | "no_action_intent" | "abstract_feeling" | "product_idea"
+  "reject_reason": null | "pure_emotion" | "keyword_fragment" | "no_action_intent" | "abstract_feeling" | "product_idea",
+  "reject_message": null | "<specific explanation in user's language>"
 }`,
       user: input.trim(),
     });
@@ -96,10 +110,15 @@ Output JSON only — no explanation, no markdown:
       ? "mixed"
       : "en";
 
+    // Prefer LLM-generated specific message; fall back to static template
+    const rejectMessage = (data?.reject_message && data.reject_message.trim())
+      ? data.reject_message.trim()
+      : REJECT_MESSAGES[lang];
+
     return {
       isValid: false,
       rejectReason: data?.reject_reason ?? "no_action_intent",
-      rejectMessage: REJECT_MESSAGES[lang],
+      rejectMessage,
     };
 
   } catch (err) {

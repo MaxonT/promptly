@@ -309,6 +309,7 @@ async function executePipelineWithEvents(runId, userId, { idea, attachments, ski
       sendEvent(runId, "pipeline-rejected", {
         reason: validation.rejectReason,
         message: validation.rejectMessage,
+        language: validation.language,
       });
       sendEvent(runId, "complete", { success: false, rejected: true });
       // Record rejected run for analytics

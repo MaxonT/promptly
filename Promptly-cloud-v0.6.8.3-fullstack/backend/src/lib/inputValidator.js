@@ -119,6 +119,7 @@ Output JSON only — no explanation, no markdown:
       isValid: false,
       rejectReason: data?.reject_reason ?? "no_action_intent",
       rejectMessage,
+      language: lang,
     };
 
   } catch (err) {

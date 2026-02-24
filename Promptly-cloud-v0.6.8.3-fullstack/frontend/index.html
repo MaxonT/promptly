@@ -2918,7 +2918,7 @@ document.addEventListener('DOMContentLoaded', () => {
           const isCh = data.questions?.[0]?.question && /[\u4e00-\u9fa5]/.test(data.questions[0].question);
           const qLines = (data.questions || []).map((q, i) => `${i + 1}. ${q.question}`).join('\n');
           bestPromptEl.value = isCh
-            ? `❓ 优化这个请求需要多一点上下文。\n\n${qLines}\n\n在下旹面板中回答，然后点「补充完成，开始优化 →」`
+            ? `❓ 优化这个请求需要多一点上下文。\n\n${qLines}\n\n在下方面板中回答，然后点「补充完成，开始优化 →」`
             : `❓ A bit more context will prevent hallucination.\n\n${qLines}\n\nAnswer in the panel below, then click "Refine & Run →".`;
         }
         showClarificationPanel(data.questions || []);

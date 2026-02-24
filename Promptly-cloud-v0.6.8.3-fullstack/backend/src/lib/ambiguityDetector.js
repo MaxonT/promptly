@@ -122,7 +122,7 @@ If needs_clarification is false, questions MUST be an empty array [].`,
     });
 
     if (!data?.needs_clarification) {
-      return { needsClarification: false, ambiguityScore: data?.ambiguity_score ?? 0, questions: [] };
+      return { needsClarification: false, ambiguityScore: data?.ambiguity_score ?? 0, language: data?.language ?? 'en', questions: [] };
     }
 
     const questions = (data.questions ?? [])
@@ -131,8 +131,8 @@ If needs_clarification is false, questions MUST be an empty array [].`,
 
     // Guard: if LLM said needs_clarification but returned no valid questions,
     // generate default fallback questions instead of silently passing
+    const lang = data?.language === "zh" ? "zh" : "en";
     if (questions.length === 0) {
-      const lang = data?.language === "zh" ? "zh" : "en";
       const defaultQuestions = lang === "zh" 
         ? [
             { id: "subject", question: "请具体说明你的任务主题或目标是什么？" },
@@ -147,6 +147,7 @@ If needs_clarification is false, questions MUST be an empty array [].`,
       return {
         needsClarification: true,
         ambiguityScore: data.ambiguity_score ?? 0.7,
+        language: lang,
         questions: defaultQuestions,
       };
     }
@@ -154,12 +155,13 @@ If needs_clarification is false, questions MUST be an empty array [].`,
     return {
       needsClarification: true,
       ambiguityScore: data.ambiguity_score ?? 0.7,
+      language: lang,
       questions,
     };
 
   } catch (err) {
     // Ambiguity check errors must NEVER block the pipeline — fail open
     console.warn("[ambiguityDetector] Detection error (fail-open):", err.message);
-    return { needsClarification: false, ambiguityScore: 0, questions: [] };
+    return { needsClarification: false, ambiguityScore: 0, language: 'en', questions: [] };
   }
 }

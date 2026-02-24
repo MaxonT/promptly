@@ -334,10 +334,11 @@ async function executePipelineWithEvents(runId, userId, { idea, attachments, ski
     if (!clarificationsProvided) {
       const ambiguity = await detectAmbiguity(idea);
       if (ambiguity.needsClarification) {
-        console.log(`[pipeline] [${runId}] Ambiguity detected (score=${ambiguity.ambiguityScore.toFixed(2)}) — requesting clarification`);
+        console.log(`[pipeline] [${runId}] Ambiguity detected (score=${ambiguity.ambiguityScore.toFixed(2)}, lang=${ambiguity.language}) — requesting clarification`);
         sendEvent(runId, "pipeline-clarification-needed", {
           questions: ambiguity.questions,
           ambiguityScore: ambiguity.ambiguityScore,
+          language: ambiguity.language ?? 'en',
         });
         sendEvent(runId, "complete", { success: false, needsClarification: true });
         return;

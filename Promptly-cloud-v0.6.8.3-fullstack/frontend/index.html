@@ -2915,13 +2915,13 @@ document.addEventListener('DOMContentLoaded', () => {
         if (bestPromptEl) {
           bestPromptEl.classList.remove('processing-animation', 'success-highlight');
           bestPromptEl.style.borderColor = '#7C3AED';
-          const isCh = data.questions?.[0]?.question && /[\u4e00-\u9fa5]/.test(data.questions[0].question);
+          const isCh = data.language === 'zh' || (data.language !== 'en' && /[\u4e00-\u9fa5]/.test(data.questions?.[0]?.question || ''));
           const qLines = (data.questions || []).map((q, i) => `${i + 1}. ${q.question}`).join('\n');
           bestPromptEl.value = isCh
             ? `❓ 优化这个请求需要多一点上下文。\n\n${qLines}\n\n在下方面板中回答，然后点「补充完成，开始优化 →」`
             : `❓ A bit more context will prevent hallucination.\n\n${qLines}\n\nAnswer in the panel below, then click "Refine & Run →".`;
         }
-        showClarificationPanel(data.questions || []);
+        showClarificationPanel(data.questions || [], data.language);
         break;
       }
 
@@ -3005,12 +3005,13 @@ document.addEventListener('DOMContentLoaded', () => {
   // ─── Clarification Panel ────────────────────────────────────────────────────
   // Shown when the ambiguity detector determines the input lacks critical context.
   // The user answers 1-3 targeted questions, then re-submits with enriched input.
-  function showClarificationPanel(questions) {
+  function showClarificationPanel(questions, language) {
     const existing = document.getElementById('promptly-clarification-panel');
     if (existing) existing.remove();
     if (!questions || questions.length === 0) return;
 
-    const isCh = /[\u4e00-\u9fa5]/.test(questions[0]?.question || '');
+    // Use authoritative language from backend; fall back to question-text detection
+    const isCh = language === 'zh' || (language !== 'en' && /[\u4e00-\u9fa5]/.test(questions[0]?.question || ''));
     const labels = {
       title:  isCh ? '再补充一点上下文，优化质量会显著提升' : 'A bit more context — significantly better results',
       sub:    isCh ? 'Promptly 已确认你的请求有效，但以下信息对最终输出影响重大。' : 'Your request is valid. These details prevent hallucination and keep the output on-target.',

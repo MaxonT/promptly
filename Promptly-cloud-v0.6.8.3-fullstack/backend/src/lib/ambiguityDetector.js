@@ -51,15 +51,26 @@ WHEN TO ASK (needs_clarification = true)
    different and equally valid prompts with no shared direction
 4. Audience or recipient would change the output direction DRASTICALLY
    and is not mentioned at all
+5. Key context fields are missing (CRITICAL FIELDS):
+   - What is the concrete topic/subject/goal?
+   - Who is the audience or recipient?
+   - What's the primary context/domain (e.g., "tech", "academic", "business")?
+   - If missing — ASK, even if a vague hint exists
 
 ═══════════════════════════════════════
 WHEN NOT TO ASK (needs_clarification = false)
 ═══════════════════════════════════════
-- Any hint of topic, subject, or goal is present — even if brief
-- Input is a technical task with implicit constraints ("parse CSV in Python")
-- The task type itself defines the output ("explain X to beginners")
-- Missing details are stylistic preferences, NOT structural requirements
-- Asking would only marginally improve quality (< 20% difference in output)
+- BOTH subject AND audience/context are explicitly stated
+  e.g. "write a cover letter for a Software Engineer role at AWS" → specific job, company
+       "explain quantum computing to high school students" → clear audience level
+- Technical task with FULL constraints stated
+  e.g. "parse CSV with error handling in Python 3.9" → language, format, constraints clear
+- The input is already detailed and complete (>80 words with specifics)
+- Missing details are ONLY stylistic preferences (tone, color, exact word choice)
+  NOT structural requirements (topic, audience, domain)
+
+REMEMBER: When in doubt → ASK. We optimize for QUALITY, not convenience.
+If asking could prevent hallucination, ALWAYS ask.
 
 ═══════════════════════════════════════
 QUESTION RULES (when asking)
@@ -118,9 +129,26 @@ If needs_clarification is false, questions MUST be an empty array [].`,
       .filter(q => q?.id && q?.question && typeof q.question === "string")
       .slice(0, 3);
 
-    // Guard: if LLM said needs_clarification but returned no valid questions, fail-open
+    // Guard: if LLM said needs_clarification but returned no valid questions,
+    // generate default fallback questions instead of silently passing
     if (questions.length === 0) {
-      return { needsClarification: false, ambiguityScore: data.ambiguity_score ?? 0, questions: [] };
+      const lang = data?.language === "zh" ? "zh" : "en";
+      const defaultQuestions = lang === "zh" 
+        ? [
+            { id: "subject", question: "请具体说明你的任务主题或目标是什么？" },
+            { id: "audience", question: "这个 prompt 是给谁用的？（目标受众或使用者）" },
+            { id: "context", question: "任务背景或领域是什么？（如：技术、学术、商业等）" }
+          ]
+        : [
+            { id: "subject", question: "What is the specific topic or goal of your task?" },
+            { id: "audience", question: "Who will use this prompt? (target audience or users)" },
+            { id: "context", question: "What is the domain or context? (e.g., tech, academic, business)" }
+          ];
+      return {
+        needsClarification: true,
+        ambiguityScore: data.ambiguity_score ?? 0.7,
+        questions: defaultQuestions,
+      };
     }
 
     return {

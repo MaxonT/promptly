@@ -104,6 +104,8 @@ needs_clarification = FALSE:
   "explain recursion with simple examples for beginners"
   "help me write a cold email to a startup for a remote CS internship"
   "写一篇关于气候变化的高中英语作文，500字左右"
+  "help me write an email to professor Smith, I'm sick today and can't make it to class"
+  "help me write an absence email to my professor, caught a flu and might miss class today"
 
 Detect the primary language of the user's input: "en", "zh", or "mixed".
 

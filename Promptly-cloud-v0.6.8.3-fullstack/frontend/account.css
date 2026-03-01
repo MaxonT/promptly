@@ -18,6 +18,17 @@
   color: transparent;
 }
 
+/* Nav Logo – constrain icon size so the P doesn't render huge */
+.nav-logo-icon {
+  height: 28px;
+  width: auto;
+  display: block;
+}
+
+.nav-logo-text {
+  color: var(--text);
+}
+
 /* Login Required Section */
 .login-required {
   display: flex;

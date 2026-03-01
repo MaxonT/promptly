@@ -126,7 +126,7 @@ export const STRIPE_MODE = process.env.STRIPE_MODE || 'test';
 export const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
 export const SUCCESS_URL = process.env.SUCCESS_URL || `${FRONTEND_URL}/checkout-success.html`;
 export const CANCEL_URL = process.env.CANCEL_URL || `${FRONTEND_URL}/checkout-cancel.html`;
-export const ACCOUNT_URL = process.env.ACCOUNT_URL || `${FRONTEND_URL}/account.html`;
+export const ACCOUNT_URL = process.env.ACCOUNT_URL || `${FRONTEND_URL}/settings.html#accountPanel`;
 
 // =============================================
 // Feature Flags

@@ -165,7 +165,10 @@ CREATE TABLE IF NOT EXISTS stripe_events (
   payload TEXT,
   
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
-  processed_at TEXT
+  processed_at TEXT,
+  
+  -- Retry tracking
+  retry_count INTEGER DEFAULT 0
 );
 
 CREATE INDEX IF NOT EXISTS idx_stripe_events_event_id ON stripe_events(event_id);

@@ -302,6 +302,18 @@ CREATE INDEX IF NOT EXISTS idx_plan_usage_user_date ON plan_usage(user_id, date,
   ensureColumn("runs", "metrics_json", "TEXT");
   ensureColumn("evaluations", "metrics_json", "TEXT");
 
+  // Ensure stripe_events has retry_count (backfill for databases created before migration fix)
+  try {
+    const tableExists = sqliteDb.prepare(
+      "SELECT name FROM sqlite_master WHERE type='table' AND name='stripe_events'"
+    ).get();
+    if (tableExists) {
+      ensureColumn("stripe_events", "retry_count", "INTEGER DEFAULT 0");
+    }
+  } catch (err) {
+    // stripe_events may not exist yet (migrations haven't run); safe to skip
+  }
+
   // Ensure demo user exists
   try {
     sqliteDb.prepare(`

@@ -692,6 +692,7 @@ export const stripeService = {
   getUserIdFromCustomer,
   createCheckoutSession,
   createCheckoutSessionNoTrial,
+  getCheckoutSession,
   createPortalSession,
   getSubscriptionStatus,
   updateSubscription,

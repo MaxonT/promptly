@@ -289,11 +289,11 @@ billingRouter.get("/verify-session/:sessionId", requireAuth, async (req, res) =>
     
     // If already completed, return success immediately
     if (dbSession.status === 'completed') {
-      const user = db.prepare("SELECT subscription_status FROM users WHERE id = ?").get(userId);
+      const subscription = stripeService.getSubscriptionStatus(userId);
       return res.json({
         ok: true,
         status: 'completed',
-        subscriptionStatus: user?.subscription_status || 'inactive',
+        subscriptionStatus: subscription?.status || 'inactive',
       });
     }
     
@@ -309,12 +309,12 @@ billingRouter.get("/verify-session/:sessionId", requireAuth, async (req, res) =>
       `).run(sessionId);
       
       // Verify subscription status
-      const user = db.prepare("SELECT subscription_status FROM users WHERE id = ?").get(userId);
+      const subscription = stripeService.getSubscriptionStatus(userId);
       
       return res.json({
         ok: true,
         status: 'completed',
-        subscriptionStatus: user?.subscription_status || 'inactive',
+        subscriptionStatus: subscription?.status || 'inactive',
       });
     } else if (stripeSession.status === 'expired') {
       db.prepare(`

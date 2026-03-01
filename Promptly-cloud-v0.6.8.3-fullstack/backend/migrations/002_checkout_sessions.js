@@ -61,6 +61,7 @@ export function up(db) {
     const columns = db.prepare("PRAGMA table_info(stripe_events)").all();
     const hasStatus = columns.some(col => col.name === 'status');
     const hasError = columns.some(col => col.name === 'error');
+    const hasRetryCount = columns.some(col => col.name === 'retry_count');
     
     if (!hasStatus) {
       db.exec(`ALTER TABLE stripe_events ADD COLUMN status TEXT DEFAULT 'completed';`);
@@ -68,6 +69,10 @@ export function up(db) {
     
     if (!hasError) {
       db.exec(`ALTER TABLE stripe_events ADD COLUMN error TEXT;`);
+    }
+
+    if (!hasRetryCount) {
+      db.exec(`ALTER TABLE stripe_events ADD COLUMN retry_count INTEGER DEFAULT 0;`);
     }
   } else {
     console.log("[migration 002] stripe_events table does not exist, skipping enhancement...");

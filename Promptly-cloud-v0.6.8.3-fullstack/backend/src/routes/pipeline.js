@@ -636,12 +636,14 @@ YOUR STYLE:
 
 CRITICAL RULES:
 1. ACCURACY: If spec contains constraints (math ranges, equations), preserve exactly. Do NOT normalize.
-2. DELIVERABLES: Ensure "Output Format" explicitly demands specific artifacts from spec.
+2. DELIVERABLES: Ensure "Output Format" demands "Set/Inequality Description" and "Constructive Sketch" (how to draw it), not just generic "Description".
 3. NO FLUFF: No emotional/qualitative intros. Start with Role/Task.
-4. NO SPOILERS: Do not reveal derived answers in context.
-5. ANTI-OUTLINE: Instruct model to EXECUTE task, not just plan it.
-6. VERBATIM PRESERVATION: Copy URLs, links, brands, quoted phrases exactly.
-7. LANGUAGE CONSISTENCY: Output prompt in SAME language as spec.
+4. NO ADJECTIVES: Do NOT use academic filler words like "rigorous", "detailed prose", "comprehensive", "precise justification". Use "engineering precision" (what to do), not "academic tone".
+5. NO SPOILERS: Do not reveal derived answers in context.
+6. ANTI-OUTLINE: Instruct model to EXECUTE task, not just plan it.
+7. REDUNDANCY CHECK: Ask to "Identify coordinate redundancy/overlap" instead of demanding formal injectivity proofs.
+8. VERBATIM PRESERVATION: Copy URLs, links, brands, quoted phrases exactly.
+9. LANGUAGE CONSISTENCY: Output prompt in SAME language as spec.
 
 OUTPUT: The complete prompt text only. No commentary.`
       },
@@ -668,7 +670,7 @@ ${normalizedSpec.edgeCases.length > 0 ? `Edge Cases:\n${normalizedSpec.edgeCases
     const TASK_TYPE_HINTS = {
       coding: "Include code fences with language tags, variable {{placeholders}}, and explicit input/output specifications. Mention error handling and edge cases.",
       writing: "Focus on tone guidance, audience awareness, word-count expectations, and stylistic examples.",
-      analysis: "Emphasize rigorous derivation, strict adherence to given constraints (e.g. mathematical bounds), and precise output deliverables (e.g. final formulas, geometric descriptions).",
+      analysis: "Emphasize precise set/inequality descriptions, coordinate redundancy checks (instead of formal injectivity proofs), and constructive sketch instructions (e.g. 'draw cross-section, then rotate').",
       brainstorming: "Encourage divergent thinking, quantity targets, categorization of ideas, and evaluation criteria.",
       translation: "Specify source/target languages, formality level, domain terminology, and handling of untranslatable terms.",
       extraction: "Define input format, extraction schema, handling of missing fields, and output structure.",

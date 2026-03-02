@@ -1,0 +1,5 @@
+- [x] `analysis` hint focuses on set description and constructive sketch.
+- [x] Generator prompt bans "academic adjectives" (rigorous, detailed prose).
+- [x] Generator prompt explicitly asks for "redundancy check" instead of injectivity proof.
+- [x] Generator prompt explicitly asks for "constructive sketch" steps (cross-section + rotation).
+- [x] Bounding box and orientation requirements are removed.

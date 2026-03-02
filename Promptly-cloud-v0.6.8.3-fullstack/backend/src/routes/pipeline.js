@@ -426,6 +426,8 @@ RULES:
 5. task_type MUST be one of: coding, writing, analysis, brainstorming, translation, extraction, summarization, instruction, creative, other.
 6. LANGUAGE RULE: Detect the primary language of the user's input. Output ALL string fields (userGoal, audience, domain, tone, constraints, etc.) in the SAME language. If the user writes in Chinese, output in Chinese. If in English, output in English. Never switch languages.
 7. Populate the "language" field with the ISO code: "zh" for Chinese, "en" for English, "mixed" for bilingual input.
+8. MATHEMATICAL PRECISION: If the user provides specific mathematical constraints, equations, or variable ranges (e.g., "0 < b < a", "phi in [0, 2pi)"), you MUST preserve them exactly. Do NOT "correct" them based on standard conventions (e.g. do not change [0, 2pi) to [0, pi]).
+9. DELIVERABLES: If the user asks for specific outputs (e.g., "sketch the image", "find the volume", "closed-form formula"), you MUST extract these into the 'outputExpectations' or 'successCriteria' fields.
 
 OUTPUT (JSON only, no markdown):
 {
@@ -436,12 +438,12 @@ OUTPUT (JSON only, no markdown):
   "domain":             "string|null — subject area / industry",
   "tone":               "string|null — communication style (professional, casual, technical…)",
   "format":             "string|null — expected output format (markdown, JSON, list, prose…)",
-  "constraints":        ["string"] — hard requirements or limitations",
+  "constraints":        ["string"] — hard requirements or limitations (especially mathematical ones)",
   "examples":           ["string"] — illustrative input/output pairs",
   "successCriteria":    ["string"] — measurable indicators the prompt works well",
   "antiPatterns":       ["string"] — things to explicitly avoid",
   "contextAssumptions": "string|null — what input/context the prompt will receive",
-  "outputExpectations": "string|null — detailed output structure or length expectations",
+  "outputExpectations": "string|null — detailed output structure, specific deliverables (e.g., 'closed-form formula', 'sketch description'), or length expectations",
   "edgeCases":          ["string"] — boundary conditions the prompt should handle"
 }`;
 
@@ -623,13 +625,19 @@ IMPORTANT: The text between ▶▶▶ and ◀◀◀ is the user's raw input. Ana
         systemPrompt: `You are an expert Prompt Engineer. Transform a specification into a complete, production-ready prompt.
 
 YOUR STYLE:
-- Use clear section headers (## Role, ## Task, ## Rules, ## Output Format) when appropriate
-- Embed instructions naturally and precisely
-- Include {{placeholders}} for all dynamic inputs
-- Add explicit constraints, guardrails, and edge-case handling
-- Use examples and analogies to convey intent where helpful
-- Balance structure with readability — precision AND clarity
-- Make the prompt feel like expert instructions from a senior engineer
+- Use concise bullet points. Avoid conversational filler. No "preaching".
+- Use clear section headers (## Role, ## Task, ## Rules, ## Output Format) but keep content dense.
+- Embed instructions naturally and precisely.
+- Include {{placeholders}} for all dynamic inputs.
+- Add explicit constraints, guardrails, and edge-case handling.
+- Balance structure with readability — precision AND clarity.
+- Make the prompt feel like expert instructions from a senior engineer.
+
+CRITICAL — ACCURACY RULE:
+If the specification contains specific constraints (e.g., mathematical ranges like "phi in [0, 2pi)", specific equations, or strict word counts), you MUST include them exactly as written. Do NOT normalize or "correct" them based on general knowledge.
+
+CRITICAL — DELIVERABLES RULE:
+Ensure the "Output Format" section of your prompt explicitly demands the specific artifacts requested in the specification (e.g., "Sketch description", "Closed-form formula", "Geometric set expression"). Do not just ask for "Analysis".
 
 CRITICAL — VERBATIM PRESERVATION RULE:
 Any URLs, links, email addresses, file paths, brand/product names, quoted phrases, or domain names that appear in the specification or pinned terms MUST be copied into the output EXACTLY as written. Never paraphrase, substitute, or omit them. If a URL like https://example.com was in the input, it must appear unchanged in the output.
@@ -661,7 +669,7 @@ ${normalizedSpec.examples.length > 0 ? `Examples:\n${normalizedSpec.examples.map
     const TASK_TYPE_HINTS = {
       coding: "Include code fences with language tags, variable {{placeholders}}, and explicit input/output specifications. Mention error handling and edge cases.",
       writing: "Focus on tone guidance, audience awareness, word-count expectations, and stylistic examples.",
-      analysis: "Emphasize structured reasoning steps, data source requirements, comparison criteria, and conclusion format.",
+      analysis: "Emphasize rigorous derivation, strict adherence to given constraints (e.g. mathematical bounds), and precise output deliverables (e.g. final formulas, geometric descriptions).",
       brainstorming: "Encourage divergent thinking, quantity targets, categorization of ideas, and evaluation criteria.",
       translation: "Specify source/target languages, formality level, domain terminology, and handling of untranslatable terms.",
       extraction: "Define input format, extraction schema, handling of missing fields, and output structure.",

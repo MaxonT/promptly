@@ -1,17 +1,14 @@
 /**
- * modelConfig.js — Unified Model Configuration (Pipeline v2)
+ * modelConfig.js — Unified Model Configuration (Pipeline v2.2)
  *
  * Single source of truth for all LLM model selections across the application.
- * Replaces the old modePolicies.js with a cleaner, stage-aware design.
  *
  * Key design decisions:
- *   1. Critique & Evaluation use a DIFFERENT model than Generation
- *      to avoid self-evaluation bias.
- *   2. Fast mode skips Critique/Refine for speed.
- *   3. Generation produces exactly 2 candidates (structured + fluent)
- *      instead of 3 undifferentiated ones.
- *   4. Non-pipeline routes share a single default instead of
- *      hardcoding 'openai' everywhere.
+ *   1. Generation uses Anthropic Claude for maximum quality.
+ *   2. Critique & Evaluation use Groq (cross-model, avoids self-evaluation bias).
+ *   3. Fast mode skips Critique/Refine for speed.
+ *   4. Single fluent candidate — no multi-version generation.
+ *   5. Non-pipeline routes share a single default.
  */
 
 // ─── Pipeline Stage Constants ───────────────────────────────────────────────
@@ -39,6 +36,7 @@ const STAGE_ORDER = Object.freeze({
 export const PIPELINE_CONFIG = Object.freeze({
 
   // 🟢 FAST — Quick results, lowest cost, skip critique/refine
+  //   Uses Groq fast models throughout for speed.
   fast: {
     id: "fast",
     name: "Fast",
@@ -51,7 +49,7 @@ export const PIPELINE_CONFIG = Object.freeze({
       generation: {
         provider: "groq",
         model: "llama-3.1-8b-instant",
-        candidates: 2,   // structured + fluent
+        candidates: 1,   // single fluent
       },
       // critique / refine — NOT executed in fast mode
       evaluation: {
@@ -67,27 +65,29 @@ export const PIPELINE_CONFIG = Object.freeze({
   },
 
   // 🔵 STANDARD — Primary product mode with full critique-refine cycle
+  //   Generation & Refine use Claude Haiku 4.5 for quality.
+  //   Critique & Evaluation use Groq 70b for fast cross-model judging.
   standard: {
     id: "standard",
     name: "Standard",
-    description: "Strong synthesis with critique-refine cycle and cross-model evaluation.",
+    description: "Strong synthesis with Claude generation, critique-refine cycle, and cross-model evaluation.",
     stages: {
       specBuilder: {
         provider: "groq",
-        model: "openai/gpt-oss-20b",
+        model: "llama-3.3-70b-versatile",
       },
       generation: {
-        provider: "groq",
-        model: "openai/gpt-oss-20b",
-        candidates: 2,
+        provider: "anthropic",
+        model: "claude-haiku-4-5-20250315",
+        candidates: 1,
       },
       critique: {
         provider: "groq",
-        model: "llama-3.3-70b-versatile",  // Cross-model: stronger reviewer
+        model: "llama-3.3-70b-versatile",  // Cross-model: different reviewer
       },
       refine: {
-        provider: "groq",
-        model: "openai/gpt-oss-20b",       // Same as generation (refines own work)
+        provider: "anthropic",
+        model: "claude-haiku-4-5-20250315", // Same as generation (refines own work)
       },
       evaluation: {
         provider: "groq",
@@ -102,27 +102,29 @@ export const PIPELINE_CONFIG = Object.freeze({
   },
 
   // 🟣 PREMIUM — Maximum quality, strongest models, full pipeline
+  //   Generation & Refine use Claude Haiku 4.5 for top quality.
+  //   Spec uses Groq qwen3-32b, Critique/Eval use Groq 70b.
   premium: {
     id: "premium",
     name: "Premium",
-    description: "Maximum quality with full critique-refine cycle and cross-model evaluation.",
+    description: "Maximum quality with Claude generation, full critique-refine cycle, and cross-model evaluation.",
     stages: {
       specBuilder: {
         provider: "groq",
         model: "qwen/qwen3-32b",
       },
       generation: {
-        provider: "groq",
-        model: "qwen/qwen3-32b",
-        candidates: 2,
+        provider: "anthropic",
+        model: "claude-haiku-4-5-20250315",
+        candidates: 1,
       },
       critique: {
         provider: "groq",
         model: "llama-3.3-70b-versatile",  // Cross-model: different perspective
       },
       refine: {
-        provider: "groq",
-        model: "qwen/qwen3-32b",           // Same as generation
+        provider: "anthropic",
+        model: "claude-haiku-4-5-20250315", // Same as generation
       },
       evaluation: {
         provider: "groq",

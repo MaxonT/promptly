@@ -5,8 +5,8 @@
  * - POST /api/pipeline/run - Execute full pipeline with SSE events
  * - GET /api/pipeline/stream/:runId - SSE stream for pipeline events
  * 
- * Pipeline Flow with Real-time Events:
- * Spec Builder → Question Engine → LLM Agents → Metrics & Scoring → Outcome Runner
+ * Pipeline Flow (v2.2 — single candidate, cost-optimized):
+ * Spec Builder → Generation (1× fluent) → Critique → Refine → Evaluation → Outcome
  */
 
 import { Router } from "express";
@@ -71,7 +71,16 @@ pipelineRouter.get("/health", (req, res) => {
 
 function stripThinkBlocks(text) {
   if (!text || typeof text !== "string") return text;
-  return text.replace(/<think>[\s\S]*?<\/think>\s*/gi, "").trim();
+  const stripped = text.replace(/<think>[\s\S]*?<\/think>\s*/gi, "").trim();
+  // Fallback: if think-block removal consumed the entire response, extract inner content
+  if (!stripped && text.trim()) {
+    const thinkMatch = text.match(/<think>([\s\S]*?)<\/think>/i);
+    if (thinkMatch) {
+      console.warn("[stripThinkBlocks] Entire response was inside <think> tags — extracting inner content as fallback");
+      return thinkMatch[1].trim();
+    }
+  }
+  return stripped;
 }
 
 /**
@@ -512,12 +521,12 @@ ${idea}${attachmentContext}`;
     });
 
     // ============================================
-    // Stage 3: Candidate Generation (Pipeline v2 — 2 differentiated candidates)
+    // Stage 3: Candidate Generation (Pipeline v2.2 — single fluent candidate)
     // ============================================
     const endGenTimer = stageTimer("generation");
     sendEvent(runId, "stage-start", {
       stage: "agents",
-      message: "Starting Differentiated Candidate Generation...",
+      message: "Starting Candidate Generation...",
       timestamp: new Date().toISOString()
     });
 
@@ -549,35 +558,22 @@ ${idea}${attachmentContext}`;
       console.warn(`[pipeline] [${runId}] Exemplar search skipped: ${exErr.message}`);
     }
 
-    // Two candidates with fundamentally different generation strategies
+    // Single fluent candidate — cost-optimized, no multi-version generation
     const generators = [
       {
-        name: "structured",
-        systemPrompt: `You are a Structured Prompt Engineer. Transform a specification into a well-organized, hierarchical prompt.
+        name: "fluent",
+        systemPrompt: `You are an expert Prompt Engineer. Transform a specification into a complete, production-ready prompt.
 
 YOUR STYLE:
-- Use clear section headers (## Role, ## Task, ## Rules, ## Output Format)
-- Number instructions and sub-steps explicitly
+- Use clear section headers (## Role, ## Task, ## Rules, ## Output Format) when appropriate
+- Embed instructions naturally and precisely
 - Include {{placeholders}} for all dynamic inputs
 - Add explicit constraints, guardrails, and edge-case handling
-- Provide a deterministic output schema (JSON, table, or template)
-- Prioritize precision and reproducibility over elegance
+- Use examples and analogies to convey intent where helpful
+- Balance structure with readability — precision AND clarity
+- Make the prompt feel like expert instructions from a senior engineer
 
-OUTPUT: The complete prompt text only. No commentary, no explanation.`
-      },
-      {
-        name: "fluent",
-        systemPrompt: `You are a Fluent Prompt Engineer. Transform a specification into a natural, expressive prompt.
-
-YOUR STYLE:
-- Write in flowing, conversational prose — no bullet lists or numbered steps
-- Embed instructions naturally within context-setting paragraphs
-- Use vivid examples and analogies to convey intent
-- Guide the AI through narrative rather than rigid structure
-- Prioritize clarity through context, not through formatting
-- Make the prompt feel like expert instructions from a mentor
-
-OUTPUT: The complete prompt text only. No commentary, no explanation.`
+OUTPUT: The complete prompt text only. No commentary, no explanation, no <think> tags.`
       },
     ];
 
@@ -612,7 +608,7 @@ ${normalizedSpec.examples.length > 0 ? `Examples:\n${normalizedSpec.examples.map
     };
     const taskTypeHint = TASK_TYPE_HINTS[normalizedSpec.task_type] || "";
 
-    console.log(`[pipeline] [${runId}] Stage 3: Generating ${generators.length} differentiated candidates (${genModel.provider}/${genModel.model})...`);
+    console.log(`[pipeline] [${runId}] Stage 3: Generating candidate (${genModel.provider}/${genModel.model})...`);
     const failures = [];
 
     for (let i = 0; i < generators.length; i++) {
@@ -646,7 +642,14 @@ ${normalizedSpec.examples.length > 0 ? `Examples:\n${normalizedSpec.examples.map
         pipelineMetrics.calls_total.generation++;
 
         const content = stripThinkBlocks(contentRaw);
-        console.log(`[pipeline] [${runId}] Stage 3: ${gen.name} completed — similarity: ${similarity?.toFixed(3) ?? "N/A"}, length: ${content.length}`);
+        console.log(`[pipeline] [${runId}] Stage 3: ${gen.name} completed — similarity: ${similarity?.toFixed(3) ?? "N/A"}, length: ${content.length}, rawLength: ${contentRaw?.length ?? 0}`);
+
+        // ── Guard: reject empty or trivially short content ──
+        if (!content || content.length < 20) {
+          console.warn(`[pipeline] [${runId}] Stage 3: ${gen.name} produced empty/minimal content after stripThinkBlocks (raw: ${contentRaw?.length ?? 0} chars, stripped: ${content?.length ?? 0} chars). Skipping.`);
+          failures.push({ agent: gen.name, error: `Empty content after think-block removal (raw ${contentRaw?.length ?? 0} chars)` });
+          continue;
+        }
 
         const candidateId = `cand_${nanoid(12)}`;
 
@@ -747,6 +750,18 @@ Be ruthlessly honest. Generic praise is not helpful. Differentiate scores — av
           checkTimeout();
 
           const candidate = db.prepare("SELECT * FROM candidate_prompts WHERE id = ?").get(candidateId);
+
+          // ── Guard: skip critique for empty/trivial candidates ──
+          if (!candidate.content || candidate.content.trim().length < 20) {
+            console.warn(`[pipeline] [${runId}] Critique: skipping ${candidate.agent} — content is empty or trivially short (${candidate.content?.length ?? 0} chars)`);
+            sendEvent(runId, "stage-progress", {
+              stage: "critique",
+              step: `skipped-empty-${candidate.agent}`,
+              message: `${candidate.agent} skipped — empty content`,
+              details: { candidateId, agent: candidate.agent, reason: "empty_content" }
+            });
+            continue;
+          }
 
           sendEvent(runId, "stage-progress", {
             stage: "critique",
@@ -880,6 +895,12 @@ RULES:
           pipelineMetrics.calls_total.refine++;
 
           const refinedContent = stripThinkBlocks(refinedRaw);
+
+          // ── Guard: reject empty refined content ──
+          if (!refinedContent || refinedContent.length < 20) {
+            console.warn(`[pipeline] [${runId}] Refine: ${candidate.agent} produced empty/minimal refined content (raw: ${refinedRaw?.length ?? 0}, stripped: ${refinedContent?.length ?? 0}). Skipping.`);
+            continue;
+          }
 
           // Create a new "refined" candidate row linked to the original
           const refinedId = `cand_${nanoid(12)}`;
@@ -1041,6 +1062,12 @@ Output JSON:
 
     const includePairwise = mode !== "fast" && evalCandidates.length >= 2;
 
+    // ── Guard: filter out empty candidates from evaluation ──
+    const validEvalCandidates = evalCandidates.filter(c => c.content && c.content.trim().length >= 20);
+    if (validEvalCandidates.length < evalCandidates.length) {
+      console.warn(`[pipeline] [${runId}] Eval: filtered out ${evalCandidates.length - validEvalCandidates.length} empty candidates before evaluation`);
+    }
+
     const batchEvalSystem = `You are an expert Prompt Evaluator comparing multiple candidates simultaneously.
 
 TASK 1: Score EACH candidate on 8 dimensions (0.0–1.0).
@@ -1081,14 +1108,15 @@ OUTPUT (JSON only):
 }`;
 
     // Build the user prompt with all candidates (0-based to match JSON schema candidateIndex)
-    const candidateBlocks = evalCandidates
+    // Use validEvalCandidates (empty ones already filtered)
+    const candidateBlocks = validEvalCandidates
       .map((c, i) => `---CANDIDATE ${i} (${c.agent})---\n${c.content}\n---END CANDIDATE ${i}---`)
       .join("\n\n");
 
     try {
       checkTimeout();
 
-      console.log(`[pipeline] [${runId}] Batch eval: ${evalCandidates.length} candidates in 1 call (${evalModel.provider}/${evalModel.model})${includePairwise ? " + pairwise" : ""}`);
+      console.log(`[pipeline] [${runId}] Batch eval: ${validEvalCandidates.length} candidates in 1 call (${evalModel.provider}/${evalModel.model})${includePairwise ? " + pairwise" : ""}`);
 
       // Schema for batch evaluation response
       const evalScoresSchema = z.object({
@@ -1138,11 +1166,11 @@ OUTPUT (JSON only):
       }
       pipelineMetrics.calls_total.evaluation = 1; // Single batch call
 
-      // Process each evaluation result
+      // Process each evaluation result (indices match validEvalCandidates)
       const evaluations = batchData?.evaluations || [];
       for (const evalItem of evaluations) {
         const idx = evalItem.candidateIndex;
-        const cand = evalCandidates[idx];
+        const cand = validEvalCandidates[idx];
         if (!cand) {
           console.warn(`[pipeline] [${runId}] Batch eval returned unknown candidateIndex: ${idx}`);
           continue;
@@ -1173,18 +1201,18 @@ OUTPUT (JSON only):
 
       // Check for candidates that didn't get evaluated
       const evaluatedIndices = new Set(evaluations.map(e => e.candidateIndex));
-      for (const cand of evalCandidates) {
-        if (!evaluatedIndices.has(cand.index)) {
+      for (let vi = 0; vi < validEvalCandidates.length; vi++) {
+        if (!evaluatedIndices.has(vi)) {
           evalFailures++;
-          console.warn(`[pipeline] [${runId}] Candidate ${cand.agent} (index ${cand.index}) missing from batch eval response`);
+          console.warn(`[pipeline] [${runId}] Candidate ${validEvalCandidates[vi].agent} (index ${vi}) missing from batch eval response`);
         }
       }
 
       // Process pairwise result
       if (includePairwise && batchData?.pairwise) {
         const pw = batchData.pairwise;
-        const candA = evalCandidates[pw.candidateA_index];
-        const candB = evalCandidates[pw.candidateB_index];
+        const candA = validEvalCandidates[pw.candidateA_index];
+        const candB = validEvalCandidates[pw.candidateB_index];
 
         if (candA && candB) {
           pairwiseResult = {
@@ -1213,9 +1241,9 @@ OUTPUT (JSON only):
         message: "Batch evaluation failed — falling back to individual scoring...",
       });
 
-      // Individual fallback (original per-candidate approach)
-      for (let i = 0; i < evalCandidates.length; i++) {
-        const cand = evalCandidates[i];
+      // Individual fallback (original per-candidate approach) — use validEvalCandidates
+      for (let i = 0; i < validEvalCandidates.length; i++) {
+        const cand = validEvalCandidates[i];
         try {
           checkTimeout();
           const { data: evalData, usage: evalUsage } = await chatJson({

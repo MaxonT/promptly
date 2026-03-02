@@ -1,5 +1,6 @@
 import { chatJson as chatJsonOpenAI, chatText as chatTextOpenAI, LlmDisabledError, getResolvedDefaultModel, isLlmEnabled } from "./openaiClient.js";
 import { chatJsonGroq, chatTextGroq } from "./groqClient.js";
+import { chatJsonAnthropic, chatTextAnthropic } from "./anthropicClient.js";
 
 export { LlmDisabledError, getResolvedDefaultModel, isLlmEnabled };
 
@@ -88,8 +89,13 @@ export async function chatJson({ system, user, model, promptlyModelId, provider,
       () => chatJsonOpenAI({ system, user, model, promptlyModelId, apiKey, maxTokens, temperature }),
       'chatJson/openai'
     );
+  } else if (provider === 'anthropic') {
+    return withRetry(
+      () => chatJsonAnthropic({ system, user, model, apiKey, maxTokens, temperature }),
+      'chatJson/anthropic'
+    );
   } else {
-    throw new Error(`[llmRouter] ❌ Contract Violation: Unknown provider '${provider}'. Supported: 'openai', 'groq'`);
+    throw new Error(`[llmRouter] ❌ Contract Violation: Unknown provider '${provider}'. Supported: 'openai', 'groq', 'anthropic'`);
   }
 }
 
@@ -112,7 +118,12 @@ export async function chatText({ system, user, model, promptlyModelId, provider,
       () => chatTextOpenAI({ system, user, model, promptlyModelId, temperature, forceRewritePrompt, minSimilarity, maxRetries }),
       'chatText/openai'
     );
+  } else if (provider === 'anthropic') {
+    return withRetry(
+      () => chatTextAnthropic({ system, user, model, temperature, minSimilarity, maxRetries }),
+      'chatText/anthropic'
+    );
   } else {
-    throw new Error(`[llmRouter] ❌ Contract Violation: Unknown provider '${provider}'. Supported: 'openai', 'groq'`);
+    throw new Error(`[llmRouter] ❌ Contract Violation: Unknown provider '${provider}'. Supported: 'openai', 'groq', 'anthropic'`);
   }
 }

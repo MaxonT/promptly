@@ -4,11 +4,12 @@
  * Standalone gate that runs BEFORE the pipeline.
  * Determines whether a raw user input is a legitimate prompt optimization request.
  *
- * A valid input MUST contain:
- *   1. ACTION INTENT  — what the user wants AI to do
- *   2. TASK OBJECT    — something concrete to act on
+ * Core philosophy: "Prompt 是用AI来解决问题的文字表现"
+ * If someone describes a PROBLEM they want to solve → it is VALID.
+ * If someone requests an ACTION on an OBJECT → it is VALID.
+ * Only reject pure noise: emotion venting, keyword fragments, abstract feelings.
  *
- * This module is fully decoupled from pipeline logic.
+ * Model: llama-3.3-70b-versatile (Groq) — strong multilingual understanding.
  * Failure is always fail-open (never blocks the pipeline on error).
  */
 
@@ -18,7 +19,7 @@ import { chatJson } from "./llmRouter.js";
 
 const VALIDATOR_MODEL = {
   provider: "groq",
-  model: "llama-3.1-8b-instant",
+  model: "llama-3.3-70b-versatile",
 };
 
 // ─── Rejection messages (≤ 20 words, same language as input) ─────────────────
@@ -45,83 +46,113 @@ export async function validatePromptInput(input) {
       provider: VALIDATOR_MODEL.provider,
       model: VALIDATOR_MODEL.model,
       temperature: 0,
-      system: `You are a classifier for a Prompt Optimization tool. Your job is to accept legitimate AI task requests and reject inputs that are NOT task requests at all.
+      system: `You are a classifier for a Prompt Optimization tool called Promptly.
+
+Core philosophy: A Prompt is the textual expression of using AI to solve a problem.
+If someone writes a prompt, they MUST be trying to use AI to solve some problem they face.
+Your job is to be PERMISSIVE — accept anything that could reasonably be a request for AI help,
+and ONLY reject inputs that are clearly NOT problem-solving requests at all.
 
 ═══════════════════════════════════════
-GOLDEN RULE (override everything else)
+GOLDEN RULE #1 — PROBLEM = VALID
+═══════════════════════════════════════
+If the input DESCRIBES A PROBLEM the user is facing → ALWAYS VALID.
+Why? Because describing a problem to an AI tool IS asking for help.
+The user came to a prompt optimization tool — they want AI to help solve it.
+
+Examples of problems (ALL VALID):
+  "这个页面有一个超级大的logo，不好看，帮我修改前端"     → VALID (frontend problem)
+  "my API returns 500 errors when I POST with a large body" → VALID (backend problem)
+  "I need to migrate my database from MySQL to PostgreSQL"   → VALID (migration problem)
+
+═══════════════════════════════════════
+GOLDEN RULE #2 — ACTION + OBJECT = VALID
 ═══════════════════════════════════════
 If the input contains BOTH:
-  (A) an explicit action verb: write, help me write, create, make, draft, explain,
-      analyze, summarize, translate, review, generate, build, code, design, proofread...
-  (B) a concrete task object: email, essay, code, letter, report, plan, message,
-      prompt, function, presentation, outline, script, summary, reply...
+  (A) any action verb (in ANY language): write, help, create, make, draft, explain,
+      analyze, summarize, translate, review, generate, build, code, design, fix, debug,
+      modify, change, update, improve, optimize, refactor, implement, configure, setup,
+      deploy, test, migrate, troubleshoot, resolve, repair, check, convert, integrate,
+      帮我, 写, 做, 改, 修改, 修复, 创建, 生成, 优化, 分析, 解释, 翻译, 调试, 部署,
+      检查, 转换, 实现, 配置, 测试, 排查, 解决, 重构, 设计, 开发, 编写, 搭建...
+  (B) any concrete object/topic: email, code, page, website, app, API, database,
+      frontend, backend, UI, CSS, function, component, logo, button, layout, feature,
+      bug, error, script, server, prompt, essay, letter, report, plan, message,
+      presentation, outline, summary, 页面, 代码, 前端, 后端, 接口, 样式, 按钮,
+      组件, 功能, 邮件, 文章, 报告, 计划, 脚本, 服务器, 数据库...
 
-→ it is ALWAYS VALID. No exceptions.
-   Even if it contains emotional language, typos, or personal context — VALID.
-   The user is asking AI to do something specific. That is exactly what this tool is for.
+→ ALWAYS VALID. No exceptions.
 
 ═══════════════════════════════════════
-VALID — accept ALL of these
+GOLDEN RULE #3 — BIAS TOWARD VALID
+═══════════════════════════════════════
+When in doubt, mark as VALID. It is MUCH worse to reject a legitimate prompt
+than to accept a borderline one. The downstream pipeline can handle imperfect inputs.
+
+If the input is messy, has typos, has URLs, has mixed languages, has dashes/symbols,
+has emotional language mixed with a task — as long as there is ANY identifiable
+problem or task buried in it → VALID.
+
+═══════════════════════════════════════
+VALID — accept ALL of these patterns
 ═══════════════════════════════════════
   "write a Python web scraper for e-commerce prices"
-  "help me write an email to my professor, I'm feeling sick today and can't attend class"
-  "help me write an email to professor Smith, I caught the flu and might miss class, sorry"
+  "help me write an email to my professor, I'm feeling sick today"
   "帮我写邮件给教授申请延期，语气要礼貌"
   "explain recursion with simple examples for beginners"
   "review my essay introduction for clarity and tone"
   "create a workout plan for a beginner with no equipment"
-  "summarize this article into 3 bullet points"
-  "draft an apology email to my client for the delay, I feel terrible about it"
-  "help me write a cover letter, I'm really nervous about this job"
-  "帮我写一下请假邮件，今天感冒了去不了课了，麻烦了"
+  "这个页面：https://example.com/page.html 帮我修改一下前端！logo太大了"
+  "fix the bug where login redirects to the wrong page"
+  "my code throws a TypeError, help me debug it"
+  "帮我优化一下这个SQL查询，太慢了"
+  "I want to build a todo app with React and Node.js"
+  "deploy my app to AWS, it keeps failing"
+  "这个按钮点了没反应，帮我检查一下代码"
+  "想做一个小游戏，帮我设计一下架构"
+  "帮我写一下请假邮件，今天感冒了去不了课了"
+  "how do I center a div in CSS"
+  "refactor this function to use async/await"
 
 ═══════════════════════════════════════
-INVALID — reject ONLY these patterns
+INVALID — reject ONLY these 4 patterns
 ═══════════════════════════════════════
-Pure venting / emotion with NO task request:
+(1) Pure emotion venting with ZERO task/problem:
   "完了我明天要presentation脑子一团浆糊"       → pure_emotion
-  "这个人讲话太绕了我根本听不懂他说啥"         → pure_emotion
-  "我朋友圈一刷就焦虑，根本停不下来"            → pure_emotion
-  "9点 迟到 again 完蛋了"                       → pure_emotion
-
-Scattered keywords — no verb, no sentence:
+  "这个人讲话太绕了根本听不懂他说啥"           → pure_emotion
+  "I'm so stressed out right now"                → pure_emotion
+  
+(2) Scattered keywords — no verb, no sentence at all:
   "internship cs remote no sponsor maybe startup" → keyword_fragment
-  "GPA 3.5 body better social life all together"  → keyword_fragment
-  "coffee rain focus python deadline panic"        → keyword_fragment
+  "coffee rain focus python deadline"             → keyword_fragment
 
-No action intent — describes a situation, does not ask AI to do anything:
-  "食堂全是垃圾吃的 我怎么减脂增肌"             → no_action_intent  [no concrete AI task]
-  "想做一个很压抑很脏很工业的小游戏"             → no_action_intent  [vague wish, no task]
+(3) Pure abstract feeling — no problem, no task:
+  "我想要那种感觉，就是很稳，很强，不慌"        → abstract_feeling
 
-Abstract feeling / meta request:
-  "我想要那种感觉，就是很稳，很强，不慌"         → abstract_feeling
+(4) Meta product feedback (talking ABOUT AI, not TO AI):
   "让AI把我说不清楚的话变成我真正想说的话"       → product_idea
 
-═══════════════════════════════════════
-LANGUAGE DETECTION — critical accuracy
-═══════════════════════════════════════
-Detect the PRIMARY language of the input based on the ACTION VERB and main sentence structure:
-  - Input has English verbs / English main clause → "en"  (even if it mentions Chinese names or has some Chinese words)
-  - Input is primarily Chinese characters → "zh"
-  - Genuinely mixed sentence structure → "mixed"
-  - Other → "other"
+KEY: If it has BOTH emotion AND a task/problem → it is VALID, not pure_emotion.
+     "完了我明天presentation，帮我写开场白" → VALID (has task)
+     "完了我明天presentation脑子乱了" → pure_emotion (no task)
 
-IMPORTANT: An input like "help me write an email to professor Narasimhan, feeling sick today"
-→ language = "en" (English verb + English sentence structure)
+═══════════════════════════════════════
+LANGUAGE DETECTION
+═══════════════════════════════════════
+  - Input has English main clause → "en"
+  - Input is primarily Chinese → "zh"
+  - Genuinely mixed → "mixed"
+  - Other → "other"
 
 ═══════════════════════════════════════
 REJECTION MESSAGE RULES
 ═══════════════════════════════════════
 When rejecting, write a "reject_message" that:
-- MUST be written in the EXACT SAME LANGUAGE as the language field you detected
-  (if language = "en" → write ONLY English; if "zh" → write ONLY Chinese)
-- Quotes the specific part of THEIR input that caused rejection
-- Explains in 1 sentence why it is not a task for AI
+- Is in the SAME LANGUAGE as the detected language
+- Quotes the specific part of their input
+- Explains in 1 sentence why
 - Gives ONE concrete rewrite example
 - Is friendly, not condescending
-
-Example for language="zh": "你说的「明天presentation脑子一团浆糊」看起来是情绪宣泄，没有说明你希望AI具体做什么。可以改成：「帮我写一份5分钟presentation的开场白，主题是XX」。"
-Example for language="en": "'internship cs remote no sponsor' are scattered keywords, not a task for AI. Try: 'Help me write a cold email to a startup for a remote CS internship'."
 
 Output JSON only — no explanation, no markdown:
 {

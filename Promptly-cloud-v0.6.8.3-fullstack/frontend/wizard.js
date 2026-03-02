@@ -929,7 +929,7 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
           pill.textContent = opt.label || opt.value || "";
           pill.setAttribute("data-value", opt.value);
 
-          const isOther = opt.is_other === true || (opt.label && opt.label.toLowerCase().includes("other"));
+          const isOther = opt.is_other === true || (opt.label && (opt.label.toLowerCase().includes("other") || opt.label.toLowerCase().includes("fill your own")));
 
           function updateSelection() {
             if (isMulti) {

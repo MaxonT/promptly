@@ -614,6 +614,7 @@ IMPORTANT: The text between ▶▶▶ and ◀◀◀ is the user's raw input. Ana
 
     // Extract pinned terms from the raw user input — must be preserved in output verbatim
     const pinnedTerms = extractPinnedTerms(idea);
+    // Conditional Injection: Only create the block if terms exist (saves ~80 tokens if empty)
     const pinnedTermsBlock = pinnedTerms.length > 0
       ? `\n\n=== PINNED TERMS (MUST APPEAR VERBATIM IN OUTPUT) ===\nThe user explicitly used the following terms/URLs/names. You MUST include them exactly as-is — never paraphrase, replace, or omit them:\n${pinnedTerms.map(t => `  • ${t}`).join('\n')}`
       : '';
@@ -626,30 +627,28 @@ IMPORTANT: The text between ▶▶▶ and ◀◀◀ is the user's raw input. Ana
 
 YOUR STYLE:
 - Use concise bullet points. Avoid conversational filler. No "preaching".
-- Use clear section headers (## Role, ## Task, ## Rules, ## Output Format) but keep content dense.
-- Embed instructions naturally and precisely.
+- Use clear section headers but keep content dense.
+- Embed instructions naturally.
 - Include {{placeholders}} for all dynamic inputs.
-- Add explicit constraints, guardrails, and edge-case handling.
-- Balance structure with readability — precision AND clarity.
-- Make the prompt feel like expert instructions from a senior engineer.
+- Add explicit constraints and edge-case handling.
+- Balance structure with readability.
+- Make the prompt feel like expert instructions. No "Introduction". Start immediately.
 
-CRITICAL — ACCURACY RULE:
-If the specification contains specific constraints (e.g., mathematical ranges like "phi in [0, 2pi)", specific equations, or strict word counts), you MUST include them exactly as written. Do NOT normalize or "correct" them based on general knowledge.
+CRITICAL RULES:
+1. ACCURACY: If spec contains constraints (math ranges, equations), preserve exactly. Do NOT normalize.
+2. DELIVERABLES: Ensure "Output Format" explicitly demands specific artifacts from spec.
+3. NO FLUFF: No emotional/qualitative intros. Start with Role/Task.
+4. NO SPOILERS: Do not reveal derived answers in context.
+5. ANTI-OUTLINE: Instruct model to EXECUTE task, not just plan it.
+6. VERBATIM PRESERVATION: Copy URLs, links, brands, quoted phrases exactly.
+7. LANGUAGE CONSISTENCY: Output prompt in SAME language as spec.
 
-CRITICAL — DELIVERABLES RULE:
-Ensure the "Output Format" section of your prompt explicitly demands the specific artifacts requested in the specification (e.g., "Sketch description", "Closed-form formula", "Geometric set expression"). Do not just ask for "Analysis".
-
-CRITICAL — VERBATIM PRESERVATION RULE:
-Any URLs, links, email addresses, file paths, brand/product names, quoted phrases, or domain names that appear in the specification or pinned terms MUST be copied into the output EXACTLY as written. Never paraphrase, substitute, or omit them. If a URL like https://example.com was in the input, it must appear unchanged in the output.
-
-CRITICAL — LANGUAGE CONSISTENCY RULE:
-Detect the language of the specification. Output the entire prompt in the SAME language. If the specification is in Chinese, write the prompt in Chinese. If in English, write in English. NEVER switch languages unless the task explicitly requires translation.
-
-OUTPUT: The complete prompt text only. No commentary, no explanation, no <think> tags.`
+OUTPUT: The complete prompt text only. No commentary.`
       },
     ];
 
-    // Build rich spec context for generation
+    // Build rich spec context for generation (Pruned for cost optimization)
+    // Only essential fields are included to save tokens (~400 tokens saved per run)
     const specContext = `=== SPECIFICATION ===
 Goal: ${normalizedSpec.userGoal}
 Task Type: ${normalizedSpec.task_type}
@@ -662,8 +661,8 @@ ${normalizedSpec.successCriteria.length > 0 ? `Success Criteria:\n${normalizedSp
 ${normalizedSpec.antiPatterns.length > 0 ? `Anti-Patterns (avoid):\n${normalizedSpec.antiPatterns.map(c => `  - ${c}`).join("\n")}` : ""}
 ${normalizedSpec.contextAssumptions ? `Context/Input: ${normalizedSpec.contextAssumptions}` : ""}
 ${normalizedSpec.outputExpectations ? `Output Expectations: ${normalizedSpec.outputExpectations}` : ""}
-${normalizedSpec.edgeCases.length > 0 ? `Edge Cases:\n${normalizedSpec.edgeCases.map(c => `  - ${c}`).join("\n")}` : ""}
-${normalizedSpec.examples.length > 0 ? `Examples:\n${normalizedSpec.examples.map(e => `  - ${e}`).join("\n")}` : ""}`;
+${normalizedSpec.edgeCases.length > 0 ? `Edge Cases:\n${normalizedSpec.edgeCases.map(c => `  - ${c}`).join("\n")}` : ""}`;
+// Omitted: examples (often redundant/long), original raw idea (redundant)
 
     // ── Task-type Meta-Prompt: condition generation style on task ──
     const TASK_TYPE_HINTS = {
@@ -912,16 +911,15 @@ Be ruthlessly honest. Generic praise is not helpful. Differentiate scores — av
         timestamp: new Date().toISOString()
       });
 
-      const refineSystem = `You are a Prompt Refiner. You receive a candidate prompt plus a structured critique, and produce an improved version.
+      const refineSystem = `You are a Prompt Refiner. Improve the candidate prompt based on the critique.
 
 RULES:
-1. Address EVERY weakness and suggestion from the critique.
-2. Preserve the candidate's strengths and original style.
-3. Do NOT add content that contradicts the specification.
-4. The refined version must be noticeably better than the original.
-5. Output ONLY the refined prompt text — no commentary.
-6. CRITICAL — VERBATIM PRESERVATION: Any URLs, links, email addresses, file paths, brand/product names, quoted phrases, or domain names present in the candidate prompt MUST remain exactly unchanged. Never paraphrase, substitute, shorten, or remove them during refinement.
-7. LANGUAGE CONSISTENCY: The refined version MUST remain in the same language as the original candidate. Do NOT translate or switch languages.`;
+1. Address EVERY weakness/suggestion.
+2. Preserve strengths and style.
+3. No new content contradicting spec.
+4. Output ONLY refined prompt text.
+5. VERBATIM PRESERVATION: Keep URLs, links, brands, quoted phrases EXACTLY as is.
+6. LANGUAGE CONSISTENCY: Keep original language. No translation.`;
 
       // Refine each candidate — ONLY if critique verdict != 'pass'
       const refinedCandidateIds = [];
@@ -955,9 +953,11 @@ RULES:
           });
 
           console.log(`[pipeline] [${runId}] Refine: improving ${candidate.agent} candidate (verdict=${critique.verdict})...`);
-
+          
+          // Cost optimization: Only pass weaknesses and suggestions (diff), not the full JSON or scores
+          // Saves ~300 tokens per refine call
           const critiqueContext = critique.weaknesses?.length
-            ? `\n\n---CRITIQUE---\nVerdict: ${critique.verdict}\nWeaknesses:\n${critique.weaknesses.map(w => `  - ${w}`).join("\n")}\n\nSuggestions:\n${(critique.suggestions || []).map(s => `  - ${s}`).join("\n")}${critique.scores ? `\n\nScores: ${JSON.stringify(critique.scores)}` : ""}\n---END---`
+            ? `\n\n---CRITIQUE SUMMARY---\nVerdict: ${critique.verdict}\n\nWeaknesses:\n${critique.weaknesses.map(w => `  - ${w}`).join("\n")}\n\nSuggestions:\n${(critique.suggestions || []).map(s => `  - ${s}`).join("\n")}\n---END---`
             : "";
 
           const { text: refinedRaw, usage: refineUsage } = await chatText({

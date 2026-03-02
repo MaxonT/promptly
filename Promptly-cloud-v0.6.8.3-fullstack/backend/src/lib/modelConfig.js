@@ -45,17 +45,20 @@ export const PIPELINE_CONFIG = Object.freeze({
       specBuilder: {
         provider: "groq",
         model: "llama-3.1-8b-instant",
+        max_tokens: 600,
       },
       generation: {
         provider: "groq",
         model: "llama-3.1-8b-instant",
         candidates: 1,   // single fluent
+        max_tokens: 2000,
       },
       // critique / refine — NOT executed in fast mode
       evaluation: {
         provider: "groq",
         model: "llama-3.1-8b-instant",
         temperature: 0,
+        max_tokens: 300,
       },
       outcome: {
         provider: null,
@@ -75,24 +78,29 @@ export const PIPELINE_CONFIG = Object.freeze({
       specBuilder: {
         provider: "groq",
         model: "llama-3.3-70b-versatile",
+        max_tokens: 600,
       },
       generation: {
         provider: "anthropic",
         model: "claude-haiku-4-5-20251001",
         candidates: 1,
+        max_tokens: 2000,
       },
       critique: {
         provider: "groq",
         model: "llama-3.3-70b-versatile",  // Cross-model: different reviewer
+        max_tokens: 400,
       },
       refine: {
         provider: "anthropic",
         model: "claude-haiku-4-5-20251001", // Same as generation (refines own work)
+        max_tokens: 2000,
       },
       evaluation: {
         provider: "groq",
         model: "llama-3.3-70b-versatile",  // Cross-model: independent judge
         temperature: 0,
+        max_tokens: 300,
       },
       outcome: {
         provider: null,
@@ -112,24 +120,29 @@ export const PIPELINE_CONFIG = Object.freeze({
       specBuilder: {
         provider: "groq",
         model: "qwen/qwen3-32b",
+        max_tokens: 600,
       },
       generation: {
         provider: "anthropic",
         model: "claude-haiku-4-5-20251001",
         candidates: 1,
+        max_tokens: 2000,
       },
       critique: {
         provider: "groq",
         model: "llama-3.3-70b-versatile",  // Cross-model: different perspective
+        max_tokens: 400,
       },
       refine: {
         provider: "anthropic",
         model: "claude-haiku-4-5-20251001", // Same as generation
+        max_tokens: 2000,
       },
       evaluation: {
         provider: "groq",
         model: "llama-3.3-70b-versatile",  // Cross-model: independent judge
         temperature: 0,
+        max_tokens: 300,
       },
       outcome: {
         provider: null,

@@ -78,7 +78,7 @@ export const PIPELINE_CONFIG = Object.freeze({
       },
       generation: {
         provider: "anthropic",
-        model: "claude-haiku-4-5-20250315",
+        model: "claude-haiku-4-5-20251001",
         candidates: 1,
       },
       critique: {
@@ -87,7 +87,7 @@ export const PIPELINE_CONFIG = Object.freeze({
       },
       refine: {
         provider: "anthropic",
-        model: "claude-haiku-4-5-20250315", // Same as generation (refines own work)
+        model: "claude-haiku-4-5-20251001", // Same as generation (refines own work)
       },
       evaluation: {
         provider: "groq",
@@ -115,7 +115,7 @@ export const PIPELINE_CONFIG = Object.freeze({
       },
       generation: {
         provider: "anthropic",
-        model: "claude-haiku-4-5-20250315",
+        model: "claude-haiku-4-5-20251001",
         candidates: 1,
       },
       critique: {
@@ -124,7 +124,7 @@ export const PIPELINE_CONFIG = Object.freeze({
       },
       refine: {
         provider: "anthropic",
-        model: "claude-haiku-4-5-20250315", // Same as generation
+        model: "claude-haiku-4-5-20251001", // Same as generation
       },
       evaluation: {
         provider: "groq",

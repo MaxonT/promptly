@@ -49,7 +49,7 @@ export async function chatJsonAnthropic({ system, user, model, apiKey: overrideK
     throw new AnthropicDisabledError();
   }
 
-  const resolvedModel = model || "claude-haiku-4-5-20250315";
+  const resolvedModel = model || "claude-haiku-4-5-20251001";
   console.log(`[promptly] 🚀 Starting Anthropic call - Model: ${resolvedModel}`);
 
   try {
@@ -116,7 +116,7 @@ export async function chatTextAnthropic({ system, user, model, apiKey: overrideK
     throw new AnthropicDisabledError();
   }
 
-  const resolvedModel = model || "claude-haiku-4-5-20250315";
+  const resolvedModel = model || "claude-haiku-4-5-20251001";
   console.log(`[promptly] 🚀 Starting Anthropic call - Model: ${resolvedModel} (Text Mode)`);
 
   try {

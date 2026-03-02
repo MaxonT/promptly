@@ -3018,53 +3018,135 @@ document.addEventListener('DOMContentLoaded', () => {
       submit: isCh ? '补充完成，开始优化 →' : 'Refine & Run →',
       skip:   isCh ? '跳过' : 'Skip',
       hint:   isCh ? '跳过后仍会优化，但结果可能不够精准' : 'Skipping is fine — Promptly will still optimize, but results may be less targeted',
-      ph:     isCh ? '你的回答…' : 'Your answer...',
+      otherPh: isCh ? '请输入具体内容…' : 'Please specify…',
     };
 
-    const qHTML = questions.map((q, i) => `
-      <div style="margin-bottom:16px">
-        <label style="display:block;font-size:13px;font-weight:600;color:#CBD5E1;margin-bottom:6px;line-height:1.4">${i + 1}. ${q.question}</label>
-        <input id="clarify-ans-${i}" type="text" placeholder="${labels.ph}"
-          autocomplete="off"
-          style="width:100%;padding:9px 12px;background:#1E293B;border:1px solid #475569;border-radius:8px;color:#F1F5F9;font-size:14px;box-sizing:border-box;outline:none;transition:border-color .15s"
-          onfocus="this.style.borderColor='#7C3AED'" onblur="this.style.borderColor='#475569'"
-          onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();document.getElementById('clarify-submit').click()}">
-      </div>`).join('');
+    // Track selected answer per question index
+    const selectedAnswers = new Map(); // index -> value string
+
+    // Generate pill-based multiple choice HTML for each question
+    const qHTML = questions.map((q, i) => {
+      const opts = Array.isArray(q.options) && q.options.length > 0 ? q.options : null;
+      if (!opts) {
+        // Fallback: free text input if no options provided
+        return `
+        <div style="margin-bottom:20px">
+          <p style="margin:0 0 10px;font-size:14px;font-weight:600;color:#E2E8F0;line-height:1.4">${i + 1}. ${q.question}</p>
+          <input id="clarify-text-${i}" type="text" placeholder="${labels.otherPh}"
+            autocomplete="off"
+            style="width:100%;padding:10px 14px;background:#1E293B;border:1px solid #475569;border-radius:8px;color:#F1F5F9;font-size:14px;box-sizing:border-box;outline:none;transition:border-color .15s"
+            onfocus="this.style.borderColor='#7C3AED'" onblur="this.style.borderColor='#475569'">
+        </div>`;
+      }
+      const pillsHTML = opts.map(opt => {
+        const isOther = opt.value === 'other';
+        return `<button type="button"
+          class="clarify-pill"
+          data-qidx="${i}"
+          data-value="${opt.value}"
+          data-is-other="${isOther}"
+          style="display:inline-flex;align-items:center;padding:8px 16px;margin:4px 4px 4px 0;border:1.5px solid #334155;border-radius:20px;background:transparent;color:#CBD5E1;font-size:13.5px;cursor:pointer;transition:all .15s;white-space:nowrap"
+          onmouseover="if(!this.classList.contains('clarify-pill--selected'))this.style.borderColor='#7C3AED'"
+          onmouseout="if(!this.classList.contains('clarify-pill--selected'))this.style.borderColor='#334155'">
+          ${opt.label}
+        </button>`;
+      }).join('');
+      return `
+        <div style="margin-bottom:24px">
+          <p style="margin:0 0 10px;font-size:14px;font-weight:600;color:#E2E8F0;line-height:1.4">${i + 1}. ${q.question}</p>
+          <div style="display:flex;flex-wrap:wrap;gap:2px">${pillsHTML}</div>
+          <input id="clarify-other-${i}" type="text" placeholder="${labels.otherPh}"
+            style="display:none;margin-top:10px;width:100%;padding:9px 12px;background:#1E293B;border:1px solid #7C3AED;border-radius:8px;color:#F1F5F9;font-size:13px;box-sizing:border-box;outline:none"
+            autocomplete="off">
+        </div>`;
+    }).join('');
 
     const panel = document.createElement('div');
     panel.id = 'promptly-clarification-panel';
     panel.setAttribute('role', 'dialog');
     panel.setAttribute('aria-modal', 'true');
-    panel.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.65);z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(2px)';
+    panel.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);z-index:99999;display:flex;align-items:center;justify-content:center;padding:24px;backdrop-filter:blur(3px)';
     panel.innerHTML = `
-      <div style="background:#0F172A;border:1px solid #334155;border-radius:16px;padding:28px 30px;max-width:520px;width:100%;box-shadow:0 25px 60px rgba(0,0,0,0.6)">
-        <div style="display:flex;align-items:flex-start;gap:12px;margin-bottom:6px">
-          <span style="font-size:22px;line-height:1;margin-top:1px">❓</span>
-          <h3 style="margin:0;font-size:16px;font-weight:700;color:#F1F5F9;line-height:1.3">${labels.title}</h3>
+      <div style="background:#0F172A;border:1px solid #334155;border-radius:20px;padding:36px 40px;max-width:680px;width:100%;box-shadow:0 30px 80px rgba(0,0,0,0.7);max-height:90vh;overflow-y:auto">
+        <div style="display:flex;align-items:flex-start;gap:14px;margin-bottom:8px">
+          <span style="font-size:26px;line-height:1;margin-top:2px">❓</span>
+          <h3 style="margin:0;font-size:18px;font-weight:700;color:#F1F5F9;line-height:1.3">${labels.title}</h3>
         </div>
-        <p style="margin:0 0 20px 34px;font-size:13px;color:#94A3B8;line-height:1.6">${labels.sub}</p>
+        <p style="margin:0 0 28px 40px;font-size:13.5px;color:#94A3B8;line-height:1.6">${labels.sub}</p>
         ${qHTML}
-        <div style="display:flex;gap:10px;margin-top:20px">
+        <div style="display:flex;gap:12px;margin-top:8px">
           <button id="clarify-submit"
-            style="flex:1;padding:11px 16px;background:#7C3AED;color:white;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;transition:background .15s"
+            style="flex:1;padding:13px 18px;background:#7C3AED;color:white;border:none;border-radius:10px;font-size:15px;font-weight:600;cursor:pointer;transition:background .15s"
             onmouseover="this.style.background='#6D28D9'" onmouseout="this.style.background='#7C3AED'">
             ${labels.submit}
           </button>
           <button id="clarify-skip"
-            style="padding:11px 20px;background:transparent;color:#94A3B8;border:1px solid #334155;border-radius:8px;font-size:13px;cursor:pointer">
+            style="padding:13px 22px;background:transparent;color:#94A3B8;border:1px solid #334155;border-radius:10px;font-size:13px;cursor:pointer">
             ${labels.skip}
           </button>
         </div>
-        <p style="margin:10px 0 0;font-size:11px;color:#475569;text-align:center">${labels.hint}</p>
+        <p style="margin:12px 0 0;font-size:11px;color:#475569;text-align:center">${labels.hint}</p>
       </div>`;
 
     document.body.appendChild(panel);
-    setTimeout(() => document.getElementById('clarify-ans-0')?.focus(), 80);
 
-    // "Refine & Run" — append answers to task input and re-submit
+    // Pill click handler — single-select per question
+    panel.querySelectorAll('.clarify-pill').forEach(pill => {
+      pill.addEventListener('click', () => {
+        const qIdx = parseInt(pill.dataset.qidx);
+        const val = pill.dataset.value;
+        const isOther = pill.dataset.isOther === 'true';
+
+        // Deselect all pills in the same question
+        panel.querySelectorAll(`.clarify-pill[data-qidx="${qIdx}"]`).forEach(p => {
+          p.classList.remove('clarify-pill--selected');
+          p.style.background = 'transparent';
+          p.style.borderColor = '#334155';
+          p.style.color = '#CBD5E1';
+          p.style.fontWeight = 'normal';
+        });
+
+        // Select this pill
+        pill.classList.add('clarify-pill--selected');
+        pill.style.background = '#7C3AED';
+        pill.style.borderColor = '#7C3AED';
+        pill.style.color = 'white';
+        pill.style.fontWeight = '600';
+
+        // Show/hide "other" text input
+        const otherInput = document.getElementById(`clarify-other-${qIdx}`);
+        if (otherInput) {
+          if (isOther) {
+            otherInput.style.display = 'block';
+            otherInput.focus();
+            selectedAnswers.set(qIdx, null); // pending — real value from input
+          } else {
+            otherInput.style.display = 'none';
+            selectedAnswers.set(qIdx, pill.textContent.trim());
+          }
+        } else {
+          selectedAnswers.set(qIdx, pill.textContent.trim());
+        }
+      });
+    });
+
+    // "Refine & Run" — collect selected pills (or text inputs) and re-submit
     document.getElementById('clarify-submit').addEventListener('click', () => {
       const answers = questions.map((q, i) => {
-        const val = (document.getElementById(`clarify-ans-${i}`)?.value || '').trim();
+        const opts = Array.isArray(q.options) && q.options.length > 0 ? q.options : null;
+        if (!opts) {
+          // Free-text fallback
+          const val = (document.getElementById(`clarify-text-${i}`)?.value || '').trim();
+          return val ? `${q.question}: ${val}` : null;
+        }
+        // Check if "other" pill was selected
+        const selectedPill = panel.querySelector(`.clarify-pill--selected[data-qidx="${i}"]`);
+        if (!selectedPill) return null;
+        if (selectedPill.dataset.isOther === 'true') {
+          const otherVal = (document.getElementById(`clarify-other-${i}`)?.value || '').trim();
+          return otherVal ? `${q.question}: ${otherVal}` : null;
+        }
+        const val = selectedAnswers.get(i);
         return val ? `${q.question}: ${val}` : null;
       }).filter(Boolean);
 
@@ -3078,7 +3160,7 @@ document.addEventListener('DOMContentLoaded', () => {
       document.getElementById('runBtn').click();
     });
 
-    // "Skip" — re-submit as-is but mark clarifications as provided to skip the check
+    // "Skip" — re-submit as-is
     document.getElementById('clarify-skip').addEventListener('click', () => {
       panel.remove();
       window._clarificationsProvided = true;

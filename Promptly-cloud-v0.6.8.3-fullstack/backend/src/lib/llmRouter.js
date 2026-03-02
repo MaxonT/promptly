@@ -1,8 +1,8 @@
 import { chatJson as chatJsonOpenAI, chatText as chatTextOpenAI, LlmDisabledError, getResolvedDefaultModel, isLlmEnabled } from "./openaiClient.js";
 import { chatJsonGroq, chatTextGroq } from "./groqClient.js";
-import { chatJsonAnthropic, chatTextAnthropic } from "./anthropicClient.js";
+import { chatJsonAnthropic, chatTextAnthropic, AnthropicDisabledError } from "./anthropicClient.js";
 
-export { LlmDisabledError, getResolvedDefaultModel, isLlmEnabled };
+export { LlmDisabledError, AnthropicDisabledError, getResolvedDefaultModel, isLlmEnabled };
 
 /**
  * Route LLM calls to the appropriate provider
@@ -25,8 +25,26 @@ const RETRYABLE_ERROR_CODES = new Set(['ECONNRESET', 'ETIMEDOUT', 'ENOTFOUND', '
 /** 最大重试次数（不含首次调用） */
 const LLM_MAX_RETRY_ATTEMPTS = 3;
 
+/** 单次 LLM 调用超时（90 秒） */
+const LLM_PER_CALL_TIMEOUT_MS = 90_000;
+
 function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+/**
+ * 给异步调用增加超时保护
+ * @param {Function} fn - 要执行的异步函数
+ * @param {number} timeoutMs - 超时毫秒数
+ * @returns {Promise}
+ */
+function withTimeout(fn, timeoutMs = LLM_PER_CALL_TIMEOUT_MS) {
+  return Promise.race([
+    fn(),
+    new Promise((_, reject) =>
+      setTimeout(() => reject(new Error(`LLM call timed out after ${timeoutMs / 1000}s`)), timeoutMs)
+    ),
+  ]);
 }
 
 /**
@@ -45,8 +63,8 @@ async function withRetry(fn, context) {
     } catch (err) {
       lastError = err;
 
-      // LlmDisabledError 直接抛出，不重试
-      if (err instanceof LlmDisabledError) throw err;
+      // LlmDisabledError / AnthropicDisabledError 直接抛出，不重试
+      if (err instanceof LlmDisabledError || err instanceof AnthropicDisabledError) throw err;
 
       const status = err.status || err.statusCode;
       const isRetryableStatus = status && RETRYABLE_STATUS_CODES.has(status);
@@ -81,17 +99,17 @@ export async function chatJson({ system, user, model, promptlyModelId, provider,
   }
   if (provider === 'groq') {
     return withRetry(
-      () => chatJsonGroq({ system, user, model, apiKey, maxTokens, temperature }),
+      () => withTimeout(() => chatJsonGroq({ system, user, model, apiKey, maxTokens, temperature })),
       'chatJson/groq'
     );
   } else if (provider === 'openai') {
     return withRetry(
-      () => chatJsonOpenAI({ system, user, model, promptlyModelId, apiKey, maxTokens, temperature }),
+      () => withTimeout(() => chatJsonOpenAI({ system, user, model, promptlyModelId, apiKey, maxTokens, temperature })),
       'chatJson/openai'
     );
   } else if (provider === 'anthropic') {
     return withRetry(
-      () => chatJsonAnthropic({ system, user, model, apiKey, maxTokens, temperature }),
+      () => withTimeout(() => chatJsonAnthropic({ system, user, model, apiKey, maxTokens, temperature })),
       'chatJson/anthropic'
     );
   } else {
@@ -110,17 +128,17 @@ export async function chatText({ system, user, model, promptlyModelId, provider,
     // Token Hardening: Groq returns similarity=0, which will skip similarity gate in openaiClient
     // This prevents unnecessary retries for Groq provider (0 < any threshold, so no retry triggered)
     return withRetry(
-      () => chatTextGroq({ system, user, model, temperature, minSimilarity, maxRetries }),
+      () => withTimeout(() => chatTextGroq({ system, user, model, temperature, minSimilarity, maxRetries })),
       'chatText/groq'
     );
   } else if (provider === 'openai') {
     return withRetry(
-      () => chatTextOpenAI({ system, user, model, promptlyModelId, temperature, forceRewritePrompt, minSimilarity, maxRetries }),
+      () => withTimeout(() => chatTextOpenAI({ system, user, model, promptlyModelId, temperature, forceRewritePrompt, minSimilarity, maxRetries })),
       'chatText/openai'
     );
   } else if (provider === 'anthropic') {
     return withRetry(
-      () => chatTextAnthropic({ system, user, model, temperature, minSimilarity, maxRetries }),
+      () => withTimeout(() => chatTextAnthropic({ system, user, model, temperature, minSimilarity, maxRetries })),
       'chatText/anthropic'
     );
   } else {

@@ -115,9 +115,25 @@ Output JSON only — no explanation, no markdown:
   "ambiguity_score": 0.0-1.0,
   "language": "en" | "zh" | "mixed",
   "questions": [
-    { "id": "short_snake_case_id", "question": "specific question referencing user's actual words" }
+    {
+      "id": "short_snake_case_id",
+      "question": "specific question referencing user's actual words",
+      "options": [
+        { "label": "Option A", "value": "option_a" },
+        { "label": "Option B", "value": "option_b" },
+        { "label": "Option C", "value": "option_c" },
+        { "label": "Option D", "value": "option_d" }
+      ]
+    }
   ]
 }
+
+RULES FOR OPTIONS:
+- Generate 3-5 options that are DIRECTLY RELEVANT to the user's specific input and context
+- Options must be short labels (2-6 words max)
+- ALWAYS include a final "Other" option: {"label": "Other / 其他", "value": "other"} for English+mixed, or {"label": "其他", "value": "other"} for Chinese
+- For Chinese inputs, write option labels in Chinese
+- Options should cover the most likely answers for that user's specific situation
 
 If needs_clarification is false, questions MUST be an empty array [].`,
       user: input.trim(),
@@ -129,6 +145,11 @@ If needs_clarification is false, questions MUST be an empty array [].`,
 
     const questions = (data.questions ?? [])
       .filter(q => q?.id && q?.question && typeof q.question === "string")
+      .map(q => ({
+        id: q.id,
+        question: q.question,
+        options: Array.isArray(q.options) && q.options.length > 0 ? q.options : null,
+      }))
       .slice(0, 3);
 
     // Guard: if LLM said needs_clarification but returned no valid questions,
@@ -137,14 +158,20 @@ If needs_clarification is false, questions MUST be an empty array [].`,
     if (questions.length === 0) {
       const defaultQuestions = lang === "zh" 
         ? [
-            { id: "subject", question: "请具体说明你的任务主题或目标是什么？" },
-            { id: "audience", question: "这个 prompt 是给谁用的？（目标受众或使用者）" },
-            { id: "context", question: "任务背景或领域是什么？（如：技术、学术、商业等）" }
+            { id: "subject", question: "请具体说明你的任务主题或目标是什么？",
+              options: [{label:"技术/编程",value:"tech"},{label:"商业/职场",value:"business"},{label:"教育/学术",value:"edu"},{label:"创意/写作",value:"creative"},{label:"其他",value:"other"}] },
+            { id: "audience", question: "这个 Prompt 是给谁用的？",
+              options: [{label:"我自己",value:"self"},{label:"学生/学员",value:"student"},{label:"团队/同事",value:"team"},{label:"客户/用户",value:"customer"},{label:"其他",value:"other"}] },
+            { id: "context", question: "任务背景或领域是什么？",
+              options: [{label:"技术/开发",value:"tech"},{label:"学术/研究",value:"academic"},{label:"商业/营销",value:"business"},{label:"教育/培训",value:"education"},{label:"其他",value:"other"}] }
           ]
         : [
-            { id: "subject", question: "What is the specific topic or goal of your task?" },
-            { id: "audience", question: "Who will use this prompt? (target audience or users)" },
-            { id: "context", question: "What is the domain or context? (e.g., tech, academic, business)" }
+            { id: "subject", question: "What is the specific topic or goal of your task?",
+              options: [{label:"Tech / Coding",value:"tech"},{label:"Business / Work",value:"business"},{label:"Education / Study",value:"edu"},{label:"Creative / Writing",value:"creative"},{label:"Other",value:"other"}] },
+            { id: "audience", question: "Who will use this prompt?",
+              options: [{label:"Myself",value:"self"},{label:"Students",value:"student"},{label:"Team / Colleagues",value:"team"},{label:"Customers / Users",value:"customer"},{label:"Other",value:"other"}] },
+            { id: "context", question: "What is the domain or context?",
+              options: [{label:"Software / Tech",value:"tech"},{label:"Academic / Research",value:"academic"},{label:"Business / Marketing",value:"business"},{label:"Education / Training",value:"education"},{label:"Other",value:"other"}] }
           ];
       return {
         needsClarification: true,

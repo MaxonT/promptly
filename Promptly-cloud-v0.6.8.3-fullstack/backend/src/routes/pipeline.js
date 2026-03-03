@@ -623,27 +623,30 @@ IMPORTANT: The text between ▶▶▶ and ◀◀◀ is the user's raw input. Ana
     const generators = [
       {
         name: "fluent",
-        systemPrompt: `You are an expert Prompt Engineer. Transform a specification into a complete, production-ready prompt.
+        systemPrompt: `You are a Precision Command Optimizer. Your goal is to transform a raw user request into a strict, executable directive for an AI Agent.
 
-YOUR STYLE:
-- Use concise bullet points. Avoid conversational filler. No "preaching".
-- Use clear section headers but keep content dense.
-- Embed instructions naturally.
-- Include {{placeholders}} for all dynamic inputs.
-- Add explicit constraints and edge-case handling.
-- Balance structure with readability.
-- Make the prompt feel like expert instructions. No "Introduction". Start immediately.
+YOUR PHILOSOPHY:
+- You are NOT a course TA writing an announcement. You are a Senior Engineer writing a spec for a Junior Engineer (the AI).
+- Output must be an "Actionable Command" (do this, use that), NOT a "Summary" (this project is about...).
+- Source of Truth is God: If a detail (grading weight, file path, rule) is not in the input, DO NOT INVENT IT. Say "Not specified".
+
+STRUCTURE OF YOUR OUTPUT:
+1. Role: Define the persona (e.g., "Java Recursion Code Reviewer").
+2. Inputs: List the files/docs the AI must treat as the *only* source of truth.
+3. Goal: One sentence on the specific deliverable.
+4. Hard Constraints: The "Thou Shalt Not" list (e.g., "No loops", "String methods allowed: length, equals").
+5. Deliverables: Ordered list of exact outputs (e.g., "1. Rules Extraction", "2. Method Implementation").
+6. Style: "Concise, Directive, Source-Bound".
 
 CRITICAL RULES:
 1. ACCURACY: If spec contains constraints (math ranges, equations), preserve exactly. Do NOT normalize.
-2. DELIVERABLES: Ensure "Output Format" demands "Set/Inequality Description" and "Constructive Sketch" (how to draw it), not just generic "Description".
-3. NO FLUFF: No emotional/qualitative intros. Start with Role/Task.
-4. NO ADJECTIVES: Do NOT use academic filler words like "rigorous", "detailed prose", "comprehensive", "precise justification". Use "engineering precision" (what to do), not "academic tone".
-5. NO SPOILERS: Do not reveal derived answers in context.
-6. ANTI-OUTLINE: Instruct model to EXECUTE task, not just plan it.
-7. REDUNDANCY CHECK: Ask to "Identify coordinate redundancy/overlap" instead of demanding formal injectivity proofs.
-8. VERBATIM PRESERVATION: Copy URLs, links, brands, quoted phrases exactly.
-9. LANGUAGE CONSISTENCY: Output prompt in SAME language as spec.
+2. NO HALLUCINATION: Do not invent grading criteria (e.g. "70% correctness"), submission commands (e.g. "javac ..."), or file paths not in input.
+3. CITATION: When listing constraints, ask the AI to cite the source doc (e.g. "[from project4.pdf]").
+4. NO FLUFF: No "Introduction", no "Overview", no "Good luck". Start directly with the Command.
+5. ANTI-OUTLINE: Instruct model to EXECUTE task, not just plan it.
+6. REDUNDANCY CHECK: Ask to "Identify coordinate redundancy/overlap" instead of demanding formal injectivity proofs.
+7. VERBATIM PRESERVATION: Copy URLs, links, brands, quoted phrases exactly.
+8. LANGUAGE CONSISTENCY: Output prompt in SAME language as spec.
 
 OUTPUT: The complete prompt text only. No commentary.`
       },
@@ -668,16 +671,16 @@ ${normalizedSpec.edgeCases.length > 0 ? `Edge Cases:\n${normalizedSpec.edgeCases
 
     // ── Task-type Meta-Prompt: condition generation style on task ──
     const TASK_TYPE_HINTS = {
-      coding: "Include code fences with language tags, variable {{placeholders}}, and explicit input/output specifications. Mention error handling and edge cases.",
-      writing: "Focus on tone guidance, audience awareness, word-count expectations, and stylistic examples.",
-      analysis: "Emphasize precise set/inequality descriptions, coordinate redundancy checks (instead of formal injectivity proofs), and constructive sketch instructions (e.g. 'draw cross-section, then rotate').",
-      brainstorming: "Encourage divergent thinking, quantity targets, categorization of ideas, and evaluation criteria.",
+      coding: "Provide a constraint-driven implementation plan. Extract strict rules first, then code.",
+      writing: "Focus on tone consistency, specific audience adaptation, and structural constraints.",
+      analysis: "Perform rule extraction, strict document adherence (cite sources), and logical deduction.",
+      brainstorming: "Generate diverse, distinct options with clear pros/cons for each.",
       translation: "Specify source/target languages, formality level, domain terminology, and handling of untranslatable terms.",
       extraction: "Define input format, extraction schema, handling of missing fields, and output structure.",
       summarization: "Specify compression ratio, key-point retention, format (bullet/prose), and what to omit.",
       instruction: "Use numbered steps, prerequisite listing, expected outcomes per step, and troubleshooting notes.",
       creative: "Encourage originality, provide genre/style anchors, set creative constraints, and define success aesthetically.",
-      other: "",
+      other: "Focus on clarity, actionable steps, and adherence to specific user constraints.",
     };
     const taskTypeHint = TASK_TYPE_HINTS[normalizedSpec.task_type] || "";
 

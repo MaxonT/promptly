@@ -24,6 +24,10 @@
 
   <header class="result-header">
     <div class="result-header-main">
+      <button id="backBtn" class="result-btn result-btn--ghost result-back-btn" title="Back to Wizard" onclick="history.length > 1 ? history.back() : (window.location.href = 'wizard.html')">
+        <span class="result-btn-icon">←</span>
+        <span data-i18n="result.back">Back</span>
+      </button>
       <img src="assets/promptly-icon.svg" alt="Promptly" class="result-logo" />
       <div>
         <h1 class="result-title" data-i18n="result.title">Your Project Specification</h1>

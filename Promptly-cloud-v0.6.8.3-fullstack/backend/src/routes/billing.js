@@ -530,6 +530,120 @@ billingRouter.post("/start-trial", requireAuth, async (req, res) => {
 });
 
 // =============================================
+// Coupon Redemption
+// =============================================
+
+/**
+ * POST /api/billing/redeem-coupon
+ * Redeems a coupon code to activate a subscription without Stripe checkout.
+ */
+billingRouter.post("/redeem-coupon", requireAuth, (req, res) => {
+  try {
+    const userId = req.user.sub;
+    const { code } = req.body;
+
+    if (!code || typeof code !== "string" || code.trim().length === 0) {
+      return res.status(400).json({ ok: false, error: "Coupon code is required" });
+    }
+
+    const normalizedCode = code.trim().toUpperCase();
+
+    // Look up the coupon
+    const coupon = db.prepare(
+      "SELECT * FROM coupons WHERE code = ? AND active = 1"
+    ).get(normalizedCode);
+
+    if (!coupon) {
+      return res.status(404).json({ ok: false, error: "Invalid or expired coupon code" });
+    }
+
+    // Check expiry
+    if (coupon.expires_at && new Date(coupon.expires_at) < new Date()) {
+      return res.status(400).json({ ok: false, error: "This coupon has expired" });
+    }
+
+    // Check max redemptions
+    if (coupon.times_redeemed >= coupon.max_redemptions) {
+      return res.status(400).json({ ok: false, error: "This coupon has reached its redemption limit" });
+    }
+
+    // Check if user already redeemed this coupon
+    const existing = db.prepare(
+      "SELECT id FROM coupon_redemptions WHERE coupon_id = ? AND user_id = ?"
+    ).get(coupon.id, userId);
+
+    if (existing) {
+      return res.status(400).json({ ok: false, error: "You have already redeemed this coupon" });
+    }
+
+    // Check user exists
+    const user = db.prepare("SELECT id, email FROM users WHERE id = ?").get(userId);
+    if (!user) {
+      return res.status(404).json({ ok: false, error: "User not found" });
+    }
+
+    // --- All checks passed: activate the subscription ---
+    const now = new Date();
+    const periodEnd = new Date();
+    periodEnd.setDate(periodEnd.getDate() + coupon.duration_days);
+
+    // Record the redemption
+    db.prepare(
+      "INSERT INTO coupon_redemptions (coupon_id, user_id) VALUES (?, ?)"
+    ).run(coupon.id, userId);
+
+    // Increment coupon usage
+    db.prepare(
+      "UPDATE coupons SET times_redeemed = times_redeemed + 1 WHERE id = ?"
+    ).run(coupon.id);
+
+    // Upsert subscription record (bypass Stripe entirely)
+    const existingSub = db.prepare(
+      "SELECT id FROM subscriptions WHERE user_id = ? ORDER BY created_at DESC LIMIT 1"
+    ).get(userId);
+
+    if (existingSub) {
+      db.prepare(`
+        UPDATE subscriptions
+        SET status = 'active', plan = ?, period_start = ?, period_end = ?, updated_at = ?
+        WHERE id = ?
+      `).run(coupon.plan, now.toISOString(), periodEnd.toISOString(), now.toISOString(), existingSub.id);
+    } else {
+      db.prepare(`
+        INSERT INTO subscriptions (user_id, status, plan, period_start, period_end, created_at, updated_at)
+        VALUES (?, 'active', ?, ?, ?, ?, ?)
+      `).run(userId, coupon.plan, now.toISOString(), periodEnd.toISOString(), now.toISOString(), now.toISOString());
+    }
+
+    // Update user tier
+    db.prepare(
+      "UPDATE users SET subscription_tier = ?, subscription_active = 1, updated_at = ? WHERE id = ?"
+    ).run(coupon.plan, now.toISOString(), userId);
+
+    // Grant tokens for the plan
+    tokenLedger.grantSubscriptionTokens(userId, coupon.plan);
+
+    const balances = tokenLedger.getTokenBalances(userId);
+
+    console.log(`[billing] Coupon ${normalizedCode} redeemed by user ${userId} → plan: ${coupon.plan}`);
+
+    res.json({
+      ok: true,
+      message: "Coupon redeemed successfully! Your subscription is now active.",
+      plan: coupon.plan,
+      periodEnd: periodEnd.toISOString(),
+      tokens: {
+        total: balances.total,
+        totalFormatted: formatTokens(balances.total),
+      },
+    });
+  } catch (err) {
+    console.error("[billing] Redeem coupon error:", err);
+    res.status(500).json({ ok: false, error: "Failed to redeem coupon" });
+  }
+});
+
+// =============================================
 // Token History
 // =============================================
 

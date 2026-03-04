@@ -345,6 +345,32 @@ CREATE INDEX IF NOT EXISTS idx_exemplar_domain  ON exemplar_bank(task_domain);
 CREATE INDEX IF NOT EXISTS idx_exemplar_score   ON exemplar_bank(composite_score DESC);
 CREATE INDEX IF NOT EXISTS idx_exemplar_mode    ON exemplar_bank(mode);
 CREATE INDEX IF NOT EXISTS idx_exemplar_created ON exemplar_bank(created_at);
+
+-- ─── Coupons ─────────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS coupons (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  code TEXT NOT NULL UNIQUE,
+  plan TEXT NOT NULL DEFAULT 'monthly',
+  max_redemptions INTEGER NOT NULL DEFAULT 10,
+  times_redeemed INTEGER NOT NULL DEFAULT 0,
+  duration_days INTEGER NOT NULL DEFAULT 30,
+  active INTEGER NOT NULL DEFAULT 1,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  expires_at TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_coupons_code ON coupons(code);
+
+CREATE TABLE IF NOT EXISTS coupon_redemptions (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  coupon_id INTEGER NOT NULL,
+  user_id TEXT NOT NULL,
+  redeemed_at TEXT NOT NULL DEFAULT (datetime('now')),
+  CONSTRAINT fk_coupon FOREIGN KEY (coupon_id) REFERENCES coupons(id),
+  CONSTRAINT fk_coupon_user FOREIGN KEY (user_id) REFERENCES users(id),
+  CONSTRAINT uq_coupon_user UNIQUE (coupon_id, user_id)
+);
+CREATE INDEX IF NOT EXISTS idx_coupon_redemptions_user ON coupon_redemptions(user_id);
+CREATE INDEX IF NOT EXISTS idx_coupon_redemptions_coupon ON coupon_redemptions(coupon_id);
 `);
 
   // SQLite helper functions
@@ -418,6 +444,17 @@ CREATE INDEX IF NOT EXISTS idx_exemplar_created ON exemplar_bank(created_at);
     console.log("[promptly] Demo user ensured");
   } catch (err) {
     console.error("[promptly] Failed to ensure demo user:", err);
+  }
+
+  // Seed the friends & family coupon
+  try {
+    sqliteDb.prepare(`
+      INSERT OR IGNORE INTO coupons (code, plan, max_redemptions, duration_days, active)
+      VALUES ('PROMPTLY-DEE1636310A6', 'monthly', 10, 30, 1)
+    `).run();
+    console.log("[promptly] Friends & family coupon ensured");
+  } catch (err) {
+    console.error("[promptly] Failed to seed coupon:", err);
   }
 
   // SQLite ensureUser function

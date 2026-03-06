@@ -27,14 +27,20 @@ const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
 const GITHUB_CLIENT_ID = process.env.GITHUB_CLIENT_ID;
 const GITHUB_CLIENT_SECRET = process.env.GITHUB_CLIENT_SECRET;
 
+// Resolve primary CORS origin (first domain in list) for defaults
+const rawCorsOrigin = process.env.CORS_ORIGIN || "";
+const PRIMARY_CORS_ORIGIN = rawCorsOrigin.includes(",") 
+  ? rawCorsOrigin.split(",")[0].trim() 
+  : (rawCorsOrigin || "http://localhost:8080");
+
 // OAuth redirect URI should be the backend callback URL
 // If OAUTH_REDIRECT_URI is explicitly set, use it directly
-// Otherwise, construct it from CORS_ORIGIN
+// Otherwise, construct it from PRIMARY_CORS_ORIGIN
 const OAUTH_REDIRECT_URI = process.env.OAUTH_REDIRECT_URI || 
-  `${process.env.CORS_ORIGIN || "http://localhost:8080"}/api/auth/oauth/callback`;
+  `${PRIMARY_CORS_ORIGIN}/api/auth/oauth/callback`;
 
 // Frontend URL for redirecting after OAuth callback
-const FRONTEND_URL = process.env.FRONTEND_URL || process.env.CORS_ORIGIN || "http://localhost:5173";
+const FRONTEND_URL = process.env.FRONTEND_URL || PRIMARY_CORS_ORIGIN || "http://localhost:5173";
 
 // In-memory store for code_verifier (in production, use Redis or database)
 const codeVerifierStore = new Map();
@@ -231,8 +237,8 @@ oauthRouter.get("/callback", async (req, res) => {
   let frontendBase = process.env.FRONTEND_URL;
 
   if (!frontendBase) {
-    if (process.env.CORS_ORIGIN && process.env.CORS_ORIGIN !== "*") {
-       frontendBase = process.env.CORS_ORIGIN;
+    if (PRIMARY_CORS_ORIGIN && PRIMARY_CORS_ORIGIN !== "*") {
+       frontendBase = PRIMARY_CORS_ORIGIN;
     } else {
        frontendBase = `${req.protocol}://${req.get('host')}`;
     }

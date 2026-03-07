@@ -39,8 +39,32 @@ const PRIMARY_CORS_ORIGIN = rawCorsOrigin.includes(",")
 const OAUTH_REDIRECT_URI = process.env.OAUTH_REDIRECT_URI || 
   `${PRIMARY_CORS_ORIGIN}/api/auth/oauth/callback`;
 
-// Frontend URL for redirecting after OAuth callback
+// Frontend URL for redirecting after OAuth callback (single, legacy)
 const FRONTEND_URL = process.env.FRONTEND_URL || PRIMARY_CORS_ORIGIN || "http://localhost:5173";
+
+// Multi-domain allowlist: FRONTEND_URLS takes comma-separated origins, falls back to FRONTEND_URL
+const ALLOWED_FRONTEND_URLS = process.env.FRONTEND_URLS
+  ? process.env.FRONTEND_URLS.split(",").map(u => u.trim().replace(/\/$/, "")).filter(Boolean)
+  : [FRONTEND_URL.replace(/\/$/, "")];
+
+/**
+ * Resolve which frontend origin to redirect back to after OAuth.
+ * Reads the Origin (or Referer) header from the initiate request and validates
+ * it against ALLOWED_FRONTEND_URLS to prevent open-redirect attacks.
+ * Falls back to the first allowed URL if no match is found.
+ */
+function resolveAllowedFrontendOrigin(req) {
+  const raw = (req.headers.origin || req.headers.referer || "").replace(/\/$/, "");
+  if (raw && ALLOWED_FRONTEND_URLS.length > 0) {
+    // Origin header is just scheme+host; Referer may include a path — match on prefix
+    const matched = ALLOWED_FRONTEND_URLS.find(
+      allowed => raw === allowed || raw.startsWith(allowed + "/")
+    );
+    if (matched) return matched;
+  }
+  // Fallback: primary allowed URL
+  return ALLOWED_FRONTEND_URLS[0];
+}
 
 // In-memory store for code_verifier (in production, use Redis or database)
 const codeVerifierStore = new Map();
@@ -160,11 +184,15 @@ oauthRouter.get("/:provider/authorize", (req, res) => {
   const codeVerifier = generateCodeVerifier();
   const codeChallenge = generateCodeChallenge(codeVerifier);
   
+  // Capture the frontend origin from the request and validate against the allowlist
+  const frontendOrigin = resolveAllowedFrontendOrigin(req);
+
   // Store code_verifier (with expiration in 10 minutes)
   const state = nanoid(32);
   codeVerifierStore.set(state, {
     codeVerifier,
     provider,
+    frontendOrigin,  // remembered so callback redirects to the correct domain
     expiresAt: Date.now() + 10 * 60 * 1000
   });
   
@@ -230,37 +258,20 @@ oauthRouter.get("/:provider/authorize", (req, res) => {
 oauthRouter.get("/callback", async (req, res) => {
   const { code, state, error } = req.query;
   
-  // Determine frontend URL dynamically if not set
-  // PRIORITY 1: FRONTEND_URL env var (MUST be set for separate frontend/backend deployment)
-  // PRIORITY 2: CORS_ORIGIN env var (fallback)
-  // PRIORITY 3: Request host (only works if frontend/backend are same domain)
-  let frontendBase = process.env.FRONTEND_URL;
-
-  if (!frontendBase) {
-    if (PRIMARY_CORS_ORIGIN && PRIMARY_CORS_ORIGIN !== "*") {
-       frontendBase = PRIMARY_CORS_ORIGIN;
-    } else {
-       frontendBase = `${req.protocol}://${req.get('host')}`;
-    }
-  }
-
-  // Remove trailing slash if present to avoid double slashes in constructed URLs
-  if (frontendBase.endsWith('/')) {
-    frontendBase = frontendBase.slice(0, -1);
-  }
-
   console.log(`[oauth] Callback received - code: ${code ? 'present' : 'missing'}, state: ${state ? 'present' : 'missing'}, error: ${error || 'none'}`);
-  console.log(`[oauth] FRONTEND_URL (resolved): ${frontendBase}`);
-  
+
+  // For early error paths (before we can look up stored state), resolve origin from request headers
+  const earlyFallbackBase = resolveAllowedFrontendOrigin(req);
+
   if (error) {
-    const errorUrl = new URL(`${frontendBase}/index.html`);
+    const errorUrl = new URL(`${earlyFallbackBase}/index.html`);
     errorUrl.searchParams.set('oauth_error', encodeURIComponent(error));
     console.log('[oauth] Redirecting to frontend with error:', errorUrl.toString());
     return res.redirect(errorUrl.toString());
   }
-  
+
   if (!code || !state) {
-    const errorUrl = new URL(`${frontendBase}/index.html`);
+    const errorUrl = new URL(`${earlyFallbackBase}/index.html`);
     errorUrl.searchParams.set('oauth_error', encodeURIComponent('Missing code or state'));
     console.log('[oauth] Redirecting to frontend with error: Missing code or state');
     return res.redirect(errorUrl.toString());
@@ -270,14 +281,18 @@ oauthRouter.get("/callback", async (req, res) => {
   const stored = codeVerifierStore.get(state);
   if (!stored || stored.expiresAt < Date.now()) {
     codeVerifierStore.delete(state);
-    const errorUrl = new URL(`${frontendBase}/index.html`);
+    const errorUrl = new URL(`${earlyFallbackBase}/index.html`);
     errorUrl.searchParams.set('oauth_error', encodeURIComponent('Invalid or expired state'));
     console.log('[oauth] Redirecting to frontend with error: Invalid or expired state');
     return res.redirect(errorUrl.toString());
   }
   
-  const { codeVerifier, provider } = stored;
+  const { codeVerifier, provider, frontendOrigin } = stored;
   codeVerifierStore.delete(state);
+
+  // Use the frontend origin that was captured at initiate time (domain-aware, allowlist-validated)
+  const frontendBase = frontendOrigin || ALLOWED_FRONTEND_URLS[0];
+  console.log(`[oauth] Redirecting back to frontend origin: ${frontendBase}`);
 
   try {
     let userInfo;

@@ -418,16 +418,25 @@ async function executePipelineWithEvents(runId, userId, { idea, attachments, ski
     // Pipeline v2: Enhanced 13-field spec extraction (incl. task_type for meta-prompt injection)
     const specSystem = `You are a prompt-engineering analyst. Given a raw idea, extract a comprehensive specification that will guide high-quality prompt generation.
 
+CORE PRINCIPLE — FIDELITY OVER INVENTION:
+Your job is to STRUCTURE what the user said, NOT to expand it into a full project plan.
+- What the user EXPLICITLY STATED → extract faithfully
+- What can be REASONABLY INFERRED from context → mark as inferred
+- What is NOT stated and NOT inferable → leave null or note as "not specified"
+NEVER upgrade vague directional guidance (e.g., "follow industry standards") into specific technical choices (e.g., specific libraries, version numbers, file structures, field names).
+
 RULES:
 1. userGoal MUST be rephrased and expanded — NEVER copy verbatim. However, any URLs, links, email addresses, file paths, domain names, brand/product names, version strings, quoted phrases, @mentions, and #hashtags from the user input MUST be preserved exactly as-is inside the rephrased goal.
-2. Infer every field you can from context. Leave null only if truly unknowable.
-3. Transform vague ideas into concrete, actionable specifications.
-4. Think about edge cases, anti-patterns, and success criteria proactively.
+2. STRICT INFERENCE BOUNDARIES: Only infer fields that are DIRECTLY SUPPORTED by the user's words. If the user says "OAuth login with GitHub and Google", you can infer domain=web authentication. But you MUST NOT infer specific libraries, version numbers, database schemas, file structures, or implementation details the user never mentioned. Leave those null.
+3. PRESERVE AMBIGUITY: If a term has multiple valid interpretations (e.g., "blueprint" could mean Flask Blueprint or deployment template), note the ambiguity in contextAssumptions rather than silently choosing one interpretation.
+4. Think about edge cases and anti-patterns proactively, but keep them at the SAME LEVEL OF ABSTRACTION as the user's input. If user says "build OAuth login", edge cases should be like "handle OAuth failure gracefully" — NOT "implement exponential backoff with 1s, 2s, 4s delays".
 5. task_type MUST be one of: coding, writing, analysis, brainstorming, translation, extraction, summarization, instruction, creative, other.
 6. LANGUAGE RULE: Detect the primary language of the user's input. Output ALL string fields (userGoal, audience, domain, tone, constraints, etc.) in the SAME language. If the user writes in Chinese, output in Chinese. If in English, output in English. Never switch languages.
 7. Populate the "language" field with the ISO code: "zh" for Chinese, "en" for English, "mixed" for bilingual input.
 8. MATHEMATICAL PRECISION: If the user provides specific mathematical constraints, equations, or variable ranges (e.g., "0 < b < a", "phi in [0, 2pi)"), you MUST preserve them exactly. Do NOT "correct" them based on standard conventions (e.g. do not change [0, 2pi) to [0, pi]).
 9. DELIVERABLES: If the user asks for specific outputs (e.g., "sketch the image", "find the volume", "closed-form formula"), you MUST extract these into the 'outputExpectations' or 'successCriteria' fields.
+10. DELIVERY INTENT: If user expresses HOW they want the output delivered (e.g., "一次性全部搞定" = all at once, "step by step" = incremental), capture this in constraints. Do NOT contradict it.
+11. DIRECTION vs DECISION: "按照行业标准" (follow industry standards) is a DIRECTION — put it in constraints as-is. It is NOT authorization to enumerate 50 specific technical decisions. The downstream prompt generator will interpret it.
 
 OUTPUT (JSON only, no markdown):
 {
@@ -634,10 +643,12 @@ YOUR PHILOSOPHY:
 
 STRUCTURE OF YOUR OUTPUT:
 1. Role: Define the persona (e.g., "Java Recursion Code Reviewer").
-2. Inputs: Separate "Inputs Provided" (facts user gave) from "Inputs Needed" (what user must provide/check).
+2. Inputs — STRICTLY SEPARATED:
+   a. "User Explicitly Stated" — ONLY facts the user literally said. No inference.
+   b. "Not Specified (use defaults or confirm)" — things the user did NOT say, listed clearly as unknown. Do NOT fill these in with your own choices.
 3. Goal: One sentence on the specific deliverable.
-4. Hard Constraints: The "Thou Shalt Not" list (e.g., "No loops").
-5. Deliverables: Ordered list of exact outputs (e.g., "1. Rules Extraction", "2. Method Implementation").
+4. Hard Constraints: The "Thou Shalt Not" list — ONLY from user's explicit words or direct implications.
+5. Deliverables: Match the user's requested scope. If user says "do it all at once", output ONE deliverable set — do NOT split into 8 phases.
 6. Style: "Concise, Directive, Source-Bound".
 
 CRITICAL RULES:
@@ -648,9 +659,12 @@ CRITICAL RULES:
 5. CITATION: When listing constraints, ask the AI to cite the source doc (e.g. "[from project4.pdf]").
 6. NO FLUFF: No "Introduction", no "Overview", no "Good luck". Start directly with the Command.
 7. ANTI-OUTLINE: Instruct model to EXECUTE task, not just plan it.
-8. REDUNDANCY CHECK: Ask to "Identify coordinate redundancy/overlap" instead of demanding formal injectivity proofs.
+8. NO OVER-SPECIFICATION: "Follow industry standards" is a DIRECTION for the AI agent to interpret — do NOT expand it into 50 specific technical decisions (library versions, file structures, DB schemas, retry intervals). Pass the direction through and let the executing AI decide.
 9. DIAGNOSTIC FLOW: For bugs, strictly enforce: P0 (Status/Robots/Syntax) -> P1 (Config/Redirects) -> P2 (CDN/Edge cases). Downgrade P2 checks to "Conditional".
 10. LANGUAGE CONSISTENCY: Output prompt in SAME language as spec.
+11. RESPECT DELIVERY INTENT: If user says "一次性全部搞定" / "do it all at once" / "don't ask, just do it", the output prompt MUST instruct one-shot delivery. Do NOT design a multi-phase plan with checkpoints.
+12. PROMPT, NOT PRD: Your output is an optimized PROMPT to feed to an AI agent. It should be concise and actionable (typically 100-400 words). It is NOT a PRD, not a technical design doc, not a project plan. If your output exceeds 600 words, you are almost certainly over-specifying.
+13. AMBIGUITY TRANSPARENCY: If a key term from the input has multiple valid interpretations (and the spec notes the ambiguity), preserve the ambiguity with a note like "(需确认: X还是Y?)" rather than silently choosing one interpretation.
 
 OUTPUT: The complete prompt text only. No commentary.`
       },
@@ -805,6 +819,9 @@ EVALUATE against ALL 8 dimensions (score each 0.0–1.0):
 
 CRITICAL CHECKS (apply as deductions):
 - HALLUCINATION CHECK: If the candidate introduces facts, URLs, names, or claims NOT present in the specification, flag this as a weakness and deduct from COMPLETENESS and SAFETY.
+- OVER-SPECIFICATION CHECK: If the candidate invents specific implementation details that the user never stated (e.g., specific library versions, file names, database field names, retry intervals, architecture decisions), flag as a weakness and deduct from SPECIFICITY and SAFETY. Direction-level guidance ("follow industry standards") should be passed through as a direction, NOT expanded into dozens of concrete technical choices.
+- SCOPE INFLATION CHECK: Compare the candidate's length and detail level to the spec's complexity. If the spec is brief (user gave a short request) but the candidate is a massive multi-section document with invented phases/checklists/documentation plans, deduct heavily from EFFICIENCY. A short user request should produce a concise, focused prompt — not a PRD.
+- DELIVERY INTENT CHECK: If the spec indicates the user wants one-shot delivery (e.g., "一次性搞定", "do it all at once"), but the candidate breaks it into multi-phase execution with checkpoints, deduct from COHERENCE.
 - PINNED TERMS CHECK: If pinned terms (URLs, emails, brand names, quoted phrases) are listed in the context, verify they appear VERBATIM in the candidate. Missing or altered pinned terms → deduct from COMPLETENESS.
 - LANGUAGE CONSISTENCY CHECK: The candidate MUST be in the same language as the specification. If the spec is Chinese but the candidate is English (or vice versa), deduct heavily from CLARITY and COHERENCE, and set verdict to "refine" or "fail".
 

@@ -56,6 +56,21 @@ WHEN TO ASK (needs_clarification = true)
    - Who is the audience or recipient?
    - What's the primary context/domain (e.g., "tech", "academic", "business")?
    - If missing — ASK, even if a vague hint exists
+6. AMBIGUOUS TECHNICAL TERMS: A key word in the input has MULTIPLE VALID
+   interpretations in context, and choosing the wrong one would lead the
+   entire output in a fundamentally different direction.
+   e.g. "blueprint" → Flask Blueprint? Render Blueprint (deploy config)? Generic template?
+        "controller" → MVC controller? Game controller? Hardware controller?
+        "pipeline" → CI/CD pipeline? Data pipeline? ML pipeline?
+        "container" → Docker container? UI container? IoC container?
+   If a term is central to the task AND has ≥2 plausible meanings in context, ASK.
+   If context makes the meaning unambiguous (e.g. "Flask blueprint"), do NOT ask.
+7. FRAMEWORK/TOOL NOT SPECIFIED: The user describes a technical task but never
+   explicitly names the framework, language, or tool to use — and the choice
+   would fundamentally change the output.
+   e.g. "build an OAuth login system" → which framework? (Flask, Django, Express, etc.)
+        "deploy via blueprint" → which blueprint system? (Flask, Render, Azure, etc.)
+   If the user explicitly names a tool ("use Django"), do NOT ask.
 
 ═══════════════════════════════════════
 WHEN NOT TO ASK (needs_clarification = false)
@@ -96,6 +111,9 @@ needs_clarification = TRUE:
   "帮我写邮件" → recipient? purpose? (two critical unknowns)
   "explain this concept to my team" → what concept? what team background?
   "帮我写一份5分钟presentation的开场白，主题是XX" → placeholder: what is the actual topic?
+  "通过blueprint来部署OAuth系统" → "blueprint" means what? Flask Blueprint? Render Blueprint? generic template?
+  "build a login system with containers" → Docker? or UI layout containers?
+  "set up a pipeline for my app" → CI/CD? data pipeline? ML pipeline?
 
 needs_clarification = FALSE:
   "帮我写一份5分钟presentation的开场白，主题是AI在医疗领域的应用，听众是投资者"
@@ -106,6 +124,8 @@ needs_clarification = FALSE:
   "写一篇关于气候变化的高中英语作文，500字左右"
   "help me write an email to professor Smith, I'm sick today and can't make it to class"
   "help me write an absence email to my professor, caught a flu and might miss class today"
+  "用Flask Blueprint来组织OAuth登录系统" → "Flask Blueprint" is explicit, no ambiguity
+  "parse CSV with error handling in Python 3.9" → language, format, constraints clear
 
 Detect the primary language of the user's input: "en", "zh", or "mixed".
 

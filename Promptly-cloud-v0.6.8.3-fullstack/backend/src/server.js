@@ -35,7 +35,10 @@ if (process.env.NODE_ENV === 'production') {
   app.set('trust proxy', true);
 }
 
-const CORS_ORIGIN = process.env.CORS_ORIGIN || "*";
+const rawCorsOrigin = process.env.CORS_ORIGIN || "*";
+const CORS_ORIGIN = rawCorsOrigin.includes(",") 
+  ? rawCorsOrigin.split(",").map(o => o.trim()) 
+  : rawCorsOrigin;
 app.use(cors({ origin: CORS_ORIGIN, credentials: true }));
 app.use(helmet());
 

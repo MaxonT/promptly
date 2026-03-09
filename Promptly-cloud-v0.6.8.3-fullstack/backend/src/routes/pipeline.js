@@ -422,7 +422,7 @@ CORE PRINCIPLE — FIDELITY OVER INVENTION:
 Your job is to STRUCTURE what the user said, NOT to expand it into a full project plan.
 - What the user EXPLICITLY STATED → extract faithfully
 - What can be REASONABLY INFERRED from context → mark as inferred
-- What is NOT stated and NOT inferable → leave null or note as "not specified"
+- What is NOT stated and NOT inferable → leave as null (do NOT write "not specified" or "未指定")
 NEVER upgrade vague directional guidance (e.g., "follow industry standards") into specific technical choices (e.g., specific libraries, version numbers, file structures, field names).
 
 RULES:
@@ -437,6 +437,8 @@ RULES:
 9. DELIVERABLES: If the user asks for specific outputs (e.g., "sketch the image", "find the volume", "closed-form formula"), you MUST extract these into the 'outputExpectations' or 'successCriteria' fields.
 10. DELIVERY INTENT: If user expresses HOW they want the output delivered (e.g., "一次性全部搞定" = all at once, "step by step" = incremental), capture this in constraints. Do NOT contradict it.
 11. DIRECTION vs DECISION: "按照行业标准" (follow industry standards) is a DIRECTION — put it in constraints as-is. It is NOT authorization to enumerate 50 specific technical decisions. The downstream prompt generator will interpret it.
+12. PRESERVE USER TERMINOLOGY: If the user uses a specific technical term (e.g., "blueprint", "postgre", "render starter"), preserve it exactly in userGoal and constraints. Do not replace it with a different term, even if you think you know what they mean. You may ADD a clarification in parentheses but never DELETE the original term.
+13. META-INSTRUCTIONS AS CONSTRAINTS: If the user says things like "记住我说的", "来执行吧", "don't ask questions just do it" — these are delivery/execution constraints. Extract them into the constraints array as-is.
 
 OUTPUT (JSON only, no markdown):
 {
@@ -632,59 +634,62 @@ IMPORTANT: The text between ▶▶▶ and ◀◀◀ is the user's raw input. Ana
     const generators = [
       {
         name: "fluent",
-        systemPrompt: `You are a Precision Command Optimizer. Your goal is to transform a raw user request into a strict, executable directive for an AI Agent.
+        systemPrompt: `You are a Prompt Precision Refiner. You receive a structured specification extracted from a user's raw input, and you produce a clean, precise, structured prompt that an AI agent can execute.
 
-YOUR PHILOSOPHY:
-- You are NOT a course TA writing an announcement. You are a Senior Engineer writing a spec for a Junior Engineer (the AI).
-- Output must be an "Actionable Command" (do this, use that), NOT a "Summary" (this project is about...).
-- Source of Truth is God: If a detail (grading weight, file path, rule) is not in the input, DO NOT INVENT IT. Say "Not specified".
-- Verbatim is Gold: If the input contains a clear instruction, question list, or constraint, QUOTE IT EXACTLY. Do not rephrase or "improve" perfectly good instructions.
-- Triage First: For debugging/diagnostics, enforce a P0 (Basics) -> P1 (Config) -> P2 (Advanced) flow. Do NOT jump to complex causes (CDN, Race Conditions) unless basics are cleared.
+YOUR CORE PHILOSOPHY:
+- You are a TRANSLATOR, not an AUTHOR. You translate the user's messy human language into clean AI-executable language.
+- ZERO INVENTION: Every single piece of information in your output MUST be traceable to the user's original input. If the user didn't say it, it does not exist in your output.
+- Do NOT write "unspecified", "not mentioned", "to be confirmed", "Not Specified (use defaults or confirm)", or any placeholder for things the user didn't say. Simply omit them entirely.
+- Do NOT add sections like "未指定", "Unspecified", "Default assumptions", or "Reasonable defaults". If it's not in the spec, it's not in the output.
 
-STRUCTURE OF YOUR OUTPUT:
-1. Role: Define the persona (e.g., "Java Recursion Code Reviewer").
-2. Inputs — STRICTLY SEPARATED:
-   a. "User Explicitly Stated" — ONLY facts the user literally said. No inference.
-   b. "Not Specified (use defaults or confirm)" — things the user did NOT say, listed clearly as unknown. Do NOT fill these in with your own choices.
-3. Goal: One sentence on the specific deliverable.
-4. Hard Constraints: The "Thou Shalt Not" list — ONLY from user's explicit words or direct implications.
-5. Deliverables: Match the user's requested scope. If user says "do it all at once", output ONE deliverable set — do NOT split into 8 phases.
-6. Style: "Concise, Directive, Source-Bound".
+WHAT YOU DO:
+1. RESTRUCTURE: Take the user's scattered, conversational input and organize it into a clear command structure.
+2. DISAMBIGUATE: If a term the user used has a clear meaning in context, sharpen it. (e.g., "postgre" → "PostgreSQL", "blueprint" in web dev context → "Flask Blueprint" if contextually clear)
+3. PRESERVE: Keep the user's specific terms, especially domain terms, brand names, technical choices, and fixed phrases — never paraphrase them away.
+4. TRANSLATE INTENT: Convert conversational meta-instructions into structural constraints. (e.g., "记住我说的！" → becomes the structural guarantee that all stated requirements are listed; "一次性搞定" → "一次性交付，不分阶段"; "来执行吧" → the prompt is written in imperative/command form)
+5. KEEP DIRECTIONAL CONSTRAINTS DIRECTIONAL: If the user says "follow industry standards" or "按行业标准", write exactly that. Do NOT expand it into specific technical choices (don't choose CSRF libraries, session management schemes, etc. on behalf of the user).
 
-CRITICAL RULES:
-1. ACCURACY: If spec contains constraints (math ranges, equations), preserve exactly. Do NOT normalize.
-2. NO HALLUCINATION: Do not invent grading criteria (e.g. "70% correctness"), submission commands (e.g. "javac ..."), or file paths not in input.
-3. NO EXPANSION: Do not break down single requirements into sub-tasks unless requested. (e.g. If input says "estimate time", do NOT change to "estimate time for each method").
-4. VERBATIM PRESERVATION: Copy URLs, links, brands, quoted phrases, and question lists EXACTLY.
-5. CITATION: When listing constraints, ask the AI to cite the source doc (e.g. "[from project4.pdf]").
-6. NO FLUFF: No "Introduction", no "Overview", no "Good luck". Start directly with the Command.
-7. ANTI-OUTLINE: Instruct model to EXECUTE task, not just plan it.
-8. NO OVER-SPECIFICATION: "Follow industry standards" is a DIRECTION for the AI agent to interpret — do NOT expand it into 50 specific technical decisions (library versions, file structures, DB schemas, retry intervals). Pass the direction through and let the executing AI decide.
-9. DIAGNOSTIC FLOW: For bugs, strictly enforce: P0 (Status/Robots/Syntax) -> P1 (Config/Redirects) -> P2 (CDN/Edge cases). Downgrade P2 checks to "Conditional".
-10. LANGUAGE CONSISTENCY: Output prompt in SAME language as spec.
-11. RESPECT DELIVERY INTENT: If user says "一次性全部搞定" / "do it all at once" / "don't ask, just do it", the output prompt MUST instruct one-shot delivery. Do NOT design a multi-phase plan with checkpoints.
-12. PROMPT, NOT PRD: Your output is an optimized PROMPT to feed to an AI agent. It should be concise and actionable (typically 100-400 words). It is NOT a PRD, not a technical design doc, not a project plan. If your output exceeds 600 words, you are almost certainly over-specifying.
-13. AMBIGUITY TRANSPARENCY: If a key term from the input has multiple valid interpretations (and the spec notes the ambiguity), preserve the ambiguity with a note like "(需确认: X还是Y?)" rather than silently choosing one interpretation.
+WHAT YOU NEVER DO:
+1. NEVER invent technical choices the user didn't make (frameworks, libraries, tools, versions, file structures).
+2. NEVER add error handling strategies, edge cases, or boundary conditions unless the user explicitly requested them.
+3. NEVER add deliverables the user didn't ask for (README, test suites, architecture docs, debug guides).
+4. NEVER assign a "role" or "persona" that adds capabilities or domains the user didn't mention.
+5. NEVER create "unspecified" or "default" or "Not Specified" sections — absence is the correct representation of absence.
+6. NEVER expand the scope beyond what the user stated. If user asked for a backend, don't add a frontend. If user asked for OAuth, don't add JWT unless they said JWT.
 
-OUTPUT: The complete prompt text only. No commentary.`
+OUTPUT STRUCTURE:
+- Use the MINIMUM structure needed to clearly convey the user's requirements.
+- Typical sections: what to build, technical choices (ONLY those the user stated), constraints/requirements (ONLY those the user stated), delivery format (if user specified).
+- If the user's request is simple, the output should be short. A 3-sentence input should NOT produce a 3-page output.
+- Output in the SAME LANGUAGE as the specification/user input.
+
+QUALITY CHECK — Before outputting, verify:
+- Can every line in my output be traced to something the user actually said? If not, delete it.
+- Did I preserve every technical term and choice the user explicitly made? If I dropped or replaced any, restore them.
+- Is my output shorter than or roughly equal to what a thorough human rewrite would produce? If it's significantly longer, I've invented content.
+
+OUTPUT: The complete refined prompt text only. No commentary, no explanation, no meta-discussion.`
       },
     ];
 
-    // Build rich spec context for generation (Pruned for cost optimization)
-    // Only essential fields are included to save tokens (~400 tokens saved per run)
-    const specContext = `=== SPECIFICATION ===
-Goal: ${normalizedSpec.userGoal}
-Task Type: ${normalizedSpec.task_type}
-${normalizedSpec.audience ? `Audience: ${normalizedSpec.audience}` : ""}
-${normalizedSpec.domain ? `Domain: ${normalizedSpec.domain}` : ""}
-${normalizedSpec.tone ? `Tone: ${normalizedSpec.tone}` : ""}
-${normalizedSpec.format ? `Output Format: ${normalizedSpec.format}` : ""}
-${normalizedSpec.constraints.length > 0 ? `Constraints:\n${normalizedSpec.constraints.map(c => `  - ${c}`).join("\n")}` : ""}
-${normalizedSpec.successCriteria.length > 0 ? `Success Criteria:\n${normalizedSpec.successCriteria.map(c => `  - ${c}`).join("\n")}` : ""}
-${normalizedSpec.antiPatterns.length > 0 ? `Anti-Patterns (avoid):\n${normalizedSpec.antiPatterns.map(c => `  - ${c}`).join("\n")}` : ""}
-${normalizedSpec.contextAssumptions ? `Context/Input: ${normalizedSpec.contextAssumptions}` : ""}
-${normalizedSpec.outputExpectations ? `Output Expectations: ${normalizedSpec.outputExpectations}` : ""}
-${normalizedSpec.edgeCases.length > 0 ? `Edge Cases:\n${normalizedSpec.edgeCases.map(c => `  - ${c}`).join("\n")}` : ""}`;
+    // Build rich spec context for generation — ONLY include non-null, non-empty fields
+    // This prevents the generator from seeing empty fields and trying to fill them
+    const specContextParts = [`=== SPECIFICATION ===`];
+    
+    if (normalizedSpec.userGoal) specContextParts.push(`Goal: ${normalizedSpec.userGoal}`);
+    if (normalizedSpec.task_type && normalizedSpec.task_type !== 'other') specContextParts.push(`Task Type: ${normalizedSpec.task_type}`);
+    if (normalizedSpec.audience) specContextParts.push(`Audience: ${normalizedSpec.audience}`);
+    if (normalizedSpec.domain) specContextParts.push(`Domain: ${normalizedSpec.domain}`);
+    if (normalizedSpec.tone) specContextParts.push(`Tone: ${normalizedSpec.tone}`);
+    if (normalizedSpec.format) specContextParts.push(`Output Format: ${normalizedSpec.format}`);
+    if (normalizedSpec.constraints.length > 0) specContextParts.push(`Constraints:\n${normalizedSpec.constraints.map(c => `  - ${c}`).join("\n")}`);
+    if (normalizedSpec.successCriteria.length > 0) specContextParts.push(`Success Criteria:\n${normalizedSpec.successCriteria.map(c => `  - ${c}`).join("\n")}`);
+    if (normalizedSpec.antiPatterns.length > 0) specContextParts.push(`Anti-Patterns (avoid):\n${normalizedSpec.antiPatterns.map(c => `  - ${c}`).join("\n")}`);
+    if (normalizedSpec.contextAssumptions) specContextParts.push(`Context/Input: ${normalizedSpec.contextAssumptions}`);
+    if (normalizedSpec.outputExpectations) specContextParts.push(`Output Expectations: ${normalizedSpec.outputExpectations}`);
+    if (normalizedSpec.edgeCases.length > 0) specContextParts.push(`Edge Cases:\n${normalizedSpec.edgeCases.map(c => `  - ${c}`).join("\n")}`);
+    
+    const specContext = specContextParts.join("\n");
 // Omitted: examples (often redundant/long), original raw idea (redundant)
 
     // ── Task-type Meta-Prompt: condition generation style on task ──
@@ -1143,7 +1148,7 @@ Output JSON:
     const dimensionDescriptions = Object.entries(EVALUATION_WEIGHTS)
       .map(([dim, w]) => {
         const desc = {
-          completeness: "Covers all spec requirements",
+          completeness: "Covers ALL spec requirements AND contains NOTHING beyond spec requirements (invention is penalized, not rewarded)",
           clarity:      "Clear and unambiguous language",
           specificity:  "Concrete and detailed, not generic",
           structure:    "Well-organized, good hierarchy",
@@ -1192,6 +1197,8 @@ CRITICAL PENALTY RULES:
 6. PINNED TERMS: If pinned terms are listed in the context and a candidate omits or alters any of them, deduct 0.15 from completeness per missing term.
 7. LANGUAGE CONSISTENCY: If the specification is in Chinese but the candidate is in English (or vice versa), deduct 0.3 from clarity and 0.2 from coherence.
 8. HALLUCINATION: If a candidate introduces facts, URLs, names, statistics, or claims NOT present in the specification, deduct from safety proportionally to severity.
+9. INVENTION PENALTY: If a candidate adds requirements, deliverables, technical choices, or constraints NOT present in the specification, deduct 0.15 from completeness per invented item. More content is NOT better — accurate content is better.
+10. SCOPE FIDELITY: If the specification contains 5 requirements and the candidate addresses 5 requirements plus 10 invented ones, completeness should be LOWER than a candidate that addresses exactly 5 requirements with zero invention.
 
 ${includePairwise ? `PAIRWISE RULES:
 1. After scoring all candidates, identify the top-2 by overall quality.

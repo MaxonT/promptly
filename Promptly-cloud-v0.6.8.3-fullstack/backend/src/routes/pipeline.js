@@ -404,6 +404,37 @@ async function executePipelineWithEvents(runId, userId, { idea, attachments, ski
     // Replaces the old Spec -> Gen -> Critique -> Refine chain.
     // Single-pass optimization using the "Executive Directive Optimizer" prompt.
     // ============================================
+
+    // Since we are skipping the Spec Builder, we need to create a placeholder Spec
+    // because the 'candidate_prompts' table has a NOT NULL constraint on spec_id.
+    
+    // Generate a specId if we don't have one (which is always true in Boss Mode)
+    if (!specId) {
+      specId = `spec_${nanoid(12)}`;
+      
+      // Insert placeholder spec to satisfy DB constraints
+      try {
+        db.prepare(`
+          INSERT INTO specs (
+            id, owner_id, title, spec_json, 
+            kind, status, created_at, updated_at
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        `).run(
+          specId,
+          userId,
+          "Direct Optimization (Boss Mode)",
+          JSON.stringify({ mode: "boss_mode", task: idea }),
+          "boss_mode",
+          "completed",
+          now,
+          now
+        );
+      } catch (specErr) {
+        console.warn(`[pipeline] Failed to create placeholder spec: ${specErr.message}`);
+        // If this fails, the subsequent candidate insert will likely fail too, 
+        // but we'll proceed to let the error bubble up if it must.
+      }
+    }
     
     // Model Selection (Updated for 2026 Models)
     const MODEL_MAP = {

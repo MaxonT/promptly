@@ -5,6 +5,8 @@ import cookieParser from "cookie-parser";
 import rateLimit from "express-rate-limit";
 import dotenv from "dotenv";
 import { nanoid } from "nanoid";
+import path from "path";
+import { fileURLToPath } from "url";
 import { db } from "./lib/db.js";
 import { getResolvedDefaultModel, isLlmEnabled } from "./lib/llmRouter.js";
 import { authRouter } from "./routes/auth.js";
@@ -193,8 +195,13 @@ if (FEATURES.subscriptionsEnabled) {
   console.log(`[promptly] 🔧 Daily compensation job scheduled`);
 }
 
+// Serve static frontend files
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+app.use(express.static(path.join(__dirname, "../../frontend")));
+
 // Root path handler - useful for checking if backend is alive
-app.get("/", (req, res) => {
+app.get("/api/status", (req, res) => {
   res.json({
     ok: true,
     service: "Promptly Backend API",

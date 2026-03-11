@@ -136,7 +136,7 @@ export function up() {
   console.log('[migration 002] ✅ Analytics tables created');
   
   // Generate initial historical data using S-curve
-  generateHistoricalData();
+  // generateHistoricalData();
   
   console.log('[migration 002] ✅ Migration complete');
 }

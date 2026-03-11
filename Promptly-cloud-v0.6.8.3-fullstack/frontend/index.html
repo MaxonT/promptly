@@ -1017,68 +1017,9 @@ temperature: 0.5</textarea>
       </div>
     </section>
 
-    <!-- Metrics Section - Between Layer 3 and Question Wizard -->
-    <section class="grid grid-4 metrics-compact" id="metricsSection" style="margin-top:16px">
-      <div class="card kpi" id="kAcc">
-        <span class="label metric-with-tooltip" data-i18n="kpi_accuracy">
-          <span class="text-highlight">Accuracy</span>
-          <span class="metric-tooltip">Percentage of test cases that passed with correct outputs</span>
-        </span>
-        <span class="value" id="valAcc">—</span>
-        <span class="delta" id="deltaAcc">+0.00%</span>
-      </div>
-      <div class="card kpi">
-        <span class="label metric-with-tooltip" data-i18n="kpi_f1">
-          <span class="text-highlight">F1</span>
-          <span class="metric-tooltip">Balance between precision and recall (higher is better)</span>
-        </span>
-        <span class="value" id="valF1">—</span>
-        <span class="delta">&nbsp;</span>
-      </div>
-      <div class="card kpi">
-        <span class="label metric-with-tooltip" data-i18n="kpi_pass">
-          <span class="text-highlight">Pass Rate</span>
-          <span class="metric-tooltip">Ratio of successful runs to total attempts</span>
-        </span>
-        <span class="value" id="valPass">—</span>
-        <span class="delta">&nbsp;</span>
-      </div>
-      <div class="card kpi">
-        <span class="label metric-with-tooltip" data-i18n="kpi_cost">
-          <span class="text-highlight">Estimated Cost</span>
-          <span class="metric-tooltip">Average usage per request (estimate)</span>
-        </span>
-        <span class="value" id="valCost">—</span>
-        <span class="delta">&nbsp;</span>
-      </div>
-      <div class="card kpi">
-        <span class="label metric-with-tooltip" data-i18n="kpi_prog">
-          <span class="text-highlight">Progress %</span>
-          <span class="metric-tooltip">Completion percentage towards target accuracy</span>
-        </span>
-        <span class="value" id="valProg">—</span>
-        <span class="delta">&nbsp;</span>
-      </div>
-    </section>
+    <!-- Metrics Section Removed for Boss Mode -->
 
-    <section class="grid grid-2" style="margin-top:16px">
-      <div class="card">
-        <h3 class="gradient-text" data-i18n="growth_chart">Growth Over Iterations</h3>
-        <canvas id="lineGrowth" class="canvas"></canvas>
-      </div>
-      <div class="card">
-        <h3 class="gradient-text" data-i18n="contrib_chart">Change Contribution</h3>
-        <canvas id="barContrib" class="canvas"></canvas>
-      </div>
-      <div class="card">
-        <h3 class="gradient-text" data-i18n="pass_pie">Pass vs Fail (%)</h3>
-        <canvas id="piePass" class="canvas"></canvas>
-      </div>
-      <div class="card">
-        <h3 class="gradient-text" data-i18n="gauge">Progress Meter (%)</h3>
-        <canvas id="gaugeProg" class="canvas"></canvas>
-      </div>
-    </section>
+    <!-- Charts Section Removed for Boss Mode -->
 
     <section class="card example-gallery" id="exampleGallery">
       <div class="example-gallery__intro">
@@ -1482,26 +1423,13 @@ window.refreshPlanBanner = async function() {
     section.style.margin='48px auto';
     section.style.maxWidth='960px';
     section.innerHTML = `
-      <h2 class="gradient-animated" data-i18n="userGuide.title" style="font-size:1.6rem;margin-bottom:12px;">User Guide</h2>
+      <h2 class="gradient-animated" data-i18n="userGuide.title" style="font-size:1.6rem;margin-bottom:12px;">Boss Mode Guide</h2>
       <ol style="line-height:1.7;margin-left:18px;margin-bottom:16px;">
-        <li data-i18n="userGuide.step1"><strong>Write your task</strong>: define <em>Instruction</em> + <em>Constraints</em> + <em>Expected style</em>.</li>
-        <li data-i18n="userGuide.step2"><strong>Add test cases</strong>: for each input, provide <em>ideal output</em>.</li>
-        <li data-i18n="userGuide.step3"><strong>Run</strong>: the system auto-searches, tests, and tunes prompts.</li>
-        <li data-i18n="userGuide.step4"><strong>Review KPIs</strong>: Accuracy / F1 / Pass Rate / Estimated Cost / Progress% update after each run.</li>
+        <li><strong>Direct Command</strong>: Tell the system exactly what you want. No fluff.</li>
+        <li><strong>Zero Invention</strong>: We organize your thoughts, we don't invent them.</li>
+        <li><strong>Result Oriented</strong>: Get a structured directive ready for execution.</li>
       </ol>
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px;">
-        <div><img src="assets/placeholder_line.png" alt="Accuracy trend" style="width:100%;border-radius:12px;box-shadow:0 4px 24px rgba(0,0,0,.25)"><p style="opacity:.7;margin-top:6px" data-i18n="userGuide.accuracyTrend">Accuracy Trend</p></div>
-        <div><img src="assets/placeholder_pie.png" alt="Error breakdown" style="width:100%;border-radius:12px;box-shadow:0 4px 24px rgba(0,0,0,.25)"><p style="opacity:.7;margin-top:6px" data-i18n="userGuide.errorBreakdown">Error Breakdown</p></div>
-        <div><img src="assets/placeholder_gauge.png" alt="Progress gauge" style="width:100%;border-radius:12px;box-shadow:0 4px 24px rgba(0,0,0,.25)"><p style="opacity:.7;margin-top:6px" data-i18n="userGuide.progressGauge">Progress Gauge</p></div>
-      </div>
-      <h3 style="margin-top:16px" class="gradient-animated" data-i18n="glossary.title">Glossary</h3>
-<ul class="glossary-list glossy">
-        <li><span class="glossary-term" data-i18n="glossary.accuracy">Accuracy</span><span class="glossary-def" data-i18n="glossary.accuracyDesc">Correct outputs / total cases.</span></li>
-        <li><span class="glossary-term" data-i18n="glossary.f1">F1</span><span class="glossary-def" data-i18n="glossary.f1Desc">2 × precision × recall ÷ (precision + recall).</span></li>
-        <li><span class="glossary-term" data-i18n="glossary.passRate">Pass Rate</span><span class="glossary-def" data-i18n="glossary.passRateDesc">Passed constraints / total constraints.</span></li>
-        <li><span class="glossary-term" data-i18n="glossary.tokenCost">Estimated Cost</span><span class="glossary-def" data-i18n="glossary.tokenCostDesc">Estimated model usage per request.</span></li>
-        <li><span class="glossary-term" data-i18n="glossary.progress">Progress %</span><span class="glossary-def" data-i18n="glossary.progressDesc">average(accuracy/target_accuracy, f1/target_f1, pass_rate/target_pass_rate, ideal_cost/cost) × 100.</span></li>
-</ul>
+      <p style="opacity:0.8; margin-top:20px;"><em>"The functionality is the goal. The prompt is just the vehicle."</em></p>
     `;
     document.body.appendChild(section);
   }
@@ -2189,13 +2117,13 @@ document.addEventListener('DOMContentLoaded', () => {
   // Pipeline SSE-Driven Animation System
   // ============================================
   
-  // Pipeline stages configuration
+  // Pipeline stages configuration (Boss Mode)
   const PIPELINE_STEPS = [
-    { key: 'spec', message: 'Structuring your idea into a spec…' },
-    { key: 'question', message: 'Spotting gaps and asking 1–3 clarifying questions…' },
-    { key: 'agents', message: 'Letting multiple agents draft and refine candidate prompts…' },
-    { key: 'metrics', message: 'Scoring candidates on clarity, style, safety, and cost…' },
-    { key: 'outcome', message: 'Selecting the best-of-N outcome for you…' }
+    { key: 'spec', message: 'Analyzing Input...' },
+    { key: 'question', message: 'Checking Fidelity...' },
+    { key: 'agents', message: 'Optimizing Directive...' },
+    { key: 'metrics', message: 'Verifying Constraints...' },
+    { key: 'outcome', message: 'Finalizing Output...' }
   ];
   
   // Stage name mapping from backend events
@@ -2203,6 +2131,7 @@ document.addEventListener('DOMContentLoaded', () => {
     'spec': 0,
     'question': 1,
     'agents': 2,
+    'optimizing': 2, // Map Boss Mode 'optimizing' to middle stage
     'metrics': 3,
     'outcome': 4
   };
@@ -2212,10 +2141,11 @@ document.addEventListener('DOMContentLoaded', () => {
     'spec': '正在从你的想法构建结构化 Spec...',
     'question': 'Question Engine 正在生成澄清问题...',
     'agents': 'LLM Agents 正在起草候选 Prompt...',
+    'optimizing': 'Boss Mode: 正在执行 Direct Optimization...',
     'metrics': '正在基于 clarity / style / safety / cost 进行多维度评分...',
     'outcome': 'Outcome Runner 正在从候选中选出 Top Pick...',
     'error': '该阶段出错，请重试',
-    'complete': 'Selected by Outcome Runner after multi-metric scoring.'
+    'complete': 'Optimization Complete.'
   };
   
   // Current pipeline state (SSE-driven)
@@ -3061,9 +2991,7 @@ document.addEventListener('DOMContentLoaded', () => {
           setTimeout(() => {
             clearBestPromptTrace();
             if (bestPromptEl && data.bestCandidate.content) {
-              // Remove markdown formatting for cleaner display
-              const cleanContent = removeMarkdownFormatting(data.bestCandidate.content);
-              bestPromptEl.value = cleanContent;
+              bestPromptEl.value = data.bestCandidate.content;
               bestPromptEl.classList.remove('processing-animation');
               bestPromptEl.classList.add('success-highlight');
               bestPromptEl.style.borderColor = '#22C55E';

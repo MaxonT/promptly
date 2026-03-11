@@ -127,6 +127,7 @@ export function searchExemplars({
   taskDomain = null,
   topK = DEFAULT_TOP_K,
   minScore = 70,
+  createdAfter = null,
 } = {}) {
   topK = Math.min(Math.max(1, topK), MAX_TOP_K);
 
@@ -140,11 +141,12 @@ export function searchExemplars({
         JOIN exemplar_bank e ON e.id = f.id
         WHERE exemplar_fts MATCH ?
           AND e.composite_score >= ?
+          ${createdAfter ? "AND e.created_at >= ?" : ""}
         ORDER BY
           CASE WHEN e.user_id = ? THEN 0 ELSE 1 END,
           e.composite_score DESC
         LIMIT ?
-      `).all(ftsQuery, minScore, userId || "", topK);
+      `).all(ftsQuery, minScore, ...(createdAfter ? [createdAfter] : []), userId || "", topK);
 
       bumpUsageCount(rows.map(r => r.id));
       return formatResults(rows);
@@ -161,11 +163,12 @@ export function searchExemplars({
       FROM exemplar_bank
       WHERE task_domain = ?
         AND composite_score >= ?
+        ${createdAfter ? "AND created_at >= ?" : ""}
       ORDER BY
         CASE WHEN user_id = ? THEN 0 ELSE 1 END,
         composite_score DESC
       LIMIT ?
-    `).all(taskDomain, minScore, userId || "", topK);
+    `).all(taskDomain, minScore, ...(createdAfter ? [createdAfter] : []), userId || "", topK);
 
     bumpUsageCount(rows.map(r => r.id));
     return formatResults(rows);
@@ -176,11 +179,12 @@ export function searchExemplars({
     SELECT id, prompt_text, composite_score, spec_summary, task_domain
     FROM exemplar_bank
     WHERE composite_score >= ?
+    ${createdAfter ? "AND created_at >= ?" : ""}
     ORDER BY
       CASE WHEN user_id = ? THEN 0 ELSE 1 END,
       composite_score DESC
     LIMIT ?
-  `).all(minScore, userId || "", topK);
+  `).all(minScore, ...(createdAfter ? [createdAfter] : []), userId || "", topK);
 
   bumpUsageCount(rows.map(r => r.id));
   return formatResults(rows);

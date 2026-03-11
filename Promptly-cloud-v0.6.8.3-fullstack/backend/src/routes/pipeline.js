@@ -716,18 +716,6 @@ SPECIAL HANDLING:
       bestAgent: bestCandidate.agent,
       bestSource: bestCandidate.agent.includes("_refined") ? "refined" : "original",
       candidateCount: candidateIds.length,
-      evalFailures,
-      pairwise: pairwiseResult ? {
-        winner: pairwiseResult.winner,
-        confidence: pairwiseResult.confidenceScore,
-      } : null,
-      specBuilderDegraded,
-      exemplars_found: exemplarsFound,
-      critique_verdicts: candidateIds.map(cId => {
-        const row = db.prepare("SELECT agent, metrics_json FROM candidate_prompts WHERE id = ?").get(cId);
-        const m = row?.metrics_json ? JSON.parse(row.metrics_json) : {};
-        return { agent: row?.agent, verdict: m?.critique?.verdict ?? null };
-      }),
       durationMs: Date.now() - startTime,
     };
     console.log(`[pipeline] [${runId}] Pipeline v2 Metrics:`, JSON.stringify(metricsSummary, null, 2));
@@ -782,22 +770,22 @@ SPECIAL HANDLING:
 
     // ── Auto-harvest: store high-scoring candidates in Exemplar Bank ──
     try {
-      for (const c of sortedCandidates) {
-        if (!c.metrics || typeof c.metrics.compositeScore !== "number") continue;
+      if (bestCandidate && bestCandidate.metrics && typeof bestCandidate.metrics.compositeScore === "number") {
+        // Boss Mode uses placeholders for spec details since we skipped SpecBuilder
         const harvest = harvestExemplar({
           userId,
           specId,
           runId,
-          candidateId: c.id,
+          candidateId: bestCandidate.id,
           mode,
-          promptText: c.content,
-          taskDomain: normalizedSpec.domain || null,
-          specSummary: normalizedSpec.userGoal?.substring(0, 200) || null,
-          language: normalizedSpec.language || "en",
-          metrics: c.metrics,
+          promptText: bestCandidate.content,
+          taskDomain: "boss_mode",
+          specSummary: idea.substring(0, 200),
+          language: "en",
+          metrics: bestCandidate.metrics,
         });
         if (harvest.harvested) {
-          console.log(`[pipeline] [${runId}] Exemplar harvested: ${harvest.id} (agent=${c.agent}, score=${c.metrics.compositeScore})`);
+          console.log(`[pipeline] [${runId}] Exemplar harvested: ${harvest.id} (agent=${bestCandidate.agent}, score=${bestCandidate.metrics.compositeScore})`);
         }
       }
     } catch (harvestErr) {

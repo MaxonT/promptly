@@ -527,8 +527,8 @@ SPECIAL HANDLING:
       VALUES (?, ?, ?, ?, ?, ?, ?)
     `).run(
       candidateId,
-      specId || `spec_dummy_${nanoid(8)}`, // Fallback if specId wasn't created (we skipped stage 1)
-      sessionId,
+      specId || null, // Allow NULL if specId not created
+      sessionId || null,
       "DirectOptimizer",
       targetModel,
       content,
@@ -541,7 +541,7 @@ SPECIAL HANDLING:
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       outcomeId,
-      specId || `spec_dummy_${nanoid(8)}`,
+      specId || null, // Allow NULL
       idea.substring(0, 500),
       1,
       targetModel,
@@ -577,17 +577,24 @@ SPECIAL HANDLING:
 
     // Query historical runs for this user to build history and contributions
     // Note: outcome_runs doesn't have user_id, so we JOIN through specs table
-    const historicalRuns = db.prepare(`
-      SELECT 
-        or_data.result_json,
-        or_data.created_at
-      FROM outcome_runs or_data
-      JOIN specs ON or_data.spec_id = specs.id
-      WHERE specs.owner_id = ?
-        AND or_data.status = 'completed'
-      ORDER BY or_data.created_at DESC
-      LIMIT 10
-    `).all(userId);
+    // For Boss Mode with NULL spec_id, we skip this join or handle it gracefully
+    let historicalRuns = [];
+    try {
+      historicalRuns = db.prepare(`
+        SELECT 
+          or_data.result_json,
+          or_data.created_at
+        FROM outcome_runs or_data
+        JOIN specs ON or_data.spec_id = specs.id
+        WHERE specs.owner_id = ?
+          AND or_data.status = 'completed'
+        ORDER BY or_data.created_at DESC
+        LIMIT 10
+      `).all(userId);
+    } catch (err) {
+      console.warn(`[pipeline] Failed to fetch history (likely due to null spec_id in Boss Mode): ${err.message}`);
+      // Fallback: empty history is fine for now
+    }
     
     // Build history array (progress/composite scores from recent runs)
     const history = [];
@@ -701,7 +708,7 @@ SPECIAL HANDLING:
         VALUES (?, ?, ?, ?, ?, ?, datetime('now'), ?, ?)
       `).run(
         runId,
-        specId,
+        specId || null,
         `pipeline-v2/${mode}`,
         "completed",
         JSON.stringify({ idea: idea.substring(0, 500), mode }),

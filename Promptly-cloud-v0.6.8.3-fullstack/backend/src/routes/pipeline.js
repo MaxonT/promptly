@@ -405,14 +405,11 @@ async function executePipelineWithEvents(runId, userId, { idea, attachments, ski
     // Single-pass optimization using the "Executive Directive Optimizer" prompt.
     // ============================================
     
-    // Model Selection (Future Proofing for Haiku 4.5 / Sonnet 4.6)
-    // Currently mapping to latest available versions:
-    // Fast/Standard -> Claude 3 Haiku (Simulating Haiku 4.5)
-    // Premium       -> Claude 3.5 Sonnet (Simulating Sonnet 4.6)
+    // Model Selection (Updated for 2026 Models)
     const MODEL_MAP = {
-      fast:     "claude-3-haiku-20240307",
-      standard: "claude-3-haiku-20240307",
-      premium:  "claude-3-5-sonnet-20240620",
+      fast:     "claude-haiku-4-5",
+      standard: "claude-haiku-4-5",
+      premium:  "claude-sonnet-4-6",
     };
     const targetModel = MODEL_MAP[mode] || MODEL_MAP.fast;
 

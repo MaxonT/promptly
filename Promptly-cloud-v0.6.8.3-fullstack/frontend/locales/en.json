@@ -5,13 +5,13 @@
     "terms": "Terms",
     "cookies": "Cookies",
     "account": "Account",
-    "questionWizard": "Question Wizard",
+    "questionWizard": "Brainstormer",
     "system": "System",
-    "tryIt": "Try the Wizard",
+    "tryIt": "Try Brainstormer",
     "home": "Home",
     "subscription": "Subscription",
     "specs": "Specs",
-    "wizard": "Wizard"
+    "wizard": "Brainstormer"
   },
   "language": {
     "label": "Language",
@@ -24,8 +24,8 @@
     "dark": "Dark"
   },
   "hero": {
-    "title": "Promptly — Prompt Optimizer Studio",
-    "subtitle": "Visualization-first workflow. See every gain, every cost, every version.",
+    "title": "Promptly — Prompt Optimization Studio",
+    "subtitle": "From messy thoughts to execution-ready prompts. Built for the way Vibe Coders actually think.",
     "eyebrow": "Promptly · Workflow Modes"
   },
   "mode": {
@@ -33,7 +33,7 @@
     "hint": "Pick a workflow mode. Switch anytime.",
     "quickStartLabel": "Quick Start",
     "quickStartDesc": "Describe your goal and generate an optimized prompt instantly.",
-    "wizardLabel": "Wizard",
+    "wizardLabel": "Brainstormer",
     "wizardDesc": "Guided step-by-step flow to refine your project idea."
   },
   "wizard": {
@@ -172,21 +172,21 @@
     "uploadSuccess": "Upload successful"
   },
   "userGuide": {
-    "title": "User Guide",
-    "step1": "Write your task: define Instruction + Constraints + Expected style.",
-    "step2": "Add test cases: for each input, provide ideal output.",
-    "step3": "Run: the system auto-searches, tests, and tunes prompts.",
-    "step4": "Review KPIs: Accuracy / F1 / Pass Rate / Estimated Cost / Progress% update after each run.",
+    "title": "Brainstormer Mode Guide",
+    "step1": "Raw Input Welcome: Paste your messy brainstorm as-is. Fragments, bullets, rambling - all valid.",
+    "step2": "Intent Preserved, Structure Added: We organize your ideas without inventing new ones. Your vision stays intact.",
+    "step3": "Agent-Ready Output: Get a clean, structured prompt your AI coding assistant can execute immediately.",
+    "step4": "Don't let bad prompting hinders your development!",
     "accuracyTrend": "Accuracy Trend",
     "errorBreakdown": "Error Breakdown",
     "progressGauge": "Progress Gauge"
   },
   "layer1": {
     "badge": "Layer 1 · Magic Mode",
-    "title": "Describe your goal",
-    "description": "Promptly transforms a single sentence into a multi-step optimized prompt. Tell us what you want, and we'll handle the rest.",
-    "taskLabel": "What should the AI do?",
-    "taskPlaceholder": "Summarize customer interviews into 5 product requirements.",
+    "title": "Dump Your Thoughts Here",
+    "description": "Vibe Coding starts with a messy idea. Paste your brainstorm, your rough notes, your half-formed directive - we'll turn it into a structured, execution-ready prompt your AI agent can actually act on.",
+    "taskLabel": "What are you trying to prompt?",
+    "taskPlaceholder": "What are you trying to prompt? Just think out loud...",
     "modelLabel": "Select LLM Model",
     "contextLabel": "Context or source text (optional)",
     "contextPlaceholder": "Paste any key passages, bullet points, or constraints you already have.",

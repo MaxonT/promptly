@@ -675,7 +675,7 @@ html[data-theme="light"] .grey-gradient-text{
         <a href="terms.html" data-i18n="nav.terms">Terms</a>
         <a href="cookies.html" data-i18n="nav.cookies">Cookies</a>
         <a href="settings.html#accountPanel" data-i18n="nav.account">Settings</a>
-        <a href="wizard.html" class="nav-wizard-link">Question Wizard</a>
+        <a href="wizard.html" class="nav-wizard-link">Brainstormer</a>
       </div>
       <label class="control"><span data-i18n="appearance.label">Appearance</span>
         <select id="themeSelect"><option value="auto" data-i18n="appearance.auto">System</option><option value="light" data-i18n="appearance.light">Light</option><option value="dark" data-i18n="appearance.dark">Dark</option></select>
@@ -691,8 +691,8 @@ html[data-theme="light"] .grey-gradient-text{
       <div class="hero-content">
         <div class="hero-eyebrow" data-i18n="hero.eyebrow">Promptly · Workflow Modes</div>
         <div>
-          <div class="title gradient-text hero-title" data-i18n="hero.title">Promptly — Prompt Optimizer <span class="title-pill">Studio</span></div>
-          <div class="subtitle hero-subtitle" data-i18n="hero.subtitle">Visualization-first workflow. See every gain, every cost, every version.</div>
+          <div class="title gradient-text hero-title" data-i18n="hero.title">Promptly — Prompt Optimization <span class="title-pill">Studio</span></div>
+          <div class="subtitle hero-subtitle" data-i18n="hero.subtitle">From messy thoughts to execution-ready prompts. Built for the way Vibe Coders actually think.</div>
         </div>
       </div>
       
@@ -760,7 +760,7 @@ html[data-theme="light"] .grey-gradient-text{
         <div class="mode-card" role="radio" aria-checked="false" aria-describedby="modeWizardDesc" tabindex="-1" data-mode="wizard">
           <div class="mode-card__icon">🧙‍♂️</div>
           <div class="mode-card__body">
-            <h3 class="mode-card__title" data-i18n="mode.wizardLabel">Wizard</h3>
+            <h3 class="mode-card__title" data-i18n="mode.wizardLabel">Brainstormer</h3>
             <p id="modeWizardDesc" class="mode-card__desc" data-i18n="mode.wizardDesc">Guided step-by-step flow to refine your project idea</p>
           </div>
           <div class="mode-card__check" aria-hidden="true">✔</div>
@@ -771,11 +771,11 @@ html[data-theme="light"] .grey-gradient-text{
     <section class="layer-card layer-default" id="layerDefault">
       <div class="layer-default__column">
         <span class="layer-badge" data-i18n="layer1.badge">Layer 1 · Magic Mode</span>
-        <h2 data-i18n="layer1.title">Describe your goal</h2>
-        <p data-i18n="layer1.description">Promptly turns a single sentence into a multi-step optimized prompt. Tell us what you want and we'll handle the rest.</p>
+        <h2 data-i18n="layer1.title">Dump Your Thoughts Here</h2>
+        <p data-i18n="layer1.description">Vibe Coding starts with a messy idea. Paste your brainstorm, your rough notes, your half-formed directive - we'll turn it into a structured, execution-ready prompt your AI agent can actually act on.</p>
         <label class="layer-field">
-          <span>What should the AI do?</span>
-          <textarea id="task" rows="6" placeholder="Summarize customer interviews into 5 product requirements."></textarea>
+          <span>What are you trying to prompt?</span>
+          <textarea id="task" rows="6" placeholder="What are you trying to prompt? Just think out loud..."></textarea>
           </label>
         <div class="model-select" title="Select Optimization Mode">
           <button id="modelDropdownToggle" class="model-select__toggle" type="button">
@@ -1395,13 +1395,13 @@ window.refreshPlanBanner = async function() {
     section.style.margin='48px auto';
     section.style.maxWidth='960px';
     section.innerHTML = `
-      <h2 class="gradient-animated" data-i18n="userGuide.title" style="font-size:1.6rem;margin-bottom:12px;">Boss Mode Guide</h2>
+      <h2 class="gradient-animated" data-i18n="userGuide.title" style="font-size:1.6rem;margin-bottom:12px;">Brainstormer Mode Guide</h2>
       <ol style="line-height:1.7;margin-left:18px;margin-bottom:16px;">
-        <li><strong>Direct Command</strong>: Tell the system exactly what you want. No fluff.</li>
-        <li><strong>Zero Invention</strong>: We organize your thoughts, we don't invent them.</li>
-        <li><strong>Result Oriented</strong>: Get a structured directive ready for execution.</li>
+        <li><strong>Raw Input Welcome</strong>: Paste your messy brainstorm as-is. Fragments, bullets, rambling - all valid.</li>
+        <li><strong>Intent Preserved, Structure Added</strong>: We organize your ideas without inventing new ones. Your vision stays intact.</li>
+        <li><strong>Agent-Ready Output</strong>: Get a clean, structured prompt your AI coding assistant can execute immediately.</li>
       </ol>
-      <p style="opacity:0.8; margin-top:20px;"><em>"The functionality is the goal. The prompt is just the vehicle."</em></p>
+      <p style="opacity:0.8; margin-top:20px;"><em>"Don't let bad prompting hinders your development!"</em></p>
     `;
     document.body.appendChild(section);
   }

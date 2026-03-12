@@ -42,9 +42,9 @@
       return fallback[key] || key;
     };
     b.innerHTML=`<span data-i18n="common.consent_text">${getText("common.consent_text")}</span>
-    <div style="display:flex;gap:8px">
-      <button class="btn" id="consentDenyBtn" data-i18n="common.deny_btn">${getText("common.deny_btn")}</button>
-      <button class="btn" id="consentBtn" data-i18n="common.consent_btn">${getText("common.consent_btn")}</button>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;min-width:240px">
+      <button class="btn" id="consentDenyBtn" data-i18n="common.deny_btn" style="width:100%">${getText("common.deny_btn")}</button>
+      <button class="btn" id="consentBtn" data-i18n="common.consent_btn" style="width:100%">${getText("common.consent_btn")}</button>
     </div>`;
     document.body.appendChild(b); 
     // Re-translate after i18n is ready - SCOPED TO BANNER ONLY

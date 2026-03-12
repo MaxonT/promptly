@@ -28,6 +28,7 @@ body{
     linear-gradient(90deg, rgba(255, 255, 255, 0.08) 1px, transparent 1px);
   background-size: 100% 100%, 100% 100%, 40px 40px, 40px 40px; /* Grid size 40px */
   background-position: 0 0, 0 0, -1px -1px, -1px -1px; /* Align grid lines */
+  background-attachment: fixed; /* Fix background to viewport to prevent scrolling cutoff */
   
   color:var(--text);
   font-family:Inter,ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;
@@ -35,12 +36,18 @@ body{
 
 [data-theme="light"] body {
   background-color: #f6f8fb;
-  /* Light mode: darker grid lines for visibility against light bg */
+  /* Tech-grid background pattern (Light Mode Fixed): Grid FIRST for visibility */
   background-image: 
-    radial-gradient(circle at 50% -20%, rgba(34,211,238,0.1), transparent 45%),
-    radial-gradient(circle at 80% 20%, rgba(139,92,246,0.1), transparent 50%),
-    linear-gradient(rgba(0, 0, 0, 0.08) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(0, 0, 0, 0.08) 1px, transparent 1px);
+    linear-gradient(rgba(0, 0, 0, 0.15) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 0, 0, 0.15) 1px, transparent 1px),
+    radial-gradient(circle at 50% -20%, rgba(34,211,238,0.25), transparent 60%),
+    radial-gradient(circle at 80% 20%, rgba(139,92,246,0.25), transparent 60%),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.6) 0%, rgba(246, 248, 251, 0.2) 100%);
+  
+  background-size: 40px 40px, 40px 40px, 100% 100%, 100% 100%, 100% 100%;
+  background-position: -1px -1px, -1px -1px, 0 0, 0 0, 0 0;
+  background-attachment: fixed !important;
+  min-height: 100vh;
 }
 a{color:inherit}
 header.topbar{position:sticky;top:0;display:flex;align-items:center;justify-content:space-between;padding:14px 20px;background:var(--bg-soft);
@@ -3626,11 +3633,7 @@ html[data-theme="light"] .text-keyword {
 /* Applied to: Dashboard, Wizard, Results, Specs, Settings, etc. */
 /* ============================================ */
 
-[data-theme="light"] body {
-  background: radial-gradient(120% 140% at 50% -10%, rgba(124, 58, 237, 0.08), transparent 45%),
-              radial-gradient(80% 80% at 80% 20%, rgba(34, 211, 238, 0.12), transparent 60%),
-              #f6f8fb !important;
-}
+/* REMOVED conflicting light theme body rule that was hiding the grid */
 
 [data-theme="light"] .panel,
 [data-theme="light"] .card,
@@ -3822,13 +3825,8 @@ html[data-theme="light"] {
 }
 
 /* ==========================================================================
-   LIGHT MODE REDESIGN (Directionality & Contrast Philosophy)
+   LIGHT MODE REDESIGN (Directionality & Contrast Philosophy) - Additional Components
    ========================================================================== */
-
-html[data-theme="light"] body {
-  /* Subtle gradient from top -> bottom: "Light comes from above" */
-  background: linear-gradient(to bottom, #f1f5f9 0%, #ffffff 30%, #ffffff 100%);
-}
 
 /* 1. LAYER CARDS: Crispness > Flatness */
 html[data-theme="light"] .layer-card {

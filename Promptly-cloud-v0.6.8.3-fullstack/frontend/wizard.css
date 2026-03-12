@@ -84,6 +84,22 @@
   color: #22d3ee;
 }
 
+/* Light Mode Fixes */
+html[data-theme="light"] .wizard-plan-banner {
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+  border: 1px solid #cbd5e1;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+}
+
+html[data-theme="light"] .wizard-plan-limit {
+  color: #64748b;
+}
+
+html[data-theme="light"] .wizard-plan-upgrade {
+  background: linear-gradient(135deg, #f59e0b 0%, #ea580c 100%);
+  box-shadow: 0 2px 4px rgba(249, 115, 22, 0.2);
+}
+
 .wizard-plan-limit {
   font-size: 14px;
   color: #94a3b8;
@@ -143,7 +159,7 @@
   animation:gradientShift 20s ease infinite;
 }
 html[data-theme="light"] .wizard-background{
-  background:linear-gradient(135deg,#f8fafc 0%,#e2e8f0 25%,#cbd5e1 50%,#e2e8f0 75%,#f8fafc 100%);
+  background: transparent;
 }
 .wizard-gradient-orb{
   position:absolute;

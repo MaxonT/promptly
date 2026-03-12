@@ -595,7 +595,7 @@ html[data-theme="light"] .grey-gradient-text{
 }
 .example-card__body{
   display:grid;
-  grid-template-columns:repeat(3,1fr);
+  grid-template-columns:repeat(2,1fr);
   gap:1.5rem;
 }
 .workflow-step{
@@ -1021,35 +1021,7 @@ temperature: 0.5</textarea>
 
     <!-- Charts Section Removed for Boss Mode -->
 
-    <section class="card example-gallery" id="exampleGallery">
-      <div class="example-gallery__intro">
-        <h3 class="gradient-text" data-i18n="examples.title">See Promptly in real workflows</h3>
-        <p class="example-gallery__subtitle" data-i18n="examples.subtitle">
-          Turn messy business requests into executable prompt specs, tests, and reports.
-        </p>
-      </div>
-      <div class="example-tabs" id="exampleTabs"></div>
-      <div class="example-card example-card--visible" id="exampleCard">
-        <div class="example-card__header">
-          <span class="example-card__icon" id="exampleIcon">🛡️</span>
-          <div class="example-card__title" id="exampleTitle">Frontier Model Safety Gate</div>
-        </div>
-        <div class="example-card__body">
-          <div class="workflow-step">
-            <div class="workflow-step__label">YOU SAY</div>
-            <pre class="workflow-step__content" id="workflowStep1"></pre>
-            </div>
-          <div class="workflow-step">
-            <div class="workflow-step__label">PROMPTLY STRUCTURES</div>
-            <pre class="workflow-step__content" id="workflowStep2"></pre>
-          </div>
-          <div class="workflow-step">
-            <div class="workflow-step__label">YOUR SYSTEM GETS</div>
-            <pre class="workflow-step__content" id="workflowStep3"></pre>
-          </div>
-        </div>
-      </div>
-    </section>
+
 
     <!-- Enhanced Algorithm Section - Moved below main features for better UX -->
     <section class="card algorithm-section-enhanced" aria-labelledby="algorithm-title">
@@ -1818,36 +1790,32 @@ window.refreshPlanBanner = async function() {
       tabLabel: "AI Safety",
       icon: "🛡️",
       title: "Frontier Model Safety Gate",
-      step1: '"Design a safety evaluation for our new LLM focusing on self-harm assistance risks."',
-      step2: "• Policy-derived risk categories (self-harm, crisis support, edge cases)\n• 40+ red-team attack prompts in 3 languages and 3 obfuscation levels\n• A scoring rubric (PASS / SOFT_FAIL / HARD_FAIL) and release thresholds\n• A machine-readable JSON spec for automated evaluation",
-      step3: "• A safety eval suite you can run on every new model / checkpoint\n• Aggregated risk scores over time and by model family\n• Clear \"ship / don't ship\" gates for your release pipeline"
+      input: '"Design a safety evaluation for our new LLM focusing on self-harm assistance risks."',
+      output: "• Policy: Self-harm, crisis support, edge cases\n• Attack Prompts: 40+ red-team prompts in 3 languages\n• Scoring: PASS / SOFT_FAIL / HARD_FAIL thresholds\n• Artifact: JSON spec for automated evaluation & aggregated risk scores"
     },
     {
       id: "quant",
       tabLabel: "Quant Finance",
       icon: "📈",
       title: "Quant Strategy Risk Report",
-      step1: '"Turn our backtest + live trading stats into a risk report for this equity market-neutral strategy."',
-      step2: "• Sharpe, drawdown, recovery time, VaR / CVaR by lookback window\n• Factor & sector exposures, top positions by risk contribution\n• Historical stress-test scenarios (GFC, COVID, rate shock)\n• A traffic-light risk rating (Green / Amber / Red) with mitigation actions",
-      step3: "• An IC-ready risk report template\n• JSON / Markdown outputs ready for dashboards or internal tools\n• A repeatable spec you can re-run whenever data updates"
+      input: '"Turn our backtest + live trading stats into a risk report for this equity market-neutral strategy."',
+      output: "• Metrics: Sharpe, drawdown, VaR / CVaR by lookback window\n• Analysis: Factor & sector exposures, top risk contributors\n• Scenarios: Historical stress-tests (GFC, COVID)\n• Artifact: IC-ready risk report template & JSON/Markdown outputs"
     },
     {
       id: "supply-chain",
       tabLabel: "Supply Chain Risk",
       icon: "🚚",
       title: "Supply Chain Stress Test",
-      step1: '"Stress-test our EV battery supply chain for port closures and export controls."',
-      step2: "• Disruption scenarios with triggers, affected suppliers & plants\n• Time-phased impact on production and revenue (0–4w, 1–3m, 3–12m)\n• Aggregated risk by plant, region, and product family\n• Mitigation playbooks (alternate suppliers, rerouting, product-mix shifts)",
-      step3: "• A scenario library for risk reviews\n• Structured data you can feed into planning tools\n• A narrative summary for exec briefings"
+      input: '"Stress-test our EV battery supply chain for port closures and export controls."',
+      output: "• Scenarios: Disruption triggers, affected suppliers & plants\n• Impact: Time-phased production/revenue loss (0–4w, 1–3m)\n• Mitigation: Alternate suppliers, rerouting playbooks\n• Artifact: Structured data for planning tools & executive summary"
     },
     {
       id: "media",
       tabLabel: "Media Compliance",
       icon: "📺",
       title: "Global Media Bias Audit",
-      step1: '"Audit our prime-time immigration coverage over the last 90 days for bias and compliance."',
-      step2: "• A sampling plan by channel, show, topic, and region\n• Per-segment labels for bias level and compliance level\n• Evidence snippets with flagged stereotypes or dehumanizing framing\n• Aggregated KPIs by show / anchor / region, plus flagged segments",
-      step3: "• A bias & compliance dashboard spec\n• Exportable CSV / JSON for BI tools\n• A human-readable audit report for legal / editorial teams"
+      input: '"Audit our prime-time immigration coverage over the last 90 days for bias and compliance."',
+      output: "• Sampling: Plan by channel, show, topic, and region\n• Labeling: Bias level, compliance level, stereotype flagging\n• Evidence: Snippets with specific timestamps\n• Artifact: Bias dashboard spec & exportable CSV/JSON audit report"
     }
   ];
 
@@ -1856,9 +1824,13 @@ window.refreshPlanBanner = async function() {
   if (!tabsEl || !cardEl) return;
   const iconEl = document.getElementById("exampleIcon");
   const titleEl = document.getElementById("exampleTitle");
-  const step1El = document.getElementById("workflowStep1");
-  const step2El = document.getElementById("workflowStep2");
-  const step3El = document.getElementById("workflowStep3");
+  const inputEl = document.getElementById("exampleInput");
+  const outputEl = document.getElementById("exampleOutput");
+  
+  // Debugging: Check if elements exist
+  if (!inputEl) console.error("[Promptly] FATAL: exampleInput element not found!");
+  if (!outputEl) console.error("[Promptly] FATAL: exampleOutput element not found!");
+
   const activeClass = "example-tab--active";
   let activeId = SCENARIOS[0].id;
 
@@ -1874,12 +1846,21 @@ window.refreshPlanBanner = async function() {
 
   function setScenario(id) {
     const scenario = SCENARIOS.find((s) => s.id === id) || SCENARIOS[0];
+    console.log("[Promptly] Setting scenario:", scenario.id, scenario.input?.length);
+    
     activeId = scenario.id;
     if (iconEl) iconEl.textContent = scenario.icon;
     if (titleEl) titleEl.textContent = scenario.title;
-    if (step1El) step1El.textContent = scenario.step1;
-    if (step2El) step2El.textContent = scenario.step2;
-    if (step3El) step3El.textContent = scenario.step3;
+    
+    if (inputEl) {
+        inputEl.textContent = scenario.input;
+        inputEl.style.opacity = "1"; // Ensure visibility
+    }
+    if (outputEl) {
+        outputEl.textContent = scenario.output;
+        outputEl.style.opacity = "1"; // Ensure visibility
+    }
+    
     tabsEl.querySelectorAll(".example-tab").forEach((btn) => {
       btn.classList.toggle(activeClass, btn.dataset.id === activeId);
     });

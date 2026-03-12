@@ -222,6 +222,7 @@
   "common": {
     "consent_text": "我们使用 Cookie 改善体验并记住偏好。",
     "consent_btn": "同意",
+    "deny_btn": "拒绝",
     "copied": "已复制！",
     "stillWorking": "仍然努力中...",
     "error": "错误",

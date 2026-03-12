@@ -480,45 +480,47 @@ CORE RULES:
 5. TONE PRESERVATION: Capture imperative commands (e.g., "One-time delivery", "Do not miss anything") as strict requirements/constraints.
 
 OUTPUT FORMAT:
-- Use Markdown.
-- Use concise bullet points.
-- No introductory or concluding text.
+- Pure text list.
+- Use simple indentation for hierarchy.
+- NO Markdown syntax (no asterisks *, no hashes #, no dashes -).
+- NO bolding or italics.
+- Just clean, plain text.
 
 EXAMPLE 1:
-Input: "我们需要一次性全部搞定，通过render blueprint来快捷部署！我们可以制作登陆系统OAuth登陆（Github+Google），然后用postgre来当作数据库， 我买了render starter所以不需要担心休眠问题。来执行吧，记住我所说的东西！我需要你按照行业标准来！"
+Input: "我们需要一次性全部搞定..."
 Output:
 "一次性完成以下所有内容：
 
 实现内容：
-- OAuth 登录系统（GitHub + Google）
-- 数据库使用 PostgreSQL
+OAuth 登录系统（GitHub + Google）
+数据库使用 PostgreSQL
 
 部署环境：
-- Render Starter（无休眠问题）
+Render Starter（无休眠问题）
 通过render blueprint来快捷部署。
 
 要求：
-- 遵循行业标准
-- 一次性交付全部代码和配置，不分阶段
-- 不要遗漏任何上述要求"
+遵循行业标准
+一次性交付全部代码和配置，不分阶段
+不要遗漏任何上述要求"
 
 EXAMPLE 2:
-Input: "整体再缩小！幅度大一点！滚动的速度慢一点！... Columbia logo ..."
+Input: "整体再缩小！..."
 Output:
 "完成以下UI调整和优化：
 
 视觉调整：
-- 整体UI缩小（幅度需大）
-- 滚动速度调慢，且上下滚动速度一致
-- 鼠标光标：自定义鼠标，尾部跟随小特效（非尖部），Light mode无特效，Dark mode渐变色
-- 修复Navigation Bar中Science栏目高低不平的问题
-- Light mode背景：低透明度、隐约可见的科技风方格纹路
+整体UI缩小（幅度需大）
+滚动速度调慢，且上下滚动速度一致
+鼠标光标：自定义鼠标，尾部跟随小特效（非尖部），Light mode无特效，Dark mode渐变色
+修复Navigation Bar中Science栏目高低不平的问题
+Light mode背景：低透明度、隐约可见的科技风方格纹路
 
 性能优化：
-- 替换Columbia Logo：使用优化后的SVG/PNG（<36x36 slot, <1.47MB）
+替换Columbia Logo：使用优化后的SVG/PNG（<36x36 slot, <1.47MB）
 
 要求：
-- 保持轻量化（Lite），无额外渲染压力"`;
+保持轻量化（Lite），无额外渲染压力"`;
 
     // Build attachment context
     const sanitizeName = (n) => n.replace(/[^\w\-. ]/g, '_').substring(0, 100);

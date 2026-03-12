@@ -3659,30 +3659,30 @@ if (document.readyState === 'loading') {
   const BRAND_LOGO_MANIFEST = [
     { id: "google", label: "Google", src: "assets/brand-logos/google.svg" },
     { id: "amazon", label: "Amazon", src: "assets/brand-logos/amazon.svg" },
-    { id: "apple", label: "Apple", src: "assets/brand-logos/apple.svg" },
+    { id: "apple", label: "Apple", src: "assets/brand-logos/apple.svg", srcDark: "assets/brand-logos/apple-dark.svg" },
     { id: "microsoft", label: "Microsoft", src: "assets/brand-logos/microsoft.svg" },
     { id: "meta", label: "Meta", src: "assets/brand-logos/meta.svg" },
     { id: "nvidia", label: "NVIDIA", src: "assets/brand-logos/nvidia.svg" },
     { id: "openai", label: "OpenAI", src: "assets/brand-logos/openai.svg" },
-    { id: "anthropic", label: "Anthropic", src: "assets/brand-logos/anthropic.svg" },
-    { id: "github", label: "GitHub", src: "assets/brand-logos/github.svg" },
+    { id: "anthropic", label: "Anthropic", src: "assets/brand-logos/anthropic.svg", srcDark: "assets/brand-logos/anthropic-dark.svg" },
+    { id: "github", label: "GitHub", src: "assets/brand-logos/github.svg", srcDark: "assets/brand-logos/github-dark.svg" },
     { id: "gitlab", label: "GitLab", src: "assets/brand-logos/gitlab.svg" },
     { id: "stripe", label: "Stripe", src: "assets/brand-logos/stripe.svg" },
     { id: "shopify", label: "Shopify", src: "assets/brand-logos/shopify.svg" },
-    { id: "adobe", label: "Adobe", src: "assets/brand-logos/adobe.svg" },
+    { id: "adobe", label: "Adobe", src: "assets/brand-logos/adobe.svg", srcDark: "assets/brand-logos/adobe-dark.svg" },
     { id: "netflix", label: "Netflix", src: "assets/brand-logos/netflix.svg" },
-    { id: "uber", label: "Uber", src: "assets/brand-logos/uber.svg" },
+    { id: "uber", label: "Uber", src: "assets/brand-logos/uber.svg", srcDark: "assets/brand-logos/uber-dark.svg" },
     { id: "airbnb", label: "Airbnb", src: "assets/brand-logos/airbnb.svg" },
     { id: "tesla", label: "Tesla", src: "assets/brand-logos/tesla.svg" },
     { id: "intel", label: "Intel", src: "assets/brand-logos/intel.svg" },
     { id: "amd", label: "AMD", src: "assets/brand-logos/amd.svg" },
-    { id: "oracle", label: "Oracle", src: "assets/brand-logos/oracle.svg" },
-    { id: "ibm", label: "IBM", src: "assets/brand-logos/ibm.svg" },
+    { id: "oracle", label: "Oracle", src: "assets/brand-logos/oracle.svg", srcDark: "assets/brand-logos/oracle-dark.svg" },
+    { id: "ibm", label: "IBM", src: "assets/brand-logos/ibm.svg", srcDark: "assets/brand-logos/ibm-dark.svg" },
     { id: "cisco", label: "Cisco", src: "assets/brand-logos/cisco.svg" },
     { id: "salesforce", label: "Salesforce", src: "assets/brand-logos/salesforce.svg" },
     { id: "slack", label: "Slack", src: "assets/brand-logos/slack.svg" },
     { id: "atlassian", label: "Atlassian", src: "assets/brand-logos/atlassian.svg" },
-    { id: "notion", label: "Notion", src: "assets/brand-logos/notion.svg" },
+    { id: "notion", label: "Notion", src: "assets/brand-logos/notion.svg", srcDark: "assets/brand-logos/notion-dark.svg" },
     { id: "figma", label: "Figma", src: "assets/brand-logos/figma.svg" },
     { id: "dropbox", label: "Dropbox", src: "assets/brand-logos/dropbox.svg" },
     { id: "paypal", label: "PayPal", src: "assets/brand-logos/paypal.svg" },
@@ -3694,7 +3694,7 @@ if (document.readyState === 'loading') {
     { id: "snowflake", label: "Snowflake", src: "assets/brand-logos/snowflake.svg" },
     { id: "mongodb", label: "MongoDB", src: "assets/brand-logos/mongodb.svg" },
     { id: "redis", label: "Redis", src: "assets/brand-logos/redis.svg" },
-    { id: "vercel", label: "Vercel", src: "assets/brand-logos/vercel.svg" },
+    { id: "vercel", label: "Vercel", src: "assets/brand-logos/vercel.svg", srcDark: "assets/brand-logos/vercel-dark.svg" },
     { id: "netlify", label: "Netlify", src: "assets/brand-logos/netlify.svg" },
     { id: "digitalocean", label: "DigitalOcean", src: "assets/brand-logos/digitalocean.svg" },
     { id: "sap", label: "SAP", src: "assets/brand-logos/sap.svg" },
@@ -3716,17 +3716,30 @@ if (document.readyState === 'loading') {
       .replace(/'/g, "&#39;");
   }
 
-  function renderTrack(trackId, logos) {
+  function getCurrentTheme() {
+    return document.documentElement.getAttribute("data-theme") === "light" ? "light" : "dark";
+  }
+
+  function resolveLogoSrc(brand, theme) {
+    if (theme === "dark" && typeof brand.srcDark === "string" && brand.srcDark.length > 0) {
+      return brand.srcDark;
+    }
+    return brand.src;
+  }
+
+  function renderTrack(trackId, logos, theme) {
     const track = document.getElementById(trackId);
     if (!track) return;
 
     const itemMarkup = logos.map((brand) => {
       const safeLabel = escapeHtml(brand.label);
-      const safeSrc = escapeHtml(brand.src);
+      const safeSrc = escapeHtml(resolveLogoSrc(brand, theme));
+      const safeDefaultSrc = escapeHtml(brand.src);
+      const safeDarkSrc = brand.srcDark ? escapeHtml(brand.srcDark) : "";
 
       return `<li class="brand-belt__item" title="${safeLabel}" aria-label="${safeLabel}">
         <div class="brand-belt__logo-wrap">
-          <img class="brand-belt__logo-img" src="${safeSrc}" alt="${safeLabel} logo" loading="eager" decoding="async" draggable="false" />
+          <img class="brand-belt__logo-img" src="${safeSrc}" data-src="${safeDefaultSrc}" data-src-dark="${safeDarkSrc}" alt="${safeLabel} logo" loading="eager" decoding="async" draggable="false" />
         </div>
         <span class="brand-belt__label">${safeLabel}</span>
       </li>`;
@@ -3739,18 +3752,58 @@ if (document.readyState === 'loading') {
   }
 
   function renderBrandBelt() {
+    const theme = getCurrentTheme();
     const topRow = BRAND_LOGO_MANIFEST.slice(0, 24);
     const bottomRow = BRAND_LOGO_MANIFEST.slice(24);
-    renderTrack("brandBeltTrackLeft", topRow);
-    renderTrack("brandBeltTrackRight", bottomRow);
+    renderTrack("brandBeltTrackLeft", topRow, theme);
+    renderTrack("brandBeltTrackRight", bottomRow, theme);
+  }
+
+  function updateBrandBeltTheme(theme) {
+    const resolvedTheme = theme === "light" ? "light" : "dark";
+    const images = document.querySelectorAll(".brand-belt__logo-img");
+    images.forEach((img) => {
+      const defaultSrc = img.getAttribute("data-src");
+      const darkSrc = img.getAttribute("data-src-dark");
+      const nextSrc = resolvedTheme === "dark" && darkSrc ? darkSrc : defaultSrc;
+      if (nextSrc && img.getAttribute("src") !== nextSrc) {
+        img.setAttribute("src", nextSrc);
+      }
+    });
+  }
+
+  function bindBrandBeltThemeSync() {
+    document.addEventListener("themechange", (event) => {
+      const nextTheme = event?.detail?.theme || getCurrentTheme();
+      updateBrandBeltTheme(nextTheme);
+    });
+
+    const root = document.documentElement;
+    if (!root || typeof MutationObserver === "undefined") return;
+
+    const observer = new MutationObserver((mutations) => {
+      for (const mutation of mutations) {
+        if (mutation.type === "attributes" && mutation.attributeName === "data-theme") {
+          updateBrandBeltTheme(getCurrentTheme());
+          break;
+        }
+      }
+    });
+
+    observer.observe(root, { attributes: true, attributeFilter: ["data-theme"] });
   }
 
   window.BRAND_LOGO_MANIFEST = BRAND_LOGO_MANIFEST;
 
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", renderBrandBelt, { once: true });
-  } else {
+  function initBrandBelt() {
     renderBrandBelt();
+    bindBrandBeltThemeSync();
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", initBrandBelt, { once: true });
+  } else {
+    initBrandBelt();
   }
 })();
 </script>

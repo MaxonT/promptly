@@ -15,11 +15,32 @@
 html,body{height:100%}
 body{
   margin:0;
-  background:radial-gradient(120% 140% at 50% -10%,rgba(34,211,238,0.08),transparent 45%),
-             radial-gradient(80% 80% at 80% 20%,rgba(139,92,246,0.18),transparent 60%),
-             #050814;
+  background-color: var(--bg);
+  /* 
+    Tech-grid background pattern (Enhanced):
+    1. Radial gradients for ambient glow (cyan & purple)
+    2. Linear gradients creating a visible grid pattern
+  */
+  background-image: 
+    radial-gradient(circle at 50% -20%, rgba(34,211,238,0.25), transparent 45%),
+    radial-gradient(circle at 80% 20%, rgba(139,92,246,0.25), transparent 50%),
+    linear-gradient(rgba(255, 255, 255, 0.08) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.08) 1px, transparent 1px);
+  background-size: 100% 100%, 100% 100%, 40px 40px, 40px 40px; /* Grid size 40px */
+  background-position: 0 0, 0 0, -1px -1px, -1px -1px; /* Align grid lines */
+  
   color:var(--text);
   font-family:Inter,ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;
+}
+
+[data-theme="light"] body {
+  background-color: #f6f8fb;
+  /* Light mode: darker grid lines for visibility against light bg */
+  background-image: 
+    radial-gradient(circle at 50% -20%, rgba(34,211,238,0.1), transparent 45%),
+    radial-gradient(circle at 80% 20%, rgba(139,92,246,0.1), transparent 50%),
+    linear-gradient(rgba(0, 0, 0, 0.08) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 0, 0, 0.08) 1px, transparent 1px);
 }
 a{color:inherit}
 header.topbar{position:sticky;top:0;display:flex;align-items:center;justify-content:space-between;padding:14px 20px;background:var(--bg-soft);

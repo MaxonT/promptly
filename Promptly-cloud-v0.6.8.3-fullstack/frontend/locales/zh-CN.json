@@ -5,13 +5,13 @@
     "terms": "条款",
     "cookies": "Cookie",
     "account": "账户",
-    "questionWizard": "问题向导",
+    "questionWizard": "Brainstormer",
     "system": "系统",
-    "tryIt": "开始向导",
+    "tryIt": "Try Brainstormer",
     "home": "首页",
     "subscription": "订阅",
     "specs": "规格",
-    "wizard": "向导"
+    "wizard": "Brainstormer"
   },
   "language": {
     "label": "语言",
@@ -24,8 +24,8 @@
     "dark": "深色"
   },
   "hero": {
-    "title": "Promptly — 提示优化工作室",
-    "subtitle": "以可视化为先的工作流程，看到每一次收益、每一笔成本、每一个版本。",
+    "title": "Promptly — Prompt Optimization Studio",
+    "subtitle": "From messy thoughts to execution-ready prompts. Built for the way Vibe Coders actually think.",
     "eyebrow": "Promptly · 工作流模式"
   },
   "mode": {
@@ -33,7 +33,7 @@
     "hint": "选择一个工作流模式，随时切换。",
     "quickStartLabel": "快速启动",
     "quickStartDesc": "描述你的目标，即刻生成优化后的提示。",
-    "wizardLabel": "向导",
+    "wizardLabel": "Brainstormer",
     "wizardDesc": "逐步引导，帮助你细化项目想法。"
   },
   "wizard": {
@@ -234,21 +234,21 @@
   },
   "layer1": {
     "badge": "第 1 层 · 魔法模式",
-    "title": "描述你的目标",
-    "description": "Promptly 将单个句子转换为多步骤优化的提示词。告诉我们你想要什么，剩下的交给我们。",
-    "taskLabel": "AI 应该做什么？",
-    "taskPlaceholder": "将客户访谈总结为 5 个产品需求。",
+    "title": "Dump Your Thoughts Here",
+    "description": "Vibe Coding starts with a messy idea. Paste your brainstorm, your rough notes, your half-formed directive - we'll turn it into a structured, execution-ready prompt your AI agent can actually act on.",
+    "taskLabel": "What are you trying to prompt?",
+    "taskPlaceholder": "What are you trying to prompt? Just think out loud...",
     "modelLabel": "选择 LLM 模型",
     "contextLabel": "上下文或源文本（可选）",
     "contextPlaceholder": "粘贴您已有的关键段落、要点或约束。",
     "contextHelp": "这有助于 Promptly 理解现有材料，而无需强制您分享。"
   },
   "userGuide": {
-    "title": "用户指南",
-    "step1": "编写您的任务：定义指令 + 约束 + 预期风格。",
-    "step2": "添加测试用例：为每个输入提供理想输出。",
-    "step3": "运行：系统自动搜索、测试和调整提示词。",
-    "step4": "查看 KPI：每次运行后更新准确率 / F1 / 通过率 / 预估成本 / 进度%。",
+    "title": "Brainstormer Mode Guide",
+    "step1": "Raw Input Welcome: Paste your messy brainstorm as-is. Fragments, bullets, rambling - all valid.",
+    "step2": "Intent Preserved, Structure Added: We organize your ideas without inventing new ones. Your vision stays intact.",
+    "step3": "Agent-Ready Output: Get a clean, structured prompt your AI coding assistant can execute immediately.",
+    "step4": "Don't let bad prompting hinders your development!",
     "accuracyTrend": "准确率趋势",
     "errorBreakdown": "错误分解",
     "progressGauge": "进度仪表"

@@ -3657,59 +3657,55 @@ if (document.readyState === 'loading') {
 // Brand trust belt: 48-logo manifest + seamless conveyor rendering
 (function () {
   const BRAND_LOGO_MANIFEST = [
-    { id: "google", label: "Google" },
-    { id: "amazon", label: "Amazon" },
-    { id: "apple", label: "Apple" },
-    { id: "microsoft", label: "Microsoft" },
-    { id: "meta", label: "Meta" },
-    { id: "nvidia", label: "NVIDIA" },
-    { id: "openai", label: "OpenAI" },
-    { id: "anthropic", label: "Anthropic" },
-    { id: "github", label: "GitHub" },
-    { id: "gitlab", label: "GitLab" },
-    { id: "stripe", label: "Stripe" },
-    { id: "shopify", label: "Shopify" },
-    { id: "adobe", label: "Adobe" },
-    { id: "netflix", label: "Netflix" },
-    { id: "uber", label: "Uber" },
-    { id: "airbnb", label: "Airbnb" },
-    { id: "tesla", label: "Tesla" },
-    { id: "intel", label: "Intel" },
-    { id: "amd", label: "AMD" },
-    { id: "oracle", label: "Oracle" },
-    { id: "ibm", label: "IBM" },
-    { id: "cisco", label: "Cisco" },
-    { id: "salesforce", label: "Salesforce" },
-    { id: "slack", label: "Slack" },
-    { id: "atlassian", label: "Atlassian" },
-    { id: "notion", label: "Notion" },
-    { id: "figma", label: "Figma" },
-    { id: "dropbox", label: "Dropbox" },
-    { id: "paypal", label: "PayPal" },
-    { id: "spotify", label: "Spotify" },
-    { id: "zoom", label: "Zoom" },
-    { id: "twilio", label: "Twilio" },
-    { id: "cloudflare", label: "Cloudflare" },
-    { id: "datadog", label: "Datadog" },
-    { id: "snowflake", label: "Snowflake" },
-    { id: "mongodb", label: "MongoDB" },
-    { id: "redis", label: "Redis" },
-    { id: "vercel", label: "Vercel" },
-    { id: "netlify", label: "Netlify" },
-    { id: "digitalocean", label: "DigitalOcean" },
-    { id: "sap", label: "SAP" },
-    { id: "samsung", label: "Samsung" },
-    { id: "xiaomi", label: "Xiaomi" },
-    { id: "bytedance", label: "ByteDance" },
-    { id: "tencent", label: "Tencent" },
-    { id: "alibaba", label: "Alibaba" },
-    { id: "baidu", label: "Baidu" },
-    { id: "huawei", label: "Huawei" }
-  ].map((brand, index) => ({ ...brand, spriteIndex: index }));
-
-  const BELT_COLS = 12;
-  const BELT_CELL_W = 192;
-  const BELT_CELL_H = 72;
+    { id: "google", label: "Google", src: "assets/brand-logos/google.svg" },
+    { id: "amazon", label: "Amazon", src: "assets/brand-logos/amazon.svg" },
+    { id: "apple", label: "Apple", src: "assets/brand-logos/apple.svg" },
+    { id: "microsoft", label: "Microsoft", src: "assets/brand-logos/microsoft.svg" },
+    { id: "meta", label: "Meta", src: "assets/brand-logos/meta.svg" },
+    { id: "nvidia", label: "NVIDIA", src: "assets/brand-logos/nvidia.svg" },
+    { id: "openai", label: "OpenAI", src: "assets/brand-logos/openai.svg" },
+    { id: "anthropic", label: "Anthropic", src: "assets/brand-logos/anthropic.svg" },
+    { id: "github", label: "GitHub", src: "assets/brand-logos/github.svg" },
+    { id: "gitlab", label: "GitLab", src: "assets/brand-logos/gitlab.svg" },
+    { id: "stripe", label: "Stripe", src: "assets/brand-logos/stripe.svg" },
+    { id: "shopify", label: "Shopify", src: "assets/brand-logos/shopify.svg" },
+    { id: "adobe", label: "Adobe", src: "assets/brand-logos/adobe.svg" },
+    { id: "netflix", label: "Netflix", src: "assets/brand-logos/netflix.svg" },
+    { id: "uber", label: "Uber", src: "assets/brand-logos/uber.svg" },
+    { id: "airbnb", label: "Airbnb", src: "assets/brand-logos/airbnb.svg" },
+    { id: "tesla", label: "Tesla", src: "assets/brand-logos/tesla.svg" },
+    { id: "intel", label: "Intel", src: "assets/brand-logos/intel.svg" },
+    { id: "amd", label: "AMD", src: "assets/brand-logos/amd.svg" },
+    { id: "oracle", label: "Oracle", src: "assets/brand-logos/oracle.svg" },
+    { id: "ibm", label: "IBM", src: "assets/brand-logos/ibm.svg" },
+    { id: "cisco", label: "Cisco", src: "assets/brand-logos/cisco.svg" },
+    { id: "salesforce", label: "Salesforce", src: "assets/brand-logos/salesforce.svg" },
+    { id: "slack", label: "Slack", src: "assets/brand-logos/slack.svg" },
+    { id: "atlassian", label: "Atlassian", src: "assets/brand-logos/atlassian.svg" },
+    { id: "notion", label: "Notion", src: "assets/brand-logos/notion.svg" },
+    { id: "figma", label: "Figma", src: "assets/brand-logos/figma.svg" },
+    { id: "dropbox", label: "Dropbox", src: "assets/brand-logos/dropbox.svg" },
+    { id: "paypal", label: "PayPal", src: "assets/brand-logos/paypal.svg" },
+    { id: "spotify", label: "Spotify", src: "assets/brand-logos/spotify.svg" },
+    { id: "zoom", label: "Zoom", src: "assets/brand-logos/zoom.svg" },
+    { id: "twilio", label: "Twilio", src: "assets/brand-logos/twilio.svg" },
+    { id: "cloudflare", label: "Cloudflare", src: "assets/brand-logos/cloudflare.svg" },
+    { id: "datadog", label: "Datadog", src: "assets/brand-logos/datadog.svg" },
+    { id: "snowflake", label: "Snowflake", src: "assets/brand-logos/snowflake.svg" },
+    { id: "mongodb", label: "MongoDB", src: "assets/brand-logos/mongodb.svg" },
+    { id: "redis", label: "Redis", src: "assets/brand-logos/redis.svg" },
+    { id: "vercel", label: "Vercel", src: "assets/brand-logos/vercel.svg" },
+    { id: "netlify", label: "Netlify", src: "assets/brand-logos/netlify.svg" },
+    { id: "digitalocean", label: "DigitalOcean", src: "assets/brand-logos/digitalocean.svg" },
+    { id: "sap", label: "SAP", src: "assets/brand-logos/sap.svg" },
+    { id: "samsung", label: "Samsung", src: "assets/brand-logos/samsung.svg" },
+    { id: "xiaomi", label: "Xiaomi", src: "assets/brand-logos/xiaomi.svg" },
+    { id: "bytedance", label: "ByteDance", src: "assets/brand-logos/bytedance.svg" },
+    { id: "tencent", label: "Tencent", src: "assets/brand-logos/tencent.svg" },
+    { id: "alibaba", label: "Alibaba", src: "assets/brand-logos/alibaba.svg" },
+    { id: "baidu", label: "Baidu", src: "assets/brand-logos/baidu.svg" },
+    { id: "huawei", label: "Huawei", src: "assets/brand-logos/huawei.svg" }
+  ];
 
   function escapeHtml(value) {
     return value
@@ -3725,13 +3721,10 @@ if (document.readyState === 'loading') {
     if (!track) return;
 
     const itemMarkup = logos.map((brand) => {
-      const col = brand.spriteIndex % BELT_COLS;
-      const row = Math.floor(brand.spriteIndex / BELT_COLS);
-      const x = `-${col * BELT_CELL_W}px`;
-      const y = `-${row * BELT_CELL_H}px`;
       const safeLabel = escapeHtml(brand.label);
+      const safeSrc = escapeHtml(brand.src);
 
-      return `<li class="brand-belt__item" title="${safeLabel}" aria-label="${safeLabel}"><span class="brand-belt__logo" style="--logo-x:${x};--logo-y:${y};" aria-hidden="true"></span></li>`;
+      return `<li class="brand-belt__item" title="${safeLabel}" aria-label="${safeLabel}"><img class="brand-belt__logo-img" src="${safeSrc}" alt="${safeLabel} logo" loading="eager" decoding="async" draggable="false" /></li>`;
     }).join("");
 
     track.innerHTML = `

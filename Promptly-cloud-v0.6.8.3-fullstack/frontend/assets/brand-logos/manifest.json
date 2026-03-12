@@ -1,0 +1,290 @@
+[
+  {
+    "id": "google",
+    "label": "Google",
+    "file": "assets/brand-logos/google.svg",
+    "hex": "#4285F4"
+  },
+  {
+    "id": "amazon",
+    "label": "Amazon",
+    "file": "assets/brand-logos/amazon.svg",
+    "hex": "#FF9900"
+  },
+  {
+    "id": "apple",
+    "label": "Apple",
+    "file": "assets/brand-logos/apple.svg",
+    "hex": "#000000"
+  },
+  {
+    "id": "microsoft",
+    "label": "Microsoft",
+    "file": "assets/brand-logos/microsoft.svg",
+    "hex": "#00A4EF"
+  },
+  {
+    "id": "meta",
+    "label": "Meta",
+    "file": "assets/brand-logos/meta.svg",
+    "hex": "#0467DF"
+  },
+  {
+    "id": "nvidia",
+    "label": "NVIDIA",
+    "file": "assets/brand-logos/nvidia.svg",
+    "hex": "#76B900"
+  },
+  {
+    "id": "openai",
+    "label": "OpenAI",
+    "file": "assets/brand-logos/openai.svg",
+    "hex": "#412991"
+  },
+  {
+    "id": "anthropic",
+    "label": "Anthropic",
+    "file": "assets/brand-logos/anthropic.svg",
+    "hex": "#191919"
+  },
+  {
+    "id": "github",
+    "label": "GitHub",
+    "file": "assets/brand-logos/github.svg",
+    "hex": "#181717"
+  },
+  {
+    "id": "gitlab",
+    "label": "GitLab",
+    "file": "assets/brand-logos/gitlab.svg",
+    "hex": "#FC6D26"
+  },
+  {
+    "id": "stripe",
+    "label": "Stripe",
+    "file": "assets/brand-logos/stripe.svg",
+    "hex": "#635BFF"
+  },
+  {
+    "id": "shopify",
+    "label": "Shopify",
+    "file": "assets/brand-logos/shopify.svg",
+    "hex": "#7AB55C"
+  },
+  {
+    "id": "adobe",
+    "label": "Adobe",
+    "file": "assets/brand-logos/adobe.svg",
+    "hex": "#111111"
+  },
+  {
+    "id": "netflix",
+    "label": "Netflix",
+    "file": "assets/brand-logos/netflix.svg",
+    "hex": "#E50914"
+  },
+  {
+    "id": "uber",
+    "label": "Uber",
+    "file": "assets/brand-logos/uber.svg",
+    "hex": "#000000"
+  },
+  {
+    "id": "airbnb",
+    "label": "Airbnb",
+    "file": "assets/brand-logos/airbnb.svg",
+    "hex": "#FF5A5F"
+  },
+  {
+    "id": "tesla",
+    "label": "Tesla",
+    "file": "assets/brand-logos/tesla.svg",
+    "hex": "#CC0000"
+  },
+  {
+    "id": "intel",
+    "label": "Intel",
+    "file": "assets/brand-logos/intel.svg",
+    "hex": "#0071C5"
+  },
+  {
+    "id": "amd",
+    "label": "AMD",
+    "file": "assets/brand-logos/amd.svg",
+    "hex": "#ED1C24"
+  },
+  {
+    "id": "oracle",
+    "label": "Oracle",
+    "file": "assets/brand-logos/oracle.svg",
+    "hex": "#111111"
+  },
+  {
+    "id": "ibm",
+    "label": "IBM",
+    "file": "assets/brand-logos/ibm.svg",
+    "hex": "#111111"
+  },
+  {
+    "id": "cisco",
+    "label": "Cisco",
+    "file": "assets/brand-logos/cisco.svg",
+    "hex": "#1BA0D7"
+  },
+  {
+    "id": "salesforce",
+    "label": "Salesforce",
+    "file": "assets/brand-logos/salesforce.svg",
+    "hex": "#00A1E0"
+  },
+  {
+    "id": "slack",
+    "label": "Slack",
+    "file": "assets/brand-logos/slack.svg",
+    "hex": "#4A154B"
+  },
+  {
+    "id": "atlassian",
+    "label": "Atlassian",
+    "file": "assets/brand-logos/atlassian.svg",
+    "hex": "#0052CC"
+  },
+  {
+    "id": "notion",
+    "label": "Notion",
+    "file": "assets/brand-logos/notion.svg",
+    "hex": "#000000"
+  },
+  {
+    "id": "figma",
+    "label": "Figma",
+    "file": "assets/brand-logos/figma.svg",
+    "hex": "#F24E1E"
+  },
+  {
+    "id": "dropbox",
+    "label": "Dropbox",
+    "file": "assets/brand-logos/dropbox.svg",
+    "hex": "#0061FF"
+  },
+  {
+    "id": "paypal",
+    "label": "PayPal",
+    "file": "assets/brand-logos/paypal.svg",
+    "hex": "#003087"
+  },
+  {
+    "id": "spotify",
+    "label": "Spotify",
+    "file": "assets/brand-logos/spotify.svg",
+    "hex": "#1ED760"
+  },
+  {
+    "id": "zoom",
+    "label": "Zoom",
+    "file": "assets/brand-logos/zoom.svg",
+    "hex": "#0B5CFF"
+  },
+  {
+    "id": "twilio",
+    "label": "Twilio",
+    "file": "assets/brand-logos/twilio.svg",
+    "hex": "#F22F46"
+  },
+  {
+    "id": "cloudflare",
+    "label": "Cloudflare",
+    "file": "assets/brand-logos/cloudflare.svg",
+    "hex": "#F38020"
+  },
+  {
+    "id": "datadog",
+    "label": "Datadog",
+    "file": "assets/brand-logos/datadog.svg",
+    "hex": "#632CA6"
+  },
+  {
+    "id": "snowflake",
+    "label": "Snowflake",
+    "file": "assets/brand-logos/snowflake.svg",
+    "hex": "#29B5E8"
+  },
+  {
+    "id": "mongodb",
+    "label": "MongoDB",
+    "file": "assets/brand-logos/mongodb.svg",
+    "hex": "#47A248"
+  },
+  {
+    "id": "redis",
+    "label": "Redis",
+    "file": "assets/brand-logos/redis.svg",
+    "hex": "#FF4438"
+  },
+  {
+    "id": "vercel",
+    "label": "Vercel",
+    "file": "assets/brand-logos/vercel.svg",
+    "hex": "#000000"
+  },
+  {
+    "id": "netlify",
+    "label": "Netlify",
+    "file": "assets/brand-logos/netlify.svg",
+    "hex": "#00C7B7"
+  },
+  {
+    "id": "digitalocean",
+    "label": "DigitalOcean",
+    "file": "assets/brand-logos/digitalocean.svg",
+    "hex": "#0080FF"
+  },
+  {
+    "id": "sap",
+    "label": "SAP",
+    "file": "assets/brand-logos/sap.svg",
+    "hex": "#0FAAFF"
+  },
+  {
+    "id": "samsung",
+    "label": "Samsung",
+    "file": "assets/brand-logos/samsung.svg",
+    "hex": "#1428A0"
+  },
+  {
+    "id": "xiaomi",
+    "label": "Xiaomi",
+    "file": "assets/brand-logos/xiaomi.svg",
+    "hex": "#FF6900"
+  },
+  {
+    "id": "bytedance",
+    "label": "ByteDance",
+    "file": "assets/brand-logos/bytedance.svg",
+    "hex": "#3C8CFF"
+  },
+  {
+    "id": "tencent",
+    "label": "Tencent",
+    "file": "assets/brand-logos/tencent.svg",
+    "hex": "#12B7F5"
+  },
+  {
+    "id": "alibaba",
+    "label": "Alibaba",
+    "file": "assets/brand-logos/alibaba.svg",
+    "hex": "#FF6A00"
+  },
+  {
+    "id": "baidu",
+    "label": "Baidu",
+    "file": "assets/brand-logos/baidu.svg",
+    "hex": "#2932E1"
+  },
+  {
+    "id": "huawei",
+    "label": "Huawei",
+    "file": "assets/brand-logos/huawei.svg",
+    "hex": "#FF0000"
+  }
+]

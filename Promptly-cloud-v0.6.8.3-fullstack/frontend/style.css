@@ -613,11 +613,6 @@ html[data-theme="light"] .model-select__option.is-active{
   font-size:0.95rem;
 }
 .brand-belt{
-  --logo-cell-w:192px;
-  --logo-cell-h:72px;
-  --logo-sprite-w:2304px;
-  --logo-sprite-h:288px;
-  --logo-color:#d7e3ff;
   display:flex;
   flex-direction:column;
   gap:10px;
@@ -654,32 +649,19 @@ html[data-theme="light"] .model-select__option.is-active{
   min-width:172px;
   height:56px;
   border-radius:12px;
-  border:1px solid rgba(148,163,184,0.22);
-  background:rgba(15,23,42,0.42);
+  border:1px solid rgba(148,163,184,0.3);
+  background:#ffffff;
   display:flex;
   align-items:center;
   justify-content:center;
   position:relative;
 }
-.brand-belt__logo{
-  width:154px;
-  height:42px;
+.brand-belt__logo-img{
+  width:136px;
+  height:40px;
+  object-fit:contain;
+  object-position:center;
   display:block;
-  position:relative;
-}
-.brand-belt__logo::before{
-  content:"";
-  position:absolute;
-  inset:0;
-  background:var(--logo-color);
-  -webkit-mask-image:url("assets/brand-logos-sprite.svg");
-  mask-image:url("assets/brand-logos-sprite.svg");
-  -webkit-mask-repeat:no-repeat;
-  mask-repeat:no-repeat;
-  -webkit-mask-size:var(--logo-sprite-w) var(--logo-sprite-h);
-  mask-size:var(--logo-sprite-w) var(--logo-sprite-h);
-  -webkit-mask-position:var(--logo-x) var(--logo-y);
-  mask-position:var(--logo-x) var(--logo-y);
 }
 .brand-belt__disclaimer{
   margin:12px 0 0;
@@ -703,7 +685,7 @@ html[data-theme="light"] .model-select__option.is-active{
   .brand-belt__row--left .brand-belt__track,
   .brand-belt__row--right .brand-belt__track{animation-duration:60s;}
   .brand-belt__item{width:154px;min-width:154px;}
-  .brand-belt__logo{width:138px;height:36px;}
+  .brand-belt__logo-img{width:124px;height:34px;}
 }
 @media (prefers-reduced-motion: reduce){
   .brand-belt__track{animation:none !important;transform:none !important;}
@@ -711,7 +693,6 @@ html[data-theme="light"] .model-select__option.is-active{
   .brand-belt__list[aria-hidden="true"]{display:none;}
 }
 html[data-theme="light"] .brand-belt__row{
-  --logo-color:#1f2937;
   border-color:rgba(109,40,217,0.2);
   background:linear-gradient(135deg,rgba(241,245,252,0.95),rgba(232,240,250,0.92));
 }

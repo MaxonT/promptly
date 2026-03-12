@@ -645,23 +645,48 @@ html[data-theme="light"] .model-select__option.is-active{
   gap:10px;
 }
 .brand-belt__item{
-  width:172px;
-  min-width:172px;
-  height:56px;
+  width:182px;
+  min-width:182px;
+  height:88px;
   border-radius:12px;
-  border:1px solid rgba(148,163,184,0.3);
-  background:#ffffff;
+  border:1px solid rgba(99,102,241,0.35);
+  background:linear-gradient(180deg,rgba(15,23,42,0.78),rgba(10,16,33,0.9));
+  box-shadow:inset 0 1px 0 rgba(148,163,184,0.16),0 8px 20px rgba(2,6,23,0.34);
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:6px;
+  padding:10px 10px 8px;
+  position:relative;
+}
+.brand-belt__logo-wrap{
+  width:100%;
+  height:42px;
   display:flex;
   align-items:center;
   justify-content:center;
-  position:relative;
 }
 .brand-belt__logo-img{
   width:136px;
-  height:40px;
+  max-width:100%;
+  height:36px;
+  max-height:100%;
   object-fit:contain;
   object-position:center;
   display:block;
+}
+.brand-belt__label{
+  width:100%;
+  margin:0;
+  color:#dbe7ff;
+  font-size:0.72rem;
+  line-height:1.1;
+  letter-spacing:0.01em;
+  text-align:center;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
 }
 .brand-belt__disclaimer{
   margin:12px 0 0;
@@ -684,8 +709,10 @@ html[data-theme="light"] .model-select__option.is-active{
 @media (max-width:768px){
   .brand-belt__row--left .brand-belt__track,
   .brand-belt__row--right .brand-belt__track{animation-duration:60s;}
-  .brand-belt__item{width:154px;min-width:154px;}
-  .brand-belt__logo-img{width:124px;height:34px;}
+  .brand-belt__item{width:154px;min-width:154px;height:84px;padding:8px 8px 7px;gap:5px;}
+  .brand-belt__logo-wrap{height:38px;}
+  .brand-belt__logo-img{width:120px;height:32px;}
+  .brand-belt__label{font-size:0.66rem;}
 }
 @media (prefers-reduced-motion: reduce){
   .brand-belt__track{animation:none !important;transform:none !important;}
@@ -697,9 +724,12 @@ html[data-theme="light"] .brand-belt__row{
   background:linear-gradient(135deg,rgba(241,245,252,0.95),rgba(232,240,250,0.92));
 }
 html[data-theme="light"] .brand-belt__item{
-  background:#ffffff;
-  border-color:#d6deed;
-  box-shadow:0 4px 12px rgba(0,0,0,0.05);
+  border-color:rgba(59,130,246,0.22);
+  background:linear-gradient(180deg,rgba(255,255,255,0.72),rgba(241,248,255,0.78));
+  box-shadow:inset 0 1px 0 rgba(255,255,255,0.58),0 4px 14px rgba(15,23,42,0.08);
+}
+html[data-theme="light"] .brand-belt__label{
+  color:#1e3a5f;
 }
 html[data-theme="light"] .brand-belt__disclaimer{
   color:#4b5563;

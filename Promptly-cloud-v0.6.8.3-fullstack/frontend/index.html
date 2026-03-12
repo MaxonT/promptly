@@ -3724,7 +3724,12 @@ if (document.readyState === 'loading') {
       const safeLabel = escapeHtml(brand.label);
       const safeSrc = escapeHtml(brand.src);
 
-      return `<li class="brand-belt__item" title="${safeLabel}" aria-label="${safeLabel}"><img class="brand-belt__logo-img" src="${safeSrc}" alt="${safeLabel} logo" loading="eager" decoding="async" draggable="false" /></li>`;
+      return `<li class="brand-belt__item" title="${safeLabel}" aria-label="${safeLabel}">
+        <div class="brand-belt__logo-wrap">
+          <img class="brand-belt__logo-img" src="${safeSrc}" alt="${safeLabel} logo" loading="eager" decoding="async" draggable="false" />
+        </div>
+        <span class="brand-belt__label">${safeLabel}</span>
+      </li>`;
     }).join("");
 
     track.innerHTML = `

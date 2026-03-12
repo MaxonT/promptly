@@ -38,10 +38,37 @@ if (process.env.NODE_ENV === 'production') {
 }
 
 const rawCorsOrigin = process.env.CORS_ORIGIN || "*";
-const CORS_ORIGIN = rawCorsOrigin.includes(",") 
-  ? rawCorsOrigin.split(",").map(o => o.trim()) 
-  : rawCorsOrigin;
-app.use(cors({ origin: CORS_ORIGIN, credentials: true }));
+const rawExtensionOrigins = process.env.CHROME_EXTENSION_ORIGINS || "";
+
+function parseOriginList(raw) {
+  return String(raw || "")
+    .split(",")
+    .map((value) => value.trim())
+    .filter(Boolean);
+}
+
+const webCorsOrigins = rawCorsOrigin === "*" ? ["*"] : parseOriginList(rawCorsOrigin);
+const extensionCorsOrigins = parseOriginList(rawExtensionOrigins);
+
+function isCorsOriginAllowed(origin) {
+  if (!origin) return true;
+  if (webCorsOrigins.includes("*")) return true;
+  if (webCorsOrigins.includes(origin)) return true;
+  if (extensionCorsOrigins.includes(origin)) return true;
+  return false;
+}
+
+app.use(cors({
+  origin(origin, callback) {
+    if (isCorsOriginAllowed(origin)) {
+      callback(null, true);
+      return;
+    }
+    console.warn(`[promptly] CORS blocked origin: ${origin}`);
+    callback(null, false);
+  },
+  credentials: true
+}));
 app.use(helmet());
 
 // Stripe webhook needs raw body for signature verification
@@ -245,7 +272,8 @@ app.get("/api/status", (req, res) => {
     },
     cors: {
       origin: process.env.CORS_ORIGIN || "*",
-      note: "Set CORS_ORIGIN env var to restrict origins"
+      extensionOrigins: process.env.CHROME_EXTENSION_ORIGINS || "",
+      note: "Set CORS_ORIGIN and CHROME_EXTENSION_ORIGINS to restrict allowed web/extension origins"
     },
     documentation: "https://github.com/your-repo/promptly"
   });

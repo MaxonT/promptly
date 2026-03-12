@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "Promptly Optimizer",
+  "name": "Promptly",
   "version": "0.1.0",
   "description": "Optimize messy prompts into agent-ready instructions using Promptly's pipeline.",
   "permissions": ["storage", "activeTab", "scripting"],
@@ -14,7 +14,7 @@
     "service_worker": "background.js"
   },
   "action": {
-    "default_title": "Promptly Optimizer",
+    "default_title": "Promptly",
     "default_popup": "popup.html"
   },
   "content_scripts": [

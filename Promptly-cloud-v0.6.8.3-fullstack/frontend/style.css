@@ -612,12 +612,17 @@ html[data-theme="light"] .model-select__option.is-active{
   line-height:1.55;
   font-size:0.95rem;
 }
-.brand-belt__marquee{
+.brand-belt{
   --logo-cell-w:192px;
   --logo-cell-h:72px;
   --logo-sprite-w:2304px;
   --logo-sprite-h:288px;
   --logo-color:#d7e3ff;
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+}
+.brand-belt__row{
   border:1px solid rgba(124,58,237,0.25);
   border-radius:16px;
   background:linear-gradient(135deg,rgba(18,24,47,0.78),rgba(14,20,39,0.7));
@@ -628,8 +633,13 @@ html[data-theme="light"] .model-select__option.is-active{
   display:inline-flex;
   align-items:center;
   width:max-content;
-  animation:brandBeltScroll 34s linear infinite;
   will-change:transform;
+}
+.brand-belt__row--left .brand-belt__track{
+  animation:brandBeltScrollLeft 48.6s linear infinite;
+}
+.brand-belt__row--right .brand-belt__track{
+  animation:brandBeltScrollRight 48.6s linear infinite;
 }
 .brand-belt__list{
   list-style:none;
@@ -678,24 +688,29 @@ html[data-theme="light"] .model-select__option.is-active{
   text-align:center;
   line-height:1.45;
 }
-.brand-belt__marquee:hover .brand-belt__track{
+.brand-belt:hover .brand-belt__track{
   animation-play-state:paused;
 }
-@keyframes brandBeltScroll{
+@keyframes brandBeltScrollLeft{
   from{transform:translate3d(0,0,0);}
   to{transform:translate3d(-50%,0,0);}
 }
+@keyframes brandBeltScrollRight{
+  from{transform:translate3d(-50%,0,0);}
+  to{transform:translate3d(0,0,0);}
+}
 @media (max-width:768px){
-  .brand-belt__track{animation-duration:42s;}
+  .brand-belt__row--left .brand-belt__track,
+  .brand-belt__row--right .brand-belt__track{animation-duration:60s;}
   .brand-belt__item{width:154px;min-width:154px;}
   .brand-belt__logo{width:138px;height:36px;}
 }
 @media (prefers-reduced-motion: reduce){
   .brand-belt__track{animation:none !important;transform:none !important;}
-  .brand-belt__marquee{overflow-x:auto;}
+  .brand-belt__row{overflow-x:auto;}
   .brand-belt__list[aria-hidden="true"]{display:none;}
 }
-html[data-theme="light"] .brand-belt__marquee{
+html[data-theme="light"] .brand-belt__row{
   --logo-color:#1f2937;
   border-color:rgba(109,40,217,0.2);
   background:linear-gradient(135deg,rgba(241,245,252,0.95),rgba(232,240,250,0.92));

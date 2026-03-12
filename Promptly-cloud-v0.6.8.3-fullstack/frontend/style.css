@@ -15,11 +15,39 @@
 html,body{height:100%}
 body{
   margin:0;
-  background:radial-gradient(120% 140% at 50% -10%,rgba(34,211,238,0.08),transparent 45%),
-             radial-gradient(80% 80% at 80% 20%,rgba(139,92,246,0.18),transparent 60%),
-             #050814;
+  background-color: var(--bg);
+  /* 
+    Tech-grid background pattern (Enhanced):
+    1. Radial gradients for ambient glow (cyan & purple)
+    2. Linear gradients creating a visible grid pattern
+  */
+  background-image: 
+    radial-gradient(circle at 50% -20%, rgba(34,211,238,0.25), transparent 45%),
+    radial-gradient(circle at 80% 20%, rgba(139,92,246,0.25), transparent 50%),
+    linear-gradient(rgba(255, 255, 255, 0.08) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.08) 1px, transparent 1px);
+  background-size: 100% 100%, 100% 100%, 40px 40px, 40px 40px; /* Grid size 40px */
+  background-position: 0 0, 0 0, -1px -1px, -1px -1px; /* Align grid lines */
+  background-attachment: fixed; /* Fix background to viewport to prevent scrolling cutoff */
+  
   color:var(--text);
   font-family:Inter,ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;
+}
+
+[data-theme="light"] body {
+  background-color: #f6f8fb;
+  /* Tech-grid background pattern (Light Mode Fixed): Grid FIRST for visibility */
+  background-image: 
+    linear-gradient(rgba(0, 0, 0, 0.15) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 0, 0, 0.15) 1px, transparent 1px),
+    radial-gradient(circle at 50% -20%, rgba(34,211,238,0.25), transparent 60%),
+    radial-gradient(circle at 80% 20%, rgba(139,92,246,0.25), transparent 60%),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.6) 0%, rgba(246, 248, 251, 0.2) 100%);
+  
+  background-size: 40px 40px, 40px 40px, 100% 100%, 100% 100%, 100% 100%;
+  background-position: -1px -1px, -1px -1px, 0 0, 0 0, 0 0;
+  background-attachment: fixed !important;
+  min-height: 100vh;
 }
 a{color:inherit}
 header.topbar{position:sticky;top:0;display:flex;align-items:center;justify-content:space-between;padding:14px 20px;background:var(--bg-soft);
@@ -558,6 +586,156 @@ html[data-theme="light"] .model-select__option.is-active{
   padding-top:12px;
 }
 
+/* Brand Trust Belt (Used by developers from...) */
+.brand-trust-section{
+  border:1px solid transparent;
+  background:linear-gradient(var(--card),var(--card)) padding-box,
+             linear-gradient(135deg,rgba(124,58,237,0.9),rgba(6,182,212,0.75)) border-box;
+  border-radius:24px;
+  padding:24px;
+  margin-top:24px;
+  margin-bottom:20px;
+  position:relative;
+  overflow:hidden;
+}
+.brand-trust__header{
+  text-align:center;
+  margin-bottom:16px;
+}
+.brand-trust__title{
+  margin:0 0 8px;
+  font-size:1.45rem;
+}
+.brand-trust__subtitle{
+  margin:0;
+  color:var(--muted);
+  line-height:1.55;
+  font-size:0.95rem;
+}
+.brand-belt{
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+}
+.brand-belt__row{
+  border:1px solid rgba(124,58,237,0.25);
+  border-radius:16px;
+  background:linear-gradient(135deg,rgba(18,24,47,0.78),rgba(14,20,39,0.7));
+  overflow:hidden;
+  padding:12px 0;
+}
+.brand-belt__track{
+  display:inline-flex;
+  align-items:center;
+  width:max-content;
+  will-change:transform;
+}
+.brand-belt__row--left .brand-belt__track{
+  animation:brandBeltScrollLeft 48.6s linear infinite;
+}
+.brand-belt__row--right .brand-belt__track{
+  animation:brandBeltScrollRight 48.6s linear infinite;
+}
+.brand-belt__list{
+  list-style:none;
+  margin:0;
+  padding:0;
+  display:flex;
+  align-items:center;
+  gap:10px;
+}
+.brand-belt__item{
+  width:182px;
+  min-width:182px;
+  height:88px;
+  border-radius:12px;
+  border:1px solid rgba(99,102,241,0.35);
+  background:linear-gradient(180deg,rgba(15,23,42,0.78),rgba(10,16,33,0.9));
+  box-shadow:inset 0 1px 0 rgba(148,163,184,0.16),0 8px 20px rgba(2,6,23,0.34);
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:6px;
+  padding:10px 10px 8px;
+  position:relative;
+}
+.brand-belt__logo-wrap{
+  width:100%;
+  height:42px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+.brand-belt__logo-img{
+  width:136px;
+  max-width:100%;
+  height:36px;
+  max-height:100%;
+  object-fit:contain;
+  object-position:center;
+  display:block;
+  filter:drop-shadow(0 1px 2px rgba(2,6,23,0.3));
+}
+.brand-belt__label{
+  width:100%;
+  margin:0;
+  color:#dbe7ff;
+  font-size:0.72rem;
+  line-height:1.1;
+  letter-spacing:0.01em;
+  text-align:center;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+.brand-belt__disclaimer{
+  margin:12px 0 0;
+  font-size:0.78rem;
+  color:var(--muted);
+  text-align:center;
+  line-height:1.45;
+}
+@keyframes brandBeltScrollLeft{
+  from{transform:translate3d(0,0,0);}
+  to{transform:translate3d(-50%,0,0);}
+}
+@keyframes brandBeltScrollRight{
+  from{transform:translate3d(-50%,0,0);}
+  to{transform:translate3d(0,0,0);}
+}
+@media (max-width:768px){
+  .brand-belt__row--left .brand-belt__track,
+  .brand-belt__row--right .brand-belt__track{animation-duration:60s;}
+  .brand-belt__item{width:154px;min-width:154px;height:84px;padding:8px 8px 7px;gap:5px;}
+  .brand-belt__logo-wrap{height:38px;}
+  .brand-belt__logo-img{width:120px;height:32px;}
+  .brand-belt__label{font-size:0.66rem;}
+}
+@media (prefers-reduced-motion: reduce){
+  .brand-belt__track{animation:none !important;transform:none !important;}
+  .brand-belt__row{overflow-x:auto;}
+  .brand-belt__list[aria-hidden="true"]{display:none;}
+}
+html[data-theme="light"] .brand-belt__row{
+  border-color:rgba(109,40,217,0.2);
+  background:linear-gradient(135deg,rgba(241,245,252,0.95),rgba(232,240,250,0.92));
+}
+html[data-theme="light"] .brand-belt__item{
+  border-color:rgba(59,130,246,0.22);
+  background:linear-gradient(180deg,rgba(255,255,255,0.72),rgba(241,248,255,0.78));
+  box-shadow:inset 0 1px 0 rgba(255,255,255,0.58),0 4px 14px rgba(15,23,42,0.08);
+}
+html[data-theme="light"] .brand-belt__label{
+  color:#1e3a5f;
+}
+html[data-theme="light"] .brand-belt__logo-img{
+  filter:none;
+}
+html[data-theme="light"] .brand-belt__disclaimer{
+  color:#4b5563;
+}
+
 /* Enhanced Algorithm Section - Attractive & Readable */
 .algorithm-section-enhanced{
   border:1px solid transparent;
@@ -994,8 +1172,31 @@ footer.footer{margin:28px 0;text-align:center;color:var(--muted)}
 /* === Promptly v0.5.6 aesthetic additions (logo + side patterns) === */
 .brand-logo{display:inline-flex; align-items:center; gap:10px}
 .brand-logo img{height:28px; width:auto; display:block}
+.beta-logo-wrap{ position:relative; display:inline-flex; align-items:center; justify-content:center; }
+.beta-badge{
+  position:absolute;
+  top:-6px;
+  right:-10px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  padding: 2px 6px;
+  border-radius: 999px;
+  border: 1px solid rgba(99, 102, 241, 0.42);
+  background: rgba(99, 102, 241, 0.18);
+  color: var(--text-high, var(--text));
+  font-weight: 400;
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.beta-badge:empty{ display:none; }
 .hero-logo{display:flex; align-items:center; justify-content:center; padding:42px 0}
 .hero-logo img{height:72px; width:auto;}
+
+@media (max-width: 480px){
+  .beta-badge{ top:-5px; right:-8px; font-size: 9px; }
+}
 
 /* Side ornamental patterns */
 body::before, body::after{
@@ -3582,11 +3783,7 @@ html[data-theme="light"] .text-keyword {
 /* Applied to: Dashboard, Wizard, Results, Specs, Settings, etc. */
 /* ============================================ */
 
-[data-theme="light"] body {
-  background: radial-gradient(120% 140% at 50% -10%, rgba(124, 58, 237, 0.08), transparent 45%),
-              radial-gradient(80% 80% at 80% 20%, rgba(34, 211, 238, 0.12), transparent 60%),
-              #f6f8fb !important;
-}
+/* REMOVED conflicting light theme body rule that was hiding the grid */
 
 [data-theme="light"] .panel,
 [data-theme="light"] .card,
@@ -3778,13 +3975,8 @@ html[data-theme="light"] {
 }
 
 /* ==========================================================================
-   LIGHT MODE REDESIGN (Directionality & Contrast Philosophy)
+   LIGHT MODE REDESIGN (Directionality & Contrast Philosophy) - Additional Components
    ========================================================================== */
-
-html[data-theme="light"] body {
-  /* Subtle gradient from top -> bottom: "Light comes from above" */
-  background: linear-gradient(to bottom, #f1f5f9 0%, #ffffff 30%, #ffffff 100%);
-}
 
 /* 1. LAYER CARDS: Crispness > Flatness */
 html[data-theme="light"] .layer-card {

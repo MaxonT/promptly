@@ -19,7 +19,7 @@ import { searchExemplars, formatExemplarBlock, harvestExemplar } from "../lib/ex
 import { spendTokensForRun, getTokenStatus } from "../lib/tokenUsage.js";
 import { FEATURES } from "../lib/subscriptionConfig.js";
 import { checkPromptOptimizationLimit, recordUsage, canUseMode } from "../lib/planLimits.js";
-import { validatePromptInput } from "../lib/inputValidator.js";
+// import { validatePromptInput } from "../lib/inputValidator.js";
 import { detectAmbiguity } from "../lib/ambiguityDetector.js";
 import { requireAuth } from "./auth.js";
 
@@ -349,10 +349,12 @@ async function executePipelineWithEvents(runId, userId, { idea, attachments, ski
 
   try {
     // ============================================
-    // Stage 0: Input Validation Gate
+    // Stage 0: Input Validation Gate (DISABLED FOR BOSS MODE)
+    // ============================================
     // Rejects inputs that are not prompt optimization requests.
     // Runs before any LLM call. Fail-open on validator error.
     // ============================================
+    /*
     sendEvent(runId, "stage-start", { stage: "validation", message: "Validating input..." });
 
     const validation = await validatePromptInput(idea);
@@ -371,19 +373,22 @@ async function executePipelineWithEvents(runId, userId, { idea, attachments, ski
           INSERT OR IGNORE INTO runs (id, spec_id, model, status, input_blocks, rejection_reason, created_at)
           VALUES (?, NULL, ?, 'rejected', ?, ?, datetime('now'))
         `).run(runId, `pipeline-v2/${mode}`, JSON.stringify({ idea: idea.substring(0, 500), mode }), validation.rejectReason);
-      } catch (_) { /* best-effort */ }
+      } catch (_) { }
       return;
     }
 
     sendEvent(runId, "stage-complete", { stage: "validation" });
+    */
 
     // ============================================
-    // Stage 0.5: Ambiguity Detection Gate
+    // Stage 0.5: Ambiguity Detection Gate (DISABLED FOR BOSS MODE)
+    // ============================================
     // Asks the user for critical missing context BEFORE any generation.
     // Skipped when user has already provided clarifications on re-submission.
     // Fail-open: any error continues directly to Stage 1.
     // Quality mandate: never hallucinate missing context — always ask first.
     // ============================================
+    /*
     if (!clarificationsProvided) {
       const ambiguity = await detectAmbiguity(idea);
       if (ambiguity.needsClarification) {
@@ -397,6 +402,7 @@ async function executePipelineWithEvents(runId, userId, { idea, attachments, ski
         return;
       }
     }
+    */
 
     // ============================================
     // Stage 1: Direct Optimizer (Boss Mode)

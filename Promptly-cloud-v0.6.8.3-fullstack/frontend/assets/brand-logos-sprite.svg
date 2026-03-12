@@ -1,0 +1,196 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="2304" height="288" viewBox="0 0 2304 288" role="img" aria-label="Brand logo sprite">
+  <rect x="0" y="0" width="2304" height="288" fill="transparent"/>
+  <g transform="translate(0 0)">
+    <circle cx="20" cy="36" r="6" fill="#111111"/>
+    <text x="102" y="43" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="700" fill="#111111">Google</text>
+  </g>
+  <g transform="translate(192 0)">
+    <circle cx="20" cy="36" r="6" fill="#111111"/>
+    <text x="102" y="43" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="700" fill="#111111">Amazon</text>
+  </g>
+  <g transform="translate(384 0)">
+    <circle cx="20" cy="36" r="6" fill="#111111"/>
+    <text x="102" y="43" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="700" fill="#111111">Apple</text>
+  </g>
+  <g transform="translate(576 0)">
+    <circle cx="20" cy="36" r="6" fill="#111111"/>
+    <text x="102" y="43" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="20" font-weight="700" fill="#111111">Microsoft</text>
+  </g>
+  <g transform="translate(768 0)">
+    <circle cx="20" cy="36" r="6" fill="#111111"/>
+    <text x="102" y="43" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="700" fill="#111111">Meta</text>
+  </g>
+  <g transform="translate(960 0)">
+    <circle cx="20" cy="36" r="6" fill="#111111"/>
+    <text x="102" y="43" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="700" fill="#111111">NVIDIA</text>
+  </g>
+  <g transform="translate(1152 0)">
+    <circle cx="20" cy="36" r="6" fill="#111111"/>
+    <text x="102" y="43" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="700" fill="#111111">OpenAI</text>
+  </g>
+  <g transform="translate(1344 0)">
+    <circle cx="20" cy="36" r="6" fill="#111111"/>
+    <text x="102" y="43" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="20" font-weight="700" fill="#111111">Anthropic</text>
+  </g>
+  <g transform="translate(1536 0)">
+    <circle cx="20" cy="36" r="6" fill="#111111"/>
+    <text x="102" y="43" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="700" fill="#111111">GitHub</text>
+  </g>
+  <g transform="translate(1728 0)">
+    <circle cx="20" cy="36" r="6" fill="#111111"/>
+    <text x="102" y="43" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="700" fill="#111111">GitLab</text>
+  </g>
+  <g transform="translate(1920 0)">
+    <circle cx="20" cy="36" r="6" fill="#111111"/>
+    <text x="102" y="43" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="700" fill="#111111">Stripe</text>
+  </g>
+  <g transform="translate(2112 0)">
+    <circle cx="20" cy="36" r="6" fill="#111111"/>
+    <text x="102" y="43" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="700" fill="#111111">Shopify</text>
+  </g>
+  <g transform="translate(0 72)">
+    <circle cx="20" cy="36" r="6" fill="#111111"/>
+    <text x="102" y="115" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="700" fill="#111111">Adobe</text>
+  </g>
+  <g transform="translate(192 72)">
+    <circle cx="20" cy="36" r="6" fill="#111111"/>
+    <text x="102" y="115" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="700" fill="#111111">Netflix</text>
+  </g>
+  <g transform="translate(384 72)">
+    <circle cx="20" cy="36" r="6" fill="#111111"/>
+    <text x="102" y="115" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="700" fill="#111111">Uber</text>
+  </g>
+  <g transform="translate(576 72)">
+    <circle cx="20" cy="36" r="6" fill="#111111"/>
+    <text x="102" y="115" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="700" fill="#111111">Airbnb</text>
+  </g>
+  <g transform="translate(768 72)">
+    <circle cx="20" cy="36" r="6" fill="#111111"/>
+    <text x="102" y="115" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="700" fill="#111111">Tesla</text>
+  </g>
+  <g transform="translate(960 72)">
+    <circle cx="20" cy="36" r="6" fill="#111111"/>
+    <text x="102" y="115" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="700" fill="#111111">Intel</text>
+  </g>
+  <g transform="translate(1152 72)">
+    <circle cx="20" cy="36" r="6" fill="#111111"/>
+    <text x="102" y="115" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="700" fill="#111111">AMD</text>
+  </g>
+  <g transform="translate(1344 72)">
+    <circle cx="20" cy="36" r="6" fill="#111111"/>
+    <text x="102" y="115" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="700" fill="#111111">Oracle</text>
+  </g>
+  <g transform="translate(1536 72)">
+    <circle cx="20" cy="36" r="6" fill="#111111"/>
+    <text x="102" y="115" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="700" fill="#111111">IBM</text>
+  </g>
+  <g transform="translate(1728 72)">
+    <circle cx="20" cy="36" r="6" fill="#111111"/>
+    <text x="102" y="115" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="700" fill="#111111">Cisco</text>
+  </g>
+  <g transform="translate(1920 72)">
+    <circle cx="20" cy="36" r="6" fill="#111111"/>
+    <text x="102" y="115" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="20" font-weight="700" fill="#111111">Salesforce</text>
+  </g>
+  <g transform="translate(2112 72)">
+    <circle cx="20" cy="36" r="6" fill="#111111"/>
+    <text x="102" y="115" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="700" fill="#111111">Slack</text>
+  </g>
+  <g transform="translate(0 144)">
+    <circle cx="20" cy="36" r="6" fill="#111111"/>
+    <text x="102" y="187" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="20" font-weight="700" fill="#111111">Atlassian</text>
+  </g>
+  <g transform="translate(192 144)">
+    <circle cx="20" cy="36" r="6" fill="#111111"/>
+    <text x="102" y="187" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="700" fill="#111111">Notion</text>
+  </g>
+  <g transform="translate(384 144)">
+    <circle cx="20" cy="36" r="6" fill="#111111"/>
+    <text x="102" y="187" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="700" fill="#111111">Figma</text>
+  </g>
+  <g transform="translate(576 144)">
+    <circle cx="20" cy="36" r="6" fill="#111111"/>
+    <text x="102" y="187" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="700" fill="#111111">Dropbox</text>
+  </g>
+  <g transform="translate(768 144)">
+    <circle cx="20" cy="36" r="6" fill="#111111"/>
+    <text x="102" y="187" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="700" fill="#111111">PayPal</text>
+  </g>
+  <g transform="translate(960 144)">
+    <circle cx="20" cy="36" r="6" fill="#111111"/>
+    <text x="102" y="187" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="700" fill="#111111">Spotify</text>
+  </g>
+  <g transform="translate(1152 144)">
+    <circle cx="20" cy="36" r="6" fill="#111111"/>
+    <text x="102" y="187" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="700" fill="#111111">Zoom</text>
+  </g>
+  <g transform="translate(1344 144)">
+    <circle cx="20" cy="36" r="6" fill="#111111"/>
+    <text x="102" y="187" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="700" fill="#111111">Twilio</text>
+  </g>
+  <g transform="translate(1536 144)">
+    <circle cx="20" cy="36" r="6" fill="#111111"/>
+    <text x="102" y="187" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="20" font-weight="700" fill="#111111">Cloudflare</text>
+  </g>
+  <g transform="translate(1728 144)">
+    <circle cx="20" cy="36" r="6" fill="#111111"/>
+    <text x="102" y="187" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="700" fill="#111111">Datadog</text>
+  </g>
+  <g transform="translate(1920 144)">
+    <circle cx="20" cy="36" r="6" fill="#111111"/>
+    <text x="102" y="187" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="20" font-weight="700" fill="#111111">Snowflake</text>
+  </g>
+  <g transform="translate(2112 144)">
+    <circle cx="20" cy="36" r="6" fill="#111111"/>
+    <text x="102" y="187" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="700" fill="#111111">MongoDB</text>
+  </g>
+  <g transform="translate(0 216)">
+    <circle cx="20" cy="36" r="6" fill="#111111"/>
+    <text x="102" y="259" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="700" fill="#111111">Redis</text>
+  </g>
+  <g transform="translate(192 216)">
+    <circle cx="20" cy="36" r="6" fill="#111111"/>
+    <text x="102" y="259" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="700" fill="#111111">Vercel</text>
+  </g>
+  <g transform="translate(384 216)">
+    <circle cx="20" cy="36" r="6" fill="#111111"/>
+    <text x="102" y="259" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="700" fill="#111111">Netlify</text>
+  </g>
+  <g transform="translate(576 216)">
+    <circle cx="20" cy="36" r="6" fill="#111111"/>
+    <text x="102" y="259" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="18" font-weight="700" fill="#111111">DigitalOcean</text>
+  </g>
+  <g transform="translate(768 216)">
+    <circle cx="20" cy="36" r="6" fill="#111111"/>
+    <text x="102" y="259" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="700" fill="#111111">SAP</text>
+  </g>
+  <g transform="translate(960 216)">
+    <circle cx="20" cy="36" r="6" fill="#111111"/>
+    <text x="102" y="259" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="700" fill="#111111">Samsung</text>
+  </g>
+  <g transform="translate(1152 216)">
+    <circle cx="20" cy="36" r="6" fill="#111111"/>
+    <text x="102" y="259" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="700" fill="#111111">Xiaomi</text>
+  </g>
+  <g transform="translate(1344 216)">
+    <circle cx="20" cy="36" r="6" fill="#111111"/>
+    <text x="102" y="259" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="20" font-weight="700" fill="#111111">ByteDance</text>
+  </g>
+  <g transform="translate(1536 216)">
+    <circle cx="20" cy="36" r="6" fill="#111111"/>
+    <text x="102" y="259" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="700" fill="#111111">Tencent</text>
+  </g>
+  <g transform="translate(1728 216)">
+    <circle cx="20" cy="36" r="6" fill="#111111"/>
+    <text x="102" y="259" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="700" fill="#111111">Alibaba</text>
+  </g>
+  <g transform="translate(1920 216)">
+    <circle cx="20" cy="36" r="6" fill="#111111"/>
+    <text x="102" y="259" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="700" fill="#111111">Baidu</text>
+  </g>
+  <g transform="translate(2112 216)">
+    <circle cx="20" cy="36" r="6" fill="#111111"/>
+    <text x="102" y="259" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="700" fill="#111111">Huawei</text>
+  </g>
+</svg>

@@ -25,7 +25,7 @@
   },
   "hero": {
     "title": "Promptly — Prompt Optimization Studio",
-    "subtitle": "From messy thoughts to execution-ready prompts. Built for the way Vibe Coders actually think.",
+    "subtitle": "From messy thoughts to execution-ready prompts. Built for Vibe Coding and AI Assisted Coding teams.",
     "eyebrow": "Promptly · Workflow Modes"
   },
   "mode": {
@@ -284,7 +284,7 @@
   },
   "whyPromptly": {
     "title": "✨ Why Promptly Beats Plain AI Models",
-    "subtitle": "We run a structured pipeline—spec building, question refinement, multi-agent orchestration, scoring, and outcome-runner selection—so you never just send a single prompt to an LLM.",
+    "subtitle": "We run a structured pipeline—spec building, question refinement, multi-agent orchestration, scoring, and outcome-runner selection—powering Vibe Coding and AI Assisted Coding beyond one-shot prompts.",
     "callout": "🚀 Every enhancement goes through Spec → Questions → Agents → Outcome pipeline, so the result you copy is a top candidate after multi-metric scoring.",
     "specBuilderTitle": "Spec Builder",
     "specBuilderDesc": "Converts your raw idea into a structured spec so every requirement is explicit before we touch an LLM.",
@@ -309,6 +309,11 @@
     "specSelectionDesc": "We compare candidates instead of returning the first hit.",
     "specOutcome": "Outcome Runner",
     "specOutcomeDesc": "Picks the winner based on tests/criteria you define."
+  },
+  "brandTrust": {
+    "title": "Used by developers from...",
+    "subtitle": "Built for Vibe Coding and AI Assisted Coding teams shipping with AI agents.",
+    "disclaimer": "Logos are trademarks of their respective owners. Displayed for ecosystem reference only; no affiliation or endorsement implied."
   },
   "specs": {
     "title": "Specs Manager",

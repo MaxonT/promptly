@@ -692,7 +692,7 @@ html[data-theme="light"] .grey-gradient-text{
         <div class="hero-eyebrow" data-i18n="hero.eyebrow">Promptly · Workflow Modes</div>
         <div>
           <div class="title gradient-text hero-title" data-i18n="hero.title">Promptly — Prompt Optimization <span class="title-pill">Studio</span></div>
-          <div class="subtitle hero-subtitle" data-i18n="hero.subtitle">From messy thoughts to execution-ready prompts. Built for the way Vibe Coders actually think.</div>
+          <div class="subtitle hero-subtitle" data-i18n="hero.subtitle">From messy thoughts to execution-ready prompts. Built for Vibe Coding and AI Assisted Coding teams.</div>
         </div>
       </div>
       
@@ -1023,11 +1023,22 @@ temperature: 0.5</textarea>
 
 
 
+    <section class="card brand-trust-section" aria-labelledby="brandTrustTitle">
+      <div class="brand-trust__header">
+        <h3 id="brandTrustTitle" class="brand-trust__title gradient-text" data-i18n="brandTrust.title">Used by developers from...</h3>
+        <p class="brand-trust__subtitle" data-i18n="brandTrust.subtitle">Built for Vibe Coding and AI Assisted Coding teams shipping with AI agents.</p>
+      </div>
+      <div class="brand-belt__marquee" role="region" aria-label="Developer ecosystem logos">
+        <div class="brand-belt__track" id="brandBeltTrack"></div>
+      </div>
+      <p class="brand-belt__disclaimer" data-i18n="brandTrust.disclaimer">Logos are trademarks of their respective owners. Displayed for ecosystem reference only; no affiliation or endorsement implied.</p>
+    </section>
+
     <!-- Enhanced Algorithm Section - Moved below main features for better UX -->
     <section class="card algorithm-section-enhanced" aria-labelledby="algorithm-title">
       <div class="algorithm-header">
         <h3 id="algorithm-title" class="algorithm-title gradient-text" data-i18n="whyPromptly.title">✨ Why Promptly beats a plain AI model</h3>
-        <p class="algorithm-subtitle" data-i18n="whyPromptly.subtitle">We run a <span class="highlight-text">structured pipeline</span>—spec building, question refining, <span class="highlight-accent">multi-agent orchestration</span>, scoring, and Outcome Runner selection—so you're never just sending a single prompt to an LLM.</p>
+        <p class="algorithm-subtitle" data-i18n="whyPromptly.subtitle">We run a <span class="highlight-text">structured pipeline</span>—spec building, question refining, <span class="highlight-accent">multi-agent orchestration</span>, scoring, and Outcome Runner selection—powering Vibe Coding and AI Assisted Coding beyond one-shot prompts.</p>
       </div>
       <div class="algorithm-grid-enhanced">
         <div class="algorithm-steps-enhanced">
@@ -3636,6 +3647,102 @@ if (document.readyState === 'loading') {
     console.warn('[Promptly] Button not found immediately - may need to wait');
   }
 }
+</script>
+<script>
+// Brand trust belt: 48-logo manifest + seamless conveyor rendering
+(function () {
+  const BRAND_LOGO_MANIFEST = [
+    { id: "google", label: "Google" },
+    { id: "amazon", label: "Amazon" },
+    { id: "apple", label: "Apple" },
+    { id: "microsoft", label: "Microsoft" },
+    { id: "meta", label: "Meta" },
+    { id: "nvidia", label: "NVIDIA" },
+    { id: "openai", label: "OpenAI" },
+    { id: "anthropic", label: "Anthropic" },
+    { id: "github", label: "GitHub" },
+    { id: "gitlab", label: "GitLab" },
+    { id: "stripe", label: "Stripe" },
+    { id: "shopify", label: "Shopify" },
+    { id: "adobe", label: "Adobe" },
+    { id: "netflix", label: "Netflix" },
+    { id: "uber", label: "Uber" },
+    { id: "airbnb", label: "Airbnb" },
+    { id: "tesla", label: "Tesla" },
+    { id: "intel", label: "Intel" },
+    { id: "amd", label: "AMD" },
+    { id: "oracle", label: "Oracle" },
+    { id: "ibm", label: "IBM" },
+    { id: "cisco", label: "Cisco" },
+    { id: "salesforce", label: "Salesforce" },
+    { id: "slack", label: "Slack" },
+    { id: "atlassian", label: "Atlassian" },
+    { id: "notion", label: "Notion" },
+    { id: "figma", label: "Figma" },
+    { id: "dropbox", label: "Dropbox" },
+    { id: "paypal", label: "PayPal" },
+    { id: "spotify", label: "Spotify" },
+    { id: "zoom", label: "Zoom" },
+    { id: "twilio", label: "Twilio" },
+    { id: "cloudflare", label: "Cloudflare" },
+    { id: "datadog", label: "Datadog" },
+    { id: "snowflake", label: "Snowflake" },
+    { id: "mongodb", label: "MongoDB" },
+    { id: "redis", label: "Redis" },
+    { id: "vercel", label: "Vercel" },
+    { id: "netlify", label: "Netlify" },
+    { id: "digitalocean", label: "DigitalOcean" },
+    { id: "sap", label: "SAP" },
+    { id: "samsung", label: "Samsung" },
+    { id: "xiaomi", label: "Xiaomi" },
+    { id: "bytedance", label: "ByteDance" },
+    { id: "tencent", label: "Tencent" },
+    { id: "alibaba", label: "Alibaba" },
+    { id: "baidu", label: "Baidu" },
+    { id: "huawei", label: "Huawei" }
+  ];
+
+  const BELT_COLS = 12;
+  const BELT_CELL_W = 192;
+  const BELT_CELL_H = 72;
+
+  function escapeHtml(value) {
+    return value
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/\"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+  }
+
+  function renderBrandBelt() {
+    const track = document.getElementById("brandBeltTrack");
+    if (!track) return;
+
+    const itemMarkup = BRAND_LOGO_MANIFEST.map((brand, index) => {
+      const col = index % BELT_COLS;
+      const row = Math.floor(index / BELT_COLS);
+      const x = `-${col * BELT_CELL_W}px`;
+      const y = `-${row * BELT_CELL_H}px`;
+      const safeLabel = escapeHtml(brand.label);
+
+      return `<li class="brand-belt__item" title="${safeLabel}" aria-label="${safeLabel}"><span class="brand-belt__logo" style="--logo-x:${x};--logo-y:${y};" aria-hidden="true"></span></li>`;
+    }).join("");
+
+    track.innerHTML = `
+      <ul class="brand-belt__list">${itemMarkup}</ul>
+      <ul class="brand-belt__list" aria-hidden="true">${itemMarkup}</ul>
+    `;
+  }
+
+  window.BRAND_LOGO_MANIFEST = BRAND_LOGO_MANIFEST;
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", renderBrandBelt, { once: true });
+  } else {
+    renderBrandBelt();
+  }
+})();
 </script>
 <script src="lib/redeemBubble.js" defer></script>
 

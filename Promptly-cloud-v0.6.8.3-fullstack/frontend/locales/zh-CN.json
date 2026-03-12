@@ -25,7 +25,7 @@
   },
   "hero": {
     "title": "Promptly — Prompt Optimization Studio",
-    "subtitle": "From messy thoughts to execution-ready prompts. Built for the way Vibe Coders actually think.",
+    "subtitle": "From messy thoughts to execution-ready prompts. Built for Vibe Coding and AI Assisted Coding teams.",
     "eyebrow": "Promptly · 工作流模式"
   },
   "mode": {
@@ -193,7 +193,7 @@
   },
   "whyPromptly": {
     "title": "✨ 为什么 Promptly 胜过普通 AI 模型",
-    "subtitle": "我们运行结构化管道——规格构建、问题细化、多代理编排、评分和结果运行器选择——因此您永远不会只是向 LLM 发送单个提示词。",
+    "subtitle": "我们运行结构化管道——规格构建、问题细化、多代理编排、评分和结果运行器选择——为 Vibe Coding 与 AI Assisted Coding 提供超越一次性提示词的能力。",
     "specBuilderTitle": "规格构建器",
     "specBuilderDesc": "将您的原始想法转换为结构化规格，以便在我们接触 LLM 之前每个需求都是明确的。",
     "questionEngineTitle": "问题引擎",
@@ -218,6 +218,11 @@
     "specOutcome": "结果运行器",
     "specOutcomeDesc": "根据您定义的测试/标准选择获胜者。",
     "callout": "🚀 每次增强都通过规格 → 问题 → 代理 → 结果管道，因此您复制的结果是多指标评分后的顶级候选。"
+  },
+  "brandTrust": {
+    "title": "Used by developers from...",
+    "subtitle": "Built for Vibe Coding and AI Assisted Coding teams shipping with AI agents.",
+    "disclaimer": "Logos are trademarks of their respective owners. Displayed for ecosystem reference only; no affiliation or endorsement implied."
   },
   "common": {
     "consent_text": "我们使用 Cookie 改善体验并记住偏好。",

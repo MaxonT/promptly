@@ -24,8 +24,8 @@ body{
   background-image: 
     radial-gradient(circle at 50% -20%, rgba(34,211,238,0.25), transparent 45%),
     radial-gradient(circle at 80% 20%, rgba(139,92,246,0.25), transparent 50%),
-    linear-gradient(rgba(255, 255, 255, 0.08) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.08) 1px, transparent 1px);
+    linear-gradient(rgba(255, 255, 255, 0.15) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.15) 1px, transparent 1px);
   background-size: 100% 100%, 100% 100%, 40px 40px, 40px 40px; /* Grid size 40px */
   background-position: 0 0, 0 0, -1px -1px, -1px -1px; /* Align grid lines */
   background-attachment: fixed; /* Fix background to viewport to prevent scrolling cutoff */
@@ -38,8 +38,8 @@ body{
   background-color: #f6f8fb;
   /* Tech-grid background pattern (Light Mode Fixed): Grid FIRST for visibility */
   background-image: 
-    linear-gradient(rgba(0, 0, 0, 0.15) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(0, 0, 0, 0.15) 1px, transparent 1px),
+    linear-gradient(rgba(0, 0, 0, 0.25) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 0, 0, 0.25) 1px, transparent 1px),
     radial-gradient(circle at 50% -20%, rgba(34,211,238,0.25), transparent 60%),
     radial-gradient(circle at 80% 20%, rgba(139,92,246,0.25), transparent 60%),
     linear-gradient(to bottom, rgba(255, 255, 255, 0.6) 0%, rgba(246, 248, 251, 0.2) 100%);

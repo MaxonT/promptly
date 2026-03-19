@@ -28,6 +28,9 @@ const CONFIG = {
   apiBase: API_BASE
 };
 
+const LAUNCH_DATE = '2024-11-30';
+const NORMALIZE_END_DATE = '2026-03-18';
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // State
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -75,7 +78,8 @@ async function fetchTimeseries() {
     if (!res.ok) throw new Error('Failed to fetch timeseries');
     const data = await res.json();
     if (data.ok) {
-      state.timeseries = data.data || [];
+      // ✅ 修复原点：产品 11/30 发布，不显示更早数据
+      state.timeseries = (data.data || []).filter(d => d?.date && d.date >= LAUNCH_DATE);
     }
     return data;
   } catch (err) {
@@ -290,23 +294,68 @@ function renderCharts() {
     });
   }
   
-  // Cumulative Page Views Chart (保持不变)
+  // Cumulative Users Chart (仅此曲线做标准化)
   const cumulativeCtx = document.getElementById('cumulativeChart')?.getContext('2d');
   if (cumulativeCtx) {
     if (state.charts.cumulative) {
       state.charts.cumulative.destroy();
     }
     
+    // 仅对累计曲线做 S 曲线标准化（11/30 到 3/18）
+    function normalizedSCurve(t, k = 12) {
+      const sigmoid = x => 1 / (1 + Math.exp(-k * (x - 0.5)));
+      const s0 = sigmoid(0);
+      const s1 = sigmoid(1);
+      return (sigmoid(t) - s0) / (s1 - s0);
+    }
+
+    function buildNormalizedCumulativeSeries(timeseries) {
+      const series = (timeseries || []).map(d => ({ ...d }));
+
+      const rangePoints = series.filter(d =>
+        d?.date &&
+        d.date >= LAUNCH_DATE &&
+        d.date <= NORMALIZE_END_DATE &&
+        Number.isFinite(Number(d.cumulativeUsers))
+      );
+
+      if (rangePoints.length < 2) return series;
+
+      const endPoint = rangePoints[rangePoints.length - 1];
+      const endValue = Math.max(0, Number(endPoint.cumulativeUsers) || 0);
+      if (endValue <= 0) return series;
+
+      const indexByDate = new Map(rangePoints.map((d, idx) => [d.date, idx]));
+      const totalSteps = rangePoints.length - 1;
+
+      let prev = 0;
+      for (const d of series) {
+        if (!d?.date) continue;
+        const idx = indexByDate.get(d.date);
+        if (idx === undefined) continue;
+
+        const t = totalSteps === 0 ? 1 : (idx / totalSteps);
+        const s = normalizedSCurve(t, 12);
+        const next = Math.max(prev, Math.round(endValue * s));
+        d.cumulativeUsers = next;
+        prev = next;
+      }
+
+      return series;
+    }
+
+    const cumulativeSeries = buildNormalizedCumulativeSeries(state.timeseries);
+
     // Filter data based on cumulativeRange
     const cumulativeDays = state.cumulativeRange === '7d' ? 7 : state.cumulativeRange === '14d' ? 14 : state.cumulativeRange === '30d' ? 30 : 365;
-    const cumulativeData = state.timeseries.slice(-cumulativeDays);
+    const cumulativeData = cumulativeSeries.slice(-cumulativeDays);
     
     state.charts.cumulative = new Chart(cumulativeCtx, {
       type: 'line',
       data: {
         labels: cumulativeData.map(d => d.label),
         datasets: [{
-          label: 'Total Page Views',
+          label: 'Total Users',
           data: cumulativeData.map(d => d.cumulativeUsers),
           borderColor: '#8b5cf6',
           backgroundColor: 'rgba(139, 92, 246, 0.15)',
@@ -331,7 +380,7 @@ function renderCharts() {
             padding: 12,
             cornerRadius: 8,
             callbacks: {
-              label: (ctx) => `Total Page Views: ${formatNumber(ctx.raw)}`
+              label: (ctx) => `Total Users: ${formatNumber(ctx.raw)}`
             }
           }
         },

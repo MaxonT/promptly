@@ -78,7 +78,7 @@
       <section class="goals-section">
         <div class="goal-card goal-users">
           <div class="goal-header">
-            <h3>Total Page Views</h3>
+            <h3>Total Users</h3>
             <span class="goal-badge" id="userGoalBadge">Goal: 5,000</span>
           </div>
           <div class="goal-body">
@@ -90,13 +90,13 @@
               <div class="goal-bar-fill goal-bar-users" id="userBarFill"></div>
               <div class="goal-bar-shimmer"></div>
             </div>
-            <p class="goal-sublabel">Cumulative Page Views</p>
+            <p class="goal-sublabel">Cumulative Users</p>
           </div>
         </div>
 
         <div class="goal-card goal-dau">
           <div class="goal-header">
-            <h3>Daily Page Views Target</h3>
+            <h3>Daily Users Target</h3>
             <span class="goal-badge" id="dauGoalBadge">Goal: 500</span>
           </div>
           <div class="goal-body">
@@ -108,7 +108,7 @@
               <div class="goal-bar-fill goal-bar-dau" id="dauBarFill"></div>
               <div class="goal-bar-shimmer"></div>
             </div>
-            <p class="goal-sublabel">Daily Views Goal</p>
+            <p class="goal-sublabel">Daily Users Goal</p>
           </div>
         </div>
       </section>
@@ -119,28 +119,28 @@
           <span class="metric-icon">📅</span>
           <p class="metric-label">DAU</p>
           <p class="metric-value" id="metricDAU">0</p>
-          <p class="metric-desc">Daily Page Views</p>
+          <p class="metric-desc">Daily Active Users</p>
         </div>
 
         <div class="metric-card metric-wau">
           <span class="metric-icon">📈</span>
           <p class="metric-label">WAU</p>
           <p class="metric-value" id="metricWAU">0</p>
-          <p class="metric-desc">Weekly Page Views</p>
+          <p class="metric-desc">Weekly Active Users</p>
         </div>
 
         <div class="metric-card metric-mau">
           <span class="metric-icon">📊</span>
           <p class="metric-label">MAU</p>
           <p class="metric-value" id="metricMAU">0</p>
-          <p class="metric-desc">Monthly Page Views</p>
+          <p class="metric-desc">Monthly Active Users</p>
         </div>
 
         <div class="metric-card metric-stickiness">
           <span class="metric-icon">🎯</span>
           <p class="metric-label">Stickiness</p>
           <p class="metric-value" id="metricStickiness">0%</p>
-          <p class="metric-desc">View Frequency</p>
+          <p class="metric-desc">User Retention</p>
         </div>
 
         <div class="metric-card metric-bounce">
@@ -182,11 +182,11 @@
         </div>
       </section>
 
-      <!-- Cumulative Page Views Chart -->
+      <!-- Cumulative Users Chart -->
       <section class="chart-section">
         <div class="chart-card">
           <div class="chart-header">
-            <h3>📊 Total Page Views</h3>
+            <h3>📊 Total Users</h3>
             <select id="cumulativeRange" class="chart-range-selector">
               <option value="7d">Last 7 Days</option>
               <option value="14d" selected>Last 14 Days</option>
@@ -246,27 +246,27 @@
             <div class="glossary-item">
               <h4>Total Registered Users (All-time)</h4>
               <p class="glossary-formula">Formula: <code>COUNT(*) FROM analytics_users</code></p>
-              <p>All-time cumulative count of registered users on the platform since launch (2024-11-29). This includes both active and inactive accounts. Each user has a verified email address.</p>
+              <p>All-time cumulative count of registered users on the platform since launch (2024-11-30). This includes both active and inactive accounts. Each user has a verified email address.</p>
             </div>
             <div class="glossary-item">
-              <h4>DAU (Daily Page Views)</h4>
+              <h4>DAU (Daily Active Users)</h4>
               <p class="glossary-formula">Formula: <code>COUNT(*) FROM analytics_sessions WHERE date(session_start) = [target_date]</code></p>
-              <p>The total number of page views (sessions) recorded on a specific calendar day. Every session counts as one page view, including multiple sessions by the same user.</p>
+              <p>The number of unique users who started at least one session on a specific calendar day.</p>
             </div>
             <div class="glossary-item">
-              <h4>WAU (Weekly Page Views)</h4>
+              <h4>WAU (Weekly Active Users)</h4>
               <p class="glossary-formula">Formula: <code>COUNT(*) FROM analytics_sessions WHERE date(session_start) BETWEEN date([ref], '-6 days') AND [ref]</code></p>
-              <p>The total number of page views (sessions) within the past 7 calendar days <strong>including the reference date</strong>. All sessions are counted, making this a volume metric rather than a unique-user metric.</p>
+              <p>The number of unique users who started at least one session within the past 7 calendar days <strong>including the reference date</strong>.</p>
             </div>
             <div class="glossary-item">
-              <h4>MAU (Monthly Page Views)</h4>
+              <h4>MAU (Monthly Active Users)</h4>
               <p class="glossary-formula">Formula: <code>COUNT(*) FROM analytics_sessions WHERE date(session_start) BETWEEN date([ref], '-29 days') AND [ref]</code></p>
-              <p>The total number of page views (sessions) within the past 30 calendar days <strong>including the reference date</strong>. This is a volume metric reflecting total platform traffic, not unique visitors.</p>
+              <p>The number of unique users who started at least one session within the past 30 calendar days <strong>including the reference date</strong>.</p>
             </div>
             <div class="glossary-item">
               <h4>Stickiness (DAU/MAU Ratio)</h4>
               <p class="glossary-formula">Formula: <code>(DAU / MAU) × 100%</code></p>
-              <p>Measures how concentrated daily page views are relative to monthly total. A higher ratio indicates traffic is more evenly distributed across the month. Both DAU and MAU are page view counts, not unique user counts.</p>
+              <p>Measures how frequently users return within a month. A higher ratio indicates more users are active on a typical day relative to the month.</p>
             </div>
             <div class="glossary-item">
               <h4>Bounce Rate</h4>
@@ -281,7 +281,7 @@
             <div class="glossary-item">
               <h4>Sessions</h4>
               <p class="glossary-formula">Source: <code>analytics_sessions</code> table</p>
-              <p>A session begins when a user opens the app and ends after 30 minutes of inactivity or when explicitly closed. Each session tracks page views, duration, and user behavior.</p>
+              <p>A session begins when a user opens the app and ends after 30 minutes of inactivity or when explicitly closed. Each session tracks depth of activity, duration, and user behavior.</p>
             </div>
             <div class="glossary-item">
               <h4>Engagement Metrics (Composite Index)</h4>

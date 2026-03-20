@@ -1,0 +1,47 @@
+0000000000000000000000000000000000000000 53f9ab8368abc0281c12133edbe82ef743393c6d Ym <ming.t.yang@vanderbilt.edu> 1772760383 -0600	branch: Created from origin/cursor-dev
+53f9ab8368abc0281c12133edbe82ef743393c6d 9288e35327bec8945a02762665e25bb1d4dda2b1 Ym <ming.t.yang@vanderbilt.edu> 1772761431 -0600	commit: Support comma-separated CORS_ORIGIN and primary
+9288e35327bec8945a02762665e25bb1d4dda2b1 92aff5d06198f4f3042660fb5b9353ea590d5c3f Ym <ming.t.yang@vanderbilt.edu> 1772863681 -0600	commit: feat: add promptly.solutions to sitemap alongside render domain
+92aff5d06198f4f3042660fb5b9353ea590d5c3f ff6c081dc16db595ff8c66c08fea061a68b8c47f Ym <ming.t.yang@vanderbilt.edu> 1772887955 -0600	commit: feat(oauth): support multi-domain OAuth redirects via FRONTEND_URLS allowlist
+ff6c081dc16db595ff8c66c08fea061a68b8c47f b34351dfa56c326ea4f73b21ff29f0a5f1a3c9f6 Ym <ming.t.yang@vanderbilt.edu> 1772934618 -0600	pull --ff --recurse-submodules --progress origin: Fast-forward
+b34351dfa56c326ea4f73b21ff29f0a5f1a3c9f6 7b353715deb27b63565a3140d043e96796981e79 Ym <ming.t.yang@vanderbilt.edu> 1772941112 -0600	commit: Refine prompt optimizer: ambiguity & fidelity
+7b353715deb27b63565a3140d043e96796981e79 56265afd982fe83be429623e5a1aeba8e05bf221 Ym <ming.t.yang@vanderbilt.edu> 1773194417 -0500	pull --ff --recurse-submodules --progress origin: Fast-forward
+56265afd982fe83be429623e5a1aeba8e05bf221 39c4ab069895c4c5dc8e4291fc5c6acda2869834 Ym <ming.t.yang@vanderbilt.edu> 1773261050 -0500	commit: Tighten spec extraction & exemplar filtering
+39c4ab069895c4c5dc8e4291fc5c6acda2869834 8676aee27daecfa18b3fc6267a8c90a01b1d45e6 Ym <ming.t.yang@vanderbilt.edu> 1773267909 -0500	commit: Add Boss Mode refactor & simplify pipeline
+8676aee27daecfa18b3fc6267a8c90a01b1d45e6 34b2c356f7689c1d74e5f718b94f32492ab37da4 Ym <ming.t.yang@vanderbilt.edu> 1773268461 -0500	commit: Update pipeline.js
+34b2c356f7689c1d74e5f718b94f32492ab37da4 30f71b7f299e2da865710f6f7955207f21ff502d Ym <ming.t.yang@vanderbilt.edu> 1773271599 -0500	commit: Update pipeline.js
+30f71b7f299e2da865710f6f7955207f21ff502d ad5687dce556b4bbf7bc6dd024ea1b03068bda20 Ym <ming.t.yang@vanderbilt.edu> 1773271930 -0500	commit: Update pipeline.js
+ad5687dce556b4bbf7bc6dd024ea1b03068bda20 7ccbc5c3cd8952cd5b9a0d0a300316a27c6380c7 Ym <ming.t.yang@vanderbilt.edu> 1773272187 -0500	commit: Update pipeline.js
+7ccbc5c3cd8952cd5b9a0d0a300316a27c6380c7 7483f0689e1182feeb42258e290157ba99f1c364 Ym <ming.t.yang@vanderbilt.edu> 1773273371 -0500	commit: Refine Boss Mode prompt to Structural Organizer
+7483f0689e1182feeb42258e290157ba99f1c364 eba32d79fbcb191b68309346674fabdfd3a58bd2 Ym <ming.t.yang@vanderbilt.edu> 1773275808 -0500	commit: ALl
+eba32d79fbcb191b68309346674fabdfd3a58bd2 ce6a7b28a20eafff44b01e5817d72902d5e92cd9 Ym <ming.t.yang@vanderbilt.edu> 1773277246 -0500	commit: Update style.css
+ce6a7b28a20eafff44b01e5817d72902d5e92cd9 6503a35ed7994d06e5b901feae3a860a3f275b23 Ym <ming.t.yang@vanderbilt.edu> 1773278426 -0500	commit: Update pipeline.js
+6503a35ed7994d06e5b901feae3a860a3f275b23 e49f5d7aed265f87ccbd499a51fab1b8d1f73e20 Ym <ming.t.yang@vanderbilt.edu> 1773283467 -0500	commit: UI: consent layout, examples, and light-theme fixes
+e49f5d7aed265f87ccbd499a51fab1b8d1f73e20 646d0ff6c746fd7853b6fb388927d79152c6d6dc Ym <ming.t.yang@vanderbilt.edu> 1773294997 -0500	commit: fix(pipeline): forbid prompt optimizer from asking clarifying questions
+646d0ff6c746fd7853b6fb388927d79152c6d6dc f699debd803916277218d96ee0879a20d5d268c7 Ym <ming.t.yang@vanderbilt.edu> 1773295498 -0500	commit: fix(pipeline): reinforce non-execution role in system prompt
+f699debd803916277218d96ee0879a20d5d268c7 0662e8ec74ceef7b77783e42bd771d8dd81012af Ym <ming.t.yang@vanderbilt.edu> 1773295835 -0500	commit: Update pipeline.js
+0662e8ec74ceef7b77783e42bd771d8dd81012af 7a371033ea4e8df87aa7e983c30c13c9a52eb333 Ym <ming.t.yang@vanderbilt.edu> 1773309745 -0500	commit: feat(pipeline): implement dual-layer prompt optimization for intent preservation
+7a371033ea4e8df87aa7e983c30c13c9a52eb333 3ba7d23724c7810393167293c7d775ec3e716037 Ym <ming.t.yang@vanderbilt.edu> 1773311180 -0500	commit: fix(pipeline): allow abstract requests and emotional translation
+3ba7d23724c7810393167293c7d775ec3e716037 3c4125d5b729225649e25ec4fed629e8cb1c99bf Ym <ming.t.yang@vanderbilt.edu> 1773311934 -0500	revert: Revert "fix(pipeline): allow abstract requests and emotional translation"
+3c4125d5b729225649e25ec4fed629e8cb1c99bf a9e9a6022c2937fc813f99915f04c72484b09c75 Ym <ming.t.yang@vanderbilt.edu> 1773311942 -0500	revert: Revert "feat(pipeline): implement dual-layer prompt optimization for intent preservation"
+a9e9a6022c2937fc813f99915f04c72484b09c75 17221c475b1d3b4d3962477b5449d550fe9d0e1b Ym <ming.t.yang@vanderbilt.edu> 1773313045 -0500	revert: Reapply "feat(pipeline): implement dual-layer prompt optimization for intent preservation"
+17221c475b1d3b4d3962477b5449d550fe9d0e1b 24daeb919796e15587e2298193854d10427d2333 Ym <ming.t.yang@vanderbilt.edu> 1773313050 -0500	revert: Reapply "fix(pipeline): allow abstract requests and emotional translation"
+24daeb919796e15587e2298193854d10427d2333 ab4fc499cd04346c7ede57ebce62b82efef1ea37 Ym <ming.t.yang@vanderbilt.edu> 1773313519 -0500	commit: fix(pipeline): reinforce prime directive to translate intent and never reject
+ab4fc499cd04346c7ede57ebce62b82efef1ea37 090415bbc61170729e13e8db9c576229205fac73 Ym <ming.t.yang@vanderbilt.edu> 1773313656 -0500	commit: fix(pipeline): strictly preserve pronouns and nouns in intent translation
+090415bbc61170729e13e8db9c576229205fac73 19b7fd9b45acfd6c35d7f254c4cbc5403d8ff2d3 Ym <ming.t.yang@vanderbilt.edu> 1773313821 -0500	commit: Update pipeline.js
+19b7fd9b45acfd6c35d7f254c4cbc5403d8ff2d3 5019c94c08247f7c25a93ed0036da4b52a108271 Ym <ming.t.yang@vanderbilt.edu> 1773314146 -0500	commit: Update pipeline.js
+5019c94c08247f7c25a93ed0036da4b52a108271 5d2f10edc344de80a11164d32cf3dbc1567464c2 Ym <ming.t.yang@vanderbilt.edu> 1773345644 -0500	commit: Rename 'Wizard' to 'Brainstormer' and update copy
+5d2f10edc344de80a11164d32cf3dbc1567464c2 5a985324bf24bc8399767464179bef42771a997e Ym <ming.t.yang@vanderbilt.edu> 1773348030 -0500	commit: Bump i18n cache prefix; update zh-CN copy
+5a985324bf24bc8399767464179bef42771a997e 72451c3b032a1f621029d8fc3f3f6bf7647819a7 Ym <ming.t.yang@vanderbilt.edu> 1773349122 -0500	commit: Add brand trust conveyor with 48-logo local sprite
+72451c3b032a1f621029d8fc3f3f6bf7647819a7 0c57934ff5c63aa9d9784200d9ee37e1684e6f8c Ym <ming.t.yang@vanderbilt.edu> 1773350117 -0500	commit: Use web-sourced brand logos and two-row slower conveyor
+0c57934ff5c63aa9d9784200d9ee37e1684e6f8c 53b8d80c15b7f80a7eaba1c07dc010be46cb822e Ym <ming.t.yang@vanderbilt.edu> 1773351093 -0500	commit: Fix full-color local logos and no-crop two-row conveyor
+53b8d80c15b7f80a7eaba1c07dc010be46cb822e 872dbf2b26bf48a00d55ed0277cf55641b35d2fa Ym <ming.t.yang@vanderbilt.edu> 1773352093 -0500	commit: feat(brand-belt): show logo names and replace white tiles with dark glass cards
+872dbf2b26bf48a00d55ed0277cf55641b35d2fa 99b2c0d69de4f0deb16e543e4ff76853465ced3f Ym <ming.t.yang@vanderbilt.edu> 1773353034 -0500	commit: fix(brand-belt): improve dark-theme logo contrast with srcDark variants
+99b2c0d69de4f0deb16e543e4ff76853465ced3f 29abc3f80b109859ba68fcbe1fb3c16e8b6cfe16 Ym <ming.t.yang@vanderbilt.edu> 1773354300 -0500	commit: fix(brand-belt): keep conveyor scrolling on hover
+29abc3f80b109859ba68fcbe1fb3c16e8b6cfe16 2ba617bae8895123f743f81316deb69cf72f4d40 Ym <ming.t.yang@vanderbilt.edu> 1773354518 -0500	commit: chore(copy): rename hero title to Vibe Coding Prompt Optimization Studio
+2ba617bae8895123f743f81316deb69cf72f4d40 eb76c3d4d2a88f8f4b320ee990a133f942d0005e Ym <ming.t.yang@vanderbilt.edu> 1773356468 -0500	commit: ss
+eb76c3d4d2a88f8f4b320ee990a133f942d0005e 42f66151c842e5a81bcec2def0805ffcd5b158fd Ym <ming.t.yang@vanderbilt.edu> 1773356486 -0500	revert: Revert "ss"
+42f66151c842e5a81bcec2def0805ffcd5b158fd 904e819e2db0a3a332fa14a7d4e0fa1b51b3ba41 Ym <ming.t.yang@vanderbilt.edu> 1773358160 -0500	commit: feat(extension): add Promptly MV3 popup optimizer with pipeline + history
+904e819e2db0a3a332fa14a7d4e0fa1b51b3ba41 ac8528d70e4677e277e9aad169ace89497408e04 Ym <ming.t.yang@vanderbilt.edu> 1773359302 -0500	commit: Create promptly-chrome.zip
+ac8528d70e4677e277e9aad169ace89497408e04 7306173c0cabb77b6371908798987f3770868d47 Ym <ming.t.yang@vanderbilt.edu> 1773359419 -0500	commit: chore(extension): rename package title to Promptly
+7306173c0cabb77b6371908798987f3770868d47 dd7552ab67853723d21debb01e25489e700ddb8a Ym <ming.t.yang@vanderbilt.edu> 1773359518 -0500	commit: Delete promptly-chrome.zip
+dd7552ab67853723d21debb01e25489e700ddb8a 4fde59bd0cccff682c23b1ea1a14949fff90e762 Ym <ming.t.yang@vanderbilt.edu> 1773376746 -0500	commit: Create promptly-chrome.zip

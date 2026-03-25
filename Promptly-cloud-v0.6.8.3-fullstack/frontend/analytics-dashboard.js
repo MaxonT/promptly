@@ -567,11 +567,14 @@ function buildSmoothIncrements(days, gap, segmentKey, profile) {
 }
 
 function buildMilestoneCumulativeSeries(timeseries, totalUsers) {
-  const safeTimeseries = Array.isArray(timeseries)
+  const todayIso = toISODateUTC(new Date());
+  const sourceTimeseries = Array.isArray(timeseries)
     ? timeseries
       .filter(d => d?.date && parseISODateUTC(d.date))
       .sort((a, b) => a.date.localeCompare(b.date))
     : [];
+  const safeTimeseries = sourceTimeseries.filter(d => d.date <= todayIso);
+  const hasFutureTimeseries = sourceTimeseries.some(d => d.date > todayIso);
 
   const latestDataDate = safeTimeseries.length
     ? safeTimeseries[safeTimeseries.length - 1].date
@@ -582,14 +585,17 @@ function buildMilestoneCumulativeSeries(timeseries, totalUsers) {
     return Number.isFinite(value) ? Math.max(max, value) : max;
   }, 0);
 
-  const endDate = latestDataDate > MILESTONE_DATES[MILESTONE_DATES.length - 1]
+  const baseEndDate = latestDataDate > MILESTONE_DATES[MILESTONE_DATES.length - 1]
     ? latestDataDate
     : MILESTONE_DATES[MILESTONE_DATES.length - 1];
+  const boundedEndDate = baseEndDate > todayIso ? todayIso : baseEndDate;
+  const endDate = boundedEndDate < LAUNCH_DATE ? LAUNCH_DATE : boundedEndDate;
 
-  const finalTotal = Math.max(
-    0,
-    Math.ceil(Math.max(rawMaxCumulative, Number(totalUsers) || 0))
-  );
+  const requestedTotal = Math.max(0, Math.ceil(Number(totalUsers) || 0));
+  // 只对今天（含）之前数据有效：若存在未来日期数据，避免把未来累计拉进当前曲线
+  const finalTotal = hasFutureTimeseries
+    ? Math.max(0, Math.ceil(rawMaxCumulative))
+    : Math.max(0, Math.ceil(Math.max(rawMaxCumulative, requestedTotal)));
 
   const rawAnchors = [
     { date: LAUNCH_DATE, value: 0 },

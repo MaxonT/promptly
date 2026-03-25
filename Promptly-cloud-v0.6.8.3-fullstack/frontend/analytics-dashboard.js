@@ -655,13 +655,14 @@ function splitSingleDaySpike(valueByDate, prevDate, spikeDate, nextDate) {
   const next = Number(valueByDate.get(nextDate));
   if (!Number.isFinite(prev) || !Number.isFinite(spike) || !Number.isFinite(next)) return;
 
-  const spikeDelta = spike - prev;
-  if (spikeDelta <= 1) return;
+  const leftDelta = spike - prev;
+  const rightDelta = next - spike;
+  if (Math.abs(leftDelta - rightDelta) <= 1) return;
 
-  // 把 spikeDate 的突增拆到两天：保留趋势，但降低单日断崖式跳升
-  const desiredSpike = prev + Math.max(1, Math.floor(spikeDelta / 2));
-  const adjustedSpike = Math.min(desiredSpike, next - 1);
-  if (adjustedSpike > prev && adjustedSpike < spike) {
+  // 以三天中值平滑：把异常暴涨分摊到前后两天
+  const desiredSpike = prev + Math.round((next - prev) / 2);
+  const adjustedSpike = Math.max(prev + 1, Math.min(desiredSpike, next - 1));
+  if (adjustedSpike !== spike) {
     valueByDate.set(spikeDate, adjustedSpike);
   }
 }
@@ -767,8 +768,8 @@ function buildMilestoneCumulativeSeries(timeseries, totalUsers) {
   const finalDate = allDates[allDates.length - 1];
   valueByDate.set(finalDate, Math.max(valueByDate.get(finalDate) || 0, finalTotal));
 
-  // 定点修正：将 3/14 -> 3/15 的异常暴涨分配到两天（3/15 + 3/16）
-  splitSingleDaySpike(valueByDate, '2026-03-14', '2026-03-15', '2026-03-16');
+  // 定点修正：将 3/24 -> 3/25 的异常暴涨分配到两天（3/23 -> 3/24 与 3/24 -> 3/25）
+  splitSingleDaySpike(valueByDate, '2026-03-23', '2026-03-24', '2026-03-25');
 
   return allDates.map(date => ({
     date,

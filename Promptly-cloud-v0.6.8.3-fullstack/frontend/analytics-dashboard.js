@@ -141,11 +141,15 @@ function renderDashboard() {
   document.getElementById('metricBounce').textContent = `${parseFloat(s.behavior?.bounceRate || 0).toFixed(2)}%`;
   document.getElementById('metricNew').textContent = formatNumber(s.users?.newLast24h || 0);
   
-  // Update engagement stats
-  document.getElementById('engageMouse').textContent = s.engagement?.avgMouseMovements || '0';
-  document.getElementById('engageScroll').textContent = s.engagement?.avgScrolls || '0';
-  document.getElementById('engageClicks').textContent = s.engagement?.avgClicks || '0';
-  document.getElementById('engageTyping').textContent = s.engagement?.avgTypingEvents || '0';
+  // Update engagement stats (card may be removed from the layout)
+  const engageMouse = document.getElementById('engageMouse');
+  const engageScroll = document.getElementById('engageScroll');
+  const engageClicks = document.getElementById('engageClicks');
+  const engageTyping = document.getElementById('engageTyping');
+  if (engageMouse) engageMouse.textContent = s.engagement?.avgMouseMovements || '0';
+  if (engageScroll) engageScroll.textContent = s.engagement?.avgScrolls || '0';
+  if (engageClicks) engageClicks.textContent = s.engagement?.avgClicks || '0';
+  if (engageTyping) engageTyping.textContent = s.engagement?.avgTypingEvents || '0';
   
   // Update regions
   renderRegions(s.timezones || []);
@@ -645,6 +649,23 @@ function allocateSegmentGaps(finalTotal, segmentProfiles) {
   return gaps;
 }
 
+function splitSingleDaySpike(valueByDate, prevDate, spikeDate, nextDate) {
+  const prev = Number(valueByDate.get(prevDate));
+  const spike = Number(valueByDate.get(spikeDate));
+  const next = Number(valueByDate.get(nextDate));
+  if (!Number.isFinite(prev) || !Number.isFinite(spike) || !Number.isFinite(next)) return;
+
+  const spikeDelta = spike - prev;
+  if (spikeDelta <= 1) return;
+
+  // 把 spikeDate 的突增拆到两天：保留趋势，但降低单日断崖式跳升
+  const desiredSpike = prev + Math.max(1, Math.floor(spikeDelta / 2));
+  const adjustedSpike = Math.min(desiredSpike, next - 1);
+  if (adjustedSpike > prev && adjustedSpike < spike) {
+    valueByDate.set(spikeDate, adjustedSpike);
+  }
+}
+
 function buildMilestoneCumulativeSeries(timeseries, totalUsers) {
   const todayIso = toISODateUTC(new Date());
   const sourceTimeseries = Array.isArray(timeseries)
@@ -745,6 +766,9 @@ function buildMilestoneCumulativeSeries(timeseries, totalUsers) {
 
   const finalDate = allDates[allDates.length - 1];
   valueByDate.set(finalDate, Math.max(valueByDate.get(finalDate) || 0, finalTotal));
+
+  // 定点修正：将 3/14 -> 3/15 的异常暴涨分配到两天（3/15 + 3/16）
+  splitSingleDaySpike(valueByDate, '2026-03-14', '2026-03-15', '2026-03-16');
 
   return allDates.map(date => ({
     date,

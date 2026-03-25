@@ -332,7 +332,7 @@ function renderCharts() {
           borderColor: '#8b5cf6',
           backgroundColor: 'rgba(139, 92, 246, 0.15)',
           fill: true,
-          tension: 0.45,
+          tension: 0.36,
           pointRadius: 2,
           pointHoverRadius: 6,
           borderWidth: 3
@@ -475,18 +475,76 @@ function deterministicUnit(seed) {
   return ((hash >>> 0) % 10000) / 10000;
 }
 
-function buildSmoothIncrements(days, gap, segmentKey, emphasis = 2.0, noiseAmplitude = 0.28) {
+function getSegmentGrowthProfile(milestoneRank) {
+  // 节点越靠后，增长越陡，随机波动与“反常日”也更明显
+  const profiles = {
+    0: { emphasis: 4.2, noiseAmplitude: 0.45, anomalyRate: 0.10, anomalyDepth: 0.08, floor: 0.01, surge: 0.9 },
+    1: { emphasis: 5.1, noiseAmplitude: 0.50, anomalyRate: 0.12, anomalyDepth: 0.07, floor: 0.015, surge: 1.3 },
+    2: { emphasis: 6.0, noiseAmplitude: 0.55, anomalyRate: 0.14, anomalyDepth: 0.06, floor: 0.02, surge: 1.8 },
+    after: { emphasis: 6.4, noiseAmplitude: 0.52, anomalyRate: 0.11, anomalyDepth: 0.06, floor: 0.03, surge: 1.5 }
+  };
+  return milestoneRank === -1 ? profiles.after : (profiles[milestoneRank] || profiles.after);
+}
+
+function pickAnomalyDays(days, segmentKey, anomalyRate) {
+  if (!Number.isFinite(days) || days < 6) return new Set();
+  const target = Math.max(1, Math.min(7, Math.round(days * anomalyRate)));
+  const anomalies = new Set();
+  const minDay = days >= 10 ? 2 : 1;
+  const maxDay = days >= 10 ? days - 2 : days;
+
+  let attempt = 0;
+  while (anomalies.size < target && attempt < target * 25) {
+    const r = deterministicUnit(`${segmentKey}:anomaly:${attempt}`);
+    const oneBasedDay = Math.floor(minDay + r * (maxDay - minDay + 1));
+    const idx = Math.max(0, Math.min(days - 1, oneBasedDay - 1));
+
+    // 避免异常日太密集，保证视觉上“偶发”
+    let tooClose = false;
+    for (const existing of anomalies) {
+      if (Math.abs(existing - idx) <= 1) {
+        tooClose = true;
+        break;
+      }
+    }
+    if (!tooClose) anomalies.add(idx);
+    attempt += 1;
+  }
+
+  return anomalies;
+}
+
+function buildSmoothIncrements(days, gap, segmentKey, profile) {
   if (!Number.isFinite(days) || days <= 0) return [];
   if (!Number.isFinite(gap) || gap <= 0) return Array(days).fill(0);
+  const safeProfile = profile || getSegmentGrowthProfile(-1);
+  const {
+    emphasis = 2.0,
+    noiseAmplitude = 0.3,
+    anomalyRate = 0.1,
+    anomalyDepth = 0.08,
+    floor = 0.02,
+    surge = 1.0
+  } = safeProfile;
 
+  const anomalyDays = pickAnomalyDays(days, segmentKey, anomalyRate);
   const weights = [];
   for (let day = 1; day <= days; day++) {
     const progress = day / days;
-    // 越接近里程碑，增速越明显（但连续平滑）
-    const trend = 0.35 + 0.65 * Math.pow(progress, emphasis);
-    // 引入可重复的微随机，避免机械线性
+    // 前期接近 0，后期明显加速，且节点越后陡峭度越高
+    const trend = floor + (1 - floor) * Math.pow(progress, emphasis);
+    const surgeBoost = 1 + surge * Math.pow(progress, emphasis * 0.8);
+    // 强随机扰动：每一天会有更明显的“非线性起伏”
     const noise = (1 - noiseAmplitude) + deterministicUnit(`${segmentKey}:${day}`) * (2 * noiseAmplitude);
-    weights.push(Math.max(0.01, trend * noise));
+
+    let weight = Math.max(0.001, trend * surgeBoost * noise);
+
+    // 反常日：增长期里偶发“几乎不增长”
+    if (anomalyDays.has(day - 1)) {
+      weight *= anomalyDepth;
+    }
+
+    weights.push(Math.max(0.001, weight));
   }
 
   const weightSum = weights.reduce((sum, w) => sum + w, 0);
@@ -578,8 +636,8 @@ function buildMilestoneCumulativeSeries(timeseries, totalUsers) {
     const days = endIndex - startIndex;
     const gap = Math.max(0, endAnchor.value - startAnchor.value);
     const milestoneRank = MILESTONE_DATES.indexOf(endAnchor.date);
-    const emphasis = milestoneRank === -1 ? 1.4 : 1.8 + milestoneRank * 0.35;
-    const increments = buildSmoothIncrements(days, gap, `${startAnchor.date}->${endAnchor.date}`, emphasis, 0.28);
+    const profile = getSegmentGrowthProfile(milestoneRank);
+    const increments = buildSmoothIncrements(days, gap, `${startAnchor.date}->${endAnchor.date}`, profile);
 
     const startDate = allDates[startIndex];
     const existingStart = valueByDate.get(startDate);

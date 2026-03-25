@@ -30,10 +30,24 @@ const CONFIG = {
 
 const LAUNCH_DATE = '2025-11-28';
 const MILESTONE_DATES = ['2025-12-05', '2026-01-22', '2026-03-13'];
-const MILESTONE_TARGET_RATIOS = {
-  '2025-12-05': 0.18,
-  '2026-01-22': 0.52,
-  '2026-03-13': 0.88
+const KEY_NODE_DATES = [LAUNCH_DATE, ...MILESTONE_DATES];
+const MILESTONE_LABELS = {
+  '2025-11-28': 'Product Finished',
+  '2025-12-05': 'Alpha Release',
+  '2026-01-22': 'Beta Release',
+  '2026-03-13': 'Product Hunt Launch'
+};
+const MILESTONE_SHORT_LABELS = {
+  '2025-11-28': 'Finish',
+  '2025-12-05': 'Alpha',
+  '2026-01-22': 'Beta',
+  '2026-03-13': 'Launch'
+};
+const MILESTONE_COLORS = {
+  '2025-11-28': '#3b82f6',
+  '2025-12-05': '#22c55e',
+  '2026-01-22': '#f59e0b',
+  '2026-03-13': '#ec4899'
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -320,7 +334,30 @@ function renderCharts() {
     }
 
     const cumulativeDates = cumulativeData.map(d => d.date);
-    const milestoneSet = new Set(MILESTONE_DATES);
+    const milestoneSet = new Set(KEY_NODE_DATES);
+    const milestoneLabelPlugin = {
+      id: 'milestoneLabelPlugin',
+      afterDatasetsDraw(chart) {
+        const meta = chart.getDatasetMeta(0);
+        if (!meta?.data?.length) return;
+
+        const { ctx } = chart;
+        ctx.save();
+        ctx.font = '600 10px system-ui, -apple-system, Segoe UI, sans-serif';
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'bottom';
+
+        meta.data.forEach((point, index) => {
+          const iso = cumulativeDates[index];
+          const shortLabel = MILESTONE_SHORT_LABELS[iso];
+          if (!shortLabel) return;
+
+          ctx.fillStyle = MILESTONE_COLORS[iso] || '#cbd5e1';
+          ctx.fillText(shortLabel, point.x + 6, point.y - 6);
+        });
+        ctx.restore();
+      }
+    };
     
     state.charts.cumulative = new Chart(cumulativeCtx, {
       type: 'line',
@@ -333,11 +370,27 @@ function renderCharts() {
           backgroundColor: 'rgba(139, 92, 246, 0.15)',
           fill: true,
           tension: 0.36,
-          pointRadius: 2,
-          pointHoverRadius: 6,
+          pointRadius: (ctx) => {
+            const iso = cumulativeDates[ctx.dataIndex];
+            return milestoneSet.has(iso) ? 5 : 0;
+          },
+          pointHoverRadius: (ctx) => {
+            const iso = cumulativeDates[ctx.dataIndex];
+            return milestoneSet.has(iso) ? 8 : 5;
+          },
+          pointBackgroundColor: (ctx) => {
+            const iso = cumulativeDates[ctx.dataIndex];
+            return MILESTONE_COLORS[iso] || '#8b5cf6';
+          },
+          pointBorderColor: '#0f172a',
+          pointBorderWidth: (ctx) => {
+            const iso = cumulativeDates[ctx.dataIndex];
+            return milestoneSet.has(iso) ? 2 : 0;
+          },
           borderWidth: 3
         }]
       },
+      plugins: [milestoneLabelPlugin],
       options: {
         responsive: true,
         maintainAspectRatio: false,
@@ -358,7 +411,12 @@ function renderCharts() {
                 const iso = cumulativeDates[first.dataIndex] || first.label;
                 return formatDateLong(iso);
               },
-              label: (ctx) => `Total Users: ${formatNumber(ctx.raw)}`
+              label: (ctx) => `Total Users: ${formatNumber(ctx.raw)}`,
+              afterLabel: (ctx) => {
+                const iso = cumulativeDates[ctx.dataIndex];
+                const milestoneLabel = MILESTONE_LABELS[iso];
+                return milestoneLabel ? `Milestone: ${milestoneLabel}` : '';
+              }
             }
           }
         },
@@ -475,39 +533,33 @@ function deterministicUnit(seed) {
   return ((hash >>> 0) % 10000) / 10000;
 }
 
-function getSegmentGrowthProfile(milestoneRank) {
-  // 节点越靠后，增长越陡，随机波动与“反常日”也更明显
+function getSegmentPhaseByEnd(endDate) {
+  if (endDate <= MILESTONE_DATES[0]) return 'flat';
+  if (endDate <= MILESTONE_DATES[1]) return 'slow';
+  if (endDate <= MILESTONE_DATES[2]) return 'fast';
+  return 'explosive';
+}
+
+function getPhaseProfile(phase) {
   const profiles = {
-    0: { emphasis: 4.2, noiseAmplitude: 0.45, anomalyRate: 0.10, anomalyDepth: 0.08, floor: 0.01, surge: 0.9 },
-    1: { emphasis: 5.1, noiseAmplitude: 0.50, anomalyRate: 0.12, anomalyDepth: 0.07, floor: 0.015, surge: 1.3 },
-    2: { emphasis: 6.0, noiseAmplitude: 0.55, anomalyRate: 0.14, anomalyDepth: 0.06, floor: 0.02, surge: 1.8 },
-    after: { emphasis: 6.4, noiseAmplitude: 0.52, anomalyRate: 0.11, anomalyDepth: 0.06, floor: 0.03, surge: 1.5 }
+    flat: { share: 0.003, emphasis: 6.2, noiseAmplitude: 0.25, anomalyRate: 0.48, anomalyDepth: 0.01, floor: 0.0006, surge: 0.04 },
+    slow: { share: 0.08, emphasis: 2.2, noiseAmplitude: 0.48, anomalyRate: 0.42, anomalyDepth: 0.028, floor: 0.008, surge: 0.45 },
+    fast: { share: 0.34, emphasis: 3.4, noiseAmplitude: 0.52, anomalyRate: 0.44, anomalyDepth: 0.022, floor: 0.03, surge: 1.15 },
+    explosive: { share: 0.577, emphasis: 4.9, noiseAmplitude: 0.58, anomalyRate: 0.48, anomalyDepth: 0.018, floor: 0.06, surge: 2.25 }
   };
-  return milestoneRank === -1 ? profiles.after : (profiles[milestoneRank] || profiles.after);
+  return profiles[phase] || profiles.explosive;
 }
 
 function pickAnomalyDays(days, segmentKey, anomalyRate) {
-  if (!Number.isFinite(days) || days < 6) return new Set();
-  const target = Math.max(1, Math.min(7, Math.round(days * anomalyRate)));
+  if (!Number.isFinite(days) || days < 4) return new Set();
+  const target = Math.max(1, Math.min(days - 1, Math.round(days * anomalyRate)));
   const anomalies = new Set();
-  const minDay = days >= 10 ? 2 : 1;
-  const maxDay = days >= 10 ? days - 2 : days;
-
   let attempt = 0;
-  while (anomalies.size < target && attempt < target * 25) {
-    const r = deterministicUnit(`${segmentKey}:anomaly:${attempt}`);
-    const oneBasedDay = Math.floor(minDay + r * (maxDay - minDay + 1));
-    const idx = Math.max(0, Math.min(days - 1, oneBasedDay - 1));
 
-    // 避免异常日太密集，保证视觉上“偶发”
-    let tooClose = false;
-    for (const existing of anomalies) {
-      if (Math.abs(existing - idx) <= 1) {
-        tooClose = true;
-        break;
-      }
-    }
-    if (!tooClose) anomalies.add(idx);
+  while (anomalies.size < target && attempt < target * 80) {
+    const r = deterministicUnit(`${segmentKey}:anomaly:${attempt}`);
+    const idx = Math.max(0, Math.min(days - 1, Math.floor(r * days)));
+    anomalies.add(idx);
     attempt += 1;
   }
 
@@ -517,7 +569,7 @@ function pickAnomalyDays(days, segmentKey, anomalyRate) {
 function buildSmoothIncrements(days, gap, segmentKey, profile) {
   if (!Number.isFinite(days) || days <= 0) return [];
   if (!Number.isFinite(gap) || gap <= 0) return Array(days).fill(0);
-  const safeProfile = profile || getSegmentGrowthProfile(-1);
+  const safeProfile = profile || getPhaseProfile('explosive');
   const {
     emphasis = 2.0,
     noiseAmplitude = 0.3,
@@ -566,6 +618,33 @@ function buildSmoothIncrements(days, gap, segmentKey, profile) {
   return increments;
 }
 
+function allocateSegmentGaps(finalTotal, segmentProfiles) {
+  if (!Number.isFinite(finalTotal) || finalTotal <= 0 || !segmentProfiles.length) {
+    return segmentProfiles.map(() => 0);
+  }
+
+  const weightSum = segmentProfiles.reduce((sum, profile) => sum + Math.max(0, Number(profile?.share) || 0), 0);
+  if (weightSum <= 0) return segmentProfiles.map(() => 0);
+
+  const raw = segmentProfiles.map(profile => finalTotal * ((Math.max(0, Number(profile?.share) || 0)) / weightSum));
+  const gaps = raw.map(value => Math.floor(value));
+  let assigned = gaps.reduce((sum, value) => sum + value, 0);
+  let remainder = finalTotal - assigned;
+
+  if (remainder > 0) {
+    const order = raw
+      .map((value, idx) => ({ idx, frac: value - Math.floor(value) }))
+      .sort((a, b) => b.frac - a.frac);
+
+    for (let i = 0; i < remainder; i++) {
+      const target = order[i % order.length];
+      gaps[target.idx] += 1;
+    }
+  }
+
+  return gaps;
+}
+
 function buildMilestoneCumulativeSeries(timeseries, totalUsers) {
   const todayIso = toISODateUTC(new Date());
   const sourceTimeseries = Array.isArray(timeseries)
@@ -597,29 +676,28 @@ function buildMilestoneCumulativeSeries(timeseries, totalUsers) {
     ? Math.max(0, Math.ceil(rawMaxCumulative))
     : Math.max(0, Math.ceil(Math.max(rawMaxCumulative, requestedTotal)));
 
-  const rawAnchors = [
-    { date: LAUNCH_DATE, value: 0 },
-    ...MILESTONE_DATES.map(date => ({
-      date,
-      value: Math.ceil(finalTotal * (MILESTONE_TARGET_RATIOS[date] || 0))
-    })),
-    { date: endDate, value: finalTotal }
-  ];
+  const anchorDates = Array.from(new Set([
+    LAUNCH_DATE,
+    ...MILESTONE_DATES.filter(date => date <= endDate),
+    endDate
+  ])).sort((a, b) => a.localeCompare(b));
 
-  const anchorMap = new Map();
-  for (const anchor of rawAnchors) {
-    const prev = anchorMap.get(anchor.date) || 0;
-    anchorMap.set(anchor.date, Math.max(prev, anchor.value));
+  const segments = [];
+  for (let i = 0; i < anchorDates.length - 1; i++) {
+    const start = anchorDates[i];
+    const end = anchorDates[i + 1];
+    const phase = getSegmentPhaseByEnd(end);
+    const profile = getPhaseProfile(phase);
+    segments.push({ start, end, phase, profile, startValue: 0, endValue: 0 });
   }
 
-  const anchors = Array.from(anchorMap.entries())
-    .sort(([a], [b]) => a.localeCompare(b))
-    .map(([date, value]) => ({ date, value }));
-
-  let runningAnchor = 0;
-  for (const anchor of anchors) {
-    runningAnchor = Math.max(runningAnchor, anchor.value);
-    anchor.value = runningAnchor;
+  const segmentGaps = allocateSegmentGaps(finalTotal, segments.map(segment => segment.profile));
+  let runningTarget = 0;
+  for (let i = 0; i < segments.length; i++) {
+    const gap = segmentGaps[i] || 0;
+    segments[i].startValue = runningTarget;
+    runningTarget += gap;
+    segments[i].endValue = runningTarget;
   }
 
   const allDates = buildDateRange(LAUNCH_DATE, endDate);
@@ -629,27 +707,26 @@ function buildMilestoneCumulativeSeries(timeseries, totalUsers) {
   const valueByDate = new Map();
   valueByDate.set(LAUNCH_DATE, 0);
 
-  for (let i = 0; i < anchors.length - 1; i++) {
-    const startAnchor = anchors[i];
-    const endAnchor = anchors[i + 1];
-    const startIndex = dateIndexMap.get(startAnchor.date);
-    const endIndex = dateIndexMap.get(endAnchor.date);
+  for (const segment of segments) {
+    const startIndex = dateIndexMap.get(segment.start);
+    const endIndex = dateIndexMap.get(segment.end);
 
     if (startIndex === undefined || endIndex === undefined || endIndex <= startIndex) {
       continue;
     }
 
     const days = endIndex - startIndex;
-    const gap = Math.max(0, endAnchor.value - startAnchor.value);
-    const milestoneRank = MILESTONE_DATES.indexOf(endAnchor.date);
-    const profile = getSegmentGrowthProfile(milestoneRank);
-    const increments = buildSmoothIncrements(days, gap, `${startAnchor.date}->${endAnchor.date}`, profile);
+    const gap = Math.max(0, segment.endValue - segment.startValue);
+    const increments = buildSmoothIncrements(days, gap, `${segment.start}->${segment.end}`, segment.profile);
 
     const startDate = allDates[startIndex];
     const existingStart = valueByDate.get(startDate);
-    valueByDate.set(startDate, existingStart === undefined ? startAnchor.value : Math.max(existingStart, startAnchor.value));
+    valueByDate.set(
+      startDate,
+      existingStart === undefined ? segment.startValue : Math.max(existingStart, segment.startValue)
+    );
 
-    let running = startAnchor.value;
+    let running = segment.startValue;
     for (let step = 1; step <= days; step++) {
       running += increments[step - 1] || 0;
       const date = allDates[startIndex + step];

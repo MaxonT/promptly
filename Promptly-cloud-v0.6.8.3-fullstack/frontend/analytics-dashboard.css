@@ -559,6 +559,165 @@
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════════
+   Milestone Artifact
+   ═══════════════════════════════════════════════════════════════════════════════ */
+
+.artifact-section {
+  margin-bottom: 24px;
+}
+
+.artifact-card {
+  position: relative;
+  overflow: hidden;
+  padding: 24px;
+  border-radius: 20px;
+  border: 1px solid rgba(99, 102, 241, 0.25);
+  background:
+    linear-gradient(135deg, rgba(59, 130, 246, 0.12), rgba(139, 92, 246, 0.12) 45%, rgba(16, 185, 129, 0.08)),
+    rgba(15, 23, 42, 0.45);
+  backdrop-filter: blur(20px);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.16);
+}
+
+.artifact-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(circle at 88% 12%, rgba(167, 139, 250, 0.22), transparent 42%);
+}
+
+.artifact-header {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.artifact-title-block h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.artifact-subtitle {
+  margin: 8px 0 0;
+  font-size: 12px;
+  color: var(--muted);
+  letter-spacing: 0.04em;
+}
+
+.artifact-badge {
+  display: inline-flex;
+  align-items: center;
+  height: 26px;
+  padding: 0 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(139, 92, 246, 0.45);
+  background: rgba(139, 92, 246, 0.15);
+  color: #c4b5fd;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.milestone-timeline {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.milestone-node {
+  --node-accent: #60a5fa;
+  position: relative;
+  padding: 16px 14px 14px 18px;
+  border-radius: 14px;
+  border: 1px solid rgba(148, 163, 184, 0.24);
+  background: rgba(15, 23, 42, 0.45);
+  transition: transform 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+}
+
+.milestone-node::before {
+  content: "";
+  position: absolute;
+  left: 8px;
+  top: 12px;
+  bottom: 12px;
+  width: 3px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, var(--node-accent), rgba(255, 255, 255, 0.02));
+}
+
+.milestone-node::after {
+  content: "";
+  position: absolute;
+  left: 5px;
+  top: 14px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--node-accent);
+  box-shadow: 0 0 0 4px rgba(148, 163, 184, 0.2);
+}
+
+.milestone-node:hover {
+  transform: translateY(-2px);
+  border-color: var(--node-accent);
+  background: rgba(30, 41, 59, 0.6);
+}
+
+.milestone-date {
+  margin: 0 0 8px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--node-accent);
+}
+
+.milestone-node h4 {
+  margin: 0 0 6px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.milestone-note {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--muted);
+}
+
+.milestone-finish { --node-accent: #3b82f6; }
+.milestone-alpha { --node-accent: #22c55e; }
+.milestone-beta { --node-accent: #f59e0b; }
+.milestone-launch { --node-accent: #ec4899; }
+
+@media (max-width: 1100px) {
+  .milestone-timeline {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .artifact-header {
+    flex-direction: column;
+  }
+
+  .milestone-timeline {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════════
    Regions Section
    ═══════════════════════════════════════════════════════════════════════════════ */
 
@@ -753,6 +912,19 @@
 
 [data-theme="light"] .engagement-stat {
   background: rgba(139, 92, 246, 0.08);
+}
+
+[data-theme="light"] .artifact-card {
+  background:
+    linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(139, 92, 246, 0.1) 45%, rgba(16, 185, 129, 0.08)),
+    rgba(255, 255, 255, 0.88);
+  border-color: rgba(99, 102, 241, 0.2);
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+}
+
+[data-theme="light"] .milestone-node {
+  background: rgba(255, 255, 255, 0.86);
+  border-color: rgba(148, 163, 184, 0.32);
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════════

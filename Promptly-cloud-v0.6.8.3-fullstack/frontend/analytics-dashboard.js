@@ -662,15 +662,14 @@ function splitSingleDaySpike(valueByDate, prevDate, spikeDate, nextDate) {
   const rightDelta = next - spike;
   if (Math.abs(leftDelta - rightDelta) <= 1) return;
 
-  // 以偏置比例分摊：保持总量不变，并确保两天是“一大一小”而非 50/50
-  const dominantRight = rightDelta > leftDelta;
-  let targetLeft = Math.round(totalDelta * (dominantRight ? 0.42 : 0.58));
+  // 偏置分摊：让 3/23->3/24 更大，3/24->3/25 更小
+  let targetLeft = Math.round(totalDelta * 0.61);
   targetLeft = Math.max(1, Math.min(totalDelta - 1, targetLeft));
 
   if (totalDelta >= 3) {
     const targetRight = totalDelta - targetLeft;
     if (targetLeft === targetRight) {
-      targetLeft += dominantRight ? -1 : 1;
+      targetLeft += 1;
       targetLeft = Math.max(1, Math.min(totalDelta - 1, targetLeft));
     }
   }

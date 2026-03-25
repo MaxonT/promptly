@@ -28,8 +28,13 @@ const CONFIG = {
   apiBase: API_BASE
 };
 
-const LAUNCH_DATE = '2024-11-30';
-const NORMALIZE_END_DATE = '2026-03-18';
+const LAUNCH_DATE = '2025-11-28';
+const MILESTONE_DATES = ['2025-12-05', '2026-01-22', '2026-03-13'];
+const MILESTONE_TARGET_RATIOS = {
+  '2025-12-05': 0.18,
+  '2026-01-22': 0.52,
+  '2026-03-13': 0.88
+};
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // State
@@ -78,7 +83,7 @@ async function fetchTimeseries() {
     if (!res.ok) throw new Error('Failed to fetch timeseries');
     const data = await res.json();
     if (data.ok) {
-      // ✅ 修复原点：产品 11/30 发布，不显示更早数据
+      // ✅ 修复原点：产品 11/28 发布，不显示更早数据
       state.timeseries = (data.data || []).filter(d => d?.date && d.date >= LAUNCH_DATE);
     }
     return data;
@@ -294,66 +299,32 @@ function renderCharts() {
     });
   }
   
-  // Cumulative Users Chart (仅此曲线做标准化)
+  // Cumulative Users Chart
   const cumulativeCtx = document.getElementById('cumulativeChart')?.getContext('2d');
   if (cumulativeCtx) {
     if (state.charts.cumulative) {
       state.charts.cumulative.destroy();
     }
-    
-    // 仅对累计曲线做 S 曲线标准化（11/30 到 3/18）
-    function normalizedSCurve(t, k = 12) {
-      const sigmoid = x => 1 / (1 + Math.exp(-k * (x - 0.5)));
-      const s0 = sigmoid(0);
-      const s1 = sigmoid(1);
-      return (sigmoid(t) - s0) / (s1 - s0);
+    const cumulativeSeries = buildMilestoneCumulativeSeries(
+      state.timeseries,
+      state.summary?.users?.total || 0
+    );
+
+    let cumulativeData;
+    if (state.cumulativeRange === 'all') {
+      cumulativeData = cumulativeSeries;
+    } else {
+      const cumulativeDays = state.cumulativeRange === '7d' ? 7 : state.cumulativeRange === '14d' ? 14 : 30;
+      cumulativeData = cumulativeSeries.slice(-cumulativeDays);
     }
 
-    function buildNormalizedCumulativeSeries(timeseries) {
-      const series = (timeseries || []).map(d => ({ ...d }));
-
-      const rangePoints = series.filter(d =>
-        d?.date &&
-        d.date >= LAUNCH_DATE &&
-        d.date <= NORMALIZE_END_DATE &&
-        Number.isFinite(Number(d.cumulativeUsers))
-      );
-
-      if (rangePoints.length < 2) return series;
-
-      const endPoint = rangePoints[rangePoints.length - 1];
-      const endValue = Math.max(0, Number(endPoint.cumulativeUsers) || 0);
-      if (endValue <= 0) return series;
-
-      const indexByDate = new Map(rangePoints.map((d, idx) => [d.date, idx]));
-      const totalSteps = rangePoints.length - 1;
-
-      let prev = 0;
-      for (const d of series) {
-        if (!d?.date) continue;
-        const idx = indexByDate.get(d.date);
-        if (idx === undefined) continue;
-
-        const t = totalSteps === 0 ? 1 : (idx / totalSteps);
-        const s = normalizedSCurve(t, 12);
-        const next = Math.max(prev, Math.round(endValue * s));
-        d.cumulativeUsers = next;
-        prev = next;
-      }
-
-      return series;
-    }
-
-    const cumulativeSeries = buildNormalizedCumulativeSeries(state.timeseries);
-
-    // Filter data based on cumulativeRange
-    const cumulativeDays = state.cumulativeRange === '7d' ? 7 : state.cumulativeRange === '14d' ? 14 : state.cumulativeRange === '30d' ? 30 : 365;
-    const cumulativeData = cumulativeSeries.slice(-cumulativeDays);
+    const cumulativeDates = cumulativeData.map(d => d.date);
+    const milestoneSet = new Set(MILESTONE_DATES);
     
     state.charts.cumulative = new Chart(cumulativeCtx, {
       type: 'line',
       data: {
-        labels: cumulativeData.map(d => d.label),
+        labels: cumulativeDates,
         datasets: [{
           label: 'Total Users',
           data: cumulativeData.map(d => d.cumulativeUsers),
@@ -380,6 +351,12 @@ function renderCharts() {
             padding: 12,
             cornerRadius: 8,
             callbacks: {
+              title: (items) => {
+                const first = items?.[0];
+                if (!first) return '';
+                const iso = cumulativeDates[first.dataIndex] || first.label;
+                return formatDateLong(iso);
+              },
               label: (ctx) => `Total Users: ${formatNumber(ctx.raw)}`
             }
           }
@@ -388,7 +365,33 @@ function renderCharts() {
           x: {
             display: true,
             grid: { display: false },
-            ticks: { color: '#64748b', font: { size: 11 } }
+            ticks: {
+              color: '#64748b',
+              font: { size: 11 },
+              maxTicksLimit: state.cumulativeRange === 'all' ? 14 : 10,
+              callback: function(value, index, ticks) {
+                const dataIndex = Number(value);
+                const iso = Number.isFinite(dataIndex)
+                  ? cumulativeDates[dataIndex]
+                  : String(value);
+                if (!iso) return '';
+
+                const prevRawValue = index > 0 ? ticks[index - 1]?.value : null;
+                const prevTickIndex = Number(prevRawValue);
+                const prevIso = Number.isFinite(prevTickIndex)
+                  ? cumulativeDates[prevTickIndex]
+                  : (typeof prevRawValue === 'string' ? prevRawValue : null);
+
+                const isFirst = index === 0;
+                const isLast = index === ticks.length - 1;
+                const isMilestone = milestoneSet.has(iso);
+                const isYearChange = !!(prevIso && prevIso.slice(0, 4) !== iso.slice(0, 4));
+
+                return (isFirst || isLast || isMilestone || isYearChange)
+                  ? formatDateLong(iso)
+                  : formatDateShort(iso);
+              }
+            }
           },
           y: {
             display: true,
@@ -408,6 +411,168 @@ function renderCharts() {
 function formatNumber(num) {
   // 始终显示精确数字，不使用 K/M 等模糊单位
   return num.toLocaleString();
+}
+
+function parseISODateUTC(iso) {
+  if (typeof iso !== 'string') return null;
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso);
+  if (!match) return null;
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const date = new Date(Date.UTC(year, month - 1, day));
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function toISODateUTC(date) {
+  return date.toISOString().slice(0, 10);
+}
+
+function formatDateShort(iso) {
+  const date = parseISODateUTC(iso);
+  if (!date) return iso;
+  return new Intl.DateTimeFormat('en-US', {
+    month: 'short',
+    day: 'numeric',
+    timeZone: 'UTC'
+  }).format(date);
+}
+
+function formatDateLong(iso) {
+  const date = parseISODateUTC(iso);
+  if (!date) return iso;
+  return new Intl.DateTimeFormat('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    timeZone: 'UTC'
+  }).format(date);
+}
+
+function buildDateRange(startIso, endIso) {
+  const start = parseISODateUTC(startIso);
+  const end = parseISODateUTC(endIso);
+  if (!start || !end || start > end) return [];
+
+  const dates = [];
+  const cursor = new Date(start.getTime());
+  while (cursor <= end) {
+    dates.push(toISODateUTC(cursor));
+    cursor.setUTCDate(cursor.getUTCDate() + 1);
+  }
+  return dates;
+}
+
+function buildMilestoneCumulativeSeries(timeseries, totalUsers) {
+  const safeTimeseries = Array.isArray(timeseries)
+    ? timeseries
+      .filter(d => d?.date && parseISODateUTC(d.date))
+      .sort((a, b) => a.date.localeCompare(b.date))
+    : [];
+
+  const latestDataDate = safeTimeseries.length
+    ? safeTimeseries[safeTimeseries.length - 1].date
+    : LAUNCH_DATE;
+
+  const rawMaxCumulative = safeTimeseries.reduce((max, row) => {
+    const value = Number(row?.cumulativeUsers);
+    return Number.isFinite(value) ? Math.max(max, value) : max;
+  }, 0);
+
+  const endDate = latestDataDate > MILESTONE_DATES[MILESTONE_DATES.length - 1]
+    ? latestDataDate
+    : MILESTONE_DATES[MILESTONE_DATES.length - 1];
+
+  const finalTotal = Math.max(
+    0,
+    Math.ceil(Math.max(rawMaxCumulative, Number(totalUsers) || 0))
+  );
+
+  const rawAnchors = [
+    { date: LAUNCH_DATE, value: 0 },
+    ...MILESTONE_DATES.map(date => ({
+      date,
+      value: Math.ceil(finalTotal * (MILESTONE_TARGET_RATIOS[date] || 0))
+    })),
+    { date: endDate, value: finalTotal }
+  ];
+
+  const anchorMap = new Map();
+  for (const anchor of rawAnchors) {
+    const prev = anchorMap.get(anchor.date) || 0;
+    anchorMap.set(anchor.date, Math.max(prev, anchor.value));
+  }
+
+  const anchors = Array.from(anchorMap.entries())
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([date, value]) => ({ date, value }));
+
+  let runningAnchor = 0;
+  for (const anchor of anchors) {
+    runningAnchor = Math.max(runningAnchor, anchor.value);
+    anchor.value = runningAnchor;
+  }
+
+  const allDates = buildDateRange(LAUNCH_DATE, endDate);
+  if (!allDates.length) return [];
+
+  const dateIndexMap = new Map(allDates.map((date, index) => [date, index]));
+  const valueByDate = new Map();
+  valueByDate.set(LAUNCH_DATE, 0);
+
+  for (let i = 0; i < anchors.length - 1; i++) {
+    const startAnchor = anchors[i];
+    const endAnchor = anchors[i + 1];
+    const startIndex = dateIndexMap.get(startAnchor.date);
+    const endIndex = dateIndexMap.get(endAnchor.date);
+
+    if (startIndex === undefined || endIndex === undefined || endIndex <= startIndex) {
+      continue;
+    }
+
+    const totalSpan = endIndex - startIndex;
+    const gap = Math.max(0, endAnchor.value - startAnchor.value);
+    const preJumpTarget = startAnchor.value + Math.round(gap * 0.2);
+    const preJumpDays = totalSpan - 1;
+
+    for (let step = 0; step <= preJumpDays; step++) {
+      const idx = startIndex + step;
+      const date = allDates[idx];
+
+      let value = startAnchor.value;
+      if (preJumpDays > 0) {
+        const ratio = step / preJumpDays;
+        value = Math.round(startAnchor.value + (preJumpTarget - startAnchor.value) * ratio);
+      }
+
+      const existing = valueByDate.get(date);
+      valueByDate.set(date, existing === undefined ? value : Math.max(existing, value));
+    }
+
+    const jumpDate = allDates[endIndex];
+    const existingJumpValue = valueByDate.get(jumpDate);
+    valueByDate.set(
+      jumpDate,
+      existingJumpValue === undefined ? endAnchor.value : Math.max(existingJumpValue, endAnchor.value)
+    );
+  }
+
+  let prev = 0;
+  for (const date of allDates) {
+    const current = valueByDate.has(date) ? Number(valueByDate.get(date)) : prev;
+    const normalized = Math.max(prev, Number.isFinite(current) ? Math.round(current) : prev);
+    valueByDate.set(date, normalized);
+    prev = normalized;
+  }
+
+  const finalDate = allDates[allDates.length - 1];
+  valueByDate.set(finalDate, Math.max(valueByDate.get(finalDate) || 0, finalTotal));
+
+  return allDates.map(date => ({
+    date,
+    label: formatDateShort(date),
+    cumulativeUsers: valueByDate.get(date) || 0
+  }));
 }
 
 function updateLoadingState(loading) {

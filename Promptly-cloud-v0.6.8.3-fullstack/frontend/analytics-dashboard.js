@@ -141,15 +141,11 @@ function renderDashboard() {
   document.getElementById('metricBounce').textContent = `${parseFloat(s.behavior?.bounceRate || 0).toFixed(2)}%`;
   document.getElementById('metricNew').textContent = formatNumber(s.users?.newLast24h || 0);
   
-  // Update engagement stats (optional UI block)
-  const engageMouseEl = document.getElementById('engageMouse');
-  if (engageMouseEl) engageMouseEl.textContent = s.engagement?.avgMouseMovements || '0';
-  const engageScrollEl = document.getElementById('engageScroll');
-  if (engageScrollEl) engageScrollEl.textContent = s.engagement?.avgScrolls || '0';
-  const engageClicksEl = document.getElementById('engageClicks');
-  if (engageClicksEl) engageClicksEl.textContent = s.engagement?.avgClicks || '0';
-  const engageTypingEl = document.getElementById('engageTyping');
-  if (engageTypingEl) engageTypingEl.textContent = s.engagement?.avgTypingEvents || '0';
+  // Update engagement stats
+  document.getElementById('engageMouse').textContent = s.engagement?.avgMouseMovements || '0';
+  document.getElementById('engageScroll').textContent = s.engagement?.avgScrolls || '0';
+  document.getElementById('engageClicks').textContent = s.engagement?.avgClicks || '0';
+  document.getElementById('engageTyping').textContent = s.engagement?.avgTypingEvents || '0';
   
   // Update regions
   renderRegions(s.timezones || []);
@@ -546,11 +542,10 @@ function getSegmentPhaseByEnd(endDate) {
 
 function getPhaseProfile(phase) {
   const profiles = {
-    // 四阶段斜率：平 -> 缓增 -> 快增 -> 爆发（爆发仍最大，但限制极端单日暴冲）
-    flat: { share: 0.005, emphasis: 5.6, noiseAmplitude: 0.20, anomalyRate: 0.36, anomalyDepth: 0.08, floor: 0.0005, surge: 0.02, maxDayFactor: 1.9 },
-    slow: { share: 0.10, emphasis: 2.0, noiseAmplitude: 0.34, anomalyRate: 0.34, anomalyDepth: 0.14, floor: 0.01, surge: 0.32, maxDayFactor: 2.0 },
-    fast: { share: 0.43, emphasis: 2.8, noiseAmplitude: 0.40, anomalyRate: 0.36, anomalyDepth: 0.12, floor: 0.035, surge: 0.95, maxDayFactor: 2.1 },
-    explosive: { share: 0.465, emphasis: 3.7, noiseAmplitude: 0.36, anomalyRate: 0.26, anomalyDepth: 0.22, floor: 0.07, surge: 1.35, maxDayFactor: 1.8 }
+    flat: { share: 0.003, emphasis: 6.2, noiseAmplitude: 0.25, anomalyRate: 0.48, anomalyDepth: 0.01, floor: 0.0006, surge: 0.04 },
+    slow: { share: 0.08, emphasis: 2.2, noiseAmplitude: 0.48, anomalyRate: 0.42, anomalyDepth: 0.028, floor: 0.008, surge: 0.45 },
+    fast: { share: 0.34, emphasis: 3.4, noiseAmplitude: 0.52, anomalyRate: 0.44, anomalyDepth: 0.022, floor: 0.03, surge: 1.15 },
+    explosive: { share: 0.577, emphasis: 4.9, noiseAmplitude: 0.58, anomalyRate: 0.48, anomalyDepth: 0.018, floor: 0.06, surge: 2.25 }
   };
   return profiles[phase] || profiles.explosive;
 }
@@ -581,8 +576,7 @@ function buildSmoothIncrements(days, gap, segmentKey, profile) {
     anomalyRate = 0.1,
     anomalyDepth = 0.08,
     floor = 0.02,
-    surge = 1.0,
-    maxDayFactor = 2.2
+    surge = 1.0
   } = safeProfile;
 
   const anomalyDays = pickAnomalyDays(days, segmentKey, anomalyRate);
@@ -618,53 +612,6 @@ function buildSmoothIncrements(days, gap, segmentKey, profile) {
       .sort((a, b) => b.frac - a.frac);
     for (let i = 0; i < remainder; i++) {
       increments[order[i % order.length].idx] += 1;
-    }
-  }
-
-  return softenDailySpikes(increments, `${segmentKey}:spike-guard`, maxDayFactor);
-}
-
-function softenDailySpikes(increments, seed, maxDayFactor = 2.2) {
-  if (!Array.isArray(increments) || increments.length <= 2) return increments;
-  const total = increments.reduce((sum, value) => sum + (Number(value) || 0), 0);
-  if (total <= 0) return increments;
-
-  const days = increments.length;
-  const avg = total / days;
-  let cap = Math.max(1, Math.ceil(avg * maxDayFactor));
-  let overflow = 0;
-
-  for (let i = 0; i < increments.length; i++) {
-    if (increments[i] > cap) {
-      overflow += increments[i] - cap;
-      increments[i] = cap;
-    }
-  }
-
-  if (overflow <= 0) return increments;
-
-  // 按“当前值较低 + 伪随机”优先回填，避免再次制造尖峰
-  const order = increments
-    .map((value, idx) => ({
-      idx,
-      score: (cap - value) + deterministicUnit(`${seed}:${idx}`) * 0.5
-    }))
-    .sort((a, b) => b.score - a.score);
-
-  while (overflow > 0) {
-    let placed = false;
-    for (const item of order) {
-      if (increments[item.idx] < cap) {
-        increments[item.idx] += 1;
-        overflow -= 1;
-        placed = true;
-        if (overflow <= 0) break;
-      }
-    }
-
-    // 如果当前 cap 没有可放空间，温和上调 1 点继续分配
-    if (!placed) {
-      cap += 1;
     }
   }
 

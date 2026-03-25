@@ -698,23 +698,6 @@ function allocateSegmentGaps(finalTotal, segmentProfiles) {
   return gaps;
 }
 
-function splitSingleDaySpike(valueByDate, prevDate, spikeDate, nextDate) {
-  const prev = Number(valueByDate.get(prevDate));
-  const spike = Number(valueByDate.get(spikeDate));
-  const next = Number(valueByDate.get(nextDate));
-  if (!Number.isFinite(prev) || !Number.isFinite(spike) || !Number.isFinite(next)) return;
-
-  const spikeDelta = spike - prev;
-  if (spikeDelta <= 1) return;
-
-  // 把 spikeDate 的单日暴涨拆一半到 nextDate，保持累计终值不变
-  const desiredSpike = prev + Math.ceil(spikeDelta / 2);
-  const adjustedSpike = Math.min(desiredSpike, next);
-  if (adjustedSpike > prev && adjustedSpike < spike) {
-    valueByDate.set(spikeDate, adjustedSpike);
-  }
-}
-
 function buildMilestoneCumulativeSeries(timeseries, totalUsers) {
   const todayIso = toISODateUTC(new Date());
   const sourceTimeseries = Array.isArray(timeseries)
@@ -815,9 +798,6 @@ function buildMilestoneCumulativeSeries(timeseries, totalUsers) {
 
   const finalDate = allDates[allDates.length - 1];
   valueByDate.set(finalDate, Math.max(valueByDate.get(finalDate) || 0, finalTotal));
-
-  // 定点修正：把 2026-03-15 的异常暴涨分配到两天（3/15 + 3/16）
-  splitSingleDaySpike(valueByDate, '2026-03-14', '2026-03-15', '2026-03-16');
 
   return allDates.map(date => ({
     date,

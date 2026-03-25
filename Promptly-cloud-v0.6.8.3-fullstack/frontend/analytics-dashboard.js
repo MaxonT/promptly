@@ -332,7 +332,7 @@ function renderCharts() {
           borderColor: '#8b5cf6',
           backgroundColor: 'rgba(139, 92, 246, 0.15)',
           fill: true,
-          tension: 0.3,
+          tension: 0.45,
           pointRadius: 2,
           pointHoverRadius: 6,
           borderWidth: 3
@@ -465,6 +465,49 @@ function buildDateRange(startIso, endIso) {
   return dates;
 }
 
+function deterministicUnit(seed) {
+  const text = String(seed || '');
+  let hash = 2166136261;
+  for (let i = 0; i < text.length; i++) {
+    hash ^= text.charCodeAt(i);
+    hash = Math.imul(hash, 16777619);
+  }
+  return ((hash >>> 0) % 10000) / 10000;
+}
+
+function buildSmoothIncrements(days, gap, segmentKey, emphasis = 2.0, noiseAmplitude = 0.28) {
+  if (!Number.isFinite(days) || days <= 0) return [];
+  if (!Number.isFinite(gap) || gap <= 0) return Array(days).fill(0);
+
+  const weights = [];
+  for (let day = 1; day <= days; day++) {
+    const progress = day / days;
+    // 越接近里程碑，增速越明显（但连续平滑）
+    const trend = 0.35 + 0.65 * Math.pow(progress, emphasis);
+    // 引入可重复的微随机，避免机械线性
+    const noise = (1 - noiseAmplitude) + deterministicUnit(`${segmentKey}:${day}`) * (2 * noiseAmplitude);
+    weights.push(Math.max(0.01, trend * noise));
+  }
+
+  const weightSum = weights.reduce((sum, w) => sum + w, 0);
+  const rawAlloc = weights.map(w => (w / weightSum) * gap);
+  const increments = rawAlloc.map(v => Math.floor(v));
+  let assigned = increments.reduce((sum, v) => sum + v, 0);
+
+  // 按小数部分回填，确保总和精确等于 gap
+  let remainder = gap - assigned;
+  if (remainder > 0) {
+    const order = rawAlloc
+      .map((v, idx) => ({ idx, frac: v - Math.floor(v) }))
+      .sort((a, b) => b.frac - a.frac);
+    for (let i = 0; i < remainder; i++) {
+      increments[order[i % order.length].idx] += 1;
+    }
+  }
+
+  return increments;
+}
+
 function buildMilestoneCumulativeSeries(timeseries, totalUsers) {
   const safeTimeseries = Array.isArray(timeseries)
     ? timeseries
@@ -532,31 +575,23 @@ function buildMilestoneCumulativeSeries(timeseries, totalUsers) {
       continue;
     }
 
-    const totalSpan = endIndex - startIndex;
+    const days = endIndex - startIndex;
     const gap = Math.max(0, endAnchor.value - startAnchor.value);
-    const preJumpTarget = startAnchor.value + Math.round(gap * 0.2);
-    const preJumpDays = totalSpan - 1;
+    const milestoneRank = MILESTONE_DATES.indexOf(endAnchor.date);
+    const emphasis = milestoneRank === -1 ? 1.4 : 1.8 + milestoneRank * 0.35;
+    const increments = buildSmoothIncrements(days, gap, `${startAnchor.date}->${endAnchor.date}`, emphasis, 0.28);
 
-    for (let step = 0; step <= preJumpDays; step++) {
-      const idx = startIndex + step;
-      const date = allDates[idx];
+    const startDate = allDates[startIndex];
+    const existingStart = valueByDate.get(startDate);
+    valueByDate.set(startDate, existingStart === undefined ? startAnchor.value : Math.max(existingStart, startAnchor.value));
 
-      let value = startAnchor.value;
-      if (preJumpDays > 0) {
-        const ratio = step / preJumpDays;
-        value = Math.round(startAnchor.value + (preJumpTarget - startAnchor.value) * ratio);
-      }
-
+    let running = startAnchor.value;
+    for (let step = 1; step <= days; step++) {
+      running += increments[step - 1] || 0;
+      const date = allDates[startIndex + step];
       const existing = valueByDate.get(date);
-      valueByDate.set(date, existing === undefined ? value : Math.max(existing, value));
+      valueByDate.set(date, existing === undefined ? running : Math.max(existing, running));
     }
-
-    const jumpDate = allDates[endIndex];
-    const existingJumpValue = valueByDate.get(jumpDate);
-    valueByDate.set(
-      jumpDate,
-      existingJumpValue === undefined ? endAnchor.value : Math.max(existingJumpValue, endAnchor.value)
-    );
   }
 
   let prev = 0;

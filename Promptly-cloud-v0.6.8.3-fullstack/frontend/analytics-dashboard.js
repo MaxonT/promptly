@@ -83,8 +83,8 @@ async function fetchTimeseries() {
     if (!res.ok) throw new Error('Failed to fetch timeseries');
     const data = await res.json();
     if (data.ok) {
-      // ✅ 修复原点：产品 11/28 发布，不显示更早数据
-      state.timeseries = (data.data || []).filter(d => d?.date && d.date >= LAUNCH_DATE);
+      // 保留完整历史数据；累计曲线会从 LAUNCH_DATE 作为原点(0)开始构建
+      state.timeseries = (data.data || []).filter(d => d?.date);
     }
     return data;
   } catch (err) {
@@ -292,6 +292,7 @@ function renderCharts() {
           y: {
             display: true,
             grid: { color: 'rgba(100, 116, 139, 0.1)' },
+            beginAtZero: true,
             ticks: { color: '#64748b', font: { size: 11 } }
           }
         }
@@ -396,6 +397,7 @@ function renderCharts() {
           y: {
             display: true,
             grid: { color: 'rgba(100, 116, 139, 0.1)' },
+            beginAtZero: true,
             ticks: { color: '#64748b', font: { size: 11 } }
           }
         }

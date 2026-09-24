@@ -1,0 +1,213 @@
+.wizard-header{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:1.25rem 1.5rem;
+  border-bottom:1px solid rgba(148,163,184,0.4);
+  background:linear-gradient(90deg,rgba(124,58,237,0.1),rgba(6,182,212,0.05));
+}
+.wizard-header-main{
+  display:flex;
+  align-items:center;
+  gap:1rem;
+}
+.wizard-logo{
+  width:32px;
+  height:32px;
+}
+.wizard-title{
+  font-size:1.1rem;
+  margin:0;
+}
+.wizard-subtitle{
+  margin:0.15rem 0 0;
+  font-size:0.9rem;
+  opacity:0.8;
+}
+.wizard-header-meta{
+  font-size:0.8rem;
+  opacity:0.8;
+}
+.wizard-tag{
+  padding:0.2rem 0.5rem;
+  border-radius:999px;
+  border:1px solid rgba(148,163,184,0.6);
+}
+.wizard-main{
+  display:grid;
+  grid-template-columns:minmax(0,1.2fr) minmax(0,1.6fr);
+  grid-template-rows:auto auto;
+  gap:1rem;
+  padding:1rem 1.5rem 1.5rem;
+}
+.wizard-panel{
+  border-radius:0.75rem;
+  border:1px solid rgba(148,163,184,0.4);
+  padding:1rem 1.1rem;
+  background:rgba(15,23,42,0.6);
+  backdrop-filter:blur(12px);
+}
+.wizard-panel--idea{
+  grid-column:1/2;
+  grid-row:1/2;
+}
+.wizard-panel--qa{
+  grid-column:2/3;
+  grid-row:1/3;
+}
+.wizard-panel--result{
+  grid-column:1/2;
+  grid-row:2/3;
+}
+.wizard-panel--log{
+  grid-column:1/3;
+  grid-row:3/4;
+}
+.wizard-panel-header h2{
+  margin:0 0 0.25rem;
+}
+.wizard-panel-desc{
+  margin:0;
+  font-size:0.85rem;
+  opacity:0.85;
+}
+.wizard-label{
+  display:flex;
+  flex-direction:column;
+  gap:0.35rem;
+  margin-top:0.75rem;
+  font-size:0.85rem;
+}
+.wizard-label textarea,
+.wizard-label select{
+  border-radius:0.5rem;
+  border:1px solid rgba(148,163,184,0.6);
+  padding:0.5rem 0.6rem;
+  background:rgba(15,23,42,0.8);
+  color:inherit;
+  resize:vertical;
+}
+.wizard-button-primary,
+.wizard-button-secondary{
+  margin-top:0.9rem;
+  padding:0.45rem 0.9rem;
+  border-radius:999px;
+  border:none;
+  font-size:0.85rem;
+  cursor:pointer;
+}
+.wizard-button-primary{
+  background:linear-gradient(120deg,#7C3AED,#06B6D4);
+  color:white;
+}
+.wizard-button-secondary{
+  background:transparent;
+  border:1px solid rgba(148,163,184,0.8);
+  color:inherit;
+}
+.wizard-empty{
+  margin-top:0.75rem;
+  font-size:0.9rem;
+  opacity:0.8;
+}
+.wizard-questions{
+  margin-top:0.75rem;
+  display:flex;
+  flex-direction:column;
+  gap:0.75rem;
+}
+.wizard-question-card{
+  border-radius:0.6rem;
+  border:1px solid rgba(148,163,184,0.5);
+  padding:0.6rem 0.7rem;
+  background:rgba(15,23,42,0.9);
+}
+.wizard-question-type{
+  font-size:0.75rem;
+  text-transform:uppercase;
+  letter-spacing:0.06em;
+  opacity:0.7;
+}
+.wizard-question-text{
+  margin:0.25rem 0 0.4rem;
+  font-size:0.9rem;
+}
+.wizard-choice-row{
+  display:flex;
+  flex-wrap:wrap;
+  gap:0.4rem;
+}
+.wizard-pill{
+  padding:0.25rem 0.55rem;
+  border-radius:999px;
+  border:1px solid rgba(148,163,184,0.7);
+  font-size:0.8rem;
+  cursor:pointer;
+}
+.wizard-pill.is-selected{
+  background:linear-gradient(120deg,#7C3AED,#06B6D4);
+  border-color:transparent;
+}
+.wizard-input-short{
+  width:100%;
+  border-radius:0.5rem;
+  border:1px solid rgba(148,163,184,0.6);
+  padding:0.4rem 0.5rem;
+  background:rgba(15,23,42,0.8);
+  color:inherit;
+}
+.wizard-qa-actions{
+  display:flex;
+  gap:0.6rem;
+  margin-top:0.8rem;
+}
+.wizard-result{
+  margin-top:0.5rem;
+  display:flex;
+  flex-direction:column;
+  gap:0.75rem;
+}
+.wizard-result-section h3{
+  margin:0 0 0.35rem;
+}
+.wizard-code{
+  max-height:220px;
+  overflow:auto;
+  border-radius:0.5rem;
+  border:1px solid rgba(148,163,184,0.5);
+  padding:0.5rem 0.6rem;
+  font-size:0.8rem;
+  background:rgba(15,23,42,0.95);
+}
+.wizard-code--plain{
+  white-space:pre-wrap;
+}
+.wizard-log{
+  max-height:180px;
+  overflow:auto;
+  border-radius:0.5rem;
+  border:1px dashed rgba(148,163,184,0.7);
+  padding:0.5rem 0.6rem;
+  font-size:0.75rem;
+  background:rgba(15,23,42,0.9);
+}
+.wizard-error{
+  margin-top:0.4rem;
+  color:#f97373;
+  font-size:0.8rem;
+}
+.hidden{
+  display:none !important;
+}
+@media (max-width: 960px){
+  .wizard-main{
+    grid-template-columns:minmax(0,1fr);
+    grid-template-rows:auto;
+  }
+  .wizard-panel--qa,
+  .wizard-panel--result,
+  .wizard-panel--idea,
+  .wizard-panel--log{
+    grid-column:1/2;
+  }
+}

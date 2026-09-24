@@ -1,0 +1,894 @@
+/* styles omitted for brevity in comment; full CSS follows */ 
+:root{
+  --bg:#0b0c10;--bg-soft:#0f121a;--card:#111624;--text:#eaf0fb;--muted:#9aa6bd;
+  --border:#1e2740;--primary:#7c3aed;--accent:#06b6d4;--ok:#34d399;--warn:#fbbf24;--err:#f87171;
+  --shadow:0 12px 30px rgba(0,0,0,.35);
+}
+[data-theme="light"]{
+  --bg:#f6f8fb;--bg-soft:#ffffff;--card:#ffffff;--text:#0b0d13;--muted:#4b5565;
+  --border:#e6e9f2;--primary:#6d28d9;--accent:#0ea5b7;--ok:#059669;--warn:#b45309;--err:#b91c1c;
+  --shadow:0 10px 26px rgba(0,0,0,.08);
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial}
+a{color:inherit}
+header.topbar{position:sticky;top:0;display:flex;align-items:center;justify-content:space-between;padding:14px 20px;background:var(--bg-soft);
+  border-bottom:1px solid var(--border);box-shadow:var(--shadow);z-index:10}
+.brand{font-size:20px;font-weight:900;letter-spacing:.3px}
+.controls{display:flex;gap:16px;align-items:center}
+.control{display:inline-flex;align-items:center;gap:8px;color:var(--muted);font-size:14px}
+.control select{background:var(--card);color:var(--text);border:1px solid var(--border);padding:8px 10px;border-radius:10px}
+.navlinks a{color:var(--muted);text-decoration:none;margin-left:12px}
+.navlinks a:hover{color:var(--text)}
+
+.container{max-width:1200px;margin:28px auto;padding:0 16px}
+.grid{display:grid;gap:16px}
+.grid-2{grid-template-columns:1fr 1fr}
+.grid-4{grid-template-columns:repeat(4,1fr)}
+@media(max-width:1020px){.grid-2{grid-template-columns:1fr}.grid-4{grid-template-columns:1fr 1fr}}
+@media(max-width:640px){.grid-4{grid-template-columns:1fr}}
+
+.card{background:var(--card);border:1px solid var(--border);border-radius:16px;box-shadow:var(--shadow);padding:18px}
+.card h2,.card h3{margin:6px 0 12px 0}
+
+.hero{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.title{font-size:30px;font-weight:1000}
+.subtitle{color:var(--muted)}
+
+.gradient-text{background:linear-gradient(90deg,#7C3AED,#06B6D4,#22D3EE,#A78BFA,#34D399);background-size:300% 300%;
+  -webkit-background-clip:text;background-clip:text;color:transparent;animation:gf 8s ease infinite}
+@keyframes gf{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
+
+textarea,input{width:100%;background:var(--bg-soft);color:var(--text);border:1px solid var(--border);border-radius:12px;padding:10px 12px}
+.btn{display:inline-block;padding:10px 14px;border-radius:12px;border:0;background:linear-gradient(90deg,rgba(124,58,237,.95),rgba(6,182,212,.95));
+  color:#fff;font-weight:700;cursor:pointer}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:900px){.row{grid-template-columns:1fr}}
+
+.kpi{display:flex;flex-direction:column;gap:4px}
+.kpi .label{line-height:1.2; color:var(--muted);font-size: clamp(16px, 1.4vw, 20px)}
+.kpi .value{font-size:24px;font-weight:900}
+.kpi .delta{font-size:12px}
+.kpi.up .delta{color:var(--ok)} .kpi.down .delta{color:var(--err)}
+
+.canvas{width:100%;height:240px;border-radius:12px;background:var(--bg-soft);border:1px solid var(--border)}
+
+.list{display:flex;flex-direction:column;gap:10px}
+.item{display:flex;justify-content:space-between;align-items:center;padding:10px;border:1px solid var(--border);border-radius:12px;background:var(--bg-soft)}
+.badge{padding:4px 8px;border-radius:999px;border:1px solid var(--border);font-size:12px;color:var(--muted)}
+.delta-badge{font-weight:800}
+.delta-pos{color:var(--ok)} .delta-neg{color:var(--err)}
+
+footer.footer{margin:28px 0;text-align:center;color:var(--muted)}
+.banner{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:var(--card);border:1px solid var(--border);
+  padding:12px 16px;border-radius:12px;box-shadow:var(--shadow);display:flex;gap:10px;align-items:center;z-index:20}
+
+
+
+/* === Promptly v0.5.6 aesthetic additions (logo + side patterns) === */
+.brand-logo{display:inline-flex; align-items:center; gap:10px}
+.brand-logo img{height:28px; width:auto; display:block}
+.hero-logo{display:flex; align-items:center; justify-content:center; padding:42px 0}
+.hero-logo img{height:72px; width:auto;}
+
+/* Side ornamental patterns */
+body::before, body::after{
+  content:""; position:fixed; top:10%; bottom:10%; width:120px; pointer-events:none; z-index:0;
+  background: radial-gradient(60% 60% at 50% 50%, rgba(99,102,241,.25), transparent 70%),
+              radial-gradient(40% 40% at 30% 70%, rgba(6,182,212,.18), transparent 72%);
+  filter: blur(28px);
+  opacity:.55;
+}
+body::before{ left:-40px; transform: rotate(-6deg); }
+body::after{ right:-40px; transform: rotate(6deg); }
+
+/* Ensure main content sits above ornaments */
+main, header, footer, .container, .card, .grid{ position: relative; z-index: 1; }
+
+
+
+/* === v0.5.6 Option B: Nav gradient underline + softer glow + sizing === */
+.topbar{
+  border-bottom: 1px solid transparent;
+  border-image: linear-gradient(90deg,var(--brand-a, #6366F1), var(--brand-b, #06B6D4), var(--brand-c, #22D3EE)) 1;
+}
+.brand-logo img{ height: 42px; }
+@media (min-width: 1280px){ .brand-logo img{ height: 46px; } }
+
+/* Softer, subtle glow just above text emphasis */
+.logo-glow{
+  filter: drop-shadow(0 0 3px rgba(99,102,241,.35)) drop-shadow(0 0 6px rgba(6,182,212,.20));
+  animation: promptlyGlowSoft 4.2s ease-in-out infinite;
+}
+@keyframes promptlyGlowSoft{
+  0%,100%{ filter: drop-shadow(0 0 3px rgba(99,102,241,.35)) drop-shadow(0 0 6px rgba(6,182,212,.20)); transform: scale(1.00); }
+  50%{    filter: drop-shadow(0 0 5px rgba(99,102,241,.50)) drop-shadow(0 0 9px rgba(34,211,238,.30)); transform: scale(1.005); }
+}
+
+
+
+/* === TigerFixK: Reduce brightness by 10% === */
+.brand-inline, .brand-logo, .brand-svg, .logo-glow {
+  filter: brightness(0.9);
+}
+
+
+
+/* === TigerFixL: Increase brightness by 20% === */
+.brand-inline, .brand-logo, .brand-svg, .logo-glow {
+  filter: brightness(1.2);
+}
+
+
+
+/* v0.5.7: Top-right nav accent (subtle, consistent across pages) */
+.topbar .navlinks a{ color:var(--text-med); text-decoration:none; transition: color .15s ease, text-shadow .25s ease; }
+.topbar .navlinks a:hover{ color:var(--brand-b); text-shadow:0 0 10px rgba(6,182,212,.35); }
+.topbar label.control span{ color:var(--text-high); transition: all .2s ease; }
+.topbar label.control:hover span{ background:linear-gradient(90deg,var(--brand-a),var(--brand-b)); -webkit-background-clip:text; background-clip:text; color:transparent; }
+.topbar select{ background:linear-gradient(#0e1117,#0b0f17); border:1px solid rgba(255,255,255,.12); border-radius:12px; color:var(--text-high); padding:.36rem .6rem; }
+.topbar select:focus{ outline:none; box-shadow:0 0 0 3px rgba(6,182,212,.25); border-color:rgba(6,182,212,.5); }
+
+
+
+/* ===== v0.5.7.2: Subtle metal baseline for topbar & key form labels ===== */
+:root{
+  --metal-1:#e6e9ef; /* highlight */
+  --metal-2:#c3c9d4; /* mid */
+  --metal-3:#a4abb7; /* mid-dark */
+  --metal-4:#848b97; /* shadow */
+  --metal-sheen: rgba(255,255,255,.25);
+}
+
+/* Brushed metal text effect (no images): layered gradients clipped to text */
+.metal-text{
+  background:
+    linear-gradient(180deg,var(--metal-1) 0%, var(--metal-2) 40%, #f8fafc 50%, var(--metal-3) 51%, var(--metal-1) 100%),
+    repeating-linear-gradient(90deg, rgba(255,255,255,.06) 0 2px, rgba(0,0,0,.04) 2px 4px);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent !important;
+  text-shadow: 0 0 .01px rgba(0,0,0,.3); /* crisp edges */
+}
+
+/* Apply to topbar baseline labels & links */
+.topbar .navlinks a,
+.topbar label.control span{ 
+  color: var(--text-high);
+}
+.topbar .navlinks a, 
+.topbar label.control span{ 
+  /* metal base */
+  background:
+    linear-gradient(180deg,var(--metal-1) 0%, var(--metal-2) 40%, #f8fafc 50%, var(--metal-3) 51%, var(--metal-1) 100%),
+    repeating-linear-gradient(90deg, rgba(255,255,255,.05) 0 2px, rgba(0,0,0,.03) 2px 4px);
+  -webkit-background-clip:text; background-clip:text; color:transparent;
+}
+
+/* Hover: keep brand cyan glow but restrained */
+.topbar .navlinks a:hover{ 
+  text-shadow: 0 0 8px rgba(6,182,212,.25);
+}
+
+/* Focus: cyan ring already present on select; leave text metal */
+.topbar select{ 
+  background:linear-gradient(#0f131a,#0b0f17);
+}
+
+/* Metal for Task & Examples headings */
+h3[data-i18n="task_label"],
+h3[data-i18n="examples_label"]{
+  background:
+    linear-gradient(180deg,var(--metal-1) 0%, var(--metal-2) 45%, var(--metal-4) 100%),
+    repeating-linear-gradient(0deg, rgba(255,255,255,.05) 0 1px, rgba(0,0,0,.05) 1px 2px);
+  -webkit-background-clip:text; background-clip:text; color:transparent;
+  letter-spacing:.2px;
+}
+
+/* Light theme: slightly darker base for readability */
+html[data-theme="light"] .topbar .navlinks a{
+  background: linear-gradient(90deg, rgba(71,85,105,0.9), rgba(124,58,237,0.9), rgba(88,166,255,0.9));
+}
+
+/* Hover/active: subtle emphasis */
+.topbar .navlinks a:hover,
+.topbar .navlinks a[aria-current="page"]{
+  background-position: 100% 50%;
+  opacity: 1;
+  text-shadow: 0 0 8px rgba(124,58,237,.14);
+}
+
+/* === Patch v2: ENFORCE subtle gradient on top-right nav links (default) === */
+.topbar .navlinks a,
+.topbar .navlinks a:link,
+.topbar .navlinks a:visited{
+  background: linear-gradient(90deg, rgba(234,240,251,0.90), rgba(124,58,237,0.90), rgba(6,182,212,0.90));
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent !important;
+  -webkit-text-fill-color: transparent;
+  text-decoration: none;
+  transition: background-position .6s ease, text-shadow .25s ease, opacity .25s ease;
+  opacity: .95;
+}
+html[data-theme="light"] .topbar .navlinks a,
+html[data-theme="light"] .topbar .navlinks a:link,
+html[data-theme="light"] .topbar .navlinks a:visited{
+  background: linear-gradient(90deg, rgba(71,85,105,0.95), rgba(124,58,237,0.95), rgba(88,166,255,0.95));
+}
+
+.topbar .navlinks a:hover,
+.topbar .navlinks a[aria-current="page"]{
+  background-position: 100% 50%;
+  opacity: 1;
+  text-shadow: 0 0 10px rgba(124,58,237,.16);
+}
+
+/* === Patch v3: VIVID gradient for top-right nav links (keep others unchanged) === */
+.topbar .navlinks a,
+.topbar .navlinks a:link,
+.topbar .navlinks a:visited{
+  background: linear-gradient(90deg, #EAF0FB 0%, #7C3AED 45%, #00E0FF 100%);
+  background-size: 250% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent !important;
+  -webkit-text-fill-color: transparent;
+  text-decoration: none;
+  transition: background-position .6s ease, text-shadow .25s ease, opacity .25s ease;
+  opacity: 1;
+  text-shadow: 0 0 10px rgba(124,58,237,.22), 0 0 16px rgba(0,224,255,.18);
+}
+html[data-theme="light"] .topbar .navlinks a,
+html[data-theme="light"] .topbar .navlinks a:link,
+html[data-theme="light"] .topbar .navlinks a:visited{
+  background: linear-gradient(90deg, #334155 0%, #7C3AED 50%, #58A6FF 100%);
+  background-size: 250% auto;
+}
+.topbar .navlinks a:hover,
+.topbar .navlinks a[aria-current="page"]{
+  background-position: 100% 50%;
+  text-shadow: 0 0 12px rgba(124,58,237,.28), 0 0 22px rgba(0,224,255,.22);
+}
+
+/* === Patch v4: ULTRA (≈2× deeper) gradient for top-right nav links === */
+.topbar .navlinks a,
+.topbar .navlinks a:link,
+.topbar .navlinks a:visited{
+  background: linear-gradient(90deg, #58A6FF 0%, #7C3AED 45%, #00E0FF 100%);
+  background-size: 300% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent !important;
+  -webkit-text-fill-color: transparent;
+  text-decoration: none;
+  opacity: 1;
+  text-shadow: 0 0 14px rgba(124,58,237,.38), 0 0 26px rgba(0,224,255,.28);
+}
+html[data-theme="light"] .topbar .navlinks a,
+html[data-theme="light"] .topbar .navlinks a:link,
+html[data-theme="light"] .topbar .navlinks a:visited{
+  background: linear-gradient(90deg, #1F2937 0%, #7C3AED 50%, #3B82F6 100%);
+  background-size: 300% auto;
+}
+.topbar .navlinks a:hover,
+.topbar .navlinks a[aria-current="page"]{
+  background-position: 100% 50%;
+  text-shadow: 0 0 16px rgba(124,58,237,.45), 0 0 30px rgba(0,224,255,.32);
+}
+
+/* === Patch v5: 60% weaker gradient + apply to label texts === */
+/* Nav links */
+.topbar .navlinks a,
+.topbar .navlinks a:link,
+.topbar .navlinks a:visited{
+  background: linear-gradient(90deg,
+    rgba(88,166,255,0.40) 0%,
+    rgba(124,58,237,0.42) 48%,
+    rgba(0,224,255,0.40) 100%);
+  background-size: 240% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent !important;
+  text-shadow: 0 0 8px rgba(124,58,237,.12), 0 0 12px rgba(0,224,255,.10);
+  opacity: .96;
+}
+html[data-theme="light"] .topbar .navlinks a,
+html[data-theme="light"] .topbar .navlinks a:link,
+html[data-theme="light"] .topbar .navlinks a:visited{
+  background: linear-gradient(90deg,
+    rgba(31,41,55,0.45) 0%,
+    rgba(124,58,237,0.45) 52%,
+    rgba(59,130,246,0.45) 100%);
+  background-size: 240% auto;
+}
+
+/* Hover/current: tiny lift only */
+.topbar .navlinks a:hover,
+.topbar .navlinks a[aria-current="page"]{
+  background-position: 100% 50%;
+  text-shadow: 0 0 10px rgba(124,58,237,.16);
+}
+
+/* Label texts left to selects ("System", "English") */
+.topbar label.control span{
+  display:inline-block;
+  background: linear-gradient(90deg,
+    rgba(88,166,255,0.40),
+    rgba(124,58,237,0.42),
+    rgba(0,224,255,0.40));
+  background-size: 220% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent !important;
+  text-shadow: 0 0 6px rgba(124,58,237,.10);
+}
+html[data-theme="light"] .topbar label.control span{
+  background: linear-gradient(90deg,
+    rgba(31,41,55,0.45),
+    rgba(124,58,237,0.45),
+    rgba(59,130,246,0.45));
+}
+
+/* === Patch v6: BRIGHTER gradient (≈ +30–40% luminance) for nav + labels === */
+/* Nav links */
+.topbar .navlinks a,
+.topbar .navlinks a:link,
+.topbar .navlinks a:visited{
+  background: linear-gradient(90deg,
+    #EAF0FB 0%,
+    #8AB4FF 22%,
+    #7C3AED 58%,
+    #58A6FF 100%);
+  background-size: 220% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent !important;
+  text-shadow: 0 0 10px rgba(255,255,255,.12), 0 0 16px rgba(124,58,237,.20);
+  opacity: 1;
+}
+/* Light theme: keep contrast while slightly brightening */
+html[data-theme="light"] .topbar .navlinks a,
+html[data-theme="light"] .topbar .navlinks a:link,
+html[data-theme="light"] .topbar .navlinks a:visited{
+  background: linear-gradient(90deg,
+    #334155 0%,
+    #7C3AED 50%,
+    #3B82F6 100%);
+  background-size: 220% auto;
+}
+
+.topbar .navlinks a:hover,
+.topbar .navlinks a[aria-current="page"]{
+  background-position: 100% 50%;
+  text-shadow: 0 0 12px rgba(255,255,255,.14), 0 0 20px rgba(124,58,237,.24);
+}
+
+/* Labels left to selects (System / English) */
+.topbar label.control span{
+  display:inline-block;
+  background: linear-gradient(90deg,
+    #EAF0FB,
+    #8AB4FF,
+    #7C3AED);
+  background-size: 220% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent !important;
+  text-shadow: 0 0 8px rgba(255,255,255,.12);
+}
+html[data-theme="light"] .topbar label.control span{
+  background: linear-gradient(90deg, #334155, #7C3AED, #3B82F6);
+}
+
+/* === Patch v7: +20% brightness AND slightly deeper gradient === */
+/* Dark theme — brighter highlights + deeper chroma mids */
+.topbar .navlinks a,
+.topbar .navlinks a:link,
+.topbar .navlinks a:visited{
+  background: linear-gradient(90deg,
+    #F4F7FE 0%,      /* brighter highlight (+20% luminance) */
+    #9EC5FF 18%,     /* brighter cyan-blue */
+    #7C3AED 48%,     /* core violet (deeper mid) */
+    #5B21B6 62%,     /* deeper violet mid for depth */
+    #60A5FA 84%,     /* richer blue tail */
+    #EAF2FF 100%);   /* soft highlight end */
+  background-size: 230% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent !important;
+  text-shadow: 0 0 10px rgba(255,255,255,.14), 0 0 18px rgba(124,58,237,.22);
+  opacity: 1;
+}
+/* Light theme — maintain contrast while deepening mids slightly */
+html[data-theme="light"] .topbar .navlinks a,
+html[data-theme="light"] .topbar .navlinks a:link,
+html[data-theme="light"] .topbar .navlinks a:visited{
+  background: linear-gradient(90deg,
+    #334155 0%,
+    #8B5CF6 45%,     /* brighter + deeper violet */
+    #3B82F6 85%,
+    #F1F5FF 100%);
+  background-size: 230% auto;
+}
+
+.topbar .navlinks a:hover,
+.topbar .navlinks a[aria-current="page"]{
+  background-position: 100% 50%;
+  text-shadow: 0 0 14px rgba(255,255,255,.16), 0 0 22px rgba(124,58,237,.26);
+}
+
+/* Apply the same treatment to the labels ("System", "English") */
+.topbar label.control span{
+  display:inline-block;
+  background: linear-gradient(90deg,
+    #F4F7FE, #9EC5FF, #7C3AED, #5B21B6, #60A5FA);
+  background-size: 230% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent !important;
+  text-shadow: 0 0 8px rgba(255,255,255,.12);
+}
+html[data-theme="light"] .topbar label.control span{
+  background: linear-gradient(90deg, #334155, #8B5CF6, #3B82F6, #F1F5FF);
+}
+
+/* === Patch v7: +20% brightness & slightly deeper gradient (nav + labels) === */
+/* Nav links */
+.topbar .navlinks a,
+.topbar .navlinks a:link,
+.topbar .navlinks a:visited{
+  background: linear-gradient(90deg,
+    #F5FAFF 0%,
+    #A5C8FF 18%,
+    #6D28D9 55%,
+    #00E5FF 100%);
+  background-size: 220% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent !important;
+  text-shadow: 0 0 6px rgba(255,255,255,.16), 0 0 12px rgba(109,40,217,.18);
+  opacity: 1;
+}
+/* Light theme: maintain contrast, slightly deeper mid-tones */
+html[data-theme="light"] .topbar .navlinks a,
+html[data-theme="light"] .topbar .navlinks a:link,
+html[data-theme="light"] .topbar .navlinks a:visited{
+  background: linear-gradient(90deg,
+    #334155 0%,
+    #6D28D9 50%,
+    #60A5FA 100%);
+  background-size: 220% auto;
+}
+
+/* Hover/current: gentle shift */
+.topbar .navlinks a:hover,
+.topbar .navlinks a[aria-current="page"]{
+  background-position: 100% 50%;
+  text-shadow: 0 0 10px rgba(255,255,255,.18), 0 0 18px rgba(0,229,255,.20);
+}
+
+/* Labels (System / English) */
+.topbar label.control span{
+  display:inline-block;
+  background: linear-gradient(90deg,
+    #F5FAFF,
+    #A5C8FF,
+    #6D28D9);
+  background-size: 220% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent !important;
+  text-shadow: 0 0 6px rgba(255,255,255,.14);
+}
+html[data-theme="light"] .topbar label.control span{
+  background: linear-gradient(90deg, #334155, #6D28D9, #60A5FA);
+}
+
+/* === Patch v8: ~35% deeper gradient (nav + labels), structure unchanged === */
+/* Nav links */
+.topbar .navlinks a,
+.topbar .navlinks a:link,
+.topbar .navlinks a:visited{
+  background: linear-gradient(90deg,
+    #EAF2FF 0%,
+    #6B8CFF 20%,
+    #4C1D95 55%,
+    #00C0E6 100%);
+  background-size: 220% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent !important;
+  text-shadow: 0 0 10px rgba(76,29,149,.22), 0 0 16px rgba(0,192,230,.18);
+  opacity: 1;
+}
+/* Light theme: deeper mid-tones while preserving contrast */
+html[data-theme="light"] .topbar .navlinks a,
+html[data-theme="light"] .topbar .navlinks a:link,
+html[data-theme="light"] .topbar .navlinks a:visited{
+  background: linear-gradient(90deg,
+    #2A3443 0%,
+    #4C1D95 50%,
+    #3B82F6 100%);
+  background-size: 220% auto;
+}
+
+.topbar .navlinks a:hover,
+.topbar .navlinks a[aria-current="page"]{
+  background-position: 100% 50%;
+  text-shadow: 0 0 12px rgba(76,29,149,.30), 0 0 20px rgba(0,192,230,.24);
+}
+
+/* Labels (System / English) */
+.topbar label.control span{
+  display:inline-block;
+  background: linear-gradient(90deg,
+    #EAF2FF,
+    #6B8CFF,
+    #4C1D95);
+  background-size: 220% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent !important;
+  text-shadow: 0 0 8px rgba(76,29,149,.20);
+}
+html[data-theme="light"] .topbar label.control span{
+  background: linear-gradient(90deg, #2A3443, #4C1D95, #3B82F6);
+}
+
+/* === Patch v9: Unified GREEN gradient for nav + labels (structure unchanged) === */
+/* Nav links */
+.topbar .navlinks a,
+.topbar .navlinks a:link,
+.topbar .navlinks a:visited{
+  background: linear-gradient(90deg,
+    #D1FAE5 0%,   /* emerald-100 */
+    #6EE7B7 30%,  /* emerald-300 */
+    #10B981 70%,  /* emerald-500 */
+    #059669 100%  /* emerald-600 */
+  );
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent !important;
+  text-shadow: 0 0 8px rgba(16,185,129,.18), 0 0 12px rgba(5,150,105,.16);
+  opacity: 1;
+}
+/* Light theme: slightly darker bases for contrast */
+html[data-theme="light"] .topbar .navlinks a,
+html[data-theme="light"] .topbar .navlinks a:link,
+html[data-theme="light"] .topbar .navlinks a:visited{
+  background: linear-gradient(90deg,
+    #065F46 0%,
+    #10B981 55%,
+    #34D399 100%
+  );
+}
+
+/* Hover/current: subtle lift */
+.topbar .navlinks a:hover,
+.topbar .navlinks a[aria-current="page"]{
+  background-position: 100% 50%;
+  text-shadow: 0 0 10px rgba(16,185,129,.26), 0 0 18px rgba(5,150,105,.22);
+}
+
+/* Labels (System / English) */
+.topbar label.control span{
+  display:inline-block;
+  background: linear-gradient(90deg,
+    #D1FAE5, #6EE7B7, #10B981, #059669);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent !important;
+  text-shadow: 0 0 6px rgba(16,185,129,.16);
+}
+html[data-theme="light"] .topbar label.control span{
+  background: linear-gradient(90deg, #065F46, #10B981, #34D399);
+}
+
+/* === Patch v10: Remove glow around top-left logo (no structure change) === */
+.brand .logo-glow, .brand-logo .logo-glow, img.logo-glow{
+  filter: none !important;
+  box-shadow: none !important;
+  text-shadow: none !important;
+  outline: none !important;
+}
+.brand.brand-logo, .brand-logo{
+  box-shadow: none !important;
+  filter: none !important;
+}
+
+/* === Patch v11: Logo brightness up (no border glow) === */
+.brand .logo-glow, .brand-logo .logo-glow, img.logo-glow{ opacity:1 !important; filter:none !important; box-shadow:none !important; }
+
+/* === Patch v12: NEON gradient (violet→cyan→blue) + light-mode fix (no green) === */
+/* Force text-clipped gradient for top-right nav links */
+.topbar .navlinks a[data-i18n],
+.topbar .navlinks a[data-i18n]:link,
+.topbar .navlinks a[data-i18n]:visited{
+  display:inline-block;
+  background: linear-gradient(90deg, #58A6FF 0%, #7C3AED 50%, #00E0FF 100%);
+  background-size: 220% auto;
+  background-repeat: no-repeat;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent !important;
+  text-decoration: none;
+  opacity: 1;
+  transition: background-position .45s ease, text-shadow .25s ease, opacity .25s ease;
+}
+/* Light theme: slightly deeper mid-tones to avoid washout on white */
+html[data-theme="light"] .topbar .navlinks a[data-i18n],
+html[data-theme="light"] .topbar .navlinks a[data-i18n]:link,
+html[data-theme="light"] .topbar .navlinks a[data-i18n]:visited{
+  background: linear-gradient(90deg, #3B82F6 0%, #6D28D9 50%, #06B6D4 100%);
+  background-size: 220% auto;
+}
+
+/* Hover/current: gentle lift */
+.topbar .navlinks a[data-i18n]:hover,
+.topbar .navlinks a[data-i18n][aria-current="page"]{
+  background-position: 100% 50%;
+  text-shadow: 0 0 8px rgba(124,58,237,.18), 0 0 14px rgba(0,224,255,.16);
+}
+
+/* Labels left to selects ("System", "English") */
+.topbar label.control span[data-i18n]{
+  display:inline-block;
+  background: linear-gradient(90deg, #58A6FF, #7C3AED, #00E0FF);
+  background-size: 220% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent !important;
+}
+html[data-theme="light"] .topbar label.control span[data-i18n]{
+  background: linear-gradient(90deg, #3B82F6, #6D28D9, #06B6D4);
+}
+
+/* Safety: neutralize any prior background-color on anchors/spans that could show as blocks */
+.topbar .navlinks a[data-i18n],
+.topbar label.control span[data-i18n]{
+  background-color: transparent !important;
+}
+
+/* === Patch v14: Slight cyan shift + +10~15% brightness for top-right nav and labels === */
+/* Dark theme nav links */
+.topbar .navlinks a[data-i18n],
+.topbar .navlinks a[data-i18n]:link,
+.topbar .navlinks a[data-i18n]:visited{
+  background: linear-gradient(90deg,
+    #7EC9FF 0%,   /* brighter blue */
+    #6A88F0 44%,  /* indigo-blue (less purple) */
+    #2FE6FF 100%  /* brighter cyan */
+  );
+  background-size: 220% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent !important;
+  text-shadow: 0 0 10px rgba(255,255,255,.12), 0 0 14px rgba(47,230,255,.14);
+}
+
+/* Light theme nav links */
+html[data-theme="light"] .topbar .navlinks a[data-i18n],
+html[data-theme="light"] .topbar .navlinks a[data-i18n]:link,
+html[data-theme="light"] .topbar .navlinks a[data-i18n]:visited{
+  background: linear-gradient(90deg,
+    #3F8DF7 0%,
+    #5B6AE5 48%,
+    #06CFE0 100%
+  );
+  background-size: 220% auto;
+}
+
+/* Labels (System / English) */
+.topbar label.control span[data-i18n]{
+  background: linear-gradient(90deg, #7EC9FF, #6A88F0, #2FE6FF);
+  background-size: 220% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent !important;
+}
+html[data-theme="light"] .topbar label.control span[data-i18n]{
+  background: linear-gradient(90deg, #3F8DF7, #5B6AE5, #06CFE0);
+}
+
+/* === Patch v15: Robust LIGHT-mode fix (prevent gradient bars) === */
+/* 1) Reset anchors to avoid background blocks; keep normal text color as fallback */
+.topbar .navlinks a{
+  background: none !important;
+  -webkit-background-clip: initial !important;
+  background-clip: initial !important;
+  -webkit-text-fill-color: inherit !important;
+  color: inherit !important;
+}
+
+/* 2) Apply gradient ONLY to text spans (and preserved fallback on a[data-i18n]) */
+.topbar .navlinks a > span[data-i18n]{
+  display: inline-block;
+  background: linear-gradient(90deg, #7EC9FF 0%, #6A88F0 44%, #2FE6FF 100%);
+  background-size: 220% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent !important;
+}
+html[data-theme="light"] .topbar .navlinks a > span[data-i18n]{
+  background: linear-gradient(90deg, #3F8DF7 0%, #5B6AE5 48%, #06CFE0 100%);
+  background-size: 220% auto;
+}
+
+/* 3) Keep previous gradient for a[data-i18n] as a fallback (if span not used) */
+.topbar .navlinks a[data-i18n],
+.topbar .navlinks a[data-i18n]:link,
+.topbar .navlinks a[data-i18n]:visited{
+  display:inline-block;
+  background: linear-gradient(90deg, #7EC9FF 0%, #6A88F0 44%, #2FE6FF 100%);
+  background-size: 220% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent !important;
+}
+html[data-theme="light"] .topbar .navlinks a[data-i18n],
+html[data-theme="light"] .topbar .navlinks a[data-i18n]:link,
+html[data-theme="light"] .topbar .navlinks a[data-i18n]:visited{
+  background: linear-gradient(90deg, #3F8DF7 0%, #5B6AE5 48%, #06CFE0 100%);
+  background-size: 220% auto;
+}
+
+/* 4) Safety: ensure no background-color leaks */
+.topbar .navlinks a, .topbar .navlinks a > span[data-i18n]{ background-color: transparent !important; }
+
+/* === Patch v16: Final robust fix for nav text (Dark/Light) === */
+/* High-specificity gradient applied to anchors and/or inner spans */
+.topbar .navlinks a[data-i18n],
+.topbar .navlinks a[data-i18n]:link,
+.topbar .navlinks a[data-i18n]:visited{
+  display: inline-block !important;
+  background: linear-gradient(90deg, #7EC9FF 0%, #6A88F0 45%, #2FE6FF 100%) !important;
+  background-size: 220% auto !important;
+  background-repeat: no-repeat !important;
+  -webkit-background-clip: text !important;
+  background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+  color: transparent !important;
+  background-color: transparent !important;
+}
+
+/* Apply to explicit inner spans too (if present) */
+.topbar .navlinks a > span[data-i18n]{
+  display: inline-block !important;
+  background: linear-gradient(90deg, #7EC9FF 0%, #6A88F0 45%, #2FE6FF 100%) !important;
+  background-size: 220% auto !important;
+  -webkit-background-clip: text !important;
+  background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+  color: transparent !important;
+  background-color: transparent !important;
+}
+
+/* Light theme tuned gradients */
+html[data-theme="light"] .topbar .navlinks a[data-i18n],
+html[data-theme="light"] .topbar .navlinks a > span[data-i18n]{
+  background: linear-gradient(90deg, #3F8DF7 0%, #5B6AE5 48%, #06CFE0 100%) !important;
+  background-size: 220% auto !important;
+}
+
+/* Ensure no other rules set background on anchors */
+.topbar .navlinks a{ background-color: transparent !important; background-image: none !important; }
+
+/* === Patch v17: Light mode uses plain text (no gradient); Dark mode keeps gradient === */
+/* Light-mode override for nav links (anchors and inner spans) */
+html[data-theme="light"] .topbar .navlinks a[data-i18n],
+html[data-theme="light"] .topbar .navlinks a[data-i18n]:link,
+html[data-theme="light"] .topbar .navlinks a[data-i18n]:visited,
+html[data-theme="light"] .topbar .navlinks a > span[data-i18n]{
+  background: none !important;
+  background-image: none !important;
+  -webkit-background-clip: initial !important;
+  background-clip: initial !important;
+  -webkit-text-fill-color: initial !important;
+  color: #0B0D13 !important; /* neutral text for light theme */
+  text-shadow: none !important;
+}
+
+/* Light-mode override for labels (System / English) */
+html[data-theme="light"] .topbar label.control span[data-i18n]{
+  background: none !important;
+  background-image: none !important;
+  -webkit-background-clip: initial !important;
+  background-clip: initial !important;
+  -webkit-text-fill-color: initial !important;
+  color: #0B0D13 !important;
+  text-shadow: none !important;
+}
+
+/* Safety: ensure anchors have no background color in light mode */
+html[data-theme="light"] .topbar .navlinks a{ background-color: transparent !important; }
+
+/* === Patch v18: Light mode — fix blurry/gradient text inside appearance & language controls === */
+/* Target only text nodes inside the pill controls (do not remove the pill background) */
+html[data-theme="light"] .topbar .control button span,
+html[data-theme="light"] .topbar .control .value,
+html[data-theme="light"] .topbar .control .label,
+html[data-theme="light"] .topbar .control .text,
+html[data-theme="light"] .topbar .control [data-i18n]{
+  background: none !important;
+  background-image: none !important;
+  -webkit-background-clip: initial !important;
+  background-clip: initial !important;
+  -webkit-text-fill-color: initial !important;
+  color: #0B0D13 !important;
+  text-shadow: none !important;
+}
+
+/* Safety: ensure the button itself keeps its visual (don’t wipe its background) */
+html[data-theme="light"] .topbar .control button{
+  color: #0B0D13 !important;
+}
+
+/* === Patch v19: Light mode — ensure high-contrast text INSIDE select controls === */
+html[data-theme="light"] .topbar .control select,
+html[data-theme="light"] .topbar .control select:focus,
+html[data-theme="light"] .topbar .control select option{
+  color: #EAF0FB !important;              /* bright text for dark pill */
+  -webkit-text-fill-color: #EAF0FB !important;
+  text-shadow: none !important;
+}
+
+/* In case the UA paints a label span over the select value, reset that too */
+html[data-theme="light"] .topbar .control select + span,
+html[data-theme="light"] .topbar .control select + .value{
+  color: #EAF0FB !important;
+  -webkit-text-fill-color: #EAF0FB !important;
+}
+
+/* Keep the left labels (Appearance/Language) as dark text on white background */
+html[data-theme="light"] .topbar label.control > span[data-i18n]{
+  color: #0B0D13 !important;
+  -webkit-text-fill-color: #0B0D13 !important;
+}
+
+/* === Patch v20: Light mode — make appearance/language control backgrounds light === */
+html[data-theme="light"] .topbar .control select,
+html[data-theme="light"] .topbar .control button,
+html[data-theme="light"] .topbar .control .select,
+html[data-theme="light"] .topbar .control .select-trigger{
+  background: #F5F9FF !important;      /* light pill background */
+  background-image: none !important;
+  color: #0B0D13 !important;            /* readable text */
+  border-color: #D7E8F5 !important;     /* subtle border for light theme */
+  box-shadow: 0 0 0 0.5px rgba(15, 23, 42, .06), 0 0 0 3px rgba(56, 189, 248, .15) inset !important; /* keep soft ring */
+}
+
+html[data-theme="light"] .topbar .control select:focus,
+html[data-theme="light"] .topbar .control button:focus{
+  outline: none !important;
+  box-shadow: 0 0 0 1px rgba(15, 23, 42, .10), 0 0 0 3px rgba(56, 189, 248, .25) inset !important;
+}
+
+/* Ensure the text inside the control stays crisp */
+html[data-theme="light"] .topbar .control select,
+html[data-theme="light"] .topbar .control select option{
+  -webkit-text-fill-color: #0B0D13 !important;
+}
+

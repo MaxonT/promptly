@@ -1,0 +1,232 @@
+const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
+  || (window.location && window.location.origin && window.location.origin !== "null"
+    ? window.location.origin
+    : "http://localhost:8080");
+
+(() => {
+  const listEl = document.getElementById("specsList");
+  const emptyEl = document.getElementById("specsEmpty");
+  const logEl = document.getElementById("specsLog");
+  const refreshBtn = document.getElementById("refreshSpecsBtn");
+  const specMetaEl = document.getElementById("specMeta");
+  const specJsonEl = document.getElementById("specJson");
+  const compiledPromptEl = document.getElementById("compiledPrompt");
+  const compileBtn = document.getElementById("compileSpecBtn");
+
+  const newTitleEl = document.getElementById("newSpecTitle");
+  const newJsonEl = document.getElementById("newSpecJson");
+  const createBtn = document.getElementById("createSpecBtn");
+  const createErrorEl = document.getElementById("createSpecError");
+
+  let currentId = null;
+
+  if (!window.authGuard?.requireLogin({ redirectTo: "settings.html#accountPanel" })) {
+    if (refreshBtn) refreshBtn.disabled = true;
+    if (compileBtn) compileBtn.disabled = true;
+    if (createBtn) createBtn.disabled = true;
+    return;
+  }
+
+  function t(key, options = {}) {
+    // Use centralized i18nManager for consistency
+    if (!window.i18nManager || !window.i18nManager.instance) {
+      console.warn(`[specs.js] i18nManager not ready for key: ${key}`);
+      // Return a friendly fallback instead of the full key
+      return key.split('.').pop();
+    }
+    
+    const result = window.i18nManager.instance.t(key, options);
+    
+    // Validate translation succeeded (check if i18next returned the key itself)
+    if (!result || result === key) {
+      console.warn(`[specs.js] Translation not found for key: ${key}`);
+      // Return the last part of the key as a friendly fallback
+      return key.split('.').pop();
+    }
+    
+    return result;
+  }
+
+  function log(line) {
+    const ts = new Date().toISOString().slice(11, 19);
+    logEl.textContent += `[${ts}] ${line}\n`;
+    logEl.scrollTop = logEl.scrollHeight;
+  }
+
+  function selectSpec(id) {
+    currentId = id;
+    compileBtn.disabled = !id;
+    for (const el of listEl.querySelectorAll(".specs-item")) {
+      el.classList.toggle("specs-item--active", el.dataset.id === id);
+    }
+    if (id) {
+      loadSpecDetail(id);
+    } else {
+      specMetaEl.textContent = "";
+      specJsonEl.textContent = "";
+      compiledPromptEl.textContent = "";
+    }
+  }
+
+  async function loadSpecs() {
+    try {
+      log("GET /api/specs ...");
+      const res = await window.authGuard.fetchWithAuth(`${API_BASE}/api/specs`);
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data) {
+        log(`Specs list error: HTTP ${res.status}`);
+        return;
+      }
+      const arr = data.items || data.specs || data.rows || [];
+      listEl.innerHTML = "";
+      if (!Array.isArray(arr) || arr.length === 0) {
+        emptyEl.classList.remove("hidden");
+        return;
+      }
+      emptyEl.classList.add("hidden");
+      for (const row of arr) {
+        const item = document.createElement("div");
+        item.className = "specs-item";
+        const id = row.id || row.spec_id || row.uuid;
+        item.dataset.id = id;
+        const title = row.title || t("specs.untitledSpec");
+        const created =
+          row.created_at || row.createdAt || row.timestamp || "unknown time";
+        item.innerHTML = `
+          <div class="specs-item-title">${title}</div>
+          <div class="specs-item-meta">${id} · ${created}</div>
+        `;
+        item.addEventListener("click", () => selectSpec(id));
+        listEl.appendChild(item);
+      }
+    } catch (err) {
+      console.error(err);
+      log("Specs list error: " + err.message);
+    }
+  }
+
+  async function loadSpecDetail(id) {
+    if (!id) return;
+    try {
+      log(`GET /api/specs/${id} ...`);
+      const res = await window.authGuard.fetchWithAuth(`${API_BASE}/api/specs/${encodeURIComponent(id)}`);
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data) {
+        log(`Spec detail error: HTTP ${res.status}`);
+        specMetaEl.textContent = t("specs.errorLoadFailed");
+        return;
+      }
+      const row = data.spec || data.item || data.row || data;
+      const title = row.title || t("specs.untitledSpec");
+      const created =
+        row.created_at || row.createdAt || row.timestamp || "unknown time";
+      specMetaEl.textContent = `${title} · ${id} · created ${created}`;
+      try {
+        const specObj =
+          row.spec ||
+          row.spec_json && JSON.parse(row.spec_json) ||
+          row.body ||
+          row;
+        specJsonEl.textContent = JSON.stringify(specObj, null, 2);
+      } catch {
+        specJsonEl.textContent = JSON.stringify(row, null, 2);
+      }
+      compiledPromptEl.textContent = "";
+    } catch (err) {
+      console.error(err);
+      log("Spec detail error: " + err.message);
+    }
+  }
+
+  async function compileCurrentSpec() {
+    if (!currentId) return;
+    try {
+      log(`POST /api/specs/${currentId}/compile ...`);
+      const res = await window.authGuard.fetchWithAuth(`${API_BASE}/api/specs/${encodeURIComponent(currentId)}/compile`, {
+        method: "POST"
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data) {
+        log(`Compile error: HTTP ${res.status}`);
+        compiledPromptEl.textContent = t("specs.errorCompileFailed");
+        return;
+      }
+      const compiled = data.compiled_prompt || data.prompt || data.result || data;
+      if (compiled.blocks) {
+        compiledPromptEl.textContent = JSON.stringify(compiled.blocks, null, 2);
+      } else {
+        compiledPromptEl.textContent = JSON.stringify(compiled, null, 2);
+      }
+    } catch (err) {
+      console.error(err);
+      log("Compile error: " + err.message);
+      compiledPromptEl.textContent = t("specs.errorCompileError", { error: err.message });
+    }
+  }
+
+  async function createSpec() {
+    createErrorEl.textContent = "";
+    createErrorEl.classList.add("hidden");
+    const title = (newTitleEl.value || "").trim();
+    if (!title) {
+      createErrorEl.textContent = t("specs.errorTitleRequired");
+      createErrorEl.classList.remove("hidden");
+      return;
+    }
+    let specObj = {};
+    const raw = (newJsonEl.value || "").trim();
+    if (raw) {
+      try {
+        specObj = JSON.parse(raw);
+      } catch (err) {
+        createErrorEl.textContent = t("specs.errorJsonInvalid");
+        createErrorEl.classList.remove("hidden");
+        return;
+      }
+    }
+    try {
+      log("POST /api/specs ...");
+      const res = await window.authGuard.fetchWithAuth(`${API_BASE}/api/specs`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title, spec: specObj })
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || data.ok === false) {
+        log(
+          "Create spec failed: HTTP " +
+            res.status +
+            " " +
+            JSON.stringify(data)
+        );
+        createErrorEl.textContent = t("specs.errorCreateFailed");
+        createErrorEl.classList.remove("hidden");
+        return;
+      }
+      log("Spec created.");
+      newTitleEl.value = "";
+      newJsonEl.value = "";
+      await loadSpecs();
+    } catch (err) {
+      console.error(err);
+      log("Create spec error: " + err.message);
+      createErrorEl.textContent = t("specs.errorCreateError");
+      createErrorEl.classList.remove("hidden");
+    }
+  }
+
+  refreshBtn?.addEventListener("click", loadSpecs);
+  compileBtn?.addEventListener("click", compileCurrentSpec);
+  createBtn?.addEventListener("click", createSpec);
+
+  // Wait for i18n to be ready before logging
+  if (window.i18n) {
+    log(t("specs.logLoaded") || "Specs Manager loaded. Fetching specs ...");
+  } else {
+    window.addEventListener('i18nReady', () => {
+      log(t("specs.logLoaded") || "Specs Manager loaded. Fetching specs ...");
+    });
+  }
+  log("Specs Manager loaded. Fetching specs ...");
+  loadSpecs();
+})();

@@ -1,0 +1,6 @@
+- [x] Generator system prompt role is "Precision Command Optimizer".
+- [x] Generator system prompt strictly enforces "source of truth" (no guessing).
+- [x] Generator system prompt output is structured as "Directives to AI" (not human summary).
+- [x] Generator system prompt explicitly asks for "Rules Extraction" with citations.
+- [x] No "Overview/Summary" sections or fluff.
+- [x] TASK_TYPE_HINTS updated to match precision style.

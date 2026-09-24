@@ -1,0 +1,83 @@
+openapi: 3.0.3
+info:
+  title: Promptly Cloud API
+  version: "0.6.8"
+servers:
+  - url: https://your-backend.example
+paths:
+  /api/health:
+    get:
+      summary: Health check
+      responses: { '200': { description: OK } }
+  /api/settings:
+    get:
+      summary: Public runtime settings (no secrets)
+      responses: { '200': { description: OK } }
+  /api/auth/login:
+    post:
+      summary: Demo email login (returns JWT)
+      responses: { '200': { description: Token } }
+  /api/docs:
+    get: { summary: List docs, responses: { '200': { description: OK } } }
+    post: { summary: Create doc, responses: { '201': { description: Created } } }
+  /api/docs/{id}:
+    put: { summary: Update doc, responses: { '200': { description: OK }, '409': { description: Conflict } } }
+    delete: { summary: Delete doc, responses: { '200': { description: Deleted } } }
+  /api/share/{docId}:
+    post:
+      summary: Create share link
+      responses: { '200': { description: URL } }
+  /api/share/resolve/{token}:
+    get:
+      summary: Resolve share token
+      responses: { '200': { description: OK } }
+  /api/enhance/score:
+    post:
+      summary: Score a prompt on multiple quality dimensions
+      responses: { '200': { description: Scored prompt } }
+  /api/enhance/structure:
+    post:
+      summary: Structural rewrite of a prompt
+      responses: { '200': { description: Structured prompt } }
+  /api/enhance/style:
+    post:
+      summary: Style / tone rewrite
+      responses: { '200': { description: Styled prompt } }
+  /api/enhance/simplify:
+    post:
+      summary: Simpler / more direct version of a prompt
+      responses: { '200': { description: Simplified prompt } }
+  /api/enhance/validate:
+    post:
+      summary: Validate a prompt against constraints / safety rules
+      responses: { '200': { description: Validation result } }
+  /api/question-sessions:
+    post:
+      summary: Start a question session for building a spec
+      responses: { '200': { description: Session started } }
+  /api/question-sessions/{id}:
+    get:
+      summary: Fetch a question session (where supported)
+      responses: { '200': { description: OK } }
+    post:
+      summary: Answer the next question in a session (where supported)
+      responses: { '200': { description: Updated session } }
+  /api/specs:
+    get:
+      summary: List specs for the current user
+      responses: { '200': { description: OK } }
+    post:
+      summary: Create a spec
+      responses: { '201': { description: Created } }
+  /api/specs/{id}:
+    get:
+      summary: Fetch a single spec
+      responses: { '200': { description: OK } }
+  /api/specs/{id}/compile:
+    post:
+      summary: Compile a spec into prompt blocks
+      responses: { '200': { description: Compiled prompt } }
+  /api/outcome-runs:
+    post:
+      summary: Outcome‑first generation (Best‑of‑N / Score / Argmax)
+      responses: { '200': { description: Candidates and best choice } }

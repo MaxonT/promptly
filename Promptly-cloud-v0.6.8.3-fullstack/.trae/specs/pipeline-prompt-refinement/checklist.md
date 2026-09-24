@@ -1,4 +1,0 @@
-- [x] Generator prompt forbids emotional/fluff introductions (e.g., "elegant").
-- [x] Generator prompt forbids revealing derived answers in context (e.g., "this is a torus with radius b").
-- [x] Generator prompt includes explicit anti-outline instruction ("start with item 1").
-- [x] Generator prompt style instructions are concise and direct.

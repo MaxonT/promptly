@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en" data-theme="auto">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Promptly Specs Manager</title>
+  <link rel="icon" href="assets/promptly-icon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="specs.css" />
+</head>
+<body class="app-shell">
+  <header class="specs-header">
+    <div class="specs-header-main">
+      <img src="assets/promptly-icon.svg" alt="Promptly" class="specs-logo" />
+      <div>
+        <h1 class="specs-title">Specs Manager</h1>
+        <p class="specs-subtitle">
+          Browse, inspect, and compile your Promptly specs into deterministic prompts.
+        </p>
+      </div>
+    </div>
+    <div class="specs-header-meta">
+      <span class="specs-tag">v0.6.8 · Specs beta</span>
+    </div>
+  </header>
+
+  <main class="specs-main">
+    <section class="specs-panel specs-panel--list">
+      <div class="specs-panel-header">
+        <h2>Specs</h2>
+        <button id="refreshSpecsBtn" class="specs-button">Refresh</button>
+      </div>
+      <p class="specs-panel-desc">
+        These specs are stored in the backend database. Select one to see details and compile it.
+      </p>
+      <div id="specsList" class="specs-list"></div>
+      <p id="specsEmpty" class="specs-empty hidden">No specs found yet.</p>
+    </section>
+
+    <section class="specs-panel specs-panel--detail">
+      <h2>Spec details</h2>
+      <p class="specs-panel-desc">
+        Inspect the raw spec JSON and compile it into prompt blocks for your LLM pipeline.
+      </p>
+      <div id="specMeta" class="specs-meta"></div>
+      <pre id="specJson" class="specs-code-block"></pre>
+
+      <div class="specs-actions">
+        <button id="compileSpecBtn" class="specs-button-primary" disabled>
+          Compile to prompt
+        </button>
+      </div>
+
+      <h3>Last compiled prompt</h3>
+      <pre id="compiledPrompt" class="specs-code-block"></pre>
+    </section>
+
+    <section class="specs-panel specs-panel--create">
+      <h2>Create new spec</h2>
+      <p class="specs-panel-desc">
+        Paste or type a JSON spec. At minimum, provide a title and a small spec object.
+      </p>
+      <label class="specs-label">
+        Title
+        <input id="newSpecTitle" type="text" placeholder="My new Promptly spec" />
+      </label>
+      <label class="specs-label">
+        Spec JSON
+        <textarea id="newSpecJson" rows="6" placeholder='{"project_goal": "..."}'></textarea>
+      </label>
+      <button id="createSpecBtn" class="specs-button">Create spec</button>
+      <p id="createSpecError" class="specs-error hidden"></p>
+    </section>
+
+    <section class="specs-panel specs-panel--log">
+      <h2>Specs log</h2>
+      <pre id="specsLog" class="specs-log"></pre>
+    </section>
+  </main>
+
+  <script src="specs.js"></script>
+</body>
+</html>

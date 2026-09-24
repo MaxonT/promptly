@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en" data-theme="auto">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Promptly Outcome-first Runner</title>
+  <link rel="icon" href="assets/promptly-icon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="outcome.css" />
+</head>
+<body class="app-shell">
+  <header class="outcome-header">
+    <div class="outcome-header-main">
+      <img src="assets/promptly-icon.svg" alt="Promptly" class="outcome-logo" />
+      <div>
+        <h1 class="outcome-title">Outcome-first Runner</h1>
+        <p class="outcome-subtitle">
+          Generate multiple candidates, score them, and pick the best one with a transparent objective.
+        </p>
+      </div>
+    </div>
+    <div class="outcome-header-meta">
+      <span class="outcome-tag">v0.6.7 · Outcome-first beta</span>
+    </div>
+  </header>
+
+  <main class="outcome-main">
+    <section class="outcome-panel outcome-panel--spec">
+      <h2>1. Define your outcome</h2>
+      <label class="outcome-label">
+        Task
+        <textarea id="taskInput" rows="3" placeholder="What do you want the model to do?"></textarea>
+      </label>
+      <label class="outcome-label">
+        Extra context (optional)
+        <textarea id="inputInput" rows="3" placeholder="Paste any input data, bullet points, or notes here."></textarea>
+      </label>
+      <div class="outcome-row">
+        <label class="outcome-label">
+          Style / tone (optional)
+          <input id="styleInput" type="text" placeholder="e.g. concise, friendly, analytical" />
+        </label>
+        <label class="outcome-label">
+          Hard constraints (optional)
+          <input id="constraintsInput" type="text" placeholder="e.g. max 400 words, no emojis, ..." />
+        </label>
+      </div>
+      <div class="outcome-row">
+        <label class="outcome-label">
+          N candidates
+          <input id="nInput" type="number" min="2" max="8" value="4" />
+        </label>
+        <label class="outcome-label">
+          Max length test (optional)
+          <input id="maxLengthInput" type="number" min="64" max="4000" placeholder="characters" />
+        </label>
+      </div>
+      <div class="outcome-row outcome-row--keywords">
+        <label class="outcome-label">
+          Must include (comma separated)
+          <input id="mustIncludeInput" type="text" placeholder="key phrases that must appear" />
+        </label>
+        <label class="outcome-label">
+          Must NOT include (comma separated)
+          <input id="mustNotIncludeInput" type="text" placeholder="forbidden phrases" />
+        </label>
+      </div>
+      <button id="runOutcomeBtn" class="outcome-button-primary">Run outcome-first generation</button>
+      <p id="specError" class="outcome-error hidden"></p>
+    </section>
+
+    <section class="outcome-panel outcome-panel--best">
+      <h2>2. Selected best candidate</h2>
+      <p class="outcome-panel-desc">
+        This is the candidate with the highest finalScore after scoring and tests.
+      </p>
+      <div id="bestScoreMeta" class="outcome-best-meta"></div>
+      <pre id="bestContent" class="outcome-code-block"></pre>
+    </section>
+
+    <section class="outcome-panel outcome-panel--list">
+      <h2>3. All candidates & scores</h2>
+      <div id="candidatesList" class="outcome-candidates"></div>
+    </section>
+
+    <section class="outcome-panel outcome-panel--log">
+      <h2>Engine log</h2>
+      <pre id="outcomeLog" class="outcome-log"></pre>
+    </section>
+  </main>
+
+  <script src="outcome.js"></script>
+</body>
+</html>

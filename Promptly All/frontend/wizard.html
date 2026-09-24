@@ -1,0 +1,495 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Promptly Question Wizard — Generate AI Project Specifications Instantly</title>
+  <!-- SEO -->
+  <meta name="description" content="Answer a few questions and Promptly's AI Question Wizard generates a complete project specification and optimized prompt for any LLM. Free to try." />
+  <meta name="keywords" content="AI project specification, question wizard, prompt generator, ChatGPT spec, LLM project brief, AI requirements generator" />
+  <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1" />
+  <link rel="canonical" href="https://promptly.solutions/wizard.html" />
+  <!-- Open Graph -->
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://promptly.solutions/wizard.html" />
+  <meta property="og:title" content="Promptly Question Wizard — Generate AI Project Specs" />
+  <meta property="og:description" content="Answer a few questions and get a complete project specification and optimized prompt for any LLM." />
+  <meta property="og:image" content="https://promptly.solutions/assets/promptly-icon.svg" />
+  <meta property="og:site_name" content="Promptly" />
+  <meta property="og:locale" content="en_US" />
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:title" content="Promptly Question Wizard — Generate AI Specs" />
+  <meta name="twitter:description" content="Answer a few questions and get a complete project specification and optimized prompt for any LLM." />
+  <meta name="twitter:image" content="https://promptly.solutions/assets/promptly-icon.svg" />
+  <!-- JSON-LD Structured Data -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebApplication",
+    "name": "Promptly Question Wizard",
+    "url": "https://promptly.solutions/wizard.html",
+    "description": "AI-powered Question Wizard that generates complete project specifications and optimized prompts for any LLM.",
+    "applicationCategory": "ProductivityApplication",
+    "operatingSystem": "Web",
+    "isPartOf": {
+      "@type": "WebSite",
+      "name": "Promptly",
+      "url": "https://promptly.solutions/"
+    }
+  }
+  </script>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://promptly.solutions/" },
+      { "@type": "ListItem", "position": 2, "name": "Question Wizard", "item": "https://promptly.solutions/wizard.html" }
+    ]
+  }
+  </script>
+  <link rel="icon" href="assets/promptly-icon.svg" type="image/svg+xml"/>
+  <link rel="apple-touch-icon" href="assets/promptly-icon.svg"/>
+  <!-- Theme Manager - Must load before CSS -->
+  <script src="lib/themeManager.js"></script>
+  <link rel="stylesheet" href="theme.css" />
+  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="wizard.css" />
+  <script src="config.js"></script>
+  <script src="lib/authGuard.js"></script>
+  <script src="core.js"></script>
+  <script src="lib/particles.js"></script>
+  <script src="lib/i18next.min.js"></script>
+  <script type="module" src="i18n/index.js"></script>
+  <style>
+    /* Global navigation header styles (consistent with index.html) */
+    .global-topbar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 2000;
+      background: var(--surface);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border-light);
+      padding: 0.75rem 1.5rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 1rem;
+      box-shadow: var(--shadow-sm);
+    }
+    html[data-theme="light"] .global-topbar {
+      background: rgba(255, 255, 255, 0.95);
+      border-bottom-color: rgba(203, 213, 225, 0.5);
+    }
+    html[data-theme="light"] .global-topbar .brand {
+      color: var(--text-secondary);
+    }
+    html[data-theme="light"] .global-topbar .navlinks a {
+      color: var(--muted);
+    }
+    html[data-theme="light"] .global-topbar .navlinks a:hover {
+      color: var(--brand-b, #06B6D4);
+    }
+    html[data-theme="light"] .global-topbar .navlinks a.active {
+      color: var(--brand-a, #7C3AED);
+    }
+    .global-topbar .brand {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-weight: 700;
+      font-size: 1.1rem;
+      color: var(--text-high, #E7EAF0);
+      text-decoration: none;
+    }
+    .global-topbar .brand img {
+      width: 28px;
+      height: 28px;
+    }
+    .global-topbar .navlinks {
+      display: flex;
+      gap: 1.5rem;
+      align-items: center;
+    }
+    .global-topbar .navlinks a {
+      color: var(--text-med, #A0A8B5);
+      text-decoration: none;
+      font-size: 0.9rem;
+      transition: color 0.2s ease;
+    }
+    .global-topbar .navlinks a:hover {
+      color: var(--brand-b, #06B6D4);
+    }
+    .global-topbar .navlinks a.active {
+      color: var(--brand-a, #7C3AED);
+      font-weight: 600;
+    }
+    /* Wizard content shifted down to accommodate header */
+    body.app-shell {
+      padding-top: 60px;
+    }
+    /* Global footer styles */
+    .global-footer {
+      text-align: center;
+      padding: 1.5rem;
+      margin-top: 3rem;
+      border-top: 1px solid rgba(148, 163, 184, 0.2);
+      color: var(--text-low, #6B7280);
+      font-size: 0.85rem;
+      background: rgba(15, 23, 42, 0.5);
+    }
+    html[data-theme="light"] .global-footer {
+      background: rgba(248, 250, 252, 0.8);
+      border-top-color: rgba(203, 213, 225, 0.5);
+    }
+    .global-footer a {
+      color: var(--brand-b, #06B6D4);
+      text-decoration: none;
+    }
+    .global-footer a:hover {
+      text-decoration: underline;
+    }
+    @media (max-width: 768px) {
+      .global-topbar {
+        flex-wrap: wrap;
+        padding: 0.5rem 1rem;
+      }
+      .global-topbar .navlinks {
+        gap: 1rem;
+        font-size: 0.85rem;
+      }
+    }
+  </style>
+  <script src="lib/seoManager.js"></script>
+</head>
+<body class="app-shell">
+  <!-- Global Navigation Header (consistent with dashboard) -->
+  <header class="global-topbar">
+    <a href="index.html" class="brand">
+      <img src="assets/promptly-icon.svg" alt="Promptly" />
+      <span>Promptly</span>
+    </a>
+    <nav class="navlinks">
+      <a href="index.html" data-i18n="nav.dashboard">← Dashboard</a>
+      <a href="subscription.html" data-i18n="nav.subscription">Subscription</a>
+      <a href="settings.html#accountPanel" data-i18n="nav.settings">Settings</a>
+      <a href="privacy.html" data-i18n="nav.privacy">Privacy</a>
+      <a href="cookies.html" data-i18n="nav.cookies">Cookies</a>
+      <a href="terms.html" data-i18n="nav.terms">Terms</a>
+      <label class="control"><span data-i18n="appearance.label">Appearance</span>
+        <select id="themeSelect"><option value="auto" data-i18n="appearance.auto">System</option><option value="light" data-i18n="appearance.light">Light</option><option value="dark" data-i18n="appearance.dark">Dark</option></select>
+      </label>
+      <label class="control"><span data-i18n="language.label">Language</span>
+        <select id="langSelect"></select>
+      </label>
+    </nav>
+  </header>
+
+  <!-- Animated AI-style background -->
+  <div class="wizard-background">
+    <div class="wizard-gradient-orb wizard-gradient-orb--1"></div>
+    <div class="wizard-gradient-orb wizard-gradient-orb--2"></div>
+    <div class="wizard-gradient-orb wizard-gradient-orb--3"></div>
+    <div class="wizard-geometric-pattern">
+      <div class="wizard-geometric-shape wizard-geometric-shape--1"></div>
+      <div class="wizard-geometric-shape wizard-geometric-shape--2"></div>
+      <div class="wizard-geometric-shape wizard-geometric-shape--3"></div>
+      <div class="wizard-geometric-shape wizard-geometric-shape--4"></div>
+    </div>
+  </div>
+  
+  <header class="wizard-header">
+    <div class="wizard-header-main">
+      <img src="assets/promptly-icon.svg" alt="Promptly" class="wizard-logo" />
+      <div>
+        <h1 class="wizard-title" data-i18n="wizard.title">Promptly Question Wizard</h1>
+        <p class="wizard-subtitle" data-i18n="wizard.subtitle">From fuzzy idea → structured spec → compiled prompt blocks.</p>
+      </div>
+    </div>
+    <div class="wizard-header-meta">
+      <span class="wizard-tag">v0.6.5 · backend-powered</span>
+    </div>
+  </header>
+
+  <!-- Top-level wizard progress stepper -->
+  <div class="wizard-stepper">
+    <div class="wizard-stepper-step wizard-stepper-step--active" id="step-describe">
+      <div class="wizard-stepper-circle">1</div>
+      <div class="wizard-stepper-label" data-i18n="wizard.stepDescribe">Describe</div>
+    </div>
+    <div class="wizard-stepper-connector"></div>
+    <div class="wizard-stepper-step" id="step-questions">
+      <div class="wizard-stepper-circle">2</div>
+      <div class="wizard-stepper-label" data-i18n="wizard.stepQuestions">Questions</div>
+    </div>
+    <div class="wizard-stepper-connector"></div>
+    <div class="wizard-stepper-step" id="step-finalize">
+      <div class="wizard-stepper-circle">3</div>
+      <div class="wizard-stepper-label" data-i18n="wizard.stepFinalize">Finalize</div>
+    </div>
+  </div>
+
+  <div class="wizard-top-controls">
+    <section class="wizard-mode-toggle" id="modeSelector" aria-label="Response depth mode">
+      <div class="wizard-mode-option" data-mode="fast" tabindex="0">
+        <div class="wizard-mode-option-header">
+          <span class="wizard-mode-label" data-i18n="wizard.modeFast">Fast</span>
+          <span class="wizard-mode-tier">A+</span>
+        </div>
+        <p class="wizard-mode-desc" data-i18n="wizard.modeFastDesc">Quick response, minimal reasoning</p>
+        <span class="wizard-mode-time" data-time="fast">🕐 10–60s</span>
+      </div>
+      <div class="wizard-mode-option" data-mode="deep" tabindex="0" data-requires-premium="true">
+        <div class="wizard-mode-option-header">
+          <span class="wizard-mode-label" data-i18n="wizard.modeDeep">Deep Thinking</span>
+          <span class="wizard-mode-tier">S</span>
+        </div>
+        <p class="wizard-mode-desc" data-i18n="wizard.modeDeepDesc">Balanced depth and speed</p>
+        <span class="wizard-mode-time" data-time="deep">🕐 30–120s</span>
+        <span class="wizard-mode-premium-badge">💎 Premium</span>
+      </div>
+      <div class="wizard-mode-option" data-mode="ultra" tabindex="0" data-requires-premium="true">
+        <div class="wizard-mode-option-header">
+          <span class="wizard-mode-label" data-i18n="wizard.modeUltra">Ultra Thinking</span>
+          <span class="wizard-mode-tier">S+</span>
+        </div>
+        <p class="wizard-mode-desc" data-i18n="wizard.modeUltraDesc">Maximum depth, slowest response</p>
+        <span class="wizard-mode-time" data-time="ultra">🕐 90–180s</span>
+        <span class="wizard-mode-premium-badge">💎 Premium</span>
+      </div>
+    </section>
+  </div>
+
+  <!-- Fixed Warning Banner (shown when wizard is running) -->
+  <div id="wizardRunningWarning" class="wizard-running-warning hidden">
+    <div class="wizard-running-warning-content">
+      <span class="wizard-running-warning-icon">⚠️</span>
+      <span class="wizard-running-warning-text">DO NOT EXIT THIS PAGE - Wizard is processing</span>
+      <span class="wizard-running-warning-icon">⚠️</span>
+    </div>
+  </div>
+
+  <main class="wizard-main">
+    <section class="wizard-panel wizard-panel--idea">
+      <h2 data-i18n="wizard.describeProject">1. Describe your project</h2>
+      <p class="wizard-panel-desc" data-i18n="wizard.describeProjectDesc">
+        Write a short description of what you want the model to build or help you with.
+        The Question Engine will turn this into a guided Q&amp;A wizard.
+      </p>
+      <label class="wizard-label">
+        <span data-i18n="wizard.projectIdea">Project idea</span>
+        <textarea id="ideaInput" rows="4" aria-describedby="ideaHint"></textarea>
+      </label>
+      <p id="ideaHint" class="wizard-inline-hint" data-i18n="wizard.projectIdeaHint">Minimum 10 characters. The Start button will enable automatically once this requirement is met.</p>
+      <label class="wizard-label">
+        <span data-i18n="wizard.projectType">Project type</span>
+        <select id="kindSelect">
+          <option value="" data-i18n="wizard.typeAutoDetect">Auto-detect</option>
+          <option value="coding" data-i18n="wizard.typeCoding">Coding / engineering</option>
+          <option value="writing" data-i18n="wizard.typeWriting">Writing / content</option>
+          <option value="analysis" data-i18n="wizard.typeAnalysis">Analysis / research</option>
+          <option value="product" data-i18n="wizard.typeProduct">Product / UX design</option>
+          <option value="custom" data-i18n="wizard.typeCustom">Custom / other</option>
+        </select>
+      </label>
+      <button id="startWizardBtn" class="wizard-button-primary" data-i18n="wizard.start">Start wizard</button>
+      <button id="restoreSnapshotBtn" class="wizard-button-secondary hidden" data-i18n="wizard.restoreSession">Restore last session</button>
+      <p id="ideaError" class="wizard-error hidden"></p>
+    </section>
+
+    <section class="wizard-panel wizard-panel--qa">
+      <div class="wizard-panel-header">
+        <h2 data-i18n="wizard.answerQuestions">2. Answer guided questions</h2>
+        <p class="wizard-panel-desc" data-i18n="wizard.answerQuestionsDesc">
+          The engine will ask 3–5 questions at a time. Your answers will be stored in the backend and
+          used to assemble a high-level spec.
+        </p>
+        <div class="wizard-user-guidance">
+          <p data-i18n="wizard.answerTipsTitle">💡 Answering Tips:</p>
+          <ul>
+            <li data-i18n="[html]wizard.answerTip1">You <strong>do NOT need to answer all questions</strong> — answering at least one is okay</li>
+            <li data-i18n="wizard.answerTip2">The more questions you answer, the more accurate and tailored your final prompt will be</li>
+            <li data-i18n="[html]wizard.answerTip3">Your answers are <strong>automatically saved</strong> as you type — no need to click Save</li>
+            <li data-i18n="wizard.answerTip4">You can skip questions or go back to previous pages anytime</li>
+          </ul>
+        </div>
+        <div class="wizard-timing-info" id="wizardTimingInfo">
+          <p>
+            <strong>Expected processing time:</strong> <span id="wizardTimingText"></span>
+          </p>
+        </div>
+      </div>
+      <div id="qaEmptyState" class="wizard-empty">
+        <p>No questions yet. Start the wizard by describing your project on the left.</p>
+      </div>
+      <div id="wizardStatus" class="wizard-status hidden" role="status" aria-live="polite"></div>
+      
+      <!-- Answer Guidance Banner (Phase 3.2) -->
+      <div id="answerGuidance" class="wizard-answer-guidance hidden">
+        <div class="wizard-answer-guidance-icon">💡</div>
+        <div class="wizard-answer-guidance-text">
+          <span id="guidanceMessage">Answer at least 1 question to continue</span>
+          <span id="guidanceCounter" class="wizard-answer-counter">0 of 0 answered</span>
+        </div>
+      </div>
+      
+      <!-- Auto-save Indicator (Phase 3.1) -->
+      <div id="autoSaveIndicator" class="wizard-autosave-indicator hidden">
+        <svg class="wizard-autosave-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="20 6 9 17 4 12"></polyline>
+        </svg>
+        <span>Auto-saved</span>
+      </div>
+      
+      <div id="questionsContainer" class="wizard-questions hidden"></div>
+      <div class="wizard-qa-actions">
+        <!-- Progress indicator at top of navigation bar -->
+        <div id="progressIndicator" class="wizard-progress-indicator hidden">
+          <div class="wizard-progress-bar-container">
+            <div id="progressBar" class="wizard-progress-bar"></div>
+          </div>
+          <div class="wizard-progress-info">
+            <span id="progressText" class="wizard-progress-text">Questions 1–5 of 20</span>
+            <span id="progressDots" class="wizard-progress-dots">●○○○</span>
+          </div>
+        </div>
+        
+        <div class="wizard-qa-actions-buttons">
+          <div class="wizard-qa-actions-left">
+            <button id="backBtn" class="wizard-button-nav wizard-button-nav--back hidden">
+              <span class="wizard-button-icon">←</span>
+              <span>Back</span>
+            </button>
+            <button id="cancelWizardBtn" class="wizard-button-secondary hidden" type="button">Cancel</button>
+            <button id="saveSnapshotBtn" class="wizard-button-secondary hidden">💾 Save snapshot</button>
+          </div>
+          <div class="wizard-qa-actions-right">
+            <button id="nextBatchBtn" class="wizard-button-nav wizard-button-nav--next hidden">
+              <span>Next questions</span>
+              <span class="wizard-button-icon">→</span>
+            </button>
+            <button id="finalizeBtn" class="wizard-button-primary wizard-button-finalize hidden">
+              <span>✓ Finalize Spec</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="wizard-panel wizard-panel--result">
+      <div class="wizard-panel-header">
+        <h2 data-i18n="wizard.specAndPrompt">3. Spec &amp; compiled prompt</h2>
+        <p class="wizard-panel-desc" data-i18n="wizard.specAndPromptDesc">
+          Once finalized, you&apos;ll see both the structured spec JSON and the compiled prompt blocks you can use with LLMs.
+        </p>
+      </div>
+      <div id="resultEmptyState" class="wizard-empty">
+        <p>Finish at least one wizard run to see results here.</p>
+      </div>
+      <div id="resultContainer" class="wizard-result wizard-result--forge hidden">
+        <!-- Forge ceremony decorations (moved to outer border) -->
+        <div class="forge-border-wrapper">
+          <div class="forge-corner forge-corner--tl"></div>
+          <div class="forge-corner forge-corner--tr"></div>
+          <div class="forge-corner forge-corner--bl"></div>
+          <div class="forge-corner forge-corner--br"></div>
+          <div class="forge-scanline"></div>
+        </div>
+        
+        <!-- SEALED badge with premium metal finish -->
+        <div class="forge-badge hidden">
+          <div class="forge-badge-shine"></div>
+          <div class="forge-badge-icon">🔒</div>
+          <div class="forge-badge-text">SEALED</div>
+        </div>
+        
+        <!-- Spec section with copy button -->
+        <div class="wizard-result-section forge-block" data-forge-delay="0">
+          <div class="forge-section-header">
+            <h3 class="forge-section-title">High-level spec</h3>
+            <button class="forge-copy-btn" data-copy-target="specOutput" aria-label="Copy spec to clipboard">
+              <svg class="forge-copy-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+              </svg>
+              <span class="forge-copy-text">Copy</span>
+            </button>
+          </div>
+          <pre id="specOutput" class="wizard-code forge-content forge-code-enhanced"></pre>
+        </div>
+        
+        <!-- Prompt blocks section with copy button -->
+        <div class="wizard-result-section forge-block" data-forge-delay="1">
+          <div class="forge-section-header">
+            <h3 class="forge-section-title">Compiled prompt blocks</h3>
+            <button class="forge-copy-btn" data-copy-target="promptOutput" aria-label="Copy prompt to clipboard">
+              <svg class="forge-copy-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+              </svg>
+              <span class="forge-copy-text">Copy</span>
+            </button>
+          </div>
+          <pre id="promptOutput" class="wizard-code forge-content forge-code-enhanced"></pre>
+        </div>
+        
+        <!-- Explanation section -->
+        <div class="wizard-result-section forge-block" data-forge-delay="2">
+          <div class="forge-section-header">
+            <h3 class="forge-section-title">Explanation</h3>
+          </div>
+          <pre id="explanationOutput" class="wizard-code wizard-code--plain forge-content forge-code-enhanced"></pre>
+        </div>
+        
+        <!-- Result page section - HERO CTA -->
+        <div class="wizard-result-section wizard-result-section--hero forge-block" data-forge-delay="3">
+          <div class="forge-section-header">
+            <h3 class="forge-section-title forge-section-title--hero">Result page</h3>
+          </div>
+          <p class="wizard-panel-desc forge-hero-desc">
+            Open this result in a dedicated view you can share or bookmark.
+          </p>
+          <button id="resultPageLink" class="forge-hero-cta hidden" type="button">
+            <span class="forge-hero-cta-bg"></span>
+            <span class="forge-hero-cta-content">
+              <span class="forge-hero-cta-text">Open Result Page</span>
+              <svg class="forge-hero-cta-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+                <polyline points="15 3 21 3 21 9"></polyline>
+                <line x1="10" y1="14" x2="21" y2="3"></line>
+              </svg>
+            </span>
+          </button>
+        </div>
+      </div>
+</section>
+
+    <section class="wizard-panel wizard-panel--log">
+      <div class="wizard-panel-header">
+        <h2>Engine log</h2>
+        <p class="wizard-panel-desc">
+          Lightweight console to help debug the Question Engine end-to-end.
+        </p>
+      </div>
+      <pre id="logOutput" class="wizard-log"></pre>
+    </section>
+  </main>
+
+  <!-- Global Footer (consistent with dashboard) -->
+  <footer class="global-footer">
+    <p>
+      © Promptly v0.6.8.3 · No trackers. Preferences saved only after consent. · 
+      <a href="privacy.html">Privacy</a> · 
+      <a href="cookies.html">Cookies</a> · 
+      <a href="terms.html">Terms</a> · 
+      Support: <a href="mailto:PromptlyGuli@gmail.com">PromptlyGuli@gmail.com</a>
+    </p>
+  </footer>
+
+  <script src="wizard.js"></script>
+  <script src="lib/redeemBubble.js" defer></script>
+</body>
+</html>

@@ -1,0 +1,475 @@
+v0.6.12.0
+
+Release Date: 2025-12-27
+Type: MAJOR - Subscription V2 MVP Complete (Days 5-8)
+
+生产级订阅系统韧性功能：
+✅ Webhook 幂等性 (stripe_events 表，status tracking)
+✅ 每日补偿任务 (自动修复 stuck sessions，webhook retry)
+✅ 错误恢复 UI (用户重试按钮，enhanced error handling)
+✅ 自动化测试套件 (14 tests, 100% pass rate)
+
+Technical Highlights:
+- Daily job at 2:00 AM reconciles pending sessions with Stripe
+- Webhook retry logic: max 3 attempts within 7 days
+- User-initiated retry buttons in checkout-success.html & subscription.js
+- Comprehensive test coverage for all MVP features (Days 1-8)
+
+Files: 6 new files, 4 modified files
+Database: 1 new table (stripe_events)
+Tests: 14/14 passed
+
+---
+
+Previous Releases:
+
+v0.6.11.0
+
+Release Date: 2025-12-20
+Type: MAJOR - 全局主题系统重构
+
+完整的深浅色模式支持：
+✅ 建立全局语义token系统 (theme.css)
+✅ 所有CSS文件使用语义token替代硬编码颜色
+✅ 表单控件完整主题支持 (input/textarea/select)
+✅ 浏览器autofill主题适配
+✅ 滚动条主题适配
+✅ 所有HTML文件引入theme.css
+
+修改的文件：
+- frontend/theme.css (新建，完整语义token系统)
+- frontend/index.html (example-card语义化)
+- frontend/wizard.html (添加theme.css)
+- frontend/wizard.css (136处硬编码→语义token)
+- frontend/specs.css (硬编码→语义token)
+- frontend/outcome.css (硬编码→语义token)
+- frontend/enhancer.css (硬编码→语义token)
+- frontend/settings.css (硬编码→语义token)
+- frontend/specs.html, outcome.html, enhancer.html, settings.html, result.html (添加theme.css)
+
+设计原则：
+1. 深浅色是两套完整的视觉状态
+2. 用语义token，不用硬编码色值
+3. 对比度是第一原则
+4. 组件身份唯一
+5. 全局优先于局部
+
+Previous Version: v0.6.10.8
+
+Changes in v0.6.10.7:
+Type: FIX - Compiled Spec Field Mapping
+
+修复compiled spec出现null的问题：
+- compileSpecToPrompt现在正确映射generateRawSpec生成的字段
+- 支持：project_goal, objectives, target_users, key_features, technical_stack, data_model等
+- 向后兼容旧字段：actors, flows, requirements, data, architecture
+
+Previous Version: v0.6.10.6
+
+Changes in v0.6.10.6:
+Type: CRITICAL HOTFIX - Light Mode Visibility + Question Generation Language 🚨
+
+🚨 紧急修复两个关键问题：
+- ✅ 修复Light模式下选项按钮完全不可见的问题
+- ✅ 修复中文模式下生成的questions仍然是英文的问题
+
+Changes in v0.6.10.6:
+
+🔧 关键修复1：Light模式选项不可见（wizard.css）
+问题：在Light模式下，.wizard-pill选项按钮的文字几乎透明，完全无法看见
+原因：缺少Light模式的特定样式覆盖
+修复：
+- 添加 [data-theme="light"] .wizard-pill 样式
+- 背景：rgba(255, 255, 255, 0.9) - 白色背景
+- 文字：rgba(15, 23, 42, 0.9) - 深色文字（高对比度）
+- 边框：rgba(148, 163, 184, 0.5) - 清晰可见边框
+- hover状态：淡紫色背景 + 深色文字
+- selected状态：保持紫色渐变 + 白色文字
+
+🔧 关键修复2：Questions生成语言问题（llmAgents.js + questionSessions.js）
+问题：用户选择中文界面，但生成的questions全是英文
+原因：generateBroadQuestions 和 generateChoiceQuestions 函数缺少language参数
+修复：
+- generateBroadQuestions 添加 language = 'en' 参数
+- generateChoiceQuestions 添加 language = 'en' 参数
+- 两个函数的system prompt都添加 getLanguageInstruction(language)
+- questionSessions.js POST "/" endpoint 提取并传递language参数
+- 添加日志：'Creating session with language: zh-CN'
+
+📊 实际效果：
+之前：
+- Light模式：选项按钮完全看不见 ❌
+- 中文界面：Questions是英文 ❌
+
+现在：
+- Light模式：选项按钮清晰可见，对比度高 ✅
+- 中文界面：Questions是中文 ✅
+
+Technical Changes:
+• frontend/wizard.css (+40 lines)
+  - 新增完整的Light模式 .wizard-pill 样式覆盖
+  - 包括normal, hover, selected, ::before, ::after状态
+
+• backend/src/lib/llmAgents.js (+4 lines)
+  - generateBroadQuestions: 添加language参数 + 语言指令
+  - generateChoiceQuestions: 添加language参数 + 语言指令
+
+• backend/src/routes/questionSessions.js (+5 lines)
+  - POST "/" 提取language参数
+  - 传递language到两个生成函数
+  - 添加语言日志
+
+Files Modified:
+- frontend/wizard.css (Light模式选项样式)
+- backend/src/lib/llmAgents.js (Questions语言支持)
+- backend/src/routes/questionSessions.js (传递language参数)
+- VERSION.txt (版本更新)
+
+⚠️ 重要：必须重启后端服务！
+```bash
+cd backend
+npm start
+```
+
+Previous Version: v0.6.10.5 (2025-12-17)
+Type: HOTFIX - Fix Hardcoded English Examples in LLM Prompt 🔧
+
+🐛 修复的问题：
+- ✅ 移除了 system prompt 中硬编码的英文示例
+- ✅ 将示例改为占位符格式（结构示例，不影响语言）
+- ✅ 强化语言指令，增加优先级标识
+- ✅ 明确告知 LLM 不要模仿示例的语言
+
+Changes in v0.6.10.5:
+
+🔧 关键修复（llmAgents.js）：
+- ❌ 之前：JSON 示例包含硬编码的英文内容
+  ```javascript
+  "project_goal": "Build a task management app for small teams"
+  ```
+- ✅ 现在：使用占位符，不影响语言选择
+  ```javascript
+  "project_goal": "<describe the main goal>"
+  ```
+
+🎯 语言指令强化：
+- 添加 🌍 视觉标识提高注意力
+- 标记为 "CRITICAL" 和 "HIGHEST PRIORITY"
+- 明确说明 "OVERRIDES any examples shown below"
+- 添加警告：示例仅用于结构，不要复制语言
+- 新增规则 #7：强调必须使用指定语言
+
+📊 实际效果：
+之前：即使选择中文，LLM 倾向于生成英文（因为示例是英文）
+现在：LLM 会正确遵循语言要求，生成对应语言的内容 ✨
+
+Technical Changes:
+• backend/src/lib/llmAgents.js (+14 lines, modified)
+  - getLanguageInstruction() 函数：增强语言指令
+  - system prompt：移除硬编码英文，使用占位符
+  - 新增规则 #7：提醒语言要求
+
+Files Modified:
+- backend/src/lib/llmAgents.js (强化语言指令 + 修复示例)
+- VERSION.txt (版本更新 + 变更日志)
+
+⚠️ 重要：修改后必须重启后端服务才能生效！
+```bash
+cd backend
+npm start
+```
+
+Previous Version: v0.6.10.4 (2025-12-17)
+Type: FEATURE - Backend Multilingual Prompt Generation Support 🌍✨
+
+🎯 核心功能：多语言 Prompt 生成
+- ✅ 后端现在支持接收用户语言偏好参数
+- ✅ 根据用户界面语言自动生成对应语言的 prompt
+- ✅ 支持全部 9 种语言：中文、英文、西班牙语、法语、日语、阿拉伯语、韩语、葡萄牙语、印地语
+- ✅ 完全向后兼容（language 参数为可选，默认英文）
+
+Changes in v0.6.10.4:
+
+🔧 后端 Schema 更新：
+- ✅ CreateSessionSchema 添加 language 参数（可选）
+- ✅ AnswerPayloadSchema 添加 language 参数（可选）
+- ✅ ModelOnlySchema 添加 language 参数（可选）
+- ✅ 支持的语言代码：en, zh-CN, es, fr, ja, ar, ko, pt, hi
+
+🌍 LLM Agent 多语言支持：
+- ✅ 新增 LANGUAGE_MAP 常量映射语言代码到语言名称
+- ✅ 新增 getLanguageInstruction() 函数生成语言指令
+- ✅ generateRawSpec() 函数新增 language 参数
+- ✅ 在 system prompt 中添加语言要求指令
+- ✅ 保持技术术语为英文，自然语言使用目标语言
+
+🔄 API Endpoint 更新：
+- ✅ POST /api/question-sessions/:sessionId/finalize 接收 language 参数
+- ✅ 从 request body 或 session 读取语言偏好
+- ✅ 将语言参数传递给 generateRawSpec()
+- ✅ 添加日志输出当前使用的语言
+
+📊 实际效果：
+用户界面选择中文 → 后端生成中文 prompt
+用户界面选择日语 → 后端生成日语 prompt
+用户界面选择西班牙语 → 后端生成西班牙语 prompt
+
+Technical Changes:
+
+Backend Files Modified:
+• backend/src/lib/llmAgents.js (+35 lines)
+  - 添加 LANGUAGE_MAP 和 getLanguageInstruction()
+  - 更新 generateRawSpec() 函数签名
+  - 在 system prompt 中集成语言指令
+
+• backend/src/routes/questionSessions.js (+8 lines)
+  - 3 个 Schema 添加 language 字段
+  - finalize endpoint 提取和传递语言参数
+  - 添加日志记录语言选择
+
+Version Control:
+- VERSION.txt (版本更新 + 详细变更日志)
+- BACKEND_LANGUAGE_IMPLEMENTATION_v0.6.10.4.md (新建，实现总结)
+
+向后兼容性：
+✅ 所有 language 参数都是可选的
+✅ 默认值为 'en'（英文）
+✅ 不影响现有功能和数据
+✅ 前端已在 v0.6.10.3 中准备就绪
+
+测试验证：
+⚠️ 需要在真实环境中测试多语言 prompt 生成
+⚠️ 确认 LLM 是否正确遵循语言指令
+⚠️ 验证各语言的 prompt 质量
+
+Total Lines Changed: ~43 lines (35 in llmAgents.js + 8 in questionSessions.js)
+
+Previous Version: v0.6.10.3 (2025-12-17)
+Type: FEATURE - Wizard UI & i18n Enhancements + Model Selector Update ✨
+
+🔄 Update 1: Added 2 missing i18n sections (7 more keys × 9 languages = 63 translations)
+🔄 Update 2: Added language parameter to backend API calls for multilingual prompt generation
+
+Changes in v0.6.10.3:
+🎨 Question Wizard UI Fixes:
+- ✅ Fixed Light mode background appearing too dark in wizard pages
+- ✅ Added Light mode support for wizard panels, cards, and input fields
+- ✅ Optimized background gradients for Light mode
+- ✅ Enhanced contrast and readability in Light theme
+
+🌍 Complete i18n Support for Wizard:
+- ✅ Added 38 translation keys for wizard functionality across all 9 languages
+- ✅ Full i18n coverage for: project description, questions, steps, modes, answering tips
+- ✅ Languages: 中文, English, Español, Français, 日本語, العربية, 한국어, Português, हिन्दी
+- ✅ All wizard UI elements now support language switching
+- ✅ Answering Tips section (5 keys): answerTipsTitle, answerTip1-4
+- ✅ Examples gallery section (2 keys): title, subtitle
+
+🎯 Home Page i18n Fixes:
+- ✅ Fixed "Describe your goal" section missing i18n attributes
+- ✅ Added data-i18n to layer1.badge, layer1.title, layer1.description
+
+🔧 Model Selector Overhaul:
+- ✅ Reduced model options from 10 to 3 (as requested)
+- ✅ Renamed models to: Promptly v0 mini, Promptly v0, Promptly v0 Max
+- ✅ Updated model slugs: promptly-v0-mini, promptly-v0, promptly-v0-max
+- ✅ Fixed Light mode dropdown styles (better contrast and readability)
+- ✅ Updated dataAggregator.js model mapping
+
+Detailed Changes by File:
+
+Frontend UI (wizard.css):
+• Added html[data-theme="light"] .wizard-background - light gradient
+• Added html[data-theme="light"] .wizard-panel - white background
+• Added html[data-theme="light"] .wizard-question-card - light card style
+• Added html[data-theme="light"] .wizard-label textarea/select - light inputs
+
+Frontend HTML (wizard.html):
+• Added data-i18n to wizard title, subtitle, steps (31 attributes)
+• wizard.describeProject, wizard.answerQuestions, wizard.specAndPrompt
+• wizard.projectIdea, wizard.projectType, wizard.modeFast/Deep/Ultra
+• Complete i18n coverage for all user-facing text
+
+Frontend HTML (index.html):
+• Added data-i18n to layer1.badge, layer1.title, layer1.description
+• Reduced model dropdown options from 10 to 3
+• Updated model names and slugs to v0 naming scheme
+• Fixed default selected model display
+
+Frontend CSS (style.css):
+• Added html[data-theme="light"] .model-select__menu - light dropdown bg
+• Added html[data-theme="light"] .model-select__option - light option style
+• Improved hover and active states for Light mode
+
+Frontend JS (dataAggregator.js):
+• Updated modelMap with new v0 model names and slugs
+• Removed 7 old model options, kept only 3 core options
+
+Translation Files (all 9 languages):
+• Added 38 new translation keys to each language (31 wizard + 5 wizard tips + 2 examples)
+• Wizard keys: title, subtitle, steps, modes, project fields, answering tips
+• Examples keys: gallery title, subtitle
+• Total: 342 new translation entries across all languages (38 keys × 9 languages)
+
+Technical Impact:
+- Zero backend changes (purely frontend updates)
+- Fully backward compatible with existing data
+- All features remain functional
+- Enhanced user experience in Light mode
+- Complete multilingual support for wizard flow
+
+🌐 Language Parameter for API Calls:
+- ✅ Added automatic language detection in wizard.js
+- ✅ Pass user's language to backend in 3 key API calls:
+  • POST /api/question-sessions (session creation)
+  • POST /api/question-sessions/{id}/answer (answer submission)
+  • POST /api/question-sessions/{id}/finalize (prompt generation) ← Most important!
+- ✅ Language determined from: window.i18nManager.currentLang or localStorage
+- ✅ Fallback to 'en' if not detected
+- ⚠️  Backend needs to implement language support (see LANGUAGE_PARAM_GUIDE.md)
+
+Files Modified:
+- frontend/wizard.css (+25 lines Light mode styles)
+- frontend/wizard.html (+36 data-i18n attributes)
+- frontend/index.html (+5 data-i18n attributes, -7 model options)
+- frontend/style.css (+12 lines Light mode model selector)
+- frontend/lib/dataAggregator.js (updated modelMap)
+- frontend/wizard.js (+18 lines, 3 API calls with language param)
+- frontend/locales/*.json (×9 files, +38 keys each)
+- VERSION.txt (version bump + changelog)
+- LANGUAGE_PARAM_GUIDE.md (new, backend implementation guide)
+
+Previous Version: v0.6.10.2 (2025-12-17)
+
+Changes in v0.6.10.2:
+🐛 Fixed Additional i18n Issues in 3 Frontend Files:
+- Fixed specs.js t() helper function to properly validate translations
+- Fixed outcome.js t() helper function to properly validate translations
+- Fixed enhancer.js t() helper function to properly validate translations
+- All helper functions now use centralized i18nManager instead of window.i18n
+- Improved fallback behavior: returns friendly text instead of full key names
+- Added detailed console warnings for missing translations
+
+Technical Changes:
+✅ Updated t() function in 3 files:
+  • specs.js (lines 23-39): Enhanced validation and fallback
+  • outcome.js (lines 23-39): Enhanced validation and fallback
+  • enhancer.js (lines 38-54): Enhanced validation and fallback
+
+✅ Improvements:
+  • Uses window.i18nManager.instance for consistency
+  • Validates translation result !== key (detects i18next fallback)
+  • Returns key.split('.').pop() as friendly fallback
+  • Adds file-specific console warnings for debugging
+
+Impact:
+- Fixes potential i18n key display on Specs, Outcome, and Enhancer pages
+- Consistent with v0.6.10.1 fixes to i18n/index.js
+- No backend changes (frontend only)
+
+Files Modified:
+- frontend/specs.js (t() function, +11 lines)
+- frontend/outcome.js (t() function, +11 lines)
+- frontend/enhancer.js (t() function, +11 lines)
+- VERSION.txt (version bump + changelog)
+
+Previous Version: v0.6.10.1 (2025-12-17)
+Type: HOTFIX - i18n Translation Display Issue Fixed 🔧
+
+Changes in v0.6.10.1:
+🐛 Fixed Critical i18n Issue:
+- Fixed translations not being applied to DOM elements
+- Page was displaying i18n key names (e.g., "whyPromptly.title") instead of actual translations
+- Enhanced i18next configuration with explicit keySeparator and namespace settings
+- Improved translatePage() method with validation and error detection
+- Added comprehensive debug logging for troubleshooting
+
+Technical Changes:
+✅ i18next configuration improvements:
+  • Enabled debug mode for better error visibility
+  • Explicit keySeparator: '.' for nested keys (whyPromptly.title)
+  • Disabled nsSeparator to avoid key conflicts
+  • Added returnEmptyString: false
+  • Added returnNull: false
+  • Added returnObjects: false
+
+✅ translatePage() enhancements:
+  • Validates translation success (checks if result !== key)
+  • Counts successful and failed translations
+  • Preserves original text if translation fails
+  • Detailed console logging
+
+✅ Initialization logging:
+  • Shows loaded locales
+  • Shows available resources
+  • Tests translation functionality
+  • Reports success/failure status
+
+Impact:
+- Affects all 196 data-i18n elements across all pages
+- All 9 languages benefit from the fix
+- No changes to translation files or data
+
+Files Modified:
+- frontend/i18n/index.js (3 functions updated)
+- VERSION.txt (version bump + changelog)
+- CHECK_I18N_FIX.md (new diagnostic document)
+
+Previous Version: v0.6.10.0 (2025-12-15)
+Type: MAJOR MILESTONE - All 9 Languages 100%+ Complete! 🌍
+
+🎊🎊🎊 HISTORIC MILESTONE ACHIEVED 🎊🎊🎊
+🎉 ALL 9 LANGUAGES NOW 100%+ COMPLETE!
+🌍 TRUE GLOBAL MULTILINGUAL SUPPORT!
+
+Complete Language Support (9/9 - 100%):
+✅ Chinese (zh-CN): 257/257 keys (100.0%)
+✅ English (en): 257/257 keys (100.0%)
+✅ Spanish (es): 257/257 keys (100.0%)
+✅ French (fr): 389/257 keys (151.4%) 🆕
+✅ Japanese (ja): 389/257 keys (151.4%) 🆕
+✅ Arabic (ar): 389/257 keys (151.4%) 🆕
+✅ Korean (ko): 389/257 keys (151.4%) 🆕
+✅ Portuguese (pt): 389/257 keys (151.4%) 🆕
+✅ Hindi (hi): 389/257 keys (151.4%) 🆕
+
+Changes in v0.6.10.0:
+- 🎯 Completed ALL 6 NEW LANGUAGES (fr, ja, ar, ko, pt, hi)
+- 📝 Added 1,992 translation keys (332 per language × 6)
+- 🌐 12 major modules fully translated for each language:
+  * common (35 keys) - UI基础元素
+  * alerts (18 keys) - 警告通知
+  * hero (13 keys) - 首页展示
+  * dynamic (15 keys) - 动态数据
+  * glossary (32 keys) - 技术术语
+  * testCases (33 keys) - 测试管理
+  * userGuide (33 keys) - 用户指南
+  * layer1 (23 keys) - 基础配置
+  * layer2 (23 keys) - 测试评估
+  * layer3 (23 keys) - 优化部署
+  * pipeline (17 keys) - 工作流
+  * whyPromptly (26 keys) - 产品介绍
+
+Translation Quality Standards:
+✅ Professional technical terminology
+✅ Culturally adapted expressions
+✅ Consistent across all modules
+✅ RTL support for Arabic
+✅ Native script support (العربية, 한국어, हिन्दी, 日本語)
+✅ 151.4% coverage (future-proofed)
+
+Statistics:
+- Total keys: 3,105 across all languages
+- Average keys per language: 345
+- Overall completion: 134.2%
+- File sizes: 14.6 KB - 23.9 KB
+- Progress: 33.3% → 100% (+66.7%)
+
+Previous Milestones:
+- v0.6.9.0: Spanish 100% complete (3/9 languages)
+- v0.6.8.5: English 100% complete (2/9 languages)
+- v0.6.8.4: Enhanced English to 83.3%
+- v0.6.8.3: i18n infrastructure fixes
+
+Next Focus: UI/UX improvements, performance optimization
+

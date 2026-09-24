@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en" data-theme="auto">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Promptly Settings</title>
+  <link rel="icon" href="assets/promptly-icon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="settings.css" />
+</head>
+<body class="app-shell">
+  <header class="settings-header">
+    <div class="settings-header-main">
+      <img src="assets/promptly-icon.svg" alt="Promptly" class="settings-logo" />
+      <div>
+        <h1 class="settings-title">Settings</h1>
+        <p class="settings-subtitle">
+          Read-only view of your Promptly cloud configuration. Environment variables stay on the server.
+        </p>
+      </div>
+    </div>
+    <div class="settings-header-meta">
+      <span class="settings-tag">v0.6.8 · Config beta</span>
+    </div>
+  </header>
+
+  <main class="settings-main">
+    <section class="settings-panel settings-panel--env">
+      <h2>Environment & models</h2>
+      <div id="envSummary" class="settings-summary"></div>
+      <dl id="modelList" class="settings-dl"></dl>
+    </section>
+
+    <section class="settings-panel settings-panel--features">
+      <h2>Features</h2>
+      <ul id="featuresList" class="settings-features"></ul>
+    </section>
+
+    <section class="settings-panel settings-panel--raw">
+      <h2>Raw settings JSON</h2>
+      <pre id="rawSettings" class="settings-code-block"></pre>
+    </section>
+
+    <section class="settings-panel settings-panel--log">
+      <h2>Settings log</h2>
+      <pre id="settingsLog" class="settings-log"></pre>
+    </section>
+  </main>
+
+  <script src="settings.js"></script>
+</body>
+</html>

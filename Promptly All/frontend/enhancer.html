@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Promptly Prompt Enhancer — Improve Any AI Prompt Instantly</title>
+  <!-- SEO -->
+  <meta name="description" content="Paste any prompt and Promptly's AI Enhancer rewrites it to be clearer, more specific, and more effective for ChatGPT, Claude, Gemini and other LLMs." />
+  <meta name="keywords" content="prompt enhancer, improve AI prompt, rewrite prompt, ChatGPT prompt improver, LLM prompt optimizer, better AI prompts" />
+  <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1" />
+  <link rel="canonical" href="https://promptly.solutions/enhancer.html" />
+  <!-- Open Graph -->
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://promptly.solutions/enhancer.html" />
+  <meta property="og:title" content="Promptly Prompt Enhancer — Improve Any AI Prompt" />
+  <meta property="og:description" content="Paste any prompt and get an AI-optimized version that works better with ChatGPT, Claude, Gemini and other LLMs." />
+  <meta property="og:image" content="https://promptly.solutions/assets/promptly-icon.svg" />
+  <meta property="og:site_name" content="Promptly" />
+  <meta property="og:locale" content="en_US" />
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:title" content="Promptly Prompt Enhancer — Improve Any AI Prompt" />
+  <meta name="twitter:description" content="Paste any prompt and get an AI-optimized version for ChatGPT, Claude, Gemini and other LLMs." />
+  <meta name="twitter:image" content="https://promptly.solutions/assets/promptly-icon.svg" />
+  <!-- JSON-LD Structured Data -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebApplication",
+    "name": "Promptly Prompt Enhancer",
+    "url": "https://promptly.solutions/enhancer.html",
+    "description": "AI-powered Prompt Enhancer that rewrites any prompt to be clearer and more effective for ChatGPT, Claude, Gemini and other LLMs.",
+    "applicationCategory": "ProductivityApplication",
+    "operatingSystem": "Web",
+    "isPartOf": {
+      "@type": "WebSite",
+      "name": "Promptly",
+      "url": "https://promptly.solutions/"
+    }
+  }
+  </script>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://promptly.solutions/" },
+      { "@type": "ListItem", "position": 2, "name": "Prompt Enhancer", "item": "https://promptly.solutions/enhancer.html" }
+    ]
+  }
+  </script>
+  <link rel="icon" href="assets/promptly-icon.svg" type="image/svg+xml"/>
+  <link rel="apple-touch-icon" href="assets/promptly-icon.svg"/>
+  <!-- Theme Manager - Must load before CSS -->
+  <script src="lib/themeManager.js"></script>
+  <link rel="stylesheet" href="theme.css" />
+  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="enhancer.css" />
+  <script src="config.js"></script>
+  <script src="lib/authGuard.js"></script>
+  <script src="lib/i18next.min.js"></script>
+  <script type="module" src="i18n/index.js"></script>
+  <script src="lib/seoManager.js"></script>
+</head>
+<body class="app-shell">
+  <header class="enhancer-header">
+    <div class="enhancer-header-main">
+      <img src="assets/promptly-icon.svg" alt="Promptly" class="enhancer-logo" />
+      <div>
+        <h1 class="enhancer-title" data-i18n="enhancer.title">Promptly Prompt Enhancer</h1>
+        <p class="enhancer-subtitle" data-i18n="enhancer.subtitle">
+          Turn raw prompts into clear, structured, high-quality instructions for LLMs.
+        </p>
+      </div>
+    </div>
+    <div class="enhancer-header-meta">
+      <span class="enhancer-tag" data-i18n="enhancer.tag">v0.6.6 · Enhancer beta</span>
+    </div>
+  </header>
+
+  <main class="enhancer-main">
+    <div id="llmStatus" class="enhancer-status hidden" role="status" aria-live="polite"></div>
+    <section class="enhancer-panel enhancer-panel--input">
+      <h2 data-i18n="enhancer.section1Title">1. Raw prompt</h2>
+      <p class="enhancer-panel-desc" data-i18n="enhancer.section1Desc">
+        Paste any prompt you currently use with models. The enhancer will keep your intent but improve structure, tone, and clarity.
+      </p>
+      <textarea id="rawPrompt" rows="10" data-i18n="enhancer.section1Placeholder" placeholder="Paste your existing prompt here..."></textarea>
+      
+      <!-- ATTACHMENT FEATURE: File attachment UI -->
+      <div class="enhancer-attachment-section">
+        <button type="button" id="attachBtn" class="enhancer-button-attach" data-i18n="enhancer.attachBtn" title="Attach images, videos, or files">
+          📎 Attach files
+        </button>
+        <input type="file" id="fileInput" multiple accept="*/*" hidden />
+        <span class="enhancer-attach-hint" data-i18n="enhancer.attachHint">Supports images, videos, PDFs, and more</span>
+      </div>
+      
+      <!-- ATTACHMENT FEATURE: Selected files preview list -->
+      <div id="attachmentList" class="attachment-list"></div>
+      
+      <div class="enhancer-mode-row">
+        <label class="enhancer-mode-label">
+          <span data-i18n="enhancer.modeLabel">Mode</span>
+          <select id="modeSelect">
+            <option value="structure" data-i18n="enhancer.modeStructure">Structure first</option>
+            <option value="style" data-i18n="enhancer.modeStyle">Style &amp; tone</option>
+            <option value="simplify" data-i18n="enhancer.modeSimplify">Simplify</option>
+          </select>
+        </label>
+        <button id="runEnhanceBtn" class="enhancer-button-primary" data-i18n="enhancer.enhanceBtn">Enhance prompt</button>
+      </div>
+      <p id="inputError" class="enhancer-error hidden"></p>
+    </section>
+
+    <section class="enhancer-panel enhancer-panel--output">
+      <h2 data-i18n="enhancer.section2Title">2. Enhanced prompt</h2>
+      <p class="enhancer-panel-desc" data-i18n="enhancer.section2Desc">
+        This is the improved version. You can copy it directly into your favourite LLM, or keep iterating with Promptly.
+      </p>
+      <pre id="enhancedPrompt" class="enhancer-code-block"></pre>
+      <div class="enhancer-output-footer">
+        <button id="copyEnhancedBtn" class="enhancer-button-secondary" data-i18n="enhancer.copyBtn">Copy enhanced prompt</button>
+        <button id="runScoreBtn" class="enhancer-button-ghost" data-i18n="enhancer.scoreBtn">Score quality</button>
+        <button id="runValidateBtn" class="enhancer-button-ghost" data-i18n="enhancer.validateBtn">Validate</button>
+      </div>
+      <div id="scoreResult" class="enhancer-score hidden"></div>
+      <div id="validationResult" class="enhancer-validation hidden"></div>
+    </section>
+
+    <section class="enhancer-panel enhancer-panel--log">
+      <h2 data-i18n="enhancer.section3Title">Engine log</h2>
+      <pre id="enhancerLog" class="enhancer-log"></pre>
+    </section>
+  </main>
+
+  <script src="enhancer.js"></script>
+</body>
+</html>

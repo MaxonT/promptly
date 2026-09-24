@@ -1,0 +1,86 @@
+{\rtf1\ansi\ansicpg936\cocoartf2822
+\cocoatextscaling0\cocoaplatform0{\fonttbl\f0\fswiss\fcharset0 Helvetica;\f1\fnil\fcharset0 .SFNS-Regular;\f2\fnil\fcharset0 .SFNS-Semibold;
+\f3\fnil\fcharset0 .AppleSystemUIFontMonospaced-Regular;\f4\fmodern\fcharset0 Courier;}
+{\colortbl;\red255\green255\blue255;\red14\green14\blue14;\red184\green93\blue213;\red155\green162\blue177;
+\red136\green185\blue102;}
+{\*\expandedcolortbl;;\cssrgb\c6700\c6700\c6700;\cssrgb\c77647\c47059\c86667;\cssrgb\c67059\c69804\c74902;
+\cssrgb\c59608\c76471\c47451;}
+\paperw11900\paperh16840\margl1440\margr1440\vieww11520\viewh8400\viewkind0
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sl324\slmult1\pardirnatural\partightenfactor0
+
+\f0\fs24 \cf0 \
+
+\f1\fs32 \cf2 API direct connection repair\
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sl324\slmult1\pardirnatural\partightenfactor0
+
+\f2\b\fs48 \cf2 Promptly Frontend Update \'96 API_BASE Hotfix (2025-11-25)
+\f1\b0\fs32 \
+\
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sl324\slmult1\pardirnatural\partightenfactor0
+
+\f2\b\fs34 \cf2 \uc0\u10024  What\'92s New
+\f1\b0\fs32 \
+\pard\tqr\tx100\tx260\li260\fi-260\sl324\slmult1\sb240\partightenfactor0
+\cf2 	\'95	\uc0\u20840 \u38754 \u26032 \u22686  
+\f3 API_BASE
+\f1  \uc0\u21160 \u24577 \u21518 \u31471 \u20837 \u21475 \u65292 \u25903 \u25345 \u36328 \u22495 \u12289 \u26080 \u39035  Vercel rewrites\u12290 \
+	\'95	\uc0\u25152 \u26377 \u21069 \u31471 \u27169 \u22359 \u65288 Settings / Specs / Wizard / Outcome\u65289 \u32479 \u19968 \u20174 \u21518 \u31471 \u22495 \u21517 \u25289 \u21462 \u25968 \u25454 \u12290 \
+	\'95	\uc0\u25903 \u25345 \u26410 \u26469 \u29615 \u22659 \u20999 \u25442 \u65288 Render \u8594  AWS / Fly.io / \u33258 \u23450 \u20041 \u22495 \u21517 \u65289 \u21482 \u25913  1 \u34892 \u37197 \u32622 \u21363 \u21487 \u12290 \
+\
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sl324\slmult1\pardirnatural\partightenfactor0
+
+\f2\b\fs34 \cf2 \uc0\u55357 \u56615  Updated Files
+\f1\b0\fs32 \
+\pard\tqr\tx100\tx260\li260\fi-260\sl324\slmult1\sb240\partightenfactor0
+\cf2 	\'95	
+\f3 frontend/settings.js
+\f1 \
+	\'95	
+\f3 frontend/specs.js
+\f1 \
+	\'95	
+\f3 frontend/wizard.js
+\f1 \
+	\'95	
+\f3 frontend/outcome.js
+\f1 \
+\
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sl324\slmult1\pardirnatural\partightenfactor0
+
+\f2\b\fs34 \cf2 \uc0\u55357 \u57056  Key Changes
+\f1\b0\fs32 \
+\pard\tqr\tx100\tx260\li260\fi-260\sl324\slmult1\sb240\partightenfactor0
+\cf2 	\'95	\uc0\u23558 \u25152 \u26377  
+\f3 fetch("/api/...")
+\f1  \uc0\u26367 \u25442 \u20026 \u65306 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sl324\slmult1\pardirnatural\partightenfactor0
+
+\f3 \cf2 fetch(
+\f1 $\{API_BASE\}/api/\'85
+\f3 )
+\f1 \
+\pard\tqr\tx100\tx260\li260\fi-260\sl324\slmult1\sb240\partightenfactor0
+\cf2 	\'95	\uc0\u32479 \u19968 \u21152 \u20837 \u65306 
+\f0\fs24 \cf0 \
+\
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural\partightenfactor0
+
+\f4\fs28 \cf3 const\cf4  API_BASE =\
+  window.PROMPTLY_API_BASE || \cf5 "https://promptly-v0-6-cloudtest.onrender.com"\cf4 ;
+\f0\fs24 \cf0 \
+\
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sl324\slmult1\pardirnatural\partightenfactor0
+
+\f1\fs32 \cf2 \
+\
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sl324\slmult1\pardirnatural\partightenfactor0
+
+\f2\b\fs34 \cf2 \uc0\u55357 \u56960  Effect
+\f1\b0\fs32 \
+\pard\tqr\tx100\tx260\li260\fi-260\sl324\slmult1\sb240\partightenfactor0
+\cf2 	\'95	\uc0\u21069 \u31471 \u27491 \u24335 \u35299 \u32806 \u21518 \u31471 \u36335 \u30001 \u65292 \u19981 \u20381 \u36182  Vercel Rewrites\u12290 \
+	\'95	\uc0\u25152 \u26377 \u39029 \u38754 \u65288 Settings / Specs / Wizard / Outcome\u65289 \u26080 \u32541 \u23545 \u25509 \u21518 \u31471 \u65292 \u21151 \u33021 \u24674 \u22797 \u27491 \u24120 \u12290 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural\partightenfactor0
+
+\f0\fs24 \cf0 \
+}

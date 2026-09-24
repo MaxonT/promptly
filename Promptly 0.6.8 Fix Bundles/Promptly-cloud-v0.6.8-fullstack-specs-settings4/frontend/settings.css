@@ -1,0 +1,116 @@
+.settings-header{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:1.25rem 1.5rem;
+  border-bottom:1px solid var(--border);
+  background:linear-gradient(90deg,rgba(124,58,237,0.18),rgba(37,99,235,0.08));
+}
+.settings-header-main{
+  display:flex;
+  align-items:center;
+  gap:1rem;
+}
+.settings-logo{
+  width:32px;
+  height:32px;
+}
+.settings-title{
+  margin:0;
+  font-size:1.1rem;
+}
+.settings-subtitle{
+  margin:0.2rem 0 0;
+  font-size:0.9rem;
+  color:var(--muted);
+}
+.settings-header-meta{
+  font-size:0.8rem;
+}
+.settings-tag{
+  padding:0.2rem 0.6rem;
+  border-radius:999px;
+  border:1px solid var(--border);
+}
+
+.settings-main{
+  display:grid;
+  grid-template-columns:minmax(0,1.2fr) minmax(0,1.2fr);
+  grid-template-rows:auto auto;
+  gap:1rem;
+  padding:1rem 1.5rem 1.5rem;
+}
+.settings-panel{
+  border-radius:0.75rem;
+  border:1px solid var(--border);
+  background:var(--card);
+  box-shadow:var(--shadow);
+  padding:0.9rem 1.1rem;
+}
+.settings-panel--env{
+  grid-column:1/2;
+}
+.settings-panel--features{
+  grid-column:2/3;
+}
+.settings-panel--raw{
+  grid-column:1/3;
+}
+.settings-panel--log{
+  grid-column:1/3;
+}
+.settings-summary{
+  font-size:0.85rem;
+  color:var(--muted);
+  margin-bottom:0.6rem;
+}
+.settings-dl{
+  display:grid;
+  grid-template-columns:auto 1fr;
+  gap:0.2rem 0.8rem;
+  font-size:0.85rem;
+}
+.settings-dl dt{
+  font-weight:600;
+}
+.settings-dl dd{
+  margin:0;
+}
+.settings-features{
+  list-style:none;
+  padding:0;
+  margin:0;
+  font-size:0.85rem;
+}
+.settings-features li{
+  padding:0.25rem 0;
+}
+.settings-code-block{
+  border-radius:0.6rem;
+  border:1px solid var(--border);
+  padding:0.5rem 0.6rem;
+  background:rgba(15,23,42,0.96);
+  font-size:0.78rem;
+  max-height:200px;
+  overflow:auto;
+}
+.settings-log{
+  font-size:0.76rem;
+  border-radius:0.6rem;
+  border:1px dashed var(--border);
+  padding:0.5rem 0.6rem;
+  background:rgba(15,23,42,0.96);
+  max-height:120px;
+  overflow:auto;
+}
+@media (max-width: 960px){
+  .settings-main{
+    grid-template-columns:minmax(0,1fr);
+  }
+  .settings-panel--env,
+  .settings-panel--features,
+  .settings-panel--raw,
+  .settings-panel--log{
+    grid-column:1/2;
+  }
+}

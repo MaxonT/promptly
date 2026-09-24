@@ -1,0 +1,4 @@
+- [x] Generator system prompt enforces "P0 -> P1 -> P2" diagnostic order (Convergent Flow).
+- [x] Generator system prompt explicitly separates "Provided Inputs" from "Required Inputs".
+- [x] Generator system prompt downgrades advanced checks (CDN, Race conditions) to conditional steps.
+- [x] Generator system prompt prevents hallucination of unprovided files.

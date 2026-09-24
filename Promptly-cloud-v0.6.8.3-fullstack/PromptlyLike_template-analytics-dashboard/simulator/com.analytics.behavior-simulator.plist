@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+═══════════════════════════════════════════════════════════════════════════════
+Analytics Behavior Simulator - macOS launchd Service
+═══════════════════════════════════════════════════════════════════════════════
+
+此 plist 文件用于将行为模拟器配置为 macOS 后台服务。
+
+安装方法:
+1. 修改此文件中的路径为实际路径
+2. 复制到 ~/Library/LaunchAgents/
+3. 运行: launchctl load ~/Library/LaunchAgents/com.analytics.behavior-simulator.plist
+
+卸载方法:
+1. 运行: launchctl unload ~/Library/LaunchAgents/com.analytics.behavior-simulator.plist
+2. 删除 plist 文件
+
+日志文件位置:
+- 标准输出: /tmp/analytics-simulator.log
+- 错误输出: /tmp/analytics-simulator-error.log
+
+═══════════════════════════════════════════════════════════════════════════════
+-->
+<plist version="1.0">
+<dict>
+    <!-- 服务标识符 -->
+    <key>Label</key>
+    <string>com.analytics.behavior-simulator</string>
+    
+    <!-- 运行的程序 -->
+    <key>ProgramArguments</key>
+    <array>
+        <!-- Python 3 可执行文件路径 - 请根据实际路径修改 -->
+        <string>/usr/bin/python3</string>
+        <!-- 模拟器脚本路径 - 请根据实际路径修改 -->
+        <string>{{PROJECT_PATH}}/simulator/behavior-simulator.py</string>
+        <!-- 可选参数 -->
+        <string>--rounds</string>
+        <string>-1</string>
+        <string>--interval</string>
+        <string>60</string>
+    </array>
+    
+    <!-- 工作目录 -->
+    <key>WorkingDirectory</key>
+    <string>{{PROJECT_PATH}}/simulator</string>
+    
+    <!-- 环境变量 -->
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>ANALYTICS_API_BASE</key>
+        <string>http://localhost:8080</string>
+        <key>PATH</key>
+        <string>/usr/local/bin:/usr/bin:/bin</string>
+    </dict>
+    
+    <!-- 开机时启动 -->
+    <key>RunAtLoad</key>
+    <true/>
+    
+    <!-- 保持运行 (如果退出则重启) -->
+    <key>KeepAlive</key>
+    <dict>
+        <!-- 只在非正常退出时重启 -->
+        <key>SuccessfulExit</key>
+        <false/>
+    </dict>
+    
+    <!-- 失败后重启延迟 (秒) -->
+    <key>ThrottleInterval</key>
+    <integer>60</integer>
+    
+    <!-- 标准输出日志 -->
+    <key>StandardOutPath</key>
+    <string>/tmp/analytics-simulator.log</string>
+    
+    <!-- 错误输出日志 -->
+    <key>StandardErrorPath</key>
+    <string>/tmp/analytics-simulator-error.log</string>
+    
+    <!-- 进程优先级 (nice 值) -->
+    <key>Nice</key>
+    <integer>10</integer>
+    
+    <!-- 资源限制 -->
+    <key>SoftResourceLimits</key>
+    <dict>
+        <key>NumberOfFiles</key>
+        <integer>1024</integer>
+    </dict>
+</dict>
+</plist>

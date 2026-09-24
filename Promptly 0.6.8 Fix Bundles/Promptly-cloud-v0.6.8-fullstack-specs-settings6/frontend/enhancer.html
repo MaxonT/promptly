@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en" data-theme="auto">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Promptly Prompt Enhancer</title>
+  <link rel="icon" href="assets/promptly-icon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="enhancer.css" />
+</head>
+<body class="app-shell">
+  <header class="enhancer-header">
+    <div class="enhancer-header-main">
+      <img src="assets/promptly-icon.svg" alt="Promptly" class="enhancer-logo" />
+      <div>
+        <h1 class="enhancer-title">Promptly Prompt Enhancer</h1>
+        <p class="enhancer-subtitle">
+          Turn raw prompts into clear, structured, high-quality instructions for LLMs.
+        </p>
+      </div>
+    </div>
+    <div class="enhancer-header-meta">
+      <span class="enhancer-tag">v0.6.6 · Enhancer beta</span>
+    </div>
+  </header>
+
+  <main class="enhancer-main">
+    <section class="enhancer-panel enhancer-panel--input">
+      <h2>1. Raw prompt</h2>
+      <p class="enhancer-panel-desc">
+        Paste any prompt you currently use with models. The enhancer will keep your intent but improve structure, tone, and clarity.
+      </p>
+      <textarea id="rawPrompt" rows="10" placeholder="Paste your existing prompt here..."></textarea>
+      <div class="enhancer-mode-row">
+        <label class="enhancer-mode-label">
+          Mode
+          <select id="modeSelect">
+            <option value="structure">Structure first</option>
+            <option value="style">Style &amp; tone</option>
+            <option value="simplify">Simplify</option>
+          </select>
+        </label>
+        <button id="runEnhanceBtn" class="enhancer-button-primary">Enhance prompt</button>
+      </div>
+      <p id="inputError" class="enhancer-error hidden"></p>
+    </section>
+
+    <section class="enhancer-panel enhancer-panel--output">
+      <h2>2. Enhanced prompt</h2>
+      <p class="enhancer-panel-desc">
+        This is the improved version. You can copy it directly into your favourite LLM, or keep iterating with Promptly.
+      </p>
+      <pre id="enhancedPrompt" class="enhancer-code-block"></pre>
+      <div class="enhancer-output-footer">
+        <button id="copyEnhancedBtn" class="enhancer-button-secondary">Copy enhanced prompt</button>
+        <button id="runScoreBtn" class="enhancer-button-ghost">Score quality</button>
+        <button id="runValidateBtn" class="enhancer-button-ghost">Validate</button>
+      </div>
+      <div id="scoreResult" class="enhancer-score hidden"></div>
+      <div id="validationResult" class="enhancer-validation hidden"></div>
+    </section>
+
+    <section class="enhancer-panel enhancer-panel--log">
+      <h2>Engine log</h2>
+      <pre id="enhancerLog" class="enhancer-log"></pre>
+    </section>
+  </main>
+
+  <script src="enhancer.js"></script>
+</body>
+</html>

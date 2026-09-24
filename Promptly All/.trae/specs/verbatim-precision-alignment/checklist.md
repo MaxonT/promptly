@@ -1,4 +1,0 @@
-- [x] Generator system prompt explicitly prefers verbatim quoting for clear instructions.
-- [x] Generator system prompt bans expanding requirements (e.g., project-level to method-level estimates).
-- [x] Generator system prompt reinforces "No Hallucination" rule.
-- [x] Generator system prompt style is updated to reflect "Transcription over Interpretation".

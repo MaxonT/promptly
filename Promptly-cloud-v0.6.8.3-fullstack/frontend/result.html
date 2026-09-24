@@ -1,0 +1,283 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Promptly Result — Spec & Prompt View</title>
+  <link rel="icon" href="assets/promptly-icon.svg" type="image/svg+xml"/>
+  <!-- Theme Manager - Must load before CSS -->
+  <script src="lib/themeManager.js"></script>
+  <link rel="stylesheet" href="theme.css" />
+  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="result.css" />
+  <script src="config.js"></script>
+  <script src="lib/authGuard.js"></script>
+  <script src="lib/i18next.min.js"></script>
+  <script type="module" src="i18n/index.js"></script>
+</head>
+<body class="app-shell result-page">
+  <!-- Animated background -->
+  <div class="result-background">
+    <div class="result-gradient-orb result-gradient-orb--1"></div>
+    <div class="result-gradient-orb result-gradient-orb--2"></div>
+  </div>
+
+  <header class="result-header">
+    <div class="result-header-main">
+      <button id="backBtn" class="result-btn result-btn--ghost result-back-btn" title="Back to Wizard" onclick="history.length > 1 ? history.back() : (window.location.href = 'wizard.html')">
+        <span class="result-btn-icon">←</span>
+        <span data-i18n="result.back">Back</span>
+      </button>
+      <img src="assets/promptly-icon.svg" alt="Promptly" class="result-logo" />
+      <div>
+        <h1 class="result-title" data-i18n="result.title">Your Project Specification</h1>
+        <p class="result-subtitle" data-i18n="result.description">Generated, structured, and ready to use with any LLM</p>
+      </div>
+    </div>
+    <div class="result-header-actions">
+      <label class="control" style="margin-right:0.5rem;"><span data-i18n="appearance.label">Appearance</span>
+        <select id="themeSelect"><option value="auto" data-i18n="appearance.auto">System</option><option value="light" data-i18n="appearance.light">Light</option><option value="dark" data-i18n="appearance.dark">Dark</option></select>
+      </label>
+      <label class="control" style="margin-right:0.5rem;"><span data-i18n="language.label">Language</span>
+        <select id="langSelect"></select>
+      </label>
+      <button id="downloadBtn" class="result-btn result-btn--secondary" title="Download specification">
+        <span class="result-btn-icon">⬇</span>
+        <span data-i18n="result.download">Download</span>
+      </button>
+      <button id="shareBtn" class="result-btn result-btn--secondary" title="Share or bookmark">
+        <span class="result-btn-icon">🔗</span>
+        <span data-i18n="result.share">Share</span>
+      </button>
+    </div>
+  </header>
+
+  <div class="result-container">
+    <!-- Main content area -->
+    <main class="result-main">
+      <!-- Loading state -->
+      <div id="resultLoading" class="result-loading">
+        <div class="result-loading-spinner"></div>
+        <p>Loading your specification...</p>
+      </div>
+
+      <!-- Error state -->
+      <div id="resultError" class="result-error hidden">
+        <div class="result-error-icon">⚠️</div>
+        <h3>Unable to load specification</h3>
+        <p id="resultErrorMessage"></p>
+      </div>
+
+      <!-- Main result content -->
+      <div id="resultContent" class="result-content hidden">
+        
+        <!-- Card 1: High-level Spec -->
+        <div class="result-card" data-card-index="0">
+          <div class="result-card-header" data-collapsible="specCard">
+            <div class="result-card-title-group">
+              <h2 class="result-card-title" data-i18n="result.specTitle">High-Level Specification</h2>
+              <span class="result-badge result-badge--primary">JSON</span>
+              <span class="result-badge result-badge--success" id="specGeneratedBadge">Generated</span>
+            </div>
+            <div class="result-card-actions">
+              <button class="result-icon-btn" id="toggleSpecView" title="Toggle view">
+                <span>📋</span>
+              </button>
+              <button class="result-icon-btn" id="copySpecBtn" title="Copy to clipboard">
+                <span>📋</span>
+              </button>
+              <button class="result-icon-btn result-collapse-btn" title="Collapse section">
+                <span class="result-collapse-icon">▼</span>
+              </button>
+            </div>
+          </div>
+          <div class="result-card-body" data-collapsible-target="specCard">
+            <div class="result-view-toggle">
+              <button class="result-view-tab result-view-tab--active" data-view="raw">
+                Raw JSON
+              </button>
+              <button class="result-view-tab" data-view="human">
+                Human-Readable
+              </button>
+            </div>
+            <div id="specRawView" class="result-code-viewer">
+              <pre><code id="specOutput" class="result-code"></code></pre>
+            </div>
+            <div id="specHumanView" class="result-human-view hidden">
+              <div id="specHumanContent" class="result-human-content"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Card 2: Compiled Prompt Blocks -->
+        <div class="result-card" data-card-index="1">
+          <div class="result-card-header" data-collapsible="promptCard">
+            <div class="result-card-title-group">
+              <h2 class="result-card-title" data-i18n="result.promptTitle">Compiled Prompt Blocks</h2>
+              <span class="result-badge result-badge--info">LLM-Ready</span>
+              <span class="result-badge" id="promptBlockCount">0 blocks</span>
+            </div>
+            <div class="result-card-actions">
+              <button class="result-icon-btn" id="copyAllPromptsBtn" title="Copy all blocks">
+                <span>📋</span>
+              </button>
+              <button class="result-icon-btn result-collapse-btn" title="Collapse section">
+                <span class="result-collapse-icon">▼</span>
+              </button>
+            </div>
+          </div>
+          <div class="result-card-body" data-collapsible-target="promptCard">
+            <div id="promptBlocksContainer" class="result-prompt-blocks">
+              <!-- Accordion items will be inserted here -->
+            </div>
+          </div>
+        </div>
+
+        <!-- Card 3: Explanation -->
+        <div class="result-card" data-card-index="2">
+          <div class="result-card-header" data-collapsible="explanationCard">
+            <div class="result-card-title-group">
+              <h2 class="result-card-title" data-i18n="result.explanationTitle">Explanation</h2>
+              <span class="result-badge">AI-Generated</span>
+            </div>
+            <div class="result-card-actions">
+              <button class="result-icon-btn" id="toggleExplanationDetail" title="Show more details">
+                <span>📄</span>
+              </button>
+              <button class="result-icon-btn result-collapse-btn" title="Collapse section">
+                <span class="result-collapse-icon">▼</span>
+              </button>
+            </div>
+          </div>
+          <div class="result-card-body" data-collapsible-target="explanationCard">
+            <div id="explanationBrief" class="result-explanation-brief">
+              <ul id="explanationList" class="result-explanation-list"></ul>
+            </div>
+            <div id="explanationFull" class="result-explanation-full hidden">
+              <p id="explanationFullText"></p>
+            </div>
+            <button id="toggleExplanationBtn" class="result-toggle-btn">
+              Show more details
+            </button>
+          </div>
+        </div>
+
+        <!-- Card 4: Metadata (optional) -->
+        <div class="result-card" data-card-index="3">
+          <div class="result-card-header" data-collapsible="metadataCard">
+            <div class="result-card-title-group">
+              <h2 class="result-card-title">Additional Information</h2>
+              <span class="result-badge result-badge--neutral">Metadata</span>
+            </div>
+            <div class="result-card-actions">
+              <button class="result-icon-btn result-collapse-btn" title="Collapse section">
+                <span class="result-collapse-icon">▼</span>
+              </button>
+            </div>
+          </div>
+          <div class="result-card-body result-card-body--collapsed" data-collapsible-target="metadataCard">
+            <div id="metadataContent" class="result-metadata">
+              <div class="result-metadata-item">
+                <span class="result-metadata-label">Spec ID:</span>
+                <span class="result-metadata-value" id="metaSpecId">-</span>
+              </div>
+              <div class="result-metadata-item">
+                <span class="result-metadata-label">Generated:</span>
+                <span class="result-metadata-value" id="metaCreatedAt">-</span>
+              </div>
+              <div class="result-metadata-item">
+                <span class="result-metadata-label">Project Type:</span>
+                <span class="result-metadata-value" id="metaProjectType">-</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </main>
+
+    <!-- Right sidebar (optional) -->
+    <aside class="result-sidebar" id="resultSidebar">
+      <div class="result-sidebar-card">
+        <h3 class="result-sidebar-title">Quick Summary</h3>
+        <div class="result-sidebar-item">
+          <div class="result-sidebar-icon">📊</div>
+          <div class="result-sidebar-content">
+            <div class="result-sidebar-label">Prompt Blocks</div>
+            <div class="result-sidebar-value" id="sidebarBlockCount">0</div>
+          </div>
+        </div>
+        <div class="result-sidebar-item">
+          <div class="result-sidebar-icon">📄</div>
+          <div class="result-sidebar-content">
+            <div class="result-sidebar-label">Project Type</div>
+            <div class="result-sidebar-value" id="sidebarProjectType">-</div>
+          </div>
+        </div>
+        <div class="result-sidebar-item">
+          <div class="result-sidebar-icon">⏱️</div>
+          <div class="result-sidebar-content">
+            <div class="result-sidebar-label">Generated</div>
+            <div class="result-sidebar-value" id="sidebarCreatedAt">-</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="result-sidebar-card">
+        <h3 class="result-sidebar-title">Export Options</h3>
+        <button class="result-export-btn" id="exportJsonBtn">
+          <span class="result-export-icon">📦</span>
+          <span>Download as JSON</span>
+        </button>
+        <button class="result-export-btn" id="exportMarkdownBtn">
+          <span class="result-export-icon">📝</span>
+          <span>Download as Markdown</span>
+        </button>
+        <button class="result-export-btn" id="exportTextBtn">
+          <span class="result-export-icon">📋</span>
+          <span>Download as Text</span>
+        </button>
+      </div>
+    </aside>
+  </div>
+
+  <!-- Copy notification -->
+  <div id="copyNotification" class="result-notification hidden">
+    <span class="result-notification-icon">✓</span>
+    <span class="result-notification-text">Copied to clipboard!</span>
+  </div>
+
+  <!-- Download modal -->
+  <div id="downloadModal" class="result-modal hidden">
+    <div class="result-modal-overlay"></div>
+    <div class="result-modal-content">
+      <div class="result-modal-header">
+        <h3>Download Specification</h3>
+        <button class="result-modal-close" id="closeDownloadModal">×</button>
+      </div>
+      <div class="result-modal-body">
+        <p>Choose your preferred format:</p>
+        <div class="result-download-options">
+          <button class="result-download-option" data-format="json">
+            <span class="result-download-icon">📦</span>
+            <span class="result-download-label">JSON</span>
+            <span class="result-download-desc">Structured data format</span>
+          </button>
+          <button class="result-download-option" data-format="markdown">
+            <span class="result-download-icon">📝</span>
+            <span class="result-download-label">Markdown</span>
+            <span class="result-download-desc">Human-readable format</span>
+          </button>
+          <button class="result-download-option" data-format="text">
+            <span class="result-download-icon">📋</span>
+            <span class="result-download-label">Plain Text</span>
+            <span class="result-download-desc">Simple text file</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="result.js"></script>
+</body>
+</html>

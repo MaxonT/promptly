@@ -1,5 +1,0 @@
-- [x] `max_tokens` set for all stages in `modelConfig.js`.
-- [x] `pinnedTermsBlock` only injected when terms > 0.
-- [x] Spec Builder pruned to essential fields for Generation/Refine.
-- [x] Refine receives only critique `weaknesses` and `suggestions` (not full JSON).
-- [x] Generator and Refine system prompts are concise (no fluff/preaching).

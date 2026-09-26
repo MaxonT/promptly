@@ -81,7 +81,7 @@ async function runTests() {
             const res = await chatJson({
                 system: "You are a JSON bot. Output { \"status\": \"ok\" }",
                 user: "Go",
-                model: "llama-3.1-8b-instant",
+                model: "openai/gpt-oss-20b",
                 provider: "groq"
             });
             if (res.data && res.data.status === 'ok') {

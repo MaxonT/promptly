@@ -4,7 +4,7 @@ import { resolveModelName, getModelConfig, getSystemPromptSuffix, buildSystemPro
 const apiKey = process.env.OPENAI_API_KEY || "";
 
 const baseURL = process.env.OPENAI_BASE_URL;
-const SAFE_FALLBACK_MODEL = "llama-3.3-70b-versatile";
+const SAFE_FALLBACK_MODEL = "gpt-4o-mini";
 
 // Resolve the configured default model (prefers OPENAI_DEFAULT_MODEL but
 // also supports legacy OPENAI_MODEL).

@@ -50,8 +50,8 @@ export const MODEL_REGISTRY = {
   'promptly': {
     id: 'standard',
     provider: MODEL_PROVIDERS.GROQ,
-    model: 'llama-3.3-70b-versatile',
-    _futureModel: 'llama-3.3-70b-versatile',
+    model: 'openai/gpt-oss-120b',
+    _futureModel: 'openai/gpt-oss-120b',
     tier: MODEL_TIERS.STANDARD,
     category: MODEL_CATEGORIES.GENERAL,
     label: 'Standard',
@@ -67,8 +67,8 @@ export const MODEL_REGISTRY = {
   'fast': {
     id: 'fast',
     provider: MODEL_PROVIDERS.GROQ,
-    model: 'llama-3.1-8b-instant',
-    _futureModel: 'llama-3.1-8b-instant',
+    model: 'openai/gpt-oss-20b',
+    _futureModel: 'openai/gpt-oss-20b',
     tier: MODEL_TIERS.MINI,
     category: MODEL_CATEGORIES.GENERAL,
     label: 'Fast',
@@ -83,8 +83,8 @@ export const MODEL_REGISTRY = {
   'standard': {
     id: 'standard',
     provider: MODEL_PROVIDERS.GROQ,
-    model: 'llama-3.3-70b-versatile',
-    _futureModel: 'llama-3.3-70b-versatile',
+    model: 'openai/gpt-oss-120b',
+    _futureModel: 'openai/gpt-oss-120b',
     tier: MODEL_TIERS.STANDARD,
     category: MODEL_CATEGORIES.GENERAL,
     label: 'Standard',

@@ -44,19 +44,19 @@ export const PIPELINE_CONFIG = Object.freeze({
     stages: {
       specBuilder: {
         provider: "groq",
-        model: "llama-3.1-8b-instant",
+        model: "openai/gpt-oss-20b",
         max_tokens: 600,
       },
       generation: {
         provider: "groq",
-        model: "llama-3.1-8b-instant",
+        model: "openai/gpt-oss-20b",
         candidates: 1,   // single fluent
         max_tokens: 2000,
       },
       // critique / refine — NOT executed in fast mode
       evaluation: {
         provider: "groq",
-        model: "llama-3.1-8b-instant",
+        model: "openai/gpt-oss-20b",
         temperature: 0,
         max_tokens: 300,
       },
@@ -77,7 +77,7 @@ export const PIPELINE_CONFIG = Object.freeze({
     stages: {
       specBuilder: {
         provider: "groq",
-        model: "llama-3.3-70b-versatile",
+        model: "openai/gpt-oss-120b",
         max_tokens: 600,
       },
       generation: {
@@ -88,7 +88,7 @@ export const PIPELINE_CONFIG = Object.freeze({
       },
       critique: {
         provider: "groq",
-        model: "llama-3.3-70b-versatile",  // Cross-model: different reviewer
+        model: "openai/gpt-oss-120b",  // Cross-model: different reviewer
         max_tokens: 400,
       },
       refine: {
@@ -98,7 +98,7 @@ export const PIPELINE_CONFIG = Object.freeze({
       },
       evaluation: {
         provider: "groq",
-        model: "llama-3.3-70b-versatile",  // Cross-model: independent judge
+        model: "openai/gpt-oss-120b",  // Cross-model: independent judge
         temperature: 0,
         max_tokens: 300,
       },
@@ -130,7 +130,7 @@ export const PIPELINE_CONFIG = Object.freeze({
       },
       critique: {
         provider: "groq",
-        model: "llama-3.3-70b-versatile",  // Cross-model: different perspective
+        model: "openai/gpt-oss-120b",  // Cross-model: different perspective
         max_tokens: 400,
       },
       refine: {
@@ -140,7 +140,7 @@ export const PIPELINE_CONFIG = Object.freeze({
       },
       evaluation: {
         provider: "groq",
-        model: "llama-3.3-70b-versatile",  // Cross-model: independent judge
+        model: "openai/gpt-oss-120b",  // Cross-model: independent judge
         temperature: 0,
         max_tokens: 300,
       },
@@ -172,7 +172,7 @@ export const EVALUATION_WEIGHTS = Object.freeze({
 
 export const NON_PIPELINE_DEFAULT = Object.freeze({
   provider: "groq",
-  model: "llama-3.3-70b-versatile",
+  model: "openai/gpt-oss-120b",
 });
 
 // ─── Public API ─────────────────────────────────────────────────────────────

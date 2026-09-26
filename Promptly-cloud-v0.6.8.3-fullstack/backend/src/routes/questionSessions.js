@@ -359,19 +359,19 @@ questionSessionRouter.post("/", async (req, res) => {
       return res.status(503).json({ ok: false, error: "LLM disabled: OPENAI_API_KEY not set" });
     }
     
-    // Check for OpenAI API authentication errors
+    // Auth failures from any LLM provider
     if (err.status === 401 || err.code === "invalid_api_key") {
       return res.status(502).json({ 
         ok: false, 
-        error: "Invalid OpenAI API Key. Please check your OPENAI_API_KEY environment variable." 
+        error: "Invalid LLM API key. Check OPENAI_API_KEY / GROQ_API_KEY / ANTHROPIC_API_KEY." 
       });
     }
     
-    // Check for other OpenAI API errors
+    // Other provider HTTP errors (Groq/OpenAI/Anthropic)
     if (err.status) {
       return res.status(502).json({ 
         ok: false, 
-        error: `OpenAI API error (${err.status}): ${err.message || "Unknown error"}` 
+        error: `LLM API error (${err.status}): ${err.message || "Unknown error"}` 
       });
     }
     

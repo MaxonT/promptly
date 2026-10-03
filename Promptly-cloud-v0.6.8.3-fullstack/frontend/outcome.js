@@ -20,6 +20,11 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
   const candidatesListEl = document.getElementById("candidatesList");
   const logEl = document.getElementById("outcomeLog");
 
+  if (!window.authGuard?.requireLogin({ redirectTo: "settings.html#accountPanel" })) {
+    if (runBtn) runBtn.disabled = true;
+    return;
+  }
+
   function t(key, options = {}) {
     // Use centralized i18nManager for consistency
     if (!window.i18nManager || !window.i18nManager.instance) {
@@ -155,7 +160,7 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
     try {
       const body = buildRequest();
       log("POST /api/outcome-runs ...");
-      const res = await fetch(`${API_BASE}/api/outcome-runs`, {
+      const res = await window.authGuard.fetchWithAuth(`${API_BASE}/api/outcome-runs`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body)

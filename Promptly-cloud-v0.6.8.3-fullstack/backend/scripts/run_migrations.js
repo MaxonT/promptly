@@ -1,3 +1,4 @@
+import "../src/lib/env.js";
 import { execSync } from 'child_process';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -9,8 +10,11 @@ const rootDir = path.join(__dirname, '..');
 const migrations = [
   'migrations/000_init.js',
   'migrations/001_subscriptions.js',
+  'migrations/002_analytics.js',
   'migrations/002_checkout_sessions.js',
-  'migrations/003_stripe_events.js'
+  'migrations/003_stripe_events.js',
+  'migrations/004_exemplar_bank.js',
+  'migrations/005_coupons.js'
 ];
 
 console.log('[Promptly] Starting database migrations...');

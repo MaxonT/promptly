@@ -1,2 +1,15 @@
 # macOS
 .DS_Store
+
+node_modules/
+.env
+.env.*
+!.env.example
+*.db
+*.db-*
+*.sqlite*
+*.log
+*.pyc
+__pycache__/
+pipeline_monitor_logs/
+.git.backup*/

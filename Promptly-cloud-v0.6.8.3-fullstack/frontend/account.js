@@ -3,8 +3,7 @@
  * 
  * Handles:
  * - Subscription status display
- * - Token balance visualization
- * - Usage history
+ * - Daily usage limits display
  * - Billing portal access
  * - Logout
  */
@@ -25,34 +24,17 @@
   const trialEnd = document.getElementById('trialEnd');
   const cancelNotice = document.getElementById('cancelNotice');
   const manageSubscriptionBtn = document.getElementById('manageSubscriptionBtn');
-  const totalTokens = document.getElementById('totalTokens');
-  const dailyFreeTokens = document.getElementById('dailyFreeTokens');
-  const monthlyTokens = document.getElementById('monthlyTokens');
-  const trialBucket = document.getElementById('trialBucket');
-  const trialTokens = document.getElementById('trialTokens');
-  const dailyFreeBar = document.getElementById('dailyFreeBar');
-  const monthlyBar = document.getElementById('monthlyBar');
-  const trialBar = document.getElementById('trialBar');
-  const usageHistory = document.getElementById('usageHistory');
-  const refreshHistoryBtn = document.getElementById('refreshHistoryBtn');
-  const loadMoreBtn = document.getElementById('loadMoreBtn');
+  const promptUsageToday = document.getElementById('promptUsageToday');
+  const wizardUsageToday = document.getElementById('wizardUsageToday');
   const userEmail = document.getElementById('userEmail');
   const memberSince = document.getElementById('memberSince');
   const logoutBtn = document.getElementById('logoutBtn');
   const loadingOverlay = document.getElementById('loadingOverlay');
   const toastContainer = document.getElementById('toastContainer');
+  const dailyResetNote = document.getElementById('dailyResetNote');
 
   // State
   let authToken = null;
-  let historyOffset = 0;
-  const historyLimit = 20;
-
-  // Token limits for progress bars
-  const TOKEN_LIMITS = {
-    daily_free: 50000,
-    monthly: 1000000,
-    trial_base: 200000,
-  };
 
   // =============================================
   // Initialization
@@ -92,16 +74,12 @@
       ...options.headers,
     };
     
-    if (authToken) {
-      headers['Authorization'] = `Bearer ${authToken}`;
-    }
-    
-    const response = await fetch(`${API_BASE}${endpoint}`, {
+    const response = await window.authGuard.fetchWithAuth(`${API_BASE}${endpoint}`, {
       ...options,
       headers,
     });
     
-    const data = await response.json();
+    const data = await response.json().catch(() => ({}));
     
     if (!response.ok) {
       throw new Error(data.error || data.message || 'Request failed');
@@ -114,13 +92,8 @@
     showLoading(true);
     
     try {
-      const [statusData, historyData] = await Promise.all([
-        apiCall('/api/billing/status'),
-        apiCall(`/api/billing/token-history?limit=${historyLimit}&offset=0`),
-      ]);
-      
+      const statusData = await apiCall('/api/billing/status');
       updateStatusDisplay(statusData);
-      updateHistoryDisplay(historyData.history);
       
     } catch (err) {
       console.error('Failed to load account data:', err);
@@ -135,22 +108,6 @@
       showToast('error', 'Failed to load account data. Please try again.');
     } finally {
       showLoading(false);
-    }
-  }
-
-  async function loadMoreHistory() {
-    historyOffset += historyLimit;
-    
-    try {
-      const data = await apiCall(`/api/billing/token-history?limit=${historyLimit}&offset=${historyOffset}`);
-      appendHistoryEntries(data.history);
-      
-      if (!data.pagination.hasMore) {
-        loadMoreBtn.style.display = 'none';
-      }
-    } catch (err) {
-      console.error('Failed to load more history:', err);
-      showToast('error', 'Failed to load more history.');
     }
   }
 
@@ -176,6 +133,7 @@
   // =============================================
 
   function showLoginRequired() {
+    window.authGuard?.showLoginRequired?.();
     loginRequired.classList.remove('hidden');
     accountContent.classList.add('hidden');
   }
@@ -186,7 +144,7 @@
   }
 
   function updateStatusDisplay(data) {
-    const { subscription, tokens, user } = data;
+    const { subscription, usage, limits, user, timezone, nextResetAt } = data;
     
     // Subscription Status
     subscriptionStatus.textContent = getStatusText(subscription.status);
@@ -228,67 +186,38 @@
     } else {
       manageSubscriptionBtn.style.display = 'none';
     }
-    
-    // Token Balances
-    totalTokens.textContent = formatTokens(tokens.total);
-    dailyFreeTokens.textContent = formatTokens(tokens.daily_free);
-    monthlyTokens.textContent = formatTokens(tokens.monthly);
-    
-    // Progress Bars
-    dailyFreeBar.style.width = `${Math.min(100, (tokens.daily_free / TOKEN_LIMITS.daily_free) * 100)}%`;
-    monthlyBar.style.width = `${Math.min(100, (tokens.monthly / TOKEN_LIMITS.monthly) * 100)}%`;
-    
-    // Trial Tokens (if applicable)
-    if (tokens.trial_base > 0) {
-      trialBucket.style.display = 'block';
-      trialTokens.textContent = formatTokens(tokens.trial_base);
-      trialBar.style.width = `${Math.min(100, (tokens.trial_base / TOKEN_LIMITS.trial_base) * 100)}%`;
-    } else {
-      trialBucket.style.display = 'none';
+
+    if (promptUsageToday && wizardUsageToday) {
+      const promptUsed = usage?.promptOptimization ?? 0;
+      const promptDaily = limits?.promptOptimization?.daily ?? '--';
+      const wizardUsed = usage?.questionWizard ?? 0;
+      const wizardDaily = limits?.questionWizard?.daily ?? '--';
+
+      promptUsageToday.textContent = `${promptUsed} / ${promptDaily}`;
+      wizardUsageToday.textContent = `${wizardUsed} / ${wizardDaily}`;
+    }
+
+    if (dailyResetNote) {
+      const tz = timezone || Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+      if (nextResetAt) {
+        const dt = new Date(nextResetAt);
+        const when = dt.toLocaleString(undefined, {
+          timeZone: tz,
+          year: "numeric",
+          month: "2-digit",
+          day: "2-digit",
+          hour: "2-digit",
+          minute: "2-digit"
+        });
+        dailyResetNote.textContent = `Resets at ${when} (${tz})`;
+      } else {
+        dailyResetNote.textContent = `Resets daily at 00:00 (${tz})`;
+      }
     }
     
     // User Info
     userEmail.textContent = user.email || '--';
     memberSince.textContent = user.createdAt ? formatDate(user.createdAt) : '--';
-  }
-
-  function updateHistoryDisplay(entries) {
-    if (!entries || entries.length === 0) {
-      usageHistory.innerHTML = `
-        <div class="empty-history">
-          <p data-i18n="account.no_history">No usage history yet.</p>
-        </div>
-      `;
-      loadMoreBtn.style.display = 'none';
-      return;
-    }
-    
-    usageHistory.innerHTML = entries.map(entry => createHistoryEntry(entry)).join('');
-    loadMoreBtn.style.display = 'block';
-    historyOffset = 0;
-  }
-
-  function appendHistoryEntries(entries) {
-    if (!entries || entries.length === 0) return;
-    
-    const html = entries.map(entry => createHistoryEntry(entry)).join('');
-    usageHistory.insertAdjacentHTML('beforeend', html);
-  }
-
-  function createHistoryEntry(entry) {
-    const isPositive = entry.change > 0;
-    const changeClass = isPositive ? 'positive' : 'negative';
-    
-    return `
-      <div class="usage-entry">
-        <div class="usage-info">
-          <span class="usage-reason">${escapeHtml(entry.reason || 'Token change')}</span>
-          <span class="usage-time">${formatDateTime(entry.createdAt)}</span>
-          <span class="usage-bucket">${formatBucket(entry.bucket)}</span>
-        </div>
-        <span class="usage-change ${changeClass}">${formatTokens(Math.abs(entry.change))}</span>
-      </div>
-    `;
   }
 
   // =============================================
@@ -298,21 +227,6 @@
   function setupEventListeners() {
     // Manage Subscription
     manageSubscriptionBtn.addEventListener('click', openBillingPortal);
-    
-    // Refresh History
-    refreshHistoryBtn.addEventListener('click', async () => {
-      historyOffset = 0;
-      usageHistory.innerHTML = '<div class="loading-placeholder">Loading...</div>';
-      try {
-        const data = await apiCall(`/api/billing/token-history?limit=${historyLimit}&offset=0`);
-        updateHistoryDisplay(data.history);
-      } catch (err) {
-        showToast('error', 'Failed to refresh history.');
-      }
-    });
-    
-    // Load More History
-    loadMoreBtn.addEventListener('click', loadMoreHistory);
     
     // Logout
     logoutBtn.addEventListener('click', () => {
@@ -352,17 +266,27 @@
     if (!themeToggle) return;
     
     const themeIcon = themeToggle.querySelector('.theme-icon');
-    const currentTheme = document.documentElement.getAttribute('data-theme');
+    const currentTheme = window.themeManager?.get() || document.documentElement.getAttribute('data-theme');
     
     updateThemeIcon(themeIcon, currentTheme);
     
     themeToggle.addEventListener('click', () => {
-      const current = document.documentElement.getAttribute('data-theme');
-      const next = current === 'dark' ? 'light' : 'dark';
-      document.documentElement.setAttribute('data-theme', next);
-      localStorage.setItem('promptly.theme', next);
-      updateThemeIcon(themeIcon, next);
+      const newTheme = window.themeManager?.set() || setLocalTheme();
+      updateThemeIcon(themeIcon, newTheme);
     });
+    
+    // 监听来自其他页面的主题变化
+    document.addEventListener('themechange', (e) => {
+      updateThemeIcon(themeIcon, e.detail.theme);
+    });
+  }
+  
+  function setLocalTheme() {
+    const current = document.documentElement.getAttribute('data-theme');
+    const next = current === 'dark' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', next);
+    localStorage.setItem('theme', next);
+    return next;
   }
 
   function updateThemeIcon(icon, theme) {
@@ -406,17 +330,6 @@
     return statusMap[status] || status;
   }
 
-  function formatTokens(tokens) {
-    if (tokens === null || tokens === undefined) return '--';
-    if (tokens >= 1000000) {
-      return `${(tokens / 1000000).toFixed(1)}M`;
-    }
-    if (tokens >= 1000) {
-      return `${(tokens / 1000).toFixed(0)}K`;
-    }
-    return tokens.toString();
-  }
-
   function formatDate(dateString) {
     if (!dateString) return '--';
     const date = new Date(dateString);
@@ -427,38 +340,10 @@
     });
   }
 
-  function formatDateTime(dateString) {
-    if (!dateString) return '--';
-    const date = new Date(dateString);
-    return date.toLocaleString(undefined, {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  }
-
-  function formatBucket(bucket) {
-    const bucketMap = {
-      'daily_free': 'Daily Free',
-      'monthly': 'Monthly',
-      'trial_base': 'Trial',
-      'adjustment': 'Adjustment',
-    };
-    return bucketMap[bucket] || bucket;
-  }
 
   function capitalizeFirst(str) {
     if (!str) return '';
     return str.charAt(0).toUpperCase() + str.slice(1);
-  }
-
-  function escapeHtml(str) {
-    if (!str) return '';
-    const div = document.createElement('div');
-    div.textContent = str;
-    return div.innerHTML;
   }
 
   // =============================================

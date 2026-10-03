@@ -183,14 +183,14 @@ body.subscription-body::after {
 }
 
 .status-info,
-.token-info {
+.usage-info {
   display: flex;
   align-items: center;
   gap: 0.5rem;
 }
 
 .status-label,
-.token-label {
+.usage-label {
   color: var(--text-secondary);
   font-size: 0.875rem;
 }
@@ -218,7 +218,7 @@ body.subscription-body::after {
   color: var(--error-color);
 }
 
-.token-value {
+.usage-value {
   font-weight: 700;
   font-size: 1.125rem;
   color: var(--accent);
@@ -451,25 +451,101 @@ body.subscription-body::after {
   padding: 1rem;
 }
 
+.subscribe-btn.is-locked {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.beta-modal {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.25rem;
+  background: rgba(0, 0, 0, 0.45);
+  z-index: 1000;
+}
+
+.beta-modal.hidden {
+  display: none;
+}
+
+.beta-modal-content {
+  width: min(520px, 92vw);
+  border: 1px solid rgba(124, 58, 237, 0.5);
+  background: radial-gradient(120% 140% at 0% 0%, rgba(124, 58, 237, 0.18) 0%, rgba(37, 99, 235, 0.08) 45%, var(--bg-primary) 100%);
+  border-radius: 18px;
+  padding: 1.5rem 1.5rem 1.25rem;
+  position: relative;
+  box-shadow: 0 22px 70px rgba(15, 23, 42, 0.45), 0 0 0 1px rgba(124, 58, 237, 0.2);
+}
+
+.beta-modal-content::before {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  border-radius: 18px;
+  padding: 1px;
+  background: linear-gradient(135deg, rgba(124, 58, 237, 0.9), rgba(14, 165, 233, 0.7), rgba(124, 58, 237, 0.2));
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+.beta-modal-content h2 {
+  margin: 0 0 0.5rem 0;
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.beta-modal-content p {
+  margin: 0 0 1rem 0;
+  font-size: 0.98rem;
+  font-weight: 500;
+  line-height: 1.6;
+  color: var(--text-secondary);
+  white-space: pre-line;
+}
+
+.beta-modal-close {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 1.6rem;
+  line-height: 1;
+  cursor: pointer;
+  float: right;
+}
+
+.beta-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+}
+
 .btn-block {
   display: block;
   width: 100%;
 }
 
-/* Token Explanation Section */
-.token-explanation {
+/* Usage Explanation Section */
+.usage-explanation {
   padding: 4rem 2rem;
   background: var(--bg-secondary);
 }
 
-.token-explanation h2 {
+.usage-explanation h2 {
   text-align: center;
   font-size: 1.75rem;
   font-weight: 700;
   margin-bottom: 2rem;
 }
 
-.token-cards {
+.usage-cards {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: 1.5rem;
@@ -477,7 +553,7 @@ body.subscription-body::after {
   margin: 0 auto;
 }
 
-.token-card {
+.usage-card {
   background: var(--bg-primary);
   border: 1px solid var(--border-color);
   border-radius: 1rem;
@@ -485,19 +561,19 @@ body.subscription-body::after {
   text-align: center;
 }
 
-.token-icon {
+.usage-icon {
   font-size: 2.5rem;
   margin-bottom: 1rem;
 }
 
-.token-card h3 {
+.usage-card h3 {
   font-size: 1.125rem;
   font-weight: 700;
   margin-bottom: 0.75rem;
   color: var(--text-primary);
 }
 
-.token-card p {
+.usage-card p {
   font-size: 0.9375rem;
   color: var(--text-secondary);
   line-height: 1.6;
@@ -709,7 +785,7 @@ body.subscription-body::after {
     text-align: center;
   }
   
-  .token-cards {
+  .usage-cards {
     grid-template-columns: 1fr;
   }
   
@@ -1067,4 +1143,3 @@ body.subscription-body::after {
     font-size: 0.75rem;
   }
 }
-

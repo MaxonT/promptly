@@ -3,17 +3,13 @@ import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 import { db } from "../lib/db.js";
 import { nanoid } from "nanoid";
+import { getNextLocalMidnightIso, normalizeTimeZone } from "../lib/timezone.js";
 
 export const authRouter = Router();
 
-let TOKEN_SECRET = process.env.JWT_SECRET;
-if (!TOKEN_SECRET) {
-  if (process.env.NODE_ENV === "development") {
-    console.warn("[promptly] WARNING: JWT_SECRET is not set. Using default insecure development secret.");
-    TOKEN_SECRET = "dev";
-  } else {
-    throw new Error("[promptly] FATAL: JWT_SECRET environment variable must be set in production.");
-  }
+const TOKEN_SECRET = process.env.JWT_SECRET;
+if (!TOKEN_SECRET || TOKEN_SECRET.length < 32) {
+  throw new Error("JWT_SECRET must contain at least 32 characters. Generate one with: openssl rand -hex 32");
 }
 const TOKEN_EXPIRES_IN = process.env.JWT_EXPIRES_IN || "7d";
 const PASSWORD_MIN_LENGTH = 8;
@@ -33,6 +29,7 @@ function buildUserPayload(row) {
   return {
     id: row.id,
     email: row.email,
+    timezone: row.timezone || "UTC",
     subscription: {
       tier: row.subscription_tier || "free",
       isActive: !!row.subscription_active
@@ -141,6 +138,42 @@ authRouter.get("/me", requireAuth, (req, res) => {
   return res.json({
     ok: true,
     user: buildUserPayload(row)
+  });
+});
+
+authRouter.put("/timezone", requireAuth, (req, res) => {
+  const userId = req.user.sub;
+  const requested = req.body?.timezone;
+  const tz = normalizeTimeZone(requested);
+  if (!requested || typeof requested !== "string" || tz === "UTC" && requested.trim() !== "UTC") {
+    return res.status(400).json({ ok: false, error: "Invalid timezone" });
+  }
+
+  const row = db.prepare("SELECT timezone, timezone_updated_at FROM users WHERE id = ?").get(userId);
+  const currentTz = normalizeTimeZone(row?.timezone);
+  if (currentTz === tz) {
+    return res.json({
+      ok: true,
+      timezone: currentTz,
+      nextResetAt: getNextLocalMidnightIso(currentTz)
+    });
+  }
+  const now = Date.now();
+  const lastUpdatedAt = row?.timezone_updated_at ? new Date(row.timezone_updated_at).getTime() : null;
+  const CHANGE_WINDOW_MS = 30 * 24 * 60 * 60 * 1000;
+  if (lastUpdatedAt && now - lastUpdatedAt < CHANGE_WINDOW_MS) {
+    return res.status(429).json({ ok: false, error: "Timezone can only be changed every 30 days" });
+  }
+
+  const nowIso = new Date(now).toISOString();
+  db.prepare(
+    "UPDATE users SET timezone = ?, timezone_updated_at = ?, updated_at = ? WHERE id = ?"
+  ).run(tz, nowIso, nowIso, userId);
+
+  return res.json({
+    ok: true,
+    timezone: tz,
+    nextResetAt: getNextLocalMidnightIso(tz)
   });
 });
 

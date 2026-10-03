@@ -2,6 +2,7 @@ import { z } from "zod";
 import { chatJson } from "./llmRouter.js";
 import { createRun, completeRunSuccess, completeRunFailure } from "./runLogger.js";
 import { buildEvaluationMetrics, buildRunMetrics } from "./metricsEngine.js";
+import { NON_PIPELINE_DEFAULT } from "./modelConfig.js";
 
 /**
  * Zod schema for Evaluator agent output
@@ -102,7 +103,7 @@ export async function evaluatePrompt({ spec, compiledPrompt, model }) {
 
   try {
     const start = Date.now();
-    const { data: raw, usage } = await chatJson({ provider: 'openai', system, user, model: evalModel });
+    const { data: raw, usage } = await chatJson({ provider: NON_PIPELINE_DEFAULT.provider, system, user, model: evalModel });
     const runMetrics = buildRunMetrics({ latencyMs: Date.now() - start, usage });
     completeRunSuccess(runId, raw, { metrics: runMetrics });
 

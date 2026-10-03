@@ -6,14 +6,14 @@ export const INFERENCE_PROFILES = {
       agentA: {
         provider: "groq",
         envKey: "GROQ_API_KEY",
-        model: "llama-3.1-8b-instant",
+        model: "openai/gpt-oss-20b",
         maxTokens: 180,
         temperature: 0.3
       },
       agentB: {
         provider: "groq",
         envKey: "GROQ_API_KEY",
-        model: "llama-3.1-8b-instant",
+        model: "openai/gpt-oss-20b",
         maxTokens: 120,
         temperature: 0.2
       },
@@ -33,7 +33,7 @@ export const INFERENCE_PROFILES = {
       agentA: {
         provider: "groq",
         envKey: "GROQ_API_KEY",
-        model: "llama-3.1-8b-instant",
+        model: "openai/gpt-oss-20b",
         maxTokens: 250,
         temperature: 0.4
       },

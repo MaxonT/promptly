@@ -9,14 +9,15 @@ import {
 } from "../lib/llmAgents.js";
 import { compileSpecToPrompt } from "../lib/specCompiler.js";
 import { chatJson, LlmDisabledError } from "../lib/llmRouter.js";
+import { NON_PIPELINE_DEFAULT } from "../lib/modelConfig.js";
 import { goBack, skipQuestion } from "../lib/questionNavigator.js";
 import { getModelIds, resolveModelName, isValidModel, getModelConfig } from "../lib/modelRegistry.js";
 import { INFERENCE_PROFILES } from "../lib/inferenceProfiles.js";
 import { checkQuestionWizardLimit, recordUsage, canUseMode } from "../lib/planLimits.js";
-import { optionalAuth } from "./auth.js";
+import { requireAuth } from "./auth.js";
 
 export const questionSessionRouter = Router();
-questionSessionRouter.use(optionalAuth);
+questionSessionRouter.use(requireAuth);
 
 const PROJECT_DESCRIPTION_REQUIRED_MESSAGE = "Project description is required.";
 
@@ -126,8 +127,7 @@ const ModelOnlySchema = z.object({
 const RUNNING_STATUSES = ["active", "ready_to_finalize"];
 
 function getUserId(req) {
-  if (req.user && req.user.sub) return req.user.sub;
-  return "demo-user";
+  return req.user.sub;
 }
 
 /**
@@ -152,7 +152,7 @@ function resolveModelChoice(modelId) {
   const selected = isValidModel(modelId) ? modelId : "promptly";
   const targetModel = resolveModelName(selected) || fallback || null;
   const config = getModelConfig(selected);
-  const provider = config?.provider || 'openai';
+  const provider = config?.provider || NON_PIPELINE_DEFAULT.provider;
   
   // Log model resolution for debugging
   if (selected !== modelId) {
@@ -359,19 +359,19 @@ questionSessionRouter.post("/", async (req, res) => {
       return res.status(503).json({ ok: false, error: "LLM disabled: OPENAI_API_KEY not set" });
     }
     
-    // Check for OpenAI API authentication errors
+    // Auth failures from any LLM provider
     if (err.status === 401 || err.code === "invalid_api_key") {
       return res.status(502).json({ 
         ok: false, 
-        error: "Invalid OpenAI API Key. Please check your OPENAI_API_KEY environment variable." 
+        error: "Invalid LLM API key. Check OPENAI_API_KEY / GROQ_API_KEY / ANTHROPIC_API_KEY." 
       });
     }
     
-    // Check for other OpenAI API errors
+    // Other provider HTTP errors (Groq/OpenAI/Anthropic)
     if (err.status) {
       return res.status(502).json({ 
         ok: false, 
-        error: `OpenAI API error (${err.status}): ${err.message || "Unknown error"}` 
+        error: `LLM API error (${err.status}): ${err.message || "Unknown error"}` 
       });
     }
     
@@ -393,13 +393,9 @@ questionSessionRouter.get("/status/active", (req, res) => {
       .prepare(
         `SELECT id, owner_id, kind, status, mode, model, language, created_at, updated_at
          FROM question_sessions
-         WHERE id = ?`
+         WHERE id = ? AND owner_id = ?`
       )
-      .get(requestedSessionId);
-
-    if (session && session.owner_id !== userId) {
-      session = null; // Do not leak other users' sessions
-    }
+      .get(requestedSessionId, userId);
   }
 
   if (!session) {
@@ -447,13 +443,14 @@ questionSessionRouter.get("/status/active", (req, res) => {
 
 questionSessionRouter.get("/:sessionId", (req, res) => {
   const { sessionId } = req.params;
+  const userId = getUserId(req);
   const session = db
     .prepare(
       `SELECT id, owner_id, kind, status, initial_description, mode, model, language, created_at, updated_at
        FROM question_sessions
-       WHERE id = ?`
+       WHERE id = ? AND owner_id = ?`
     )
-    .get(sessionId);
+    .get(sessionId, userId);
 
   if (!session) {
     return res.status(404).json({ ok: false, error: "Session not found" });
@@ -481,14 +478,15 @@ questionSessionRouter.get("/:sessionId", (req, res) => {
 // GET /api/question-sessions/:sessionId/state - hydrate in-progress sessions without creating a new one
 questionSessionRouter.get("/:sessionId/state", (req, res) => {
   const { sessionId } = req.params;
+  const userId = getUserId(req);
 
   const session = db
     .prepare(
       `SELECT id, owner_id, kind, status, initial_description, mode, model, language, created_at, updated_at
        FROM question_sessions
-       WHERE id = ?`
+       WHERE id = ? AND owner_id = ?`
     )
-    .get(sessionId);
+    .get(sessionId, userId);
 
   if (!session) {
     return res.status(404).json({ ok: false, error: "Session not found" });
@@ -557,9 +555,10 @@ questionSessionRouter.post("/:sessionId/answer", (req, res) => {
     return res.status(400).json({ ok: false, error: parsed.error.flatten() });
   }
   const { sessionId } = req.params;
+  const userId = getUserId(req);
   const session = db
-    .prepare("SELECT * FROM question_sessions WHERE id = ?")
-    .get(sessionId);
+    .prepare("SELECT * FROM question_sessions WHERE id = ? AND owner_id = ?")
+    .get(sessionId, userId);
   if (!session) {
     return res.status(404).json({ ok: false, error: "Session not found" });
   }
@@ -661,9 +660,10 @@ questionSessionRouter.post("/:sessionId/answer", (req, res) => {
 
 questionSessionRouter.post("/:sessionId/finalize", async (req, res) => {
   const { sessionId } = req.params;
+  const userId = getUserId(req);
   const session = db
-    .prepare("SELECT * FROM question_sessions WHERE id = ?")
-    .get(sessionId);
+    .prepare("SELECT * FROM question_sessions WHERE id = ? AND owner_id = ?")
+    .get(sessionId, userId);
   if (!session) {
     return res.status(404).json({ ok: false, error: "Session not found" });
   }
@@ -724,7 +724,10 @@ questionSessionRouter.post("/:sessionId/finalize", async (req, res) => {
 
     const compiled = compileSpecToPrompt(result.spec);
     const now = new Date().toISOString();
-    const userId = session.owner_id || "demo-user";
+    const userId = session.owner_id;
+    if (!userId) {
+      throw new Error("Session owner is missing");
+    }
     const specId = `spec_${nanoid(12)}`;
     const cpId = `cp_${nanoid(12)}`;
 
@@ -1011,10 +1014,23 @@ questionSessionRouter.post("/next", async (req, res) => {
   }
 
   const { specId, sessionId = null, lastAnswer = null } = parsed.data;
+  const isNewSession = !sessionId;
 
   try {
     console.log(`[promptly] 📝 /api/question-sessions/next: Request received`);
     console.log(`[promptly] SpecId: ${specId}, SessionId: ${sessionId || 'new'}, LastAnswer: ${lastAnswer ? 'provided' : 'none'}`);
+
+    if (isNewSession) {
+      const limitCheck = checkQuestionWizardLimit(userId);
+      if (!limitCheck.allowed) {
+        return res.status(403).json({
+          ok: false,
+          error: limitCheck.reason,
+          usage: limitCheck.usage,
+          limit: limitCheck.limit
+        });
+      }
+    }
 
     // 1. Load Spec by specId
     const specRow = db.prepare("SELECT * FROM specs WHERE id = ?").get(specId);
@@ -1265,7 +1281,7 @@ Based on this specification and Q&A history, generate the next clarifying questi
 
     // 6. Call LLM to generate next question
     const { data: llmResponse } = await chatJson({
-      provider: 'openai',
+      ...NON_PIPELINE_DEFAULT,
       system: systemPrompt,
       user: userPrompt
     });
@@ -1329,6 +1345,9 @@ Based on this specification and Q&A history, generate the next clarifying questi
     console.log(`[promptly] ✅ Updated session: step=${newStep}, complete=${sessionComplete}, completeness=${estimatedCompleteness.toFixed(2)}`);
 
     // 8. Return response
+    if (isNewSession) {
+      recordUsage(userId, 'question_wizard');
+    }
     res.json({
       ok: true,
       session: {

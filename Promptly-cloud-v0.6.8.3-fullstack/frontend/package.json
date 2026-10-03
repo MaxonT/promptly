@@ -5,6 +5,8 @@
   "description": "Promptly Frontend - Prompt Optimizer Studio",
   "scripts": {
     "build": "node build.js",
+    "sitemap": "node scripts/generate-sitemap.js",
+    "prebuild": "node scripts/generate-sitemap.js",
     "dev": "echo 'Open index.html in your browser for local development'"
   },
   "devDependencies": {}

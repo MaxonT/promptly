@@ -1,14 +1,63 @@
 <!doctype html>
-<html lang="en" data-theme="auto">
+<html lang="en" data-theme="dark">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Promptly Wizard — Question Engine Demo</title>
+  <title>Promptly Question Wizard — Generate AI Project Specifications Instantly</title>
+  <!-- SEO -->
+  <meta name="description" content="Answer a few questions and Promptly's AI Question Wizard generates a complete project specification and optimized prompt for any LLM. Free to try." />
+  <meta name="keywords" content="AI project specification, question wizard, prompt generator, ChatGPT spec, LLM project brief, AI requirements generator" />
+  <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1" />
+  <link rel="canonical" href="https://promptly.solutions/wizard.html" />
+  <!-- Open Graph -->
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://promptly.solutions/wizard.html" />
+  <meta property="og:title" content="Promptly Question Wizard — Generate AI Project Specs" />
+  <meta property="og:description" content="Answer a few questions and get a complete project specification and optimized prompt for any LLM." />
+  <meta property="og:image" content="https://promptly.solutions/assets/promptly-icon.svg" />
+  <meta property="og:site_name" content="Promptly" />
+  <meta property="og:locale" content="en_US" />
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:title" content="Promptly Question Wizard — Generate AI Specs" />
+  <meta name="twitter:description" content="Answer a few questions and get a complete project specification and optimized prompt for any LLM." />
+  <meta name="twitter:image" content="https://promptly.solutions/assets/promptly-icon.svg" />
+  <!-- JSON-LD Structured Data -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebApplication",
+    "name": "Promptly Question Wizard",
+    "url": "https://promptly.solutions/wizard.html",
+    "description": "AI-powered Question Wizard that generates complete project specifications and optimized prompts for any LLM.",
+    "applicationCategory": "ProductivityApplication",
+    "operatingSystem": "Web",
+    "isPartOf": {
+      "@type": "WebSite",
+      "name": "Promptly",
+      "url": "https://promptly.solutions/"
+    }
+  }
+  </script>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://promptly.solutions/" },
+      { "@type": "ListItem", "position": 2, "name": "Question Wizard", "item": "https://promptly.solutions/wizard.html" }
+    ]
+  }
+  </script>
   <link rel="icon" href="assets/promptly-icon.svg" type="image/svg+xml"/>
+  <link rel="apple-touch-icon" href="assets/promptly-icon.svg"/>
+  <!-- Theme Manager - Must load before CSS -->
+  <script src="lib/themeManager.js"></script>
   <link rel="stylesheet" href="theme.css" />
   <link rel="stylesheet" href="style.css" />
   <link rel="stylesheet" href="wizard.css" />
   <script src="config.js"></script>
+  <script src="lib/authGuard.js"></script>
   <script src="core.js"></script>
   <script src="lib/particles.js"></script>
   <script src="lib/i18next.min.js"></script>
@@ -114,6 +163,7 @@
       }
     }
   </style>
+  <script src="lib/seoManager.js"></script>
 </head>
 <body class="app-shell">
   <!-- Global Navigation Header (consistent with dashboard) -->
@@ -125,7 +175,7 @@
     <nav class="navlinks">
       <a href="index.html" data-i18n="nav.dashboard">← Dashboard</a>
       <a href="subscription.html" data-i18n="nav.subscription">Subscription</a>
-      <a href="account.html" data-i18n="nav.my_account">My Account</a>
+      <a href="settings.html#accountPanel" data-i18n="nav.settings">Settings</a>
       <a href="privacy.html" data-i18n="nav.privacy">Privacy</a>
       <a href="cookies.html" data-i18n="nav.cookies">Cookies</a>
       <a href="terms.html" data-i18n="nav.terms">Terms</a>
@@ -435,10 +485,11 @@
       <a href="privacy.html">Privacy</a> · 
       <a href="cookies.html">Cookies</a> · 
       <a href="terms.html">Terms</a> · 
-      Support: <a href="mailto:ming.t.yang@vanderbilt.edu">ming.t.yang@vanderbilt.edu</a>
+      Support: <a href="mailto:PromptlyGuli@gmail.com">PromptlyGuli@gmail.com</a>
     </p>
   </footer>
 
   <script src="wizard.js"></script>
+  <script src="lib/redeemBubble.js" defer></script>
 </body>
 </html>

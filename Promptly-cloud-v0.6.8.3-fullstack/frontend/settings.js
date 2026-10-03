@@ -15,7 +15,14 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
   const loginForm = document.getElementById("loginForm");
   const registerForm = document.getElementById("registerForm");
   const logoutBtn = document.getElementById("logoutBtn");
+  const accountManagementSection = document.getElementById("accountManagementSection");
+  const manageAccountToggle = document.getElementById("manageAccountToggle");
+  const toggleIcon = document.getElementById("toggleIcon");
+  const accountDetailsPanel = document.getElementById("accountDetailsPanel");
+  const manageSubscriptionBtn = document.getElementById("manageSubscriptionBtn");
   const TOKEN_KEY = "promptly.token";
+
+  // Account management state
 
   function log(line) {
     const ts = new Date().toISOString().slice(11, 19);
@@ -62,10 +69,14 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
       authStatusEl.textContent = `Signed in as ${user.email} · Plan: ${tier} (${active})`;
       authFormsEl?.classList.add("hidden");
       logoutBtn?.classList.remove("hidden");
+      accountManagementSection?.classList.remove("hidden");
     } else {
       authStatusEl.textContent = "Not signed in.";
       authFormsEl?.classList.remove("hidden");
       logoutBtn?.classList.add("hidden");
+      accountManagementSection?.classList.add("hidden");
+      accountDetailsPanel?.classList.add("hidden");
+      if (toggleIcon) toggleIcon.textContent = "▶";
     }
   }
 
@@ -79,8 +90,8 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
   }
 
   async function fetchWithAuth(path, options = {}) {
-    const headers = authHeaders(options.headers || {});
-    return fetch(`${API_BASE}${path}`, { ...options, headers });
+    const headers = options.headers || {};
+    return window.authGuard.fetchWithAuth(`${API_BASE}${path}`, { ...options, headers });
   }
 
   async function loadAccount() {
@@ -104,7 +115,8 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
       console.error(err);
       saveToken(null);
       updateAuthView(null);
-      setAuthMessage("Session expired. Please sign in again.", true);
+      window.authGuard?.showLoginRequired?.();
+      setAuthMessage("Please log in first", true);
       log("Account error: " + err.message);
     }
   }
@@ -205,6 +217,102 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
     }
   });
 
+  // Manage Account toggle
+  manageAccountToggle?.addEventListener("click", () => {
+    const isExpanded = !accountDetailsPanel?.classList.contains("hidden");
+    accountDetailsPanel?.classList.toggle("hidden");
+    if (toggleIcon) toggleIcon.textContent = isExpanded ? "▶" : "▼";
+    if (!isExpanded) loadAccountManagementData();
+  });
+
+  manageSubscriptionBtn?.addEventListener("click", async () => {
+    try {
+      log("POST /api/billing/portal-session ...");
+      const res = await fetchWithAuth("/api/billing/portal-session", { method: "POST" });
+      const data = await res.json();
+      if (!res.ok || !data.ok) throw new Error(data.error || "Failed to open portal");
+      window.location.href = data.url;
+    } catch (err) {
+      console.error(err);
+      setAuthMessage(err.message || "Failed to open billing portal.", true);
+    }
+  });
+
+  async function loadAccountManagementData() {
+    const subscriptionStatus = document.getElementById("subscriptionStatus");
+    const planName = document.getElementById("planName");
+    const periodEnd = document.getElementById("periodEnd");
+    const trialEndItem = document.getElementById("trialEndItem");
+    const trialEnd = document.getElementById("trialEnd");
+    const promptUsageToday = document.getElementById("promptUsageToday");
+    const wizardUsageToday = document.getElementById("wizardUsageToday");
+
+    try {
+      const statusRes = await fetchWithAuth("/api/billing/status");
+      const statusData = await statusRes.json();
+
+      if (!statusRes.ok || !statusData.ok) throw new Error(statusData.error || "Failed to load status");
+
+      const { subscription, usage, limits } = statusData;
+      subscriptionStatus && (subscriptionStatus.textContent = getStatusText(subscription.status));
+      subscriptionStatus && (subscriptionStatus.className = `status-badge ${subscription.status}`);
+      planName && (planName.textContent = subscription.plan ? capitalizeFirst(subscription.plan) : "None");
+      periodEnd && (periodEnd.textContent = subscription.periodEnd ? formatDate(subscription.periodEnd) : "--");
+      if (subscription.status === "trialing" && subscription.trialEnd) {
+        trialEndItem && (trialEndItem.style.display = "flex");
+        trialEnd && (trialEnd.textContent = formatDate(subscription.trialEnd) + (subscription.trialDaysRemaining != null ? ` (${subscription.trialDaysRemaining} days left)` : ""));
+      } else {
+        trialEndItem && (trialEndItem.style.display = "none");
+      }
+      if (subscription.status === "active" || subscription.status === "trialing") {
+        manageSubscriptionBtn && (manageSubscriptionBtn.style.display = "inline-flex");
+      } else {
+        manageSubscriptionBtn && (manageSubscriptionBtn.style.display = "none");
+      }
+      if (promptUsageToday && wizardUsageToday) {
+        const promptUsed = usage?.promptOptimization ?? 0;
+        const promptDaily = limits?.promptOptimization?.daily ?? "--";
+        const wizardUsed = usage?.questionWizard ?? 0;
+        const wizardDaily = limits?.questionWizard?.daily ?? "--";
+        promptUsageToday.textContent = `${promptUsed} / ${promptDaily}`;
+        wizardUsageToday.textContent = `${wizardUsed} / ${wizardDaily}`;
+      }
+
+      const noteEl = document.getElementById("settingsDailyResetNote");
+      if (noteEl) {
+        const tz = statusData.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+        if (statusData.nextResetAt) {
+          const dt = new Date(statusData.nextResetAt);
+          const when = dt.toLocaleString(undefined, {
+            timeZone: tz,
+            year: "numeric",
+            month: "2-digit",
+            day: "2-digit",
+            hour: "2-digit",
+            minute: "2-digit"
+          });
+          noteEl.textContent = `Resets at ${when} (${tz})`;
+        } else {
+          noteEl.textContent = `Resets daily at 00:00 (${tz})`;
+        }
+      }
+    } catch (err) {
+      console.error("Account management load error:", err);
+    }
+  }
+
+  function getStatusText(status) {
+    const m = { none: "No Subscription", trialing: "Trial Active", active: "Active", past_due: "Past Due", canceled: "Canceled", unpaid: "Unpaid" };
+    return m[status] || status;
+  }
+  function formatDate(s) {
+    if (!s) return "--";
+    return new Date(s).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
+  }
+  function capitalizeFirst(str) {
+    return str ? str.charAt(0).toUpperCase() + str.slice(1) : "";
+  }
+
   async function loadSettings() {
     try {
       log("GET /api/settings ...");
@@ -240,7 +348,10 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
     }
 
     if (modelListEl) {
-      modelListEl.innerHTML = "";
+      // 安全地清空容器
+      while (modelListEl.firstChild) {
+        modelListEl.removeChild(modelListEl.firstChild);
+      }
     }
     const modelDisplayName = "Promptly Refined LLM Model";
     const modelItems = [
@@ -295,7 +406,10 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
       }
 
     if (featuresListEl) {
-      featuresListEl.innerHTML = "";
+      // 安全地清空容器
+      while (featuresListEl.firstChild) {
+        featuresListEl.removeChild(featuresListEl.firstChild);
+      }
     }
     const features = s.features || {
       questionWizard: true,

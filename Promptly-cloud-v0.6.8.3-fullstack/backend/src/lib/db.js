@@ -1,3 +1,4 @@
+import "./env.js";
 /**
  * Database Adapter - Supports both SQLite and PostgreSQL
  * Automatically selects based on environment variables:
@@ -17,15 +18,43 @@ if (USE_POSTGRES) {
   // Dynamic import PostgreSQL module (top-level await supported in Node.js 14.8+)
   dbModule = await import('./db-pg.js');
   console.log('[promptly] Using PostgreSQL database');
+  await dbModule.initializeSchema();
+  await dbModule.ensureDemoUser();
 } else {
   // Use SQLite (default)
   console.log('[promptly] Using SQLite database');
   
   const DB_PATH = process.env.SQLITE_PATH || "./data/app.db";
+  const absoluteDBPath = path.resolve(DB_PATH);
   console.log(`[promptly] SQLite database path: ${DB_PATH}`);
-  fs.mkdirSync(path.dirname(DB_PATH), { recursive: true });
+  console.log(`[promptly] SQLite absolute path: ${absoluteDBPath}`);
+  console.log(`[promptly] Current working directory: ${process.cwd()}`);
   
-  const sqliteDb = new Database(DB_PATH);
+  // 确保数据库目录存在且权限正确
+  const dbDir = path.dirname(absoluteDBPath);
+  fs.mkdirSync(dbDir, { recursive: true, mode: 0o750 });
+  
+  // 设置安全的数据库选项
+  const sqliteDb = new Database(absoluteDBPath, {
+    fileMustExist: false,
+    timeout: 5000,
+    verbose: process.env.NODE_ENV === 'development' ? console.log : undefined
+  });
+  
+  // 设置安全的SQLite配置
+  sqliteDb.pragma('journal_mode = WAL');  // WAL模式提供更好的并发性
+  sqliteDb.pragma('synchronous = NORMAL'); // 平衡性能和安全性
+  sqliteDb.pragma('foreign_keys = ON');    // 启用外键约束
+  sqliteDb.pragma('temp_store = MEMORY');  // 临时数据存储在内存中
+  
+  // 验证数据库连接
+  try {
+    sqliteDb.exec('SELECT 1');
+    console.log('[promptly] ✅ SQLite database connection verified');
+  } catch (error) {
+    console.error('[promptly] ❌ SQLite database connection failed:', error);
+    throw error;
+  }
   
   // Export SQLite Database directly (synchronous API)
   // Routes use db.prepare(), db.exec(), etc. which are synchronous
@@ -275,6 +304,74 @@ CREATE TABLE IF NOT EXISTS plan_usage (
 );
 
 CREATE INDEX IF NOT EXISTS idx_plan_usage_user_date ON plan_usage(user_id, date, feature_type);
+
+-- Timezone-aware daily refresh tracking
+CREATE TABLE IF NOT EXISTS user_daily_refresh_tracker (
+  user_id TEXT PRIMARY KEY,
+  last_daily_refresh_date TEXT NOT NULL,
+  updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+  CONSTRAINT fk_refresh_user FOREIGN KEY (user_id) REFERENCES users(id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_refresh_tracker_updated ON user_daily_refresh_tracker(updated_at);
+
+-- ─── Exemplar Bank (Pipeline v2) ─────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS exemplar_bank (
+  id              TEXT PRIMARY KEY,
+  user_id         TEXT NOT NULL,
+  spec_id         TEXT,
+  run_id          TEXT,
+  candidate_id    TEXT,
+  mode            TEXT NOT NULL DEFAULT 'standard',
+  prompt_text     TEXT NOT NULL,
+  task_domain     TEXT,
+  spec_summary    TEXT,
+  language        TEXT DEFAULT 'en',
+  composite_score REAL NOT NULL,
+  completeness    REAL,
+  clarity         REAL,
+  specificity     REAL,
+  structure       REAL,
+  coherence       REAL,
+  creativity      REAL,
+  safety          REAL,
+  efficiency      REAL,
+  usage_count     INTEGER DEFAULT 0,
+  created_at      TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at      TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_exemplar_user    ON exemplar_bank(user_id);
+CREATE INDEX IF NOT EXISTS idx_exemplar_domain  ON exemplar_bank(task_domain);
+CREATE INDEX IF NOT EXISTS idx_exemplar_score   ON exemplar_bank(composite_score DESC);
+CREATE INDEX IF NOT EXISTS idx_exemplar_mode    ON exemplar_bank(mode);
+CREATE INDEX IF NOT EXISTS idx_exemplar_created ON exemplar_bank(created_at);
+
+-- ─── Coupons ─────────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS coupons (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  code TEXT NOT NULL UNIQUE,
+  plan TEXT NOT NULL DEFAULT 'monthly',
+  max_redemptions INTEGER NOT NULL DEFAULT 10,
+  times_redeemed INTEGER NOT NULL DEFAULT 0,
+  duration_days INTEGER NOT NULL DEFAULT 30,
+  active INTEGER NOT NULL DEFAULT 1,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  expires_at TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_coupons_code ON coupons(code);
+
+CREATE TABLE IF NOT EXISTS coupon_redemptions (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  coupon_id INTEGER NOT NULL,
+  user_id TEXT NOT NULL,
+  redeemed_at TEXT NOT NULL DEFAULT (datetime('now')),
+  CONSTRAINT fk_coupon FOREIGN KEY (coupon_id) REFERENCES coupons(id),
+  CONSTRAINT fk_coupon_user FOREIGN KEY (user_id) REFERENCES users(id),
+  CONSTRAINT uq_coupon_user UNIQUE (coupon_id, user_id)
+);
+CREATE INDEX IF NOT EXISTS idx_coupon_redemptions_user ON coupon_redemptions(user_id);
+CREATE INDEX IF NOT EXISTS idx_coupon_redemptions_coupon ON coupon_redemptions(coupon_id);
 `);
 
   // SQLite helper functions
@@ -298,20 +395,45 @@ CREATE INDEX IF NOT EXISTS idx_plan_usage_user_date ON plan_usage(user_id, date,
   ensureColumn("candidate_prompts", "metrics_json", "TEXT");
   ensureColumn("users", "oauth_provider", "TEXT");
   ensureColumn("users", "oauth_id", "TEXT");
+  ensureColumn("users", "timezone", "TEXT DEFAULT 'UTC'");
+  ensureColumn("users", "timezone_updated_at", "TEXT");
   ensureColumn("runs", "completed_at", "TEXT");
   ensureColumn("runs", "metrics_json", "TEXT");
+  ensureColumn("runs", "rejection_reason", "TEXT");
   ensureColumn("evaluations", "metrics_json", "TEXT");
 
-  // Ensure stripe_events has retry_count (backfill for databases created before migration fix)
+  // ─── Exemplar FTS5 (separate exec for VIRTUAL TABLE compat) ──────────
   try {
-    const tableExists = sqliteDb.prepare(
-      "SELECT name FROM sqlite_master WHERE type='table' AND name='stripe_events'"
-    ).get();
-    if (tableExists) {
-      ensureColumn("stripe_events", "retry_count", "INTEGER DEFAULT 0");
-    }
-  } catch (err) {
-    // stripe_events may not exist yet (migrations haven't run); safe to skip
+    sqliteDb.exec(`
+      CREATE VIRTUAL TABLE IF NOT EXISTS exemplar_fts USING fts5(
+        id UNINDEXED,
+        prompt_text,
+        spec_summary,
+        task_domain,
+        content='exemplar_bank',
+        content_rowid='rowid'
+      );
+
+      CREATE TRIGGER IF NOT EXISTS exemplar_fts_insert AFTER INSERT ON exemplar_bank BEGIN
+        INSERT INTO exemplar_fts(rowid, id, prompt_text, spec_summary, task_domain)
+        VALUES (new.rowid, new.id, new.prompt_text, new.spec_summary, new.task_domain);
+      END;
+
+      CREATE TRIGGER IF NOT EXISTS exemplar_fts_delete AFTER DELETE ON exemplar_bank BEGIN
+        INSERT INTO exemplar_fts(exemplar_fts, rowid, id, prompt_text, spec_summary, task_domain)
+        VALUES ('delete', old.rowid, old.id, old.prompt_text, old.spec_summary, old.task_domain);
+      END;
+
+      CREATE TRIGGER IF NOT EXISTS exemplar_fts_update AFTER UPDATE ON exemplar_bank BEGIN
+        INSERT INTO exemplar_fts(exemplar_fts, rowid, id, prompt_text, spec_summary, task_domain)
+        VALUES ('delete', old.rowid, old.id, old.prompt_text, old.spec_summary, old.task_domain);
+        INSERT INTO exemplar_fts(rowid, id, prompt_text, spec_summary, task_domain)
+        VALUES (new.rowid, new.id, new.prompt_text, new.spec_summary, new.task_domain);
+      END;
+    `);
+  } catch (ftsErr) {
+    // FTS5 may not be available in all SQLite builds — log but don't crash
+    console.warn("[promptly] FTS5 setup skipped (not critical):", ftsErr.message);
   }
 
   // Ensure demo user exists
@@ -324,6 +446,9 @@ CREATE INDEX IF NOT EXISTS idx_plan_usage_user_date ON plan_usage(user_id, date,
   } catch (err) {
     console.error("[promptly] Failed to ensure demo user:", err);
   }
+
+  // Public sample codes must not grant paid access on an operator's instance.
+  sqliteDb.prepare("UPDATE coupons SET active = 0 WHERE code IN ('PROMPTLY-DEE1636310A6')").run();
 
   // SQLite ensureUser function
   dbModule.ensureUser = function(userId, email = null) {

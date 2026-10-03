@@ -4,21 +4,44 @@ The runnable public snapshot is on **main**, under `Promptly-cloud-v0.6.8.3-full
 `cursor-dev` remains an ongoing development branch. Older version folders are historical
 snapshots; start with the current fullstack folder.
 
-## Quick start (Node.js 22)
+## Start your own copy
 
 ```bash
 git clone https://github.com/MaxonT/promptly.git
-cd promptly/Promptly-cloud-v0.6.8.3-fullstack/backend
-cp .env.example .env
-openssl rand -hex 32
+cd promptly/Promptly-cloud-v0.6.8.3-fullstack
+node scripts/setup-local.mjs
+docker compose up --build
 ```
 
-Paste the generated value into `JWT_SECRET` in `.env`. Add your own Anthropic key for
-the current direct-optimizer pipeline (all modes).
+Open http://localhost:4173/index.html and register with email/password. Setup creates
+`backend/.env` with a random login signing key. It preserves existing configuration,
+uses owner-only file permissions and never prints the key. Add your own
+`ANTHROPIC_API_KEY` to this file for real optimization. The app can start without it;
+the optimization endpoint clearly reports the missing key instead of producing real output.
+
+Docker with Compose runs the backend, static frontend and a fresh SQLite database.
+The frontend uses a same-origin local API proxy. Its container-specific config does not
+change the maintained hosted frontend config. The web port is bound to localhost.
+The named `app-data` volume retains accounts and saved prompts across restarts.
+Stop with Ctrl+C or `docker compose down`; restart with `docker compose up --build`.
+`docker compose down -v` deletes that local database. To change the local web port,
+use `WEB_PORT=4174 docker compose up --build`.
+
+Node.js 22 is used by the setup helper. If you only have Docker, run this instead of
+`node scripts/setup-local.mjs`:
 
 ```bash
+docker run --rm -v "$PWD:/workspace" -w /workspace node:22-alpine node scripts/setup-local.mjs
+```
+
+### Native Node route (without Docker)
+
+Use Node 22 and run the same setup helper first. From the current fullstack folder:
+
+```bash
+cd backend
 npm ci
-npm run check:config -- --mode fast
+npm run check:config
 npm start
 ```
 
@@ -29,22 +52,15 @@ npm run build
 python3 -m http.server 4173
 ```
 
-Open http://localhost:4173/index.html and create an email/password account.
 The frontend defaults to your backend on port 8080. Local defaults disable payment,
 trials and token metering. Ordinary daily plan/mode limits still apply.
-
-From `backend/`, verify the running app:
-
-```bash
-npm run health
-npm test
-npm run check:config -- --mode standard
-```
-
+From `backend/`, `npm run health` checks the running server;
+`npm run check:config -- --mode fast` checks required AI configuration.
 Config checks inspect presence only; they never print secrets or make paid API calls.
-`npm test` checks config and a running backend, not AI output quality.
 `backend/.env` takes precedence over the fullstack root `.env`; externally supplied
 environment variables take precedence over both. Start backend commands from `backend/`.
+Compose fixes local database/payment/CORS defaults; keys still come from `backend/.env`.
+The localhost Compose setup is not a production HTTPS/domain configuration.
 
 ## Provider requirements
 
@@ -106,7 +122,7 @@ VITE_API_BASE=https://your-api.example npm run build
 
 Set backend `CORS_ORIGIN`, `FRONTEND_URL` and `FRONTEND_URLS` to your frontend
 origin(s), plus a strong JWT secret and the keys for your chosen mode. Keep secrets
-on the backend. Docker uses Node 22 and excludes `.env`, logs and local databases.
+on the backend. Docker uses Node 22, runs the backend as an unprivileged user and excludes `.env`, logs and local databases.
 SQLite is the verified local setup. PostgreSQL code exists, but some older routes
 and migration scripts still assume SQLite; treat PostgreSQL deployment as requiring
 a separate compatibility review. Historical deploy guides are reference material.
@@ -128,3 +144,19 @@ Node 22 + SQLite + 邮箱密码登录即可搭建基础应用。自己生成 `JW
 ## Admin sync and coupons
 
 Admin write endpoints are disabled without your own `SYNC_TOKEN` and require that token in the Authorization header. Public sample coupon codes are no longer seeded and are disabled on startup; existing redeemed subscriptions are retained. Operators create their own private promotion codes separately.
+
+## Packages and Docker, plainly
+
+`package.json` lists dependencies and command shortcuts. `npm ci` installs the versions
+recorded in `package-lock.json`. These are private application packages; no npm library
+is being published. The supported way to inherit the app is to fork this repository.
+
+Docker packages the runtime, dependencies and source into an image; Compose starts
+the frontend/backend and mounts a separate volume for saved data. Secrets are supplied
+at runtime from your own configuration. The local setup does not publish images or
+create cloud services. `npm run setup:local`, `npm run docker:up` and `npm run docker:down`
+are shortcuts in the current fullstack folder; setup itself needs no npm install.
+
+中文快捷方式：进入当前 fullstack 文件夹，运行 `node scripts/setup-local.mjs`，再运行
+`docker compose up --build`，打开 http://localhost:4173。密钥由脚本生成，Anthropic API key
+自己填写。Docker 包含运行环境、依赖和源码；密钥和用户数据库留在使用者自己的环境里。

@@ -1,7 +1,9 @@
 import express from 'express';
 import { db } from '../lib/db.js';
+import { requireSyncToken } from '../middleware/syncTokenAuth.js';
 
 const router = express.Router();
+router.use(requireSyncToken);
 
 /**
  * 数据同步端点 - 接收来自本地的数据导入
@@ -12,18 +14,6 @@ const router = express.Router();
  */
 router.post('/sync-data', (req, res) => {
   try {
-    // 可选的授权检查
-    const syncToken = process.env.SYNC_TOKEN;
-    if (syncToken) {
-      const authHeader = req.headers.authorization || '';
-      const token = authHeader.replace('Bearer ', '');
-      if (token !== syncToken) {
-        return res.status(401).json({ 
-          ok: false, 
-          error: 'Unauthorized: Invalid sync token' 
-        });
-      }
-    }
 
     const { analytics, pipeline } = req.body;
     
@@ -309,18 +299,6 @@ router.post('/sync-data', (req, res) => {
  */
 router.post('/clear-analytics', (req, res) => {
   try {
-    // 可选的授权检查
-    const syncToken = process.env.SYNC_TOKEN;
-    if (syncToken) {
-      const authHeader = req.headers.authorization || '';
-      const token = authHeader.replace('Bearer ', '');
-      if (token !== syncToken) {
-        return res.status(401).json({ 
-          ok: false, 
-          error: 'Unauthorized: Invalid sync token' 
-        });
-      }
-    }
     
     console.log('[admin/clear] ⚠️ 开始清空analytics数据...');
     

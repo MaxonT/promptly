@@ -124,3 +124,7 @@ remove old Git history. Credential presence checks are not a full historical sec
 Node 22 + SQLite + 邮箱密码登录即可搭建基础应用。自己生成 `JWT_SECRET`；
 当前主入口的全部模式填 Anthropic 密钥；Groq/OpenAI 用于可选的其他流程。支付和社交登录可选。
 源码可以修改和复用，AI 调用使用你自己的账号和额度。
+
+## Admin sync and coupons
+
+Admin write endpoints are disabled without your own `SYNC_TOKEN` and require that token in the Authorization header. Public sample coupon codes are no longer seeded and are disabled on startup; existing redeemed subscriptions are retained. Operators create their own private promotion codes separately.

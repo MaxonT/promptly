@@ -29,11 +29,21 @@ export const pipelineRouter = Router();
 const activeStreams = new Map();
 const streamAuth = new Map();
 
+function releaseStreamToken(runId) {
+  const record = streamAuth.get(runId);
+  if (record?.cleanup) clearTimeout(record.cleanup);
+  streamAuth.delete(runId);
+}
+
 function issueStreamToken(runId, userId) {
+  releaseStreamToken(runId);
   const token = nanoid(32);
+  const cleanup = setTimeout(() => releaseStreamToken(runId), 15 * 60 * 1000);
+  cleanup.unref();
   streamAuth.set(runId, {
     userId,
     token,
+    cleanup,
     expiresAt: Date.now() + 15 * 60 * 1000
   });
   return token;
@@ -44,7 +54,7 @@ function validateStreamToken(runId, token) {
   const record = streamAuth.get(runId);
   if (!record) return false;
   if (record.expiresAt < Date.now()) {
-    streamAuth.delete(runId);
+    releaseStreamToken(runId);
     return false;
   }
   return record.token === token;
@@ -905,10 +915,10 @@ Output:
       runId
     });
     
-    // Clean up stream connection
-    activeStreams.delete(runId);
+    // The finally block closes the stream and releases its credentials.
   } finally {
     // 3. Ensure Cleanup
+    releaseStreamToken(runId);
     if (pingInterval) clearInterval(pingInterval);
     
     // Close the stream gracefully if it's still open

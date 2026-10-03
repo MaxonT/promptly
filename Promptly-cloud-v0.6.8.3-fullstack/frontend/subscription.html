@@ -1,17 +1,65 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="auto">
+<html lang="en" data-theme="dark">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
-  <title>Subscription - Promptly</title>
+  <title>Promptly Pricing & Plans — AI Prompt Optimization for Everyone</title>
+  <!-- SEO -->
+  <meta name="description" content="Choose the Promptly plan that fits you. Get unlimited AI prompt optimization, Question Wizard access, and Prompt Enhancer with our flexible subscription options." />
+  <meta name="keywords" content="Promptly pricing, AI prompt tool plans, prompt optimization subscription, LLM tool pricing, AI writing tool cost" />
+  <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1" />
+  <link rel="canonical" href="https://promptly.solutions/subscription.html" />
+  <!-- Open Graph -->
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://promptly.solutions/subscription.html" />
+  <meta property="og:title" content="Promptly Pricing & Plans" />
+  <meta property="og:description" content="Choose the Promptly plan that fits you. Unlimited AI prompt optimization with flexible pricing." />
+  <meta property="og:image" content="https://promptly.solutions/assets/promptly-icon.svg" />
+  <meta property="og:site_name" content="Promptly" />
+  <meta property="og:locale" content="en_US" />
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:title" content="Promptly Pricing & Plans" />
+  <meta name="twitter:description" content="Choose the Promptly plan that fits you. Unlimited AI prompt optimization with flexible pricing." />
+  <meta name="twitter:image" content="https://promptly.solutions/assets/promptly-icon.svg" />
+  <!-- JSON-LD Structured Data -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebPage",
+    "name": "Promptly Pricing & Plans",
+    "url": "https://promptly.solutions/subscription.html",
+    "description": "Compare Promptly subscription plans for AI prompt optimization.",
+    "isPartOf": {
+      "@type": "WebSite",
+      "name": "Promptly",
+      "url": "https://promptly.solutions/"
+    }
+  }
+  </script>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://promptly.solutions/" },
+      { "@type": "ListItem", "position": 2, "name": "Pricing", "item": "https://promptly.solutions/subscription.html" }
+    ]
+  }
+  </script>
   <link rel="icon" href="assets/promptly-icon.svg" type="image/svg+xml"/>
+  <link rel="apple-touch-icon" href="assets/promptly-icon.svg"/>
+  <!-- 主题初始化脚本 - 必须在所有 CSS 前加载 -->
+  <script src="lib/themeManager.js"></script>
   <link rel="stylesheet" href="theme.css" />
   <link rel="stylesheet" href="style.css" />
   <link rel="stylesheet" href="subscription.css" />
   <script src="config.js"></script>
+  <script src="lib/authGuard.js"></script>
   <script src="lib/i18next.min.js"></script>
   <script type="module" src="i18n/index.js"></script>
+  <script src="lib/seoManager.js"></script>
 </head>
 <body class="subscription-body">
   <!-- Navigation Header -->
@@ -51,20 +99,6 @@
       </p>
     </section>
 
-    <!-- Current Status Banner (for logged-in users) -->
-    <section id="statusBanner" class="status-banner hidden">
-      <div class="status-content">
-        <div class="status-info">
-          <span class="status-label" data-i18n="subscription.current_status">Current Status:</span>
-          <span id="statusValue" class="status-value">--</span>
-        </div>
-        <div class="token-info">
-          <span class="token-label" data-i18n="subscription.tokens_remaining">Tokens Remaining:</span>
-          <span id="tokenValue" class="token-value">--</span>
-        </div>
-      </div>
-    </section>
-
     <!-- Trial Banner -->
     <section id="trialBanner" class="trial-banner hidden">
       <div class="trial-content">
@@ -72,7 +106,7 @@
         <div class="trial-text">
           <h3 data-i18n="subscription.trial_title">Start Your 14-Day Free Trial</h3>
           <p data-i18n="subscription.trial_description">
-            No credit card required. Get full access to all features with 200K base tokens + 20K daily tokens.
+            No credit card required. Full access to all features.
           </p>
         </div>
         <button id="startTrialBtn" class="btn btn-primary btn-lg" data-i18n="subscription.start_trial">
@@ -120,8 +154,8 @@
           </div>
           <ul class="plan-features">
             <li><span class="feature-icon">✓</span> <span data-i18n="subscription.feature_full_access">Full access to all features</span></li>
-            <li><span class="feature-icon">✓</span> <span data-i18n="subscription.feature_monthly_tokens">1M tokens per month</span></li>
-            <li><span class="feature-icon">✓</span> <span data-i18n="subscription.feature_daily_tokens">50K daily free tokens</span></li>
+            <li><span class="feature-icon">✓</span> <span data-i18n="subscription.feature_daily_prompt_optimizations">50 prompt optimizations per day</span></li>
+            <li><span class="feature-icon">✓</span> <span data-i18n="subscription.feature_daily_question_wizard">30 question-wizard sessions per day</span></li>
             <li><span class="feature-icon">✓</span> <span data-i18n="subscription.feature_priority_support">Priority support</span></li>
             <li><span class="feature-icon">✓</span> <span data-i18n="subscription.feature_cancel_anytime">Cancel anytime</span></li>
           </ul>
@@ -146,8 +180,8 @@
           </div>
           <ul class="plan-features">
             <li><span class="feature-icon">✓</span> <span data-i18n="subscription.feature_full_access">Full access to all features</span></li>
-            <li><span class="feature-icon">✓</span> <span data-i18n="subscription.feature_yearly_tokens">12M tokens per year</span></li>
-            <li><span class="feature-icon">✓</span> <span data-i18n="subscription.feature_daily_tokens">50K daily free tokens</span></li>
+            <li><span class="feature-icon">✓</span> <span data-i18n="subscription.feature_daily_prompt_optimizations">50 prompt optimizations per day</span></li>
+            <li><span class="feature-icon">✓</span> <span data-i18n="subscription.feature_daily_question_wizard">30 question-wizard sessions per day</span></li>
             <li><span class="feature-icon">✓</span> <span data-i18n="subscription.feature_priority_support">Priority support</span></li>
             <li><span class="feature-icon">✓</span> <span data-i18n="subscription.feature_save">Save $24/year</span></li>
           </ul>
@@ -158,32 +192,28 @@
       </div>
     </section>
 
-    <!-- Token Explanation Section -->
-    <section class="token-explanation">
-      <h2 data-i18n="subscription.token_title">Understanding Token Credits</h2>
-      <div class="token-cards">
-        <div class="token-card">
-          <div class="token-icon">🎯</div>
-          <h3 data-i18n="subscription.token_what_title">What are Tokens?</h3>
-          <p data-i18n="subscription.token_what_desc">
-            Tokens are units used by AI models to process text. Each word typically uses 1-4 tokens.
-            Your usage is metered based on both input and output tokens.
+    <section class="usage-explanation">
+      <h2 data-i18n="subscription.usage_title">Daily usage limits</h2>
+      <div class="usage-cards">
+        <div class="usage-card">
+          <div class="usage-icon">🎯</div>
+          <h3 data-i18n="subscription.usage_prompt_title">What counts as a Prompt optimization?</h3>
+          <p data-i18n="subscription.usage_prompt_desc">
+            Each time you run an optimization counts as 1.
           </p>
         </div>
-        <div class="token-card">
-          <div class="token-icon">📊</div>
-          <h3 data-i18n="subscription.token_usage_title">Transparent Billing</h3>
-          <p data-i18n="subscription.token_usage_desc">
-            After each run, you'll see a detailed breakdown: input tokens, output tokens,
-            total tokens used, and your remaining balance. No hidden fees.
+        <div class="usage-card">
+          <div class="usage-icon">🧩</div>
+          <h3 data-i18n="subscription.usage_wizard_title">What counts as a Question-wizard session?</h3>
+          <p data-i18n="subscription.usage_wizard_desc">
+            Starting a new wizard session counts toward the daily limit.
           </p>
         </div>
-        <div class="token-card">
-          <div class="token-icon">🔄</div>
-          <h3 data-i18n="subscription.token_daily_title">Daily Refresh</h3>
-          <p data-i18n="subscription.token_daily_desc">
-            Get free daily tokens that refresh at UTC midnight. These are used first before
-            your monthly allocation, maximizing your value.
+        <div class="usage-card">
+          <div class="usage-icon">🔄</div>
+          <h3 data-i18n="subscription.usage_reset_title">When do limits reset?</h3>
+          <p data-i18n="subscription.usage_reset_desc">
+            Limits reset daily at 00:00 in your timezone.
           </p>
         </div>
       </div>
@@ -204,14 +234,13 @@
           <summary data-i18n="subscription.faq_trial_q">What happens after my trial?</summary>
           <p data-i18n="subscription.faq_trial_a">
             After your 14-day trial ends, you can subscribe to continue using Promptly.
-            Your unused tokens will expire, but you won't be charged automatically.
+            You won't be charged automatically.
           </p>
         </details>
         <details class="faq-item">
-          <summary data-i18n="subscription.faq_rollover_q">Do unused tokens roll over?</summary>
-          <p data-i18n="subscription.faq_rollover_a">
-            Monthly tokens do not roll over to the next period. Daily free tokens can
-            accumulate up to 2 days' worth (40K max).
+          <summary data-i18n="subscription.faq_limits_q">How do daily limits work?</summary>
+          <p data-i18n="subscription.faq_limits_a">
+            Your daily limits reset at 00:00 in your timezone. Both Monthly and Annual plans include the same daily limits.
           </p>
         </details>
         <details class="faq-item">
@@ -245,6 +274,21 @@
 
   <!-- Toast Container -->
   <div id="toastContainer" class="toast-container"></div>
+
+  <div id="betaModal" class="beta-modal hidden" role="dialog" aria-modal="true" aria-labelledby="betaModalTitle">
+    <div class="beta-modal-content">
+      <button class="beta-modal-close" aria-label="Close">&times;</button>
+      <h2 id="betaModalTitle" data-i18n="subscription.beta_modal_title">Beta</h2>
+      <p id="betaModalMessage" data-i18n="subscription.beta_modal_message">
+        Subscriptions and trials are not available yet. Coming soon.
+      </p>
+      <div class="beta-modal-actions">
+        <button id="betaModalOk" class="btn btn-primary" type="button" data-i18n="subscription.beta_modal_ok">
+          OK
+        </button>
+      </div>
+    </div>
+  </div>
 
   <!-- Auth Modal -->
   <div id="authModal" class="auth-modal hidden">
@@ -346,5 +390,6 @@
   <script type="module" src="lib/analytics.js"></script>
   <script type="module" src="lib/oauth.js"></script>
   <script type="module" src="subscription.js"></script>
+  <script src="lib/redeemBubble.js" defer></script>
 </body>
 </html>

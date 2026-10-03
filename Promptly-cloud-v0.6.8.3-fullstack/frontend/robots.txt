@@ -1,0 +1,35 @@
+# Promptly — robots.txt
+# Primary hostname: https://promptly.solutions
+
+User-agent: *
+Allow: /
+Allow: /wizard.html
+Allow: /enhancer.html
+Allow: /subscription.html
+Allow: /privacy.html
+Allow: /terms.html
+Allow: /cookies.html
+
+# Private / authenticated pages — do not index
+Disallow: /account.html
+Disallow: /settings.html
+Disallow: /specs.html
+Disallow: /result.html
+Disallow: /outcome.html
+Disallow: /analytics-dashboard.html
+Disallow: /checkout-success.html
+Disallow: /checkout-cancel.html
+Disallow: /test-connection.html
+Disallow: /maintenance.html
+Disallow: /404.html
+
+# Block crawlers from internal assets
+Disallow: /lib/
+Disallow: /scripts/
+Disallow: /i18n/
+
+# Crawl delay (polite crawling)
+Crawl-delay: 1
+
+# Sitemap
+Sitemap: https://promptly.solutions/sitemap.xml

@@ -11,6 +11,12 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
   const ideaError = document.getElementById("ideaError");
   const WIZARD_SESSION_KEY = "promptly.wizard.session";
 
+  if (!window.authGuard?.requireLogin({ redirectTo: "settings.html#accountPanel" })) {
+    if (startBtn) startBtn.disabled = true;
+    if (restoreSnapshotBtn) restoreSnapshotBtn.disabled = true;
+    return;
+  }
+
   const ideaPanel = document.querySelector(".wizard-panel--idea");
   const qaPanel = document.querySelector(".wizard-panel--qa");
   
@@ -275,7 +281,7 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
   // Fetch user plan information from backend
   async function fetchUserPlanInfo() {
     try {
-      const res = await fetch(`${API_BASE}/api/billing/status`);
+      const res = await window.authGuard.fetchWithAuth(`${API_BASE}/api/billing/status`);
       if (!res.ok) {
         console.warn("Failed to fetch plan info, assuming free plan");
         return { plan: 'free', isPremium: false, dailyLimit: 5, used: 0 };
@@ -496,7 +502,7 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
 
   async function hydrateExistingSession(sessionId) {
     try {
-      const res = await fetch(`${API_BASE}/api/question-sessions/${encodeURIComponent(sessionId)}/state`);
+      const res = await window.authGuard.fetchWithAuth(`${API_BASE}/api/question-sessions/${encodeURIComponent(sessionId)}/state`);
       if (!res.ok) {
         // Silently ignore 404 (no previous session) - this is expected behavior
         if (res.status !== 404) {
@@ -578,9 +584,20 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
   }
   
   // Add questions to the global list (with sequential numbering)
+  // Filter out choice questions with no options
   function addQuestions(newQuestions) {
+    // Filter out single_choice/multi_choice questions that have no options
+    const validQuestions = newQuestions.filter(q => {
+      if ((q.type === 'single_choice' || q.type === 'multi_choice') && 
+          (!q.options || q.options.length === 0)) {
+        console.log(`[wizard] Filtering out question "${q.id}" - no options available`);
+        return false;
+      }
+      return true;
+    });
+    
     const startIndex = allQuestions.length;
-    newQuestions.forEach((q, idx) => {
+    validQuestions.forEach((q, idx) => {
       allQuestions.push({
         ...q,
         questionNumber: startIndex + idx + 1 // 1-based numbering
@@ -891,18 +908,9 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
         const options = q.options || [];
         const isMulti = q.type === "multi_choice";
 
+        // Skip questions with no options - don't show error to user
         if (options.length === 0) {
-          const missingDiv = document.createElement("div");
-          missingDiv.className = "wizard-missing-options";
-          missingDiv.innerHTML = `
-            <span class="wizard-missing-options-icon">⚠️</span>
-            <span>No options available. Click "Regenerate" to try more questions.</span>
-          `;
-          answerArea.appendChild(missingDiv);
-          card.appendChild(header);
-          card.appendChild(textDiv);
-          card.appendChild(answerArea);
-          questionsContainer.appendChild(card);
+          console.log(`[wizard] Skipping question "${q.id}" - no options available`);
           return;
         }
 
@@ -921,7 +929,7 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
           pill.textContent = opt.label || opt.value || "";
           pill.setAttribute("data-value", opt.value);
 
-          const isOther = opt.is_other === true || (opt.label && opt.label.toLowerCase().includes("other"));
+          const isOther = opt.is_other === true || (opt.label && (opt.label.toLowerCase().includes("other") || opt.label.toLowerCase().includes("fill your own")));
 
           function updateSelection() {
             if (isMulti) {
@@ -1138,16 +1146,9 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
       // Get current language from unified resolver
       const currentLanguage = getCurrentLanguage();
       
-      // Prepare headers with optional authentication
-      const token = localStorage.getItem('promptly.token');
-      const headers = { "Content-Type": "application/json" };
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-      }
-      
-      const res = await fetch(`${API_BASE}/api/question-sessions`, {
+      const res = await window.authGuard.fetchWithAuth(`${API_BASE}/api/question-sessions`, {
         method: "POST",
-        headers: headers,
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           initial_description: idea,
           kind,
@@ -1335,17 +1336,10 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
       log("Submitting all answers...");
       // Get current language
       const currentLanguage = getCurrentLanguage();
-      
-      // Prepare headers with optional authentication
-      const token = localStorage.getItem('promptly.token');
-      const headers = { "Content-Type": "application/json" };
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-      }
-      
-      const res = await fetch(`${API_BASE}/api/question-sessions/${encodeURIComponent(currentSessionId)}/answer`, {
+
+      const res = await window.authGuard.fetchWithAuth(`${API_BASE}/api/question-sessions/${encodeURIComponent(currentSessionId)}/answer`, {
         method: "POST",
-        headers: headers,
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
           answers: answersPayload, 
           model: currentModel,
@@ -1471,17 +1465,10 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
       
       // Get current language
       const currentLanguage = getCurrentLanguage();
-      
-      // Prepare headers with optional authentication
-      const token = localStorage.getItem('promptly.token');
-      const headers = { "Content-Type": "application/json" };
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-      }
-      
-      const res = await fetch(`${API_BASE}/api/question-sessions/${encodeURIComponent(currentSessionId)}/finalize`, {
+
+      const res = await window.authGuard.fetchWithAuth(`${API_BASE}/api/question-sessions/${encodeURIComponent(currentSessionId)}/finalize`, {
         method: "POST",
-        headers: headers,
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
           model: currentModel,
           language: currentLanguage  // Pass user's language for prompt generation
@@ -1608,7 +1595,7 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
       saveSnapshotBtn.disabled = true;
       saveSnapshotBtn.textContent = "💾 Saving...";
 
-      const res = await fetch(`${API_BASE}/api/question-sessions/${encodeURIComponent(currentSessionId)}/snapshot`, {
+      const res = await window.authGuard.fetchWithAuth(`${API_BASE}/api/question-sessions/${encodeURIComponent(currentSessionId)}/snapshot`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ model: currentModel })
@@ -1676,7 +1663,7 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
     }
     try {
       log("Restoring latest snapshot...");
-      const res = await fetch(`${API_BASE}/api/question-sessions/${encodeURIComponent(currentSessionId)}/snapshot/latest`);
+      const res = await window.authGuard.fetchWithAuth(`${API_BASE}/api/question-sessions/${encodeURIComponent(currentSessionId)}/snapshot/latest`);
       if (!res.ok) {
         const txt = await res.text();
         log(`Failed to restore snapshot: HTTP ${res.status} ${txt}`);
@@ -1918,16 +1905,16 @@ const API_BASE = (window.PROMPTLY_API_BASE && window.PROMPTLY_API_BASE.trim())
   }
 
   // Initialize theme from localStorage or system
-  const savedTheme = localStorage.getItem('promptly-theme') || 'auto';
+  const savedTheme = localStorage.getItem('theme') || 'dark';
   applyTheme(savedTheme);
 
   // Listen for system theme changes
   if (window.matchMedia) {
     const mediaQuery = window.matchMedia('(prefers-color-scheme: light)');
     mediaQuery.addEventListener('change', () => {
-      const currentTheme = localStorage.getItem('promptly-theme') || 'auto';
-      if (currentTheme === 'auto') {
-        applyTheme('auto');
+      const currentTheme = localStorage.getItem('theme') || 'dark';
+      if (currentTheme === 'dark') {
+        applyTheme('dark');
       }
     });
   }

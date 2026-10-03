@@ -20,6 +20,7 @@ import {
   MONTHLY_PLAN_TOKENS,
   YEARLY_PLAN_TOKENS,
   PAID_DAILY_TOKENS,
+  FREE_USER_DAILY_TOKENS,
   TRIAL_DAYS,
 } from "./subscriptionConfig.js";
 
@@ -237,6 +238,62 @@ export function grantSubscriptionTokens(userId, plan, stripeEventId = null, subs
   
   console.log(`[tokenLedger] Subscription tokens granted to user ${userId} (plan: ${plan})`);
   
+  return getTokenBalances(userId);
+}
+
+/**
+ * Ensure free user has daily tokens
+ * Called when checking balance for users without subscriptions
+ * Grants initial daily tokens if user has never received any
+ */
+export function ensureFreeUserTokens(userId) {
+  // Check if user has any token records
+  const hasRecords = db.prepare(`
+    SELECT 1 FROM token_ledger WHERE user_id = ? LIMIT 1
+  `).get(userId);
+  
+  if (hasRecords) {
+    // User already has token records, check if needs daily refresh
+    const balances = getTokenBalances(userId);
+    const today = new Date().toISOString().split('T')[0];
+    
+    // Check if user got daily tokens today
+    const todayGrant = db.prepare(`
+      SELECT 1 FROM token_ledger 
+      WHERE user_id = ? 
+        AND bucket = ? 
+        AND source IN (?, ?)
+        AND date(created_at) = ?
+      LIMIT 1
+    `).get(userId, BUCKET_TYPES.DAILY_FREE, TOKEN_SOURCES.CRON, TOKEN_SOURCES.SYSTEM, today);
+    
+    if (!todayGrant && balances.daily_free < FREE_USER_DAILY_TOKENS) {
+      // Grant daily tokens
+      const tokensToGrant = FREE_USER_DAILY_TOKENS - balances.daily_free;
+      grantTokens({
+        userId,
+        bucket: BUCKET_TYPES.DAILY_FREE,
+        tokens: tokensToGrant,
+        source: TOKEN_SOURCES.SYSTEM,
+        reason: 'Free user daily tokens',
+      });
+      console.log(`[tokenLedger] Granted ${tokensToGrant} daily tokens to free user ${userId}`);
+      return getTokenBalances(userId);
+    }
+    
+    return balances;
+  }
+  
+  // First time user - grant initial daily tokens
+  grantTokens({
+    userId,
+    bucket: BUCKET_TYPES.DAILY_FREE,
+    tokens: FREE_USER_DAILY_TOKENS,
+    source: TOKEN_SOURCES.SYSTEM,
+    reason: 'Free user initial daily tokens',
+  });
+  
+  console.log(`[tokenLedger] Initialized ${FREE_USER_DAILY_TOKENS} daily tokens for new free user ${userId}`);
   return getTokenBalances(userId);
 }
 
@@ -500,6 +557,7 @@ export const tokenLedger = {
   grantTokens,
   grantTrialTokens,
   grantSubscriptionTokens,
+  ensureFreeUserTokens,
   refreshDailyTokens,
   adminAdjustment,
   hasEnoughTokens,

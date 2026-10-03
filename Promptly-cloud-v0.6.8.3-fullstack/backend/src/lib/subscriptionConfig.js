@@ -46,6 +46,21 @@ export const YEARLY_PLAN_TOKENS = Number(process.env.YEARLY_PLAN_TOKENS || 12000
 // Daily free tokens for paid users
 export const PAID_DAILY_TOKENS = Number(process.env.PAID_DAILY_TOKENS || 50000);
 
+// Daily free tokens for free users (no subscription)
+export const FREE_USER_DAILY_TOKENS = Number(process.env.FREE_USER_DAILY_TOKENS || 50000);
+
+// =============================================
+// Daily Usage Limits (UI + enforcement)
+// =============================================
+
+export const DAILY_PROMPT_OPTIMIZATIONS_PER_DAY = Number(
+  process.env.DAILY_PROMPT_OPTIMIZATIONS_PER_DAY || 50
+);
+
+export const DAILY_QUESTION_WIZARD_SESSIONS_PER_DAY = Number(
+  process.env.DAILY_QUESTION_WIZARD_SESSIONS_PER_DAY || 30
+);
+
 // =============================================
 // Multiplier Configuration
 // =============================================
@@ -109,9 +124,9 @@ export const STRIPE_MODE = process.env.STRIPE_MODE || 'test';
 // =============================================
 
 export const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
-export const SUCCESS_URL = `${FRONTEND_URL}/subscription/success`;
-export const CANCEL_URL = `${FRONTEND_URL}/subscription/cancel`;
-export const ACCOUNT_URL = `${FRONTEND_URL}/account`;
+export const SUCCESS_URL = process.env.SUCCESS_URL || `${FRONTEND_URL}/checkout-success.html`;
+export const CANCEL_URL = process.env.CANCEL_URL || `${FRONTEND_URL}/checkout-cancel.html`;
+export const ACCOUNT_URL = process.env.ACCOUNT_URL || `${FRONTEND_URL}/settings.html#accountPanel`;
 
 // =============================================
 // Feature Flags
@@ -160,6 +175,7 @@ export const TOKEN_SOURCES = {
   ADMIN: 'admin',
   API_USAGE: 'api_usage',
   TRIAL_START: 'trial_start',
+  SYSTEM: 'system',  // Auto-granted by system (e.g., free user daily tokens)
 };
 
 // =============================================
@@ -176,10 +192,14 @@ export const PLANS = {
     interval: 'month',
     tokens: MONTHLY_PLAN_TOKENS,
     dailyTokens: PAID_DAILY_TOKENS,
+    dailyLimits: {
+      promptOptimizationsPerDay: DAILY_PROMPT_OPTIMIZATIONS_PER_DAY,
+      questionWizardSessionsPerDay: DAILY_QUESTION_WIZARD_SESSIONS_PER_DAY,
+    },
     features: [
       'Full access to all features',
-      `${(MONTHLY_PLAN_TOKENS / 1000000).toFixed(1)}M tokens per month`,
-      `${(PAID_DAILY_TOKENS / 1000).toFixed(0)}K daily free tokens`,
+      `${DAILY_PROMPT_OPTIMIZATIONS_PER_DAY} prompt optimizations per day`,
+      `${DAILY_QUESTION_WIZARD_SESSIONS_PER_DAY} question-wizard sessions per day`,
       'Priority support',
       'Cancel anytime',
     ],
@@ -193,12 +213,16 @@ export const PLANS = {
     interval: 'year',
     tokens: YEARLY_PLAN_TOKENS,
     dailyTokens: PAID_DAILY_TOKENS,
+    dailyLimits: {
+      promptOptimizationsPerDay: DAILY_PROMPT_OPTIMIZATIONS_PER_DAY,
+      questionWizardSessionsPerDay: DAILY_QUESTION_WIZARD_SESSIONS_PER_DAY,
+    },
     monthlyEquivalent: Math.round(YEARLY_PRICE_USD / 12),
     savings: (MONTHLY_PRICE_USD * 12) - YEARLY_PRICE_USD,
     features: [
       'Full access to all features',
-      `${(YEARLY_PLAN_TOKENS / 1000000).toFixed(1)}M tokens per year`,
-      `${(PAID_DAILY_TOKENS / 1000).toFixed(0)}K daily free tokens`,
+      `${DAILY_PROMPT_OPTIMIZATIONS_PER_DAY} prompt optimizations per day`,
+      `${DAILY_QUESTION_WIZARD_SESSIONS_PER_DAY} question-wizard sessions per day`,
       'Priority support',
       `Save $${(MONTHLY_PRICE_USD * 12) - YEARLY_PRICE_USD}/year`,
     ],
@@ -212,10 +236,14 @@ export const PLANS = {
     days: TRIAL_DAYS,
     tokens: TRIAL_BASE_TOKENS,
     dailyTokens: TRIAL_DAILY_TOKENS,
+    dailyLimits: {
+      promptOptimizationsPerDay: DAILY_PROMPT_OPTIMIZATIONS_PER_DAY,
+      questionWizardSessionsPerDay: DAILY_QUESTION_WIZARD_SESSIONS_PER_DAY,
+    },
     features: [
       `${TRIAL_DAYS} days free`,
-      `${(TRIAL_BASE_TOKENS / 1000).toFixed(0)}K base tokens`,
-      `${(TRIAL_DAILY_TOKENS / 1000).toFixed(0)}K daily free tokens`,
+      `${DAILY_PROMPT_OPTIMIZATIONS_PER_DAY} prompt optimizations per day`,
+      `${DAILY_QUESTION_WIZARD_SESSIONS_PER_DAY} question-wizard sessions per day`,
       'No credit card required',
       'Cancel anytime',
     ],

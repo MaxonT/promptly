@@ -21,11 +21,14 @@ import { tokenLedger } from "../lib/tokenLedger.js";
 import { trialAntiAbuse } from "../lib/trialAntiAbuse.js";
 import { shouldInjectError, injectDelay, InjectedError } from "../lib/errorInjector.js";
 import { getUserPlan, getDailyUsage } from "../lib/planLimits.js";
+import { getNextLocalMidnightIso, normalizeTimeZone } from "../lib/timezone.js";
 import {
   PLANS,
   FEATURES,
   isStripeConfigured,
   formatTokens,
+  DAILY_PROMPT_OPTIMIZATIONS_PER_DAY,
+  DAILY_QUESTION_WIZARD_SESSIONS_PER_DAY,
 } from "../lib/subscriptionConfig.js";
 
 export const billingRouter = Router();
@@ -40,25 +43,32 @@ export const stripeWebhookRouter = Router();
  * Returns available subscription plans
  */
 billingRouter.get("/plans", (req, res) => {
+  const sanitizePlanForUi = (plan) => ({
+    id: plan.id,
+    name: plan.name,
+    price: plan.price,
+    currency: plan.currency,
+    interval: plan.interval,
+    days: plan.days,
+    monthlyEquivalent: plan.monthlyEquivalent,
+    savings: plan.savings,
+    dailyLimits: plan.dailyLimits,
+    features: plan.features,
+  });
+
   res.json({
     ok: true,
     plans: {
-      monthly: {
-        ...PLANS.monthly,
-        priceId: undefined, // Don't expose Stripe price IDs
-      },
-      yearly: {
-        ...PLANS.yearly,
-        priceId: undefined,
-      },
-      trial: {
-        ...PLANS.trial,
-      },
+      monthly: sanitizePlanForUi(PLANS.monthly),
+      yearly: sanitizePlanForUi(PLANS.yearly),
+      trial: sanitizePlanForUi(PLANS.trial),
     },
     features: {
       subscriptionsEnabled: FEATURES.subscriptionsEnabled,
       trialsEnabled: FEATURES.trialsEnabled,
     },
+    stripeConfigured: isStripeConfigured(),
+    subscriptionsAvailable: FEATURES.subscriptionsEnabled && isStripeConfigured(),
   });
 });
 
@@ -77,8 +87,14 @@ billingRouter.get("/status", requireAuth, (req, res) => {
     // Get subscription status
     const subscription = stripeService.getSubscriptionStatus(userId);
     
-    // Get token balances
-    const balances = tokenLedger.getTokenBalances(userId);
+    // Ensure free users have daily tokens
+    // For users without subscription, this will grant them daily tokens
+    let balances;
+    if (subscription.status === 'none' || !subscription.status) {
+      balances = tokenLedger.ensureFreeUserTokens(userId);
+    } else {
+      balances = tokenLedger.getTokenBalances(userId);
+    }
     
     // Get user plan and usage
     const plan = getUserPlan(userId);
@@ -87,7 +103,7 @@ billingRouter.get("/status", requireAuth, (req, res) => {
     
     // Get user info
     const user = db.prepare(`
-      SELECT email, email_verified, trial_used, trial_started_at, created_at
+      SELECT email, email_verified, trial_used, trial_started_at, created_at, timezone
       FROM users WHERE id = ?
     `).get(userId);
     
@@ -99,9 +115,13 @@ billingRouter.get("/status", requireAuth, (req, res) => {
       trialDaysRemaining = Math.max(0, Math.ceil((trialEnd - now) / (1000 * 60 * 60 * 24)));
     }
     
+    const tz = normalizeTimeZone(user?.timezone);
+
     res.json({
       ok: true,
       plan: plan, // 'free', 'monthly', 'yearly', or 'trial'
+      timezone: tz,
+      nextResetAt: getNextLocalMidnightIso(tz),
       subscription: {
         status: subscription.status,
         plan: subscription.plan,
@@ -114,10 +134,10 @@ billingRouter.get("/status", requireAuth, (req, res) => {
       },
       limits: {
         promptOptimization: {
-          daily: plan === 'free' ? 8 : null // null means unlimited
+          daily: plan === 'free' ? 8 : DAILY_PROMPT_OPTIMIZATIONS_PER_DAY
         },
         questionWizard: {
-          daily: plan === 'free' ? 5 : null // null means unlimited
+          daily: plan === 'free' ? 5 : DAILY_QUESTION_WIZARD_SESSIONS_PER_DAY
         }
       },
       usage: {
@@ -506,6 +526,120 @@ billingRouter.post("/start-trial", requireAuth, async (req, res) => {
   } catch (err) {
     console.error("[billing] Start trial error:", err);
     res.status(500).json({ ok: false, error: "Failed to start trial" });
+  }
+});
+
+// =============================================
+// Coupon Redemption
+// =============================================
+
+/**
+ * POST /api/billing/redeem-coupon
+ * Redeems a coupon code to activate a subscription without Stripe checkout.
+ */
+billingRouter.post("/redeem-coupon", requireAuth, (req, res) => {
+  try {
+    const userId = req.user.sub;
+    const { code } = req.body;
+
+    if (!code || typeof code !== "string" || code.trim().length === 0) {
+      return res.status(400).json({ ok: false, error: "Coupon code is required" });
+    }
+
+    const normalizedCode = code.trim().toUpperCase();
+
+    // Look up the coupon
+    const coupon = db.prepare(
+      "SELECT * FROM coupons WHERE code = ? AND active = 1"
+    ).get(normalizedCode);
+
+    if (!coupon) {
+      return res.status(404).json({ ok: false, error: "Invalid or expired coupon code" });
+    }
+
+    // Check expiry
+    if (coupon.expires_at && new Date(coupon.expires_at) < new Date()) {
+      return res.status(400).json({ ok: false, error: "This coupon has expired" });
+    }
+
+    // Check max redemptions
+    if (coupon.times_redeemed >= coupon.max_redemptions) {
+      return res.status(400).json({ ok: false, error: "This coupon has reached its redemption limit" });
+    }
+
+    // Check if user already redeemed this coupon
+    const existing = db.prepare(
+      "SELECT id FROM coupon_redemptions WHERE coupon_id = ? AND user_id = ?"
+    ).get(coupon.id, userId);
+
+    if (existing) {
+      return res.status(400).json({ ok: false, error: "You have already redeemed this coupon" });
+    }
+
+    // Check user exists
+    const user = db.prepare("SELECT id, email FROM users WHERE id = ?").get(userId);
+    if (!user) {
+      return res.status(404).json({ ok: false, error: "User not found" });
+    }
+
+    // --- All checks passed: activate the subscription ---
+    const now = new Date();
+    const periodEnd = new Date();
+    periodEnd.setDate(periodEnd.getDate() + coupon.duration_days);
+
+    // Record the redemption
+    db.prepare(
+      "INSERT INTO coupon_redemptions (coupon_id, user_id) VALUES (?, ?)"
+    ).run(coupon.id, userId);
+
+    // Increment coupon usage
+    db.prepare(
+      "UPDATE coupons SET times_redeemed = times_redeemed + 1 WHERE id = ?"
+    ).run(coupon.id);
+
+    // Upsert subscription record (bypass Stripe entirely)
+    const existingSub = db.prepare(
+      "SELECT id FROM subscriptions WHERE user_id = ? ORDER BY created_at DESC LIMIT 1"
+    ).get(userId);
+
+    if (existingSub) {
+      db.prepare(`
+        UPDATE subscriptions
+        SET status = 'active', plan = ?, period_start = ?, period_end = ?, updated_at = ?
+        WHERE id = ?
+      `).run(coupon.plan, now.toISOString(), periodEnd.toISOString(), now.toISOString(), existingSub.id);
+    } else {
+      db.prepare(`
+        INSERT INTO subscriptions (user_id, status, plan, period_start, period_end, created_at, updated_at)
+        VALUES (?, 'active', ?, ?, ?, ?, ?)
+      `).run(userId, coupon.plan, now.toISOString(), periodEnd.toISOString(), now.toISOString(), now.toISOString());
+    }
+
+    // Update user tier
+    db.prepare(
+      "UPDATE users SET subscription_tier = ?, subscription_active = 1, updated_at = ? WHERE id = ?"
+    ).run(coupon.plan, now.toISOString(), userId);
+
+    // Grant tokens for the plan
+    tokenLedger.grantSubscriptionTokens(userId, coupon.plan);
+
+    const balances = tokenLedger.getTokenBalances(userId);
+
+    console.log(`[billing] Coupon ${normalizedCode} redeemed by user ${userId} → plan: ${coupon.plan}`);
+
+    res.json({
+      ok: true,
+      message: "Coupon redeemed successfully! Your subscription is now active.",
+      plan: coupon.plan,
+      periodEnd: periodEnd.toISOString(),
+      tokens: {
+        total: balances.total,
+        totalFormatted: formatTokens(balances.total),
+      },
+    });
+  } catch (err) {
+    console.error("[billing] Redeem coupon error:", err);
+    res.status(500).json({ ok: false, error: "Failed to redeem coupon" });
   }
 });
 

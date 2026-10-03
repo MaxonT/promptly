@@ -23,7 +23,7 @@ import { track, EVENTS } from './lib/analytics.js';
   const statusBanner = document.getElementById('statusBanner');
   const trialBanner = document.getElementById('trialBanner');
   const statusValue = document.getElementById('statusValue');
-  const tokenValue = document.getElementById('tokenValue');
+  const usageLimitsValue = document.getElementById('usageLimitsValue');
   const startTrialBtn = document.getElementById('startTrialBtn');
   const monthlyToggle = document.getElementById('monthlyToggle');
   const yearlyToggle = document.getElementById('yearlyToggle');
@@ -31,6 +31,9 @@ import { track, EVENTS } from './lib/analytics.js';
   const toastContainer = document.getElementById('toastContainer');
   const subscribeButtons = document.querySelectorAll('.subscribe-btn');
   const pricingCards = document.querySelectorAll('.pricing-card');
+  const betaModal = document.getElementById('betaModal');
+  const betaModalClose = betaModal?.querySelector('.beta-modal-close');
+  const betaModalOk = document.getElementById('betaModalOk');
   
   // Auth Modal Elements
   const authModal = document.getElementById('authModal');
@@ -49,6 +52,8 @@ import { track, EVENTS } from './lib/analytics.js';
   let stateMachine = null;
   let selectedPlan = null;
   let idempotencyKey = null;
+  let billingPlans = null;
+  let subscriptionsAvailable = null;
 
   // =============================================
   // Initialization
@@ -59,6 +64,7 @@ import { track, EVENTS } from './lib/analytics.js';
     setupBillingToggle();
     setupSubscribeButtons();
     setupTrialButton();
+    setupBetaModal();
     setupAuthModal();
     
     // Check authentication - use unified authState if available
@@ -75,6 +81,8 @@ import { track, EVENTS } from './lib/analytics.js';
     // Initialize State Machine
     stateMachine = new SubscriptionStateMachine();
     stateMachine.onStateChange(handleStateChange);
+
+    await loadBillingPlans();
     
     if (authToken) {
       await loadBillingStatus();
@@ -402,6 +410,28 @@ import { track, EVENTS } from './lib/analytics.js';
     return data;
   }
 
+  async function loadBillingPlans() {
+    try {
+      const res = await fetch(`${API_BASE}/api/billing/plans`, { method: 'GET' });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.ok) {
+        throw new Error(data.error || 'Failed to load plans');
+      }
+
+      billingPlans = data;
+      subscriptionsAvailable = !!data.subscriptionsAvailable;
+    } catch (err) {
+      console.error('[subscription] Failed to load billing plans:', err);
+      subscriptionsAvailable = false;
+    }
+  }
+
+  function getBetaMessage() {
+    return window.i18n
+      ? window.i18n.t('subscription.beta_modal_message')
+      : 'Subscriptions and trials are not available yet. Coming soon.';
+  }
+
   async function loadBillingStatus() {
     try {
       billingStatus = await apiCall('/api/billing/status');
@@ -418,6 +448,11 @@ import { track, EVENTS } from './lib/analytics.js';
 
   async function startTrial() {
     track(EVENTS.TRIAL_START_CLICKED);
+
+    if (subscriptionsAvailable === false) {
+      showBetaModal();
+      return;
+    }
     
     if (!authToken) {
       selectedPlan = 'trial';
@@ -549,15 +584,29 @@ import { track, EVENTS } from './lib/analytics.js';
   function updateStatusDisplay() {
     if (!billingStatus) return;
     
-    const { subscription, tokens } = billingStatus;
+    const { subscription, limits } = billingStatus;
     
-    statusBanner.classList.remove('hidden');
+    if (statusBanner) {
+      statusBanner.classList.remove('hidden');
+    }
     
     const statusText = getStatusText(subscription.status);
-    statusValue.textContent = statusText;
-    statusValue.className = `status-value ${subscription.status}`;
+    if (statusValue) {
+      statusValue.textContent = statusText;
+      statusValue.className = `status-value ${subscription.status}`;
+    }
     
-    tokenValue.textContent = tokens.totalFormatted;
+    if (usageLimitsValue && limits?.promptOptimization?.daily && limits?.questionWizard?.daily) {
+      const promptDaily = limits.promptOptimization.daily;
+      const wizardDaily = limits.questionWizard.daily;
+      const translated = window.i18n
+        ? window.i18n.t('subscription.usage_limits_value', { promptDaily, wizardDaily })
+        : null;
+      usageLimitsValue.textContent =
+        translated && translated !== 'subscription.usage_limits_value'
+          ? translated
+          : `${promptDaily} prompt optimizations/day · ${wizardDaily} question-wizard sessions/day`;
+    }
     
     showTrialBanner(subscription.canStartTrial && subscription.status === 'none');
     
@@ -663,6 +712,16 @@ import { track, EVENTS } from './lib/analytics.js';
           showToast('info', message);
           return;
         }
+
+        if (billingStatus?.subscription?.status === 'active' || billingStatus?.subscription?.status === 'trialing') {
+          openBillingPortal();
+          return;
+        }
+
+        if (subscriptionsAvailable === false) {
+          showBetaModal();
+          return;
+        }
         
         // Ensure state machine is initialized
         if (!stateMachine) {
@@ -682,22 +741,52 @@ import { track, EVENTS } from './lib/analytics.js';
     }
   }
 
+  function setupBetaModal() {
+    betaModalClose?.addEventListener('click', hideBetaModal);
+    betaModalOk?.addEventListener('click', hideBetaModal);
+    betaModal?.addEventListener('click', (e) => {
+      if (e.target === betaModal) hideBetaModal();
+    });
+  }
+
+  function showBetaModal() {
+    if (!betaModal) return;
+    const msg = document.getElementById('betaModalMessage');
+    if (msg) msg.textContent = getBetaMessage();
+    betaModal.classList.remove('hidden');
+  }
+
+  function hideBetaModal() {
+    if (!betaModal) return;
+    betaModal.classList.add('hidden');
+  }
+
   function setupThemeToggle() {
     const themeToggle = document.getElementById('themeToggle');
     if (!themeToggle) return;
     
     const themeIcon = themeToggle.querySelector('.theme-icon');
-    const currentTheme = document.documentElement.getAttribute('data-theme');
+    const currentTheme = window.themeManager?.get() || document.documentElement.getAttribute('data-theme');
     
     updateThemeIcon(themeIcon, currentTheme);
     
     themeToggle.addEventListener('click', () => {
-      const current = document.documentElement.getAttribute('data-theme');
-      const next = current === 'dark' ? 'light' : 'dark';
-      document.documentElement.setAttribute('data-theme', next);
-      localStorage.setItem('promptly.theme', next);
-      updateThemeIcon(themeIcon, next);
+      const newTheme = window.themeManager?.set() || setLocalTheme();
+      updateThemeIcon(themeIcon, newTheme);
     });
+    
+    // 监听来自其他页面的主题变化
+    document.addEventListener('themechange', (e) => {
+      updateThemeIcon(themeIcon, e.detail.theme);
+    });
+  }
+  
+  function setLocalTheme() {
+    const current = document.documentElement.getAttribute('data-theme');
+    const next = current === 'dark' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', next);
+    localStorage.setItem('theme', next);
+    return next;
   }
 
   function updateThemeIcon(icon, theme) {
@@ -850,4 +939,3 @@ import { track, EVENTS } from './lib/analytics.js';
     });
   }
 })();
-

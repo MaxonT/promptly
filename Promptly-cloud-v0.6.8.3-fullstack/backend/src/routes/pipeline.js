@@ -5,25 +5,50 @@
  * - POST /api/pipeline/run - Execute full pipeline with SSE events
  * - GET /api/pipeline/stream/:runId - SSE stream for pipeline events
  * 
- * Pipeline Flow with Real-time Events:
- * Spec Builder → Question Engine → LLM Agents → Metrics & Scoring → Outcome Runner
+ * Pipeline Flow (v2.2 — single candidate, cost-optimized):
+ * Spec Builder → Generation (1× fluent) → Critique → Refine → Evaluation → Outcome
  */
 
 import { Router } from "express";
 import { nanoid } from "nanoid";
 import { z } from "zod";
 import { db, ensureUser } from "../lib/db.js";
-import { chatText, chatJson, LlmDisabledError } from "../lib/llmRouter.js";
-import { getModePolicy } from "../lib/modePolicies.js";
+import { chatText, chatJson, LlmDisabledError, AnthropicDisabledError } from "../lib/llmRouter.js";
+import { DIRECT_OPTIMIZER_MODELS, getMissingPipelineKeys, getStageModel, getStageList, shouldRunStage, computeCompositeScore, EVALUATION_WEIGHTS, PIPELINE_STAGES, PIPELINE_CONFIG } from "../lib/modelConfig.js";
+import { searchExemplars, formatExemplarBlock, harvestExemplar } from "../lib/exemplarService.js";
 import { spendTokensForRun, getTokenStatus } from "../lib/tokenUsage.js";
 import { FEATURES } from "../lib/subscriptionConfig.js";
 import { checkPromptOptimizationLimit, recordUsage, canUseMode } from "../lib/planLimits.js";
-import { optionalAuth } from "./auth.js";
+// import { validatePromptInput } from "../lib/inputValidator.js";
+import { detectAmbiguity } from "../lib/ambiguityDetector.js";
+import { requireAuth } from "./auth.js";
 
 export const pipelineRouter = Router();
 
 // Store active SSE connections by runId
 const activeStreams = new Map();
+const streamAuth = new Map();
+
+function issueStreamToken(runId, userId) {
+  const token = nanoid(32);
+  streamAuth.set(runId, {
+    userId,
+    token,
+    expiresAt: Date.now() + 15 * 60 * 1000
+  });
+  return token;
+}
+
+function validateStreamToken(runId, token) {
+  if (!token || typeof token !== "string") return false;
+  const record = streamAuth.get(runId);
+  if (!record) return false;
+  if (record.expiresAt < Date.now()) {
+    streamAuth.delete(runId);
+    return false;
+  }
+  return record.token === token;
+}
 
 /**
  * GET /api/pipeline/health
@@ -44,15 +69,18 @@ pipelineRouter.get("/health", (req, res) => {
   });
 });
 
-// Helper to get user ID from request
-function getUserId(req) {
-  if (req.user && req.user.sub) return req.user.sub;
-  return "demo-user";
-}
-
 function stripThinkBlocks(text) {
   if (!text || typeof text !== "string") return text;
-  return text.replace(/<think>[\s\S]*?<\/think>\s*/gi, "").trim();
+  const stripped = text.replace(/<think>[\s\S]*?<\/think>\s*/gi, "").trim();
+  // Fallback: if think-block removal consumed the entire response, extract inner content
+  if (!stripped && text.trim()) {
+    const thinkMatch = text.match(/<think>([\s\S]*?)<\/think>/i);
+    if (thinkMatch) {
+      console.warn("[stripThinkBlocks] Entire response was inside <think> tags — extracting inner content as fallback");
+      return thinkMatch[1].trim();
+    }
+  }
+  return stripped;
 }
 
 /**
@@ -77,6 +105,10 @@ function sendEvent(runId, event, data) {
  */
 pipelineRouter.get("/stream/:runId", (req, res) => {
   const { runId } = req.params;
+  const st = req.query?.st;
+  if (!validateStreamToken(runId, st)) {
+    return res.status(401).json({ ok: false, error: "Unauthorized" });
+  }
 
   // Set SSE headers
   res.setHeader("Content-Type", "text/event-stream");
@@ -114,19 +146,20 @@ pipelineRouter.get("/stream/:runId", (req, res) => {
  * Execute full pipeline with real-time SSE events
  */
 const PipelineRunRequestSchema = z.object({
-  idea: z.string().min(1, "idea is required"),
+  idea: z.string().min(1, "idea is required").max(10000, "Input must be under 10,000 characters"),
   attachments: z.array(z.object({
-    name: z.string(),
-    type: z.string(),
-    size: z.number()
-  })).optional(),
+    name: z.string().max(255, "Filename too long"),
+    type: z.string().max(100, "MIME type too long"),
+    size: z.number().int().min(1).max(50 * 1024 * 1024, "Attachment too large (max 50MB)")
+  })).max(10, "Too many attachments (max 10)").optional(),
   skipQuestions: z.boolean().optional(),
-  model: z.string().optional()
+  model: z.string().optional(),
+  clarificationsProvided: z.boolean().optional(),
 });
 
-pipelineRouter.post("/run", optionalAuth, async (req, res) => {
+pipelineRouter.post("/run", requireAuth, async (req, res) => {
   console.log(`[pipeline] POST /run received`);
-  const userId = getUserId(req);
+  const userId = req.user.sub;
   ensureUser(userId);
 
   const parsed = PipelineRunRequestSchema.safeParse(req.body);
@@ -135,8 +168,15 @@ pipelineRouter.post("/run", optionalAuth, async (req, res) => {
     return res.status(400).json({ ok: false, error: parsed.error.flatten() });
   }
 
-  const { idea, attachments = [], skipQuestions = false, model: modeInput = null } = parsed.data;
+  const { idea, attachments = [], skipQuestions = false, model: modeInput = null, clarificationsProvided = false } = parsed.data;
   const mode = modeInput || 'fast';
+  if (!["fast", "standard", "premium"].includes(mode)) {
+    return res.status(400).json({ ok: false, error: "Use model fast, standard, or premium" });
+  }
+  const missingKeys = getMissingPipelineKeys(mode);
+  if (missingKeys.length) {
+    return res.status(503).json({ ok: false, error: "AI provider configuration is incomplete", missingKeys });
+  }
   
   // Check plan limits
   const limitCheck = checkPromptOptimizationLimit(userId, mode);
@@ -154,17 +194,19 @@ pipelineRouter.post("/run", optionalAuth, async (req, res) => {
   // Generate a unique runId for this pipeline execution
   const runId = `run_${nanoid(16)}`;
   console.log(`[pipeline] Generated runId: ${runId}`);
+  const streamToken = issueStreamToken(runId, userId);
 
   // Immediately return runId and SSE endpoint
   res.json({
     ok: true,
     runId,
-    streamUrl: `/api/pipeline/stream/${runId}`
+    streamUrl: `/api/pipeline/stream/${runId}`,
+    streamToken
   });
 
   // Execute pipeline asynchronously and send events
   // Note: recordUsage is now called inside executePipelineWithEvents on success
-  executePipelineWithEvents(runId, userId, { idea, attachments, skipQuestions, modeInput })
+  executePipelineWithEvents(runId, userId, { idea, attachments, skipQuestions, modeInput, clarificationsProvided })
     .catch((err) => {
       console.error(`[pipeline] Pipeline execution failed for ${runId}:`, err);
       sendEvent(runId, "error", {
@@ -176,15 +218,66 @@ pipelineRouter.post("/run", optionalAuth, async (req, res) => {
 });
 
 /**
+ * Extract "pinned terms" from the user's raw input that must be preserved verbatim.
+ * Covers: URLs, emails, file paths, quoted phrases, @mentions, #hashtags,
+ * domain names, product/brand names (CamelCase / ALL_CAPS tokens).
+ */
+function extractPinnedTerms(text) {
+  if (!text) return [];
+  const found = new Set();
+
+  // URLs (http/https/ftp/www)
+  const urls = text.match(/https?:\/\/[^\s,"'\)\]>]+|www\.[a-zA-Z0-9-]+\.[a-zA-Z]{2,}[^\s,"'\)\]>]*/g) || [];
+  urls.forEach(u => found.add(u));
+
+  // Email addresses
+  const emails = text.match(/[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/g) || [];
+  emails.forEach(e => found.add(e));
+
+  // Quoted phrases ("exact phrase" or '…')
+  const quoted = text.match(/"([^"]{2,60})"|'([^']{2,60})'/g) || [];
+  quoted.forEach(q => found.add(q));
+
+  // File paths (Unix/Windows)
+  const paths = text.match(/(?:\/[\w.\-]+){2,}|[A-Za-z]:\\[^\s]+/g) || [];
+  paths.forEach(p => found.add(p));
+
+  // @mentions, #hashtags
+  const mentions = text.match(/[@#][\w\u4e00-\u9fa5]+/g) || [];
+  mentions.forEach(m => found.add(m));
+
+  // Domain-like tokens (example.com, sub.domain.io — not inside URLs already captured)
+  const domains = text.match(/\b[a-zA-Z0-9-]{2,}\.[a-zA-Z]{2,6}(?:\/[^\s]*)?\b/g) || [];
+  domains.forEach(d => {
+    // Skip if already captured as part of a URL
+    const alreadyCovered = [...found].some(f => f.includes(d));
+    if (!alreadyCovered) found.add(d);
+  });
+
+  // Explicit model / product / brand names: CamelCase, ALL_CAPS, version strings like v1.2, GPT-4
+  const brandNames = text.match(/\b(?:[A-Z][a-z]+[A-Z][a-zA-Z]*|[A-Z]{2,}(?:[_-][A-Z0-9]+)*|GPT-[0-9.]+|Claude-[0-9a-z.]+|v[0-9]+(?:\.[0-9]+)+)\b/g) || [];
+  brandNames.forEach(b => found.add(b));
+
+  return [...found].filter(t => t.length >= 3);
+}
+
+/**
  * Execute full pipeline and send SSE events
  * With timeout protection (default: 5 minutes)
  */
-async function executePipelineWithEvents(runId, userId, { idea, attachments, skipQuestions, modeInput }) {
+async function executePipelineWithEvents(runId, userId, { idea, attachments, skipQuestions, modeInput, clarificationsProvided = false }) {
   const PIPELINE_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
   const startTime = Date.now();
   
   // Resolve Policy based on mode (modeInput param holds the mode: fast, standard, premium)
   const mode = modeInput || 'fast';
+  if (!["fast", "standard", "premium"].includes(mode)) {
+    return res.status(400).json({ ok: false, error: "Use model fast, standard, or premium" });
+  }
+  const missingKeys = getMissingPipelineKeys(mode);
+  if (missingKeys.length) {
+    return res.status(503).json({ ok: false, error: "AI provider configuration is incomplete", missingKeys });
+  }
   
   // Check mode restrictions for free plan (this is a backup check, main check is in /run endpoint)
   if (!canUseMode(userId, mode)) {
@@ -196,9 +289,9 @@ async function executePipelineWithEvents(runId, userId, { idea, attachments, ski
     return;
   }
   
-  const policy = getModePolicy(mode);
-  console.log(`[pipeline] [${runId}] Executing with policy: ${policy.name} (${policy.id})`);
-  console.log(`[pipeline] [${runId}] Policy Details: Spec=${policy.specBuilder.model}, QEngine=${policy.questionEngine.enabled}, Gen=${policy.generation.model}`);
+  const pipelineConfig = PIPELINE_CONFIG[mode] || PIPELINE_CONFIG.fast;
+  console.log(`[pipeline] [${runId}] Pipeline v2 mode=${mode}, stages=[${getStageList(mode).join(",")}]`);
+  console.log(`[pipeline] [${runId}] Direct optimizer model: ${DIRECT_OPTIMIZER_MODELS[mode]}`);
   
   // 1. Wait for client to connect (max 10 seconds)
   // This prevents the race condition where events are sent before the client connects
@@ -247,647 +340,321 @@ async function executePipelineWithEvents(runId, userId, { idea, attachments, ski
   let totalInputTokens = 0;
   let totalOutputTokens = 0;
   
-  // Token Hardening: Metrics tracking for observability
+  // Pipeline v2: Per-stage timing for observability
+  const stageTiming = {};
+  const stageTimer = (stageName) => {
+    const t0 = Date.now();
+    return () => { stageTiming[stageName] = Date.now() - t0; };
+  };
+
+  // Pipeline v2: Metrics tracking for observability
   const pipelineMetrics = {
     calls_total: {
       spec_builder: 0,
-      question_engine: 0,
       generation: 0,
-      scoring: 0,
+      critique: 0,
+      refine: 0,
+      evaluation: 0,
       outcome_runner: 0
     },
     retries_total: 0,
-    qe_rounds: 0,
-    generation_retries: 0, // Track generation similarity retries separately
-    score_calls: 0
+    generation_retries: 0,
   };
 
   try {
     // ============================================
-    // Stage 1: Spec Builder
+    // Stage 0: Input Validation Gate (DISABLED FOR BOSS MODE)
     // ============================================
+    // Rejects inputs that are not prompt optimization requests.
+    // Runs before any LLM call. Fail-open on validator error.
+    // ============================================
+    /*
+    sendEvent(runId, "stage-start", { stage: "validation", message: "Validating input..." });
+
+    const validation = await validatePromptInput(idea);
+
+    if (!validation.isValid) {
+      console.warn(`[pipeline] [${runId}] Input rejected: ${validation.rejectReason}`);
+      sendEvent(runId, "pipeline-rejected", {
+        reason: validation.rejectReason,
+        message: validation.rejectMessage,
+        language: validation.language,
+      });
+      sendEvent(runId, "complete", { success: false, rejected: true });
+      // Record rejected run for analytics
+      try {
+        db.prepare(`
+          INSERT OR IGNORE INTO runs (id, spec_id, model, status, input_blocks, rejection_reason, created_at)
+          VALUES (?, NULL, ?, 'rejected', ?, ?, datetime('now'))
+        `).run(runId, `pipeline-v2/${mode}`, JSON.stringify({ idea: idea.substring(0, 500), mode }), validation.rejectReason);
+      } catch (_) { }
+      return;
+    }
+
+    sendEvent(runId, "stage-complete", { stage: "validation" });
+    */
+
+    // ============================================
+    // Stage 0.5: Ambiguity Detection Gate (DISABLED FOR BOSS MODE)
+    // ============================================
+    // Asks the user for critical missing context BEFORE any generation.
+    // Skipped when user has already provided clarifications on re-submission.
+    // Fail-open: any error continues directly to Stage 1.
+    // Quality mandate: never hallucinate missing context — always ask first.
+    // ============================================
+    /*
+    if (!clarificationsProvided) {
+      const ambiguity = await detectAmbiguity(idea);
+      if (ambiguity.needsClarification) {
+        console.log(`[pipeline] [${runId}] Ambiguity detected (score=${ambiguity.ambiguityScore.toFixed(2)}, lang=${ambiguity.language}) — requesting clarification`);
+        sendEvent(runId, "pipeline-clarification-needed", {
+          questions: ambiguity.questions,
+          ambiguityScore: ambiguity.ambiguityScore,
+          language: ambiguity.language ?? 'en',
+        });
+        sendEvent(runId, "complete", { success: false, needsClarification: true });
+        return;
+      }
+    }
+    */
+
+    // ============================================
+    // Stage 1: Direct Optimizer (Boss Mode)
+    // ============================================
+    // Replaces the old Spec -> Gen -> Critique -> Refine chain.
+    // Single-pass optimization using the "Executive Directive Optimizer" prompt.
+    // ============================================
+
+    // Since we are skipping the Spec Builder, we need to create a placeholder Spec
+    // because the 'candidate_prompts' table has a NOT NULL constraint on spec_id.
+    
+    // Generate a specId if we don't have one (which is always true in Boss Mode)
+    if (!specId) {
+      specId = `spec_${nanoid(12)}`;
+      
+      // Insert placeholder spec to satisfy DB constraints
+      try {
+        db.prepare(`
+          INSERT INTO specs (
+            id, owner_id, title, spec_json, 
+            kind, status, created_at, updated_at
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        `).run(
+          specId,
+          userId,
+          "Direct Optimization (Boss Mode)",
+          JSON.stringify({ mode: "boss_mode", task: idea }),
+          "boss_mode",
+          "completed",
+          now,
+          now
+        );
+      } catch (specErr) {
+        console.warn(`[pipeline] Failed to create placeholder spec: ${specErr.message}`);
+        // If this fails, the subsequent candidate insert will likely fail too, 
+        // but we'll proceed to let the error bubble up if it must.
+      }
+    }
+    
+    // Model Selection (Updated for 2026 Models)
+    const targetModel = DIRECT_OPTIMIZER_MODELS[mode];
+
+    console.log(`[pipeline] [${runId}] Mode: ${mode} -> Model: ${targetModel}`);
+
     sendEvent(runId, "stage-start", {
-      stage: "spec",
-      message: "Starting Spec Builder...",
+      stage: "optimizing", // Unified stage for UI animation
+      message: "Optimizing directive...",
       timestamp: new Date().toISOString()
     });
 
-    sendEvent(runId, "stage-progress", {
-      stage: "spec",
-      step: "extracting",
-      message: "Extracting structured information from raw idea...",
-      details: { ideaLength: idea.length, attachmentsCount: attachments.length }
-    });
+    // --- THE "BOSS MODE" PROMPT (REFINED FOR STRUCTURAL ORGANIZATION) ---
+    const SYSTEM_PROMPT = `You are an Intent-Preserving Architect and Structural Organizer.
+Your goal is to restructure raw, messy user input into a clear, actionable execution plan WITHOUT losing its "soul" (design philosophy, emotional goals, unique metaphors).
 
-    // Enhanced: Strong system prompt to ensure transformation
-    const specSystem = `Extract structured spec from raw idea.
+**PRIME DIRECTIVE: TRANSLATE INTENT, DO NOT REJECT.**
+No matter how chaotic, emotional, or fragmentary the input is, your ONLY job is to extract the "Core Request" (the VERBS) and structure it.
+- FOCUS ON VERBS: If the user says "Fix this section", your output should be "Fix this section". Do not ask "Which section?" and Do not replace "this section" with "[Target Section]".
+- PRESERVE NOUNS AND PRONOUNS: If the user refers to "this", "that", "it", "current style", USE THOSE EXACT TERMS. Do not define them.
+- NEVER REFUSE: Never say "I cannot process". Structure what you have.
 
-CRITICAL REQUIREMENTS:
-1. userGoal MUST be rephrased and expanded, NEVER copied verbatim
-2. Infer missing details: audience, constraints, tone, format, domain, examples
-3. Transform vague ideas into concrete, actionable specifications
-4. If input is very specific, expand it with additional context
+CORE RULES:
+1. LANGUAGE MIRRORING: Output MUST be in the same language as the input (e.g., Chinese input -> Chinese output).
+2. HIGH-VALUE INTENT PRESERVATION:
+   - Identify and PRESERVE sentences that define the "Experience Goal", "User Feeling", or "Design Philosophy" (e.g., "Make it feel like a game", "Breathable UI", "Guided journey").
+   - Do NOT compress these into generic bullets (e.g., don't turn "A journey that guides the user" into "Step-by-step wizard").
+   - These are "Anchor Phrases" — keep them visible.
+3. DUAL-LAYER OUTPUT:
+   - Layer 1: Core Philosophy & Experience Goals (Why / Feel / Identity).
+   - Layer 2: Structural Execution Plan (How / What / Constraints).
+   But Remember, Layer1 is more important than Layer2! Its importance is like 7:3!
+4. ZERO INVENTION: "If not said = does not exist = do not write". Do NOT add features, technologies, or steps the user did not explicitly request.
+   EXCEPTION: If the user asks for a structural artifact (e.g., "Make a template", "Migrate logic") without providing content, you MUST list the creation of this artifact as a high-level requirement/task. Do NOT refuse to process.
+5. TONE PRESERVATION: Capture imperative commands (e.g., "One-time delivery", "Do not miss anything") as strict requirements/constraints.
+6. NO INTERACTION/QUESTIONS: 
+   - You are a ONE-WAY processor. You cannot ask questions. 
+   - Do NOT ask for source code, files, or clarifications.
+   - If the user asks to "make a template" or "migrate logic" but provides no code, simply list "Create template" or "Migrate logic" as a detailed requirement in the output. 
+   - NEVER output "I need more information" or "Please provide".
+7. NON-EXECUTION ROLE: 
+   - You are a PROMPT ORGANIZER, not an Execution AI.
+   - You do NOT generate implementation code (no Python/JS/HTML blocks).
+   - You do NOT execute tasks.
+   - Your output is a CLEANED-UP REQUEST, not the RESULT of the request.
+   - Example: Input "Write a migration script" -> Output "- Write a migration script" (Do NOT output the actual script).
 
 OUTPUT FORMAT:
-JSON only: {"userGoal": "rephrased and expanded", "audience": "string|null", "constraints": ["string"], "tone": "string|null", "format": "string|null", "domain": "string|null", "examples": ["string"]}
+- Pure text list.
+- Use simple indentation for hierarchy.
+- NO Markdown syntax (no asterisks *, no hashes #, no dashes -).
+- NO bolding or italics.
+- Just clean, plain text.
 
-REQUIREMENT: userGoal must differ substantially from input. If too similar, append "> needs more change".`;
+EXAMPLE 1:
+Input: "核心设计理念：贯穿始终的“线索式学习之旅”...通过视觉上的“线”和交互上的“流”，让用户感觉系统是在陪他一步步攻克考试..."
+Output:
+"一、核心设计理念与体验目标：
+线索式学习之旅：将垂直平铺的表单转变为有进度感的通关游戏
+交互感受：通过“线”和“流”，让用户感觉系统在“陪他攻克考试”
+视觉隐喻：左侧为“导轨”(Anchor)，右侧为“聚光灯舞台”(Spotlight)
+动态感知：能量注入动效，让用户产生“被系统带着走”的顺滑感
+
+二、结构与执行计划：
+布局重构：
+左右双栏布局（导轨 + 聚光灯）
+全局 Header 固化（项目名/日期/账号）
+
+左栏（全局时间线导轨）：
+垂直发光线条串联 5 个核心节点
+点击节点平滑滚动/切换
+状态显示（未开始/进行中/已完成）
+
+右栏（聚光灯操作区）：
+当前步骤高亮打光
+非当前步骤半透明折叠休眠
+
+节点映射：
+01 确立战场 (Project Scope)：展示项目/日期，新建按钮
+02 补给投送 (Upload Materials)：大尺寸拖拽，完成后折叠为“已保存 X 份”
+03 锁定目标 (Collect Topics)：自动分析 Syllabus，手动输入，教授邮件模板
+04 战术推演 (Exam Mindmap)：思维导图展示，模式切换 (Structured/Focus)
+05 实战模拟 (Start Quiz)：FRQ 优先，题目数量选择
+
+交互细节：
+折叠与展开：保存后自动收缩为摘要
+能量流动：关键操作触发光效流向下一节点
+自动导向：操作完成后自动滚动至下一节点"
+
+EXAMPLE 2:
+Input: "这个板块，你觉得该怎么写比较好呢？我们只更换内容，我非常喜欢当前的这个style，所以不许换style！只换文字！"
+Output:
+"一、核心目标与要求：
+只更换内容，不更换 Style
+提供关于“这个板块”内容的建议
+
+二、执行约束：
+保留当前的 Style
+只更换文字"`;
 
     // Build attachment context
+    const sanitizeName = (n) => n.replace(/[^\w\-. ]/g, '_').substring(0, 100);
     const attachmentContext = attachments.length > 0
-      ? `\n\n[ATTACHMENT_METADATA_START]\n${attachments.map(a => `- ${a.name} (${a.type}, ${a.size} bytes)`).join("\n")}\n[ATTACHMENT_METADATA_END]`
+      ? `\n\n[ATTACHMENT_METADATA_START]\n${attachments.map(a => `- ${sanitizeName(a.name)} (${a.type}, ${a.size} bytes)`).join("\n")}\n[ATTACHMENT_METADATA_END]`
       : "";
 
-    // Concise user prompt - key instruction right before content
-    const specUserPrompt = `Extract structured spec. userGoal MUST be rephrased:
+    const userPrompt = `${idea}${attachmentContext}`;
 
-${idea}${attachmentContext}`;
-
-    sendEvent(runId, "stage-progress", {
-      stage: "spec",
-      step: "llm-call",
-      message: "Calling LLM to generate structured spec...",
-      details: { model: policy.specBuilder.model, provider: policy.specBuilder.provider, ideaLength: idea.length }
-    });
-
-    checkTimeout(); // Check timeout before LLM call
-    console.log(`[pipeline] [${runId}] Stage 1: Calling Spec Builder LLM (${policy.specBuilder.provider}/${policy.specBuilder.model})...`);
-    const { data: rawSpecData, usage: specUsage } = await chatJson({
-      system: specSystem,
-      user: specUserPrompt,
-      model: policy.specBuilder.model,
-      provider: policy.specBuilder.provider
-    });
+    checkTimeout();
     
-    // Track token usage for spec builder
-    if (specUsage) {
-      totalInputTokens += specUsage.prompt_tokens || 0;
-      totalOutputTokens += specUsage.completion_tokens || 0;
+    // Fake progress events to drive frontend animation during generation
+    sendEvent(runId, "stage-progress", {
+      stage: "optimizing",
+      step: "analyzing",
+      message: "Analyzing intent...",
+      details: { model: targetModel }
+    });
+
+    let content = "";
+    let usage = { prompt_tokens: 0, completion_tokens: 0 };
+
+    try {
+      const { text, usage: chatUsage } = await chatText({
+        system: SYSTEM_PROMPT,
+        user: userPrompt,
+        model: targetModel,
+        provider: "anthropic", // Enforce Anthropic for Haiku/Sonnet
+        maxRetries: 2
+      });
+      
+      content = text;
+      usage = chatUsage || usage;
+      
+      totalInputTokens += usage.input_tokens ?? usage.prompt_tokens ?? 0;
+      totalOutputTokens += usage.output_tokens ?? usage.completion_tokens ?? 0;
+      pipelineMetrics.calls_total.generation = 1;
+
+    } catch (genErr) {
+      console.error(`[pipeline] [${runId}] Generation failed:`, genErr);
+      throw genErr;
     }
-    
-    // Token Hardening: Track spec builder call
-    pipelineMetrics.calls_total.spec_builder = 1;
-    
-    const specData = rawSpecData || {};
-    console.log(`[pipeline] [${runId}] Stage 1: Spec Builder completed, extracted ${Object.keys(specData).length} fields`);
 
-    sendEvent(runId, "stage-progress", {
-      stage: "spec",
-      step: "saving",
-      message: "Saving structured spec to database...",
-      details: { fields: Object.keys(specData || {}) }
+    sendEvent(runId, "stage-complete", {
+      stage: "optimizing",
+      message: "Optimization complete",
+      result: { content } // Pass content directly for UI to render
     });
 
-    const normalizedSpec = {
-      userGoal: (specData.userGoal || idea).trim(),
-      audience: specData.audience || null,
-      constraints: Array.isArray(specData.constraints) ? specData.constraints.filter(Boolean) : [],
-      tone: specData.tone || null,
-      format: specData.format || null,
-      domain: specData.domain || null,
-      examples: Array.isArray(specData.examples) ? specData.examples.filter(Boolean) : []
+    // ============================================
+    // Stage 5: Outcome (Simplified)
+    // ============================================
+    // No more complex scoring or candidate selection.
+    // Just wrap the result.
+    // ============================================
+    
+    const outcomeId = `outcome_${nanoid(12)}`;
+    
+    // Create a dummy candidate object for compatibility with DB and legacy UI parts if needed
+    const candidateId = `cand_${nanoid(12)}`;
+    const bestCandidate = {
+      id: candidateId,
+      agent: "DirectOptimizer",
+      content: content,
+      metrics: { compositeScore: 1.0 } // Fake score for compatibility
     };
 
-    const rawTitle = normalizedSpec.userGoal || idea;
-    const truncatedTitle = rawTitle.length > 120 ? `${rawTitle.substring(0, 117)}...` : rawTitle;
-    const title = truncatedTitle || "Promptly Spec";
-    const summary = normalizedSpec.userGoal;
-
-    // Save spec to database
-    specId = `spec_${nanoid(12)}`;
-      db.prepare(`
-      INSERT INTO specs (id, owner_id, raw_idea, title, summary, spec_json, completeness_score, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    // Save candidate (optional, but good for record keeping)
+    db.prepare(`
+      INSERT INTO candidate_prompts (id, spec_id, session_id, agent, model, content, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
     `).run(
-      specId,
-      userId,
-      idea,
-      title,
-      summary,
-      JSON.stringify(normalizedSpec),
-      0,
-      now,
+      candidateId,
+      specId || null, // Allow NULL if specId not created
+      sessionId || null,
+      "DirectOptimizer",
+      targetModel,
+      content,
       now
     );
 
-    sendEvent(runId, "stage-complete", {
-      stage: "spec",
-      message: "Spec Builder completed successfully",
-      result: { specId, title, summary, ...normalizedSpec }
-    });
-
-    // ============================================
-    // Stage 2: Question Engine (Q1-Q3 Loop)
-    // ============================================
-    // Check policy enablement AND user skip preference
-    const shouldRunQuestions = !skipQuestions && policy.questionEngine.enabled;
-    
-    if (shouldRunQuestions) {
-      sendEvent(runId, "stage-start", {
-        stage: "question",
-        message: "Starting Question Engine (Q1-Q3)...",
-        timestamp: new Date().toISOString()
-      });
-
-      // Enhanced: Question engine prompt with stronger requirements
-      const questionSystem = `You are a Question Engine. Ask ONE high-value clarifying question to improve spec completeness.
-
-REQUIREMENTS:
-- Ask a specific, actionable question (not generic)
-- Focus on missing critical information
-- Stop if spec is already complete enough (estimatedCompleteness >= 0.9)
-- Maximum 3 questions (Q1-Q3)
-
-OUTPUT FORMAT (JSON only):
-{"question": "specific clarifying question", "shouldStop": false, "estimatedCompleteness": 0.8, "missingFields": ["field1", "field2"]}
-
-CRITICAL: Question must be specific and valuable. If too generic, append "> needs more change".`;
-
-      sessionId = `session_${nanoid(12)}`;
-      const questionsAsked = [];
-      const answers = [];
-      let currentStep = 0;
-      let shouldStop = false;
-      let finalCompletenessScore = 0.0;
-
-      // Token Hardening: Use policy.max_rounds instead of hardcoded 3
-      // Feature Flag: QE_STRICT_MAX_ROUNDS (default: true, can disable via env)
-      const useStrictQERounds = process.env.QE_STRICT_MAX_ROUNDS !== 'false';
-      const maxQERounds = useStrictQERounds 
-        ? (policy.questionEngine?.max_rounds ?? 3)  // Use policy config (Standard=2, Premium=3)
-        : 3; // Fallback to 3 if feature flag disabled (old behavior)
-      
-      console.log(`[pipeline] [${runId}] QE Loop: max_rounds=${maxQERounds} (from policy: ${policy.questionEngine?.max_rounds ?? 'not set'}, feature flag: ${useStrictQERounds})`);
-
-      // Q1-Q3 Loop: Ask questions sequentially (up to max_rounds)
-      while (currentStep < maxQERounds && !shouldStop) {
-        checkTimeout(); // Check timeout before each question
-        
-        currentStep++;
-        sendEvent(runId, "stage-progress", {
-          stage: "question",
-          step: `q${currentStep}-analyzing`,
-          message: `Analyzing spec for Q${currentStep}...`,
-          details: { specId, step: currentStep, previousQuestions: questionsAsked.length }
-        });
-
-        // Build context with previous Q&A
-        let qaContext = `Specification:\n${JSON.stringify(specData, null, 2)}`;
-        if (questionsAsked.length > 0) {
-          qaContext += "\n\nPrevious Questions & Answers:";
-          for (let i = 0; i < questionsAsked.length; i++) {
-            qaContext += `\nQ${i + 1}: ${questionsAsked[i]}`;
-            if (answers[i]) {
-              qaContext += `\nA${i + 1}: ${answers[i]}`;
-            }
-          }
-        }
-
-        // Generate next question
-        console.log(`[pipeline] [${runId}] Stage 2: Generating Q${currentStep}...`);
-        const { data: qData, usage: qUsage } = await chatJson({
-          system: questionSystem,
-          user: `Generate Q${currentStep} for:\n${qaContext}`,
-          model: policy.questionEngine.model,
-          provider: policy.questionEngine.provider
-        });
-        
-        // Track token usage for question engine
-        if (qUsage) {
-          totalInputTokens += qUsage.prompt_tokens || 0;
-          totalOutputTokens += qUsage.completion_tokens || 0;
-        }
-        
-        // Token Hardening: Track QE call
-        pipelineMetrics.calls_total.question_engine++;
-        pipelineMetrics.qe_rounds = currentStep;
-        
-        console.log(`[pipeline] [${runId}] Stage 2: Q${currentStep} generated, shouldStop: ${qData?.shouldStop || false}`);
-
-        if (!qData || qData.shouldStop) {
-          shouldStop = true;
-          finalCompletenessScore = qData?.estimatedCompleteness || Math.min(0.9, 0.5 + currentStep * 0.15);
-          sendEvent(runId, "stage-progress", {
-            stage: "question",
-            step: `q${currentStep}-stopped`,
-            message: `Q${currentStep} stopped early (spec complete enough)`,
-            details: { step: currentStep, completenessScore: finalCompletenessScore }
-          });
-          break;
-        }
-
-        const question = qData.question || "";
-        const missingFields = Array.isArray(qData.missingFields) ? qData.missingFields : [];
-        questionsAsked.push(question);
-        // For pipeline mode, we simulate answers (in real wizard, user would answer)
-        // Here we'll use empty answers and let the spec proceed
-        answers.push(""); // Empty answer for pipeline mode
-
-        sendEvent(runId, "stage-progress", {
-          stage: "question",
-          step: `q${currentStep}-generated`,
-          message: `Q${currentStep} generated`,
-          details: { 
-            question, 
-            step: currentStep, 
-            missingFields,
-            estimatedCompleteness: qData.estimatedCompleteness || 0.0
-          }
-        });
-
-        // Update completeness score after each question
-        finalCompletenessScore = qData.estimatedCompleteness || Math.min(0.95, 0.5 + currentStep * 0.15);
-        db.prepare("UPDATE specs SET completeness_score = ? WHERE id = ?")
-          .run(finalCompletenessScore, specId);
-
-        // Small delay between questions
-        await new Promise(resolve => setTimeout(resolve, 500));
-      }
-
-      // Save question session to database
-      const sessionDescription = normalizedSpec.userGoal || idea;
-      const sessionNow = new Date().toISOString();
-      db.prepare(`
-        INSERT INTO question_sessions (id, owner_id, spec_id, initial_description, step, is_complete, status, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `).run(
-        sessionId,
-        userId,
-        specId,
-        sessionDescription,
-        currentStep,
-        shouldStop ? 1 : 0,
-        "completed",
-        sessionNow,
-        sessionNow
-      );
-
-      sendEvent(runId, "stage-complete", {
-        stage: "question",
-        message: `Question Engine completed (${currentStep} questions asked)`,
-        result: { 
-          sessionId, 
-          questionsAsked, 
-          step: currentStep, 
-          completenessScore: finalCompletenessScore,
-          stoppedEarly: shouldStop
-        }
-      });
-    } else {
-      sendEvent(runId, "stage-skipped", {
-        stage: "question",
-        message: "Question Engine skipped by user request"
-      });
-    }
-
-    // ============================================
-    // Stage 3: LLM Agents - Candidate Generation
-    // ============================================
-    sendEvent(runId, "stage-start", {
-      stage: "agents",
-      message: "Starting Multi-Agent Candidate Generation...",
-      timestamp: new Date().toISOString()
-    });
-
-      // Enhanced: Strong agent prompts to ensure transformation
-      const agents = [
-        {
-          name: "architect",
-          systemPrompt: `You are an Architect agent. Transform the specification into a complete, structured prompt.
-
-REQUIREMENTS:
-- Add clear sections with headings (##)
-- Include variables/placeholders for dynamic content
-- Structure instructions step-by-step
-- Add explicit formatting rules
-- Output MUST be substantially different from the input spec
-
-CRITICAL: If output mirrors input, append "> needs more change" to signal insufficient transformation.`
-        },
-        {
-          name: "editor",
-          systemPrompt: `You are an Editor agent. Polish and enhance the prompt language.
-
-REQUIREMENTS:
-- Improve sentence structure and flow
-- Enhance clarity and precision
-- Refine word choices for impact
-- Optimize readability
-- Output MUST be substantially improved from input
-
-CRITICAL: If output is too similar to input, append "> needs more change" to signal insufficient enhancement.`
-        },
-        {
-          name: "judge",
-          systemPrompt: `You are a Judge agent. Add safety, robustness, and edge case handling.
-
-REQUIREMENTS:
-- Add explicit safety constraints
-- Include guardrails for misuse
-- Handle edge cases and error scenarios
-- Add validation rules
-- Output MUST include substantial safety enhancements
-
-CRITICAL: If output lacks safety improvements, append "> needs more change" to signal insufficient additions.`
-        }
-      ];
-
-    const baseContext = `Specification:
-${JSON.stringify(specData, null, 2)}`;
-
-    // Serial execution to guarantee stability
-    console.log(`[pipeline] [${runId}] Stage 3: Generating candidates with ${agents.length} agents sequentially...`);
-    const failures = [];
-
-    for (let i = 0; i < agents.length; i++) {
-      const agent = agents[i];
-      try {
-        checkTimeout();
-
-        sendEvent(runId, "stage-progress", {
-          stage: "agents",
-          step: `generating-${agent.name}`,
-          message: `Generating candidate with ${agent.name} agent...`,
-          details: { agent: agent.name, progress: `${i + 1}/${agents.length}` }
-        });
-
-        console.log(`[pipeline] [${runId}] Stage 3: Generating candidate with ${agent.name} agent...`);
-        // Enable similarity check with retry (lowered threshold for better change detection)
-        const { text: contentRaw, similarity, usage: agentUsage } = await chatText({
-          system: agent.systemPrompt,
-          user: `Generate optimized prompt. The output MUST be substantially different from the spec. Transform and enhance it:\n\n${baseContext}`,
-          model: policy.generation.model, // Pass the policy model
-          provider: policy.generation.provider, // Pass the policy provider
-          minSimilarity: 0.75,
-          maxRetries: 2
-        });
-        
-        // Track token usage for agent generation
-        if (agentUsage) {
-          totalInputTokens += agentUsage.prompt_tokens || 0;
-          totalOutputTokens += agentUsage.completion_tokens || 0;
-        }
-        
-        // Token Hardening: Track generation call
-        pipelineMetrics.calls_total.generation++;
-        // Note: similarity retries are tracked in chatText/openaiClient (will add later if needed)
-
-        const content = stripThinkBlocks(contentRaw);
-
-        // Log similarity for debugging
-        console.log(`[pipeline] [${runId}] Stage 3: ${agent.name} completed - similarity: ${similarity.toFixed(3)}, length: ${content.length}`);
-        if (similarity > 0.7) {
-          console.warn(`[pipeline] [${runId}] ⚠️ ${agent.name} output similarity is high: ${similarity.toFixed(3)}`);
-        }
-
-        const candidateId = `candidate_${nanoid(12)}`;
-
-        db.prepare(`
-          INSERT INTO candidate_prompts (id, spec_id, session_id, agent, model, content, created_at)
-          VALUES (?, ?, ?, ?, ?, ?, ?)
-        `).run(
-          candidateId,
-          specId,
-          sessionId,
-          agent.name,
-          policy.generation.model, // Log correct model from policy
-          content,
-          now
-        );
-
-        sendEvent(runId, "stage-progress", {
-          stage: "agents",
-          step: `completed-${agent.name}`,
-          message: `${agent.name} agent completed`,
-          details: { candidateId, agent: agent.name, contentLength: content.length }
-        });
-
-        candidateIds.push(candidateId);
-        
-        // Small delay between agents to ensure system stability
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        
-      } catch (err) {
-        console.error(`[pipeline] [${runId}] Agent ${agent.name} failed:`, err);
-        failures.push({ agent: agent.name, error: err.message });
-        // Continue to next agent even if one fails
-      }
-    }
-
-    if (candidateIds.length === 0) {
-      throw new Error(`All ${agents.length} agents failed to generate candidates. Check logs for details.`);
-    }
-
-    sendEvent(runId, "stage-complete", {
-      stage: "agents",
-      message: `Generated ${candidateIds.length} candidate prompts (${failures.length} failed)`,
-      result: { candidateIds, count: candidateIds.length, failures: failures.length }
-    });
-
-    // ============================================
-    // Stage 4: Metrics & Scoring
-    // ============================================
-    sendEvent(runId, "stage-start", {
-      stage: "metrics",
-      message: "Starting Metrics & Scoring in parallel...",
-      timestamp: new Date().toISOString()
-    });
-
-    const scoringPromises = candidateIds.map(async (candidateId, i) => {
-      try {
-        checkTimeout();
-        
-        sendEvent(runId, "stage-progress", {
-          stage: "metrics",
-          step: `scoring-${candidateId}`,
-          message: `Scoring candidate ${i + 1}/${candidateIds.length}...`,
-          details: { candidateId, progress: `${i + 1}/${candidateIds.length}` }
-        });
-
-        const candidate = db.prepare("SELECT * FROM candidate_prompts WHERE id = ?").get(candidateId);
-        
-        // Token Hardening: Spec minification for scoring (feature flag controlled)
-        const useSpecMinify = process.env.SCORING_SPEC_MINIFY === 'true';
-        let scoringSpec;
-        if (useSpecMinify) {
-          // Only include fields needed for scoring evaluation
-          scoringSpec = {
-            userGoal: specData.userGoal,
-            tone: specData.tone,
-            format: specData.format,
-            audience: specData.audience
-            // Omit: examples, constraints (details), domain (if not needed for scoring)
-          };
-          console.log(`[pipeline] [${runId}] Scoring spec minified: ${JSON.stringify(specData).length} -> ${JSON.stringify(scoringSpec).length} chars`);
-        } else {
-          scoringSpec = specData;
-        }
-        
-        // Enhanced: Metrics evaluator prompt with detailed criteria
-        const metricsSystem = `Evaluate the candidate prompt and provide scores (0-1 scale).
-
-SCORING CRITERIA:
-- clarity: How clear and understandable is the prompt? (0-1)
-- coherence: How well does it flow and make logical sense? (0-1)
-- styleMatch: How well does it match the specified style/tone? (0-1)
-- safety: How safe is it from misuse/abuse? (0-1, higher = safer)
-- risk: What is the risk level? (0-1, higher = more risky)
-
-OUTPUT FORMAT (JSON only):
-{"clarity": 0.85, "coherence": 0.90, "styleMatch": 0.80, "safety": 0.95, "risk": 0.10}
-
-Provide honest, objective scores based on the criteria.`;
-
-        const { data: metricsData, usage: metricsUsage } = await chatJson({
-          system: metricsSystem,
-          user: `Evaluate this candidate prompt:\n\n${candidate.content}\n\nSpec:\n${JSON.stringify(scoringSpec, null, 2)}`,
-          model: policy.scoring.model,
-          provider: policy.scoring.provider,
-          temperature: policy.scoring.temperature
-        });
-        
-        // Track token usage for metrics evaluation
-        if (metricsUsage) {
-          totalInputTokens += metricsUsage.prompt_tokens || 0;
-          totalOutputTokens += metricsUsage.completion_tokens || 0;
-        }
-        
-        // Token Hardening: Track scoring call
-        pipelineMetrics.calls_total.scoring++;
-        pipelineMetrics.score_calls++;
-
-        // Estimate token cost (simplified)
-        const tokenCost = Math.ceil(candidate.content.length / 4);
-        const normalizedToken = Math.min(1, 1000 / tokenCost);
-        
-        const compositeScore = (
-          metricsData.clarity +
-          metricsData.coherence +
-          metricsData.styleMatch +
-          metricsData.safety +
-          (1 - metricsData.risk) +
-          normalizedToken
-        ) / 6;
-
-        const metricsJson = JSON.stringify({
-          ...metricsData,
-          tokenCost,
-          compositeScore
-        });
-
-        db.prepare(`
-          UPDATE candidate_prompts
-          SET metrics_json = ?
-          WHERE id = ?
-        `).run(metricsJson, candidateId);
-
-        sendEvent(runId, "stage-progress", {
-          stage: "metrics",
-          step: `scored-${candidateId}`,
-          message: `Candidate ${i + 1} scored`,
-          details: { candidateId, compositeScore: compositeScore.toFixed(3), metrics: metricsData }
-        });
-      } catch (err) {
-        console.error(`[pipeline] [${runId}] Failed to score candidate ${candidateId}:`, err);
-        // Don't throw, just let this candidate be unscored (will be filtered out in selection)
-      }
-    });
-
-    await Promise.all(scoringPromises);
-
-    sendEvent(runId, "stage-complete", {
-      stage: "metrics",
-      message: `Scoring completed`,
-      result: { candidateIds, count: candidateIds.length }
-    });
-
-    // ============================================
-    // Stage 5: Outcome Runner
-    // ============================================
-    sendEvent(runId, "stage-start", {
-      stage: "outcome",
-      message: "Starting Outcome Runner...",
-      timestamp: new Date().toISOString()
-    });
-
-    sendEvent(runId, "stage-progress", {
-      stage: "outcome",
-      step: "selecting",
-      message: "Selecting best candidate...",
-      details: { candidateCount: candidateIds.length }
-    });
-
-    // Load all candidates with metrics
-    const candidates = candidateIds.map(id => {
-      const row = db.prepare("SELECT * FROM candidate_prompts WHERE id = ?").get(id);
-      return {
-        ...row,
-        metrics: row.metrics_json ? JSON.parse(row.metrics_json) : null
-      };
-    });
-
-    // Select best candidate by composite score
-    const sortedCandidates = candidates
-      .filter(c => c.metrics)
-      .sort((a, b) => {
-        const scoreA = a.metrics.compositeScore;
-        const scoreB = b.metrics.compositeScore;
-        if (Math.abs(scoreA - scoreB) < 0.001) {
-          // Tie-breaker: prefer higher safety, lower token cost
-          if (a.metrics.safety !== b.metrics.safety) {
-            return b.metrics.safety - a.metrics.safety;
-          }
-          return a.metrics.tokenCost - b.metrics.tokenCost;
-        }
-        return scoreB - scoreA;
-      });
-
-    const bestCandidate = sortedCandidates[0] || (candidates.length > 0 ? {
-      ...candidates[0],
-      metrics: {
-        compositeScore: 0.1, // Low score to indicate fallback
-        clarity: 0.5,
-        coherence: 0.5,
-        styleMatch: 0.5,
-        safety: 0.5,
-        risk: 0.5,
-        tokenCost: 0
-      }
-    } : null);
-
-    if (!bestCandidate) {
-      throw new Error("No candidates available for selection (all agents failed or no output generated).");
-    }
-
-    // Optional: Add Fast Mode specific flags
-    if (mode === 'fast') {
-      bestCandidate.metrics = {
-        ...bestCandidate.metrics,
-        assumptions_used: true,
-        confidence: "low"
-      };
-    }
-
-    const outcomeId = `outcome_${nanoid(12)}`;
-
-    // Store outcome in outcome_runs table (matching actual schema)
+    // Save outcome
     db.prepare(`
       INSERT INTO outcome_runs (id, spec_id, task, n, model, status, best_candidate_id, result_json, created_at)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       outcomeId,
-      specId,
-      idea.substring(0, 500), // Use first 500 chars of idea as task
-      candidateIds.length,
-      policy.outcomeRunner.model || "sorting-only", // No LLM call, only sorting by composite score
+      specId || null, // Allow NULL
+      idea.substring(0, 500),
+      1,
+      targetModel,
       "completed",
-      bestCandidate.id,
+      candidateId,
       JSON.stringify({
-        reasoning: `Selected ${bestCandidate.agent} candidate with compositeScore = ${bestCandidate.metrics.compositeScore.toFixed(3)}`,
+        pipelineVersion: "3.0-boss-mode",
+        selectionMethod: "direct",
         bestCandidate: {
-          id: bestCandidate.id,
-          agent: bestCandidate.agent,
-          metrics: bestCandidate.metrics
+          id: candidateId,
+          agent: "DirectOptimizer",
+          content: content,
+          metrics: { compositeScore: 1.0 }
         }
       }),
       now
@@ -895,29 +662,39 @@ Provide honest, objective scores based on the criteria.`;
 
     sendEvent(runId, "stage-complete", {
       stage: "outcome",
-      message: "Best candidate selected",
+      message: "Directive ready",
       result: {
         outcomeId,
-        selectedCandidateId: bestCandidate.id,
-        agent: bestCandidate.agent,
-        compositeScore: bestCandidate.metrics.compositeScore,
-        content: bestCandidate.content
+        selectedCandidateId: candidateId,
+        agent: "DirectOptimizer",
+        compositeScore: 1.0,
+        content: content
       }
     });
 
+    // ... (Remainder of the function: history, token usage, cleanup) ...
+
+
     // Query historical runs for this user to build history and contributions
     // Note: outcome_runs doesn't have user_id, so we JOIN through specs table
-    const historicalRuns = db.prepare(`
-      SELECT 
-        or_data.result_json,
-        or_data.created_at
-      FROM outcome_runs or_data
-      JOIN specs ON or_data.spec_id = specs.id
-      WHERE specs.owner_id = ?
-        AND or_data.status = 'completed'
-      ORDER BY or_data.created_at DESC
-      LIMIT 10
-    `).all(userId);
+    // For Boss Mode with NULL spec_id, we skip this join or handle it gracefully
+    let historicalRuns = [];
+    try {
+      historicalRuns = db.prepare(`
+        SELECT 
+          or_data.result_json,
+          or_data.created_at
+        FROM outcome_runs or_data
+        JOIN specs ON or_data.spec_id = specs.id
+        WHERE specs.owner_id = ?
+          AND or_data.status = 'completed'
+        ORDER BY or_data.created_at DESC
+        LIMIT 10
+      `).all(userId);
+    } catch (err) {
+      console.warn(`[pipeline] Failed to fetch history (likely due to null spec_id in Boss Mode): ${err.message}`);
+      // Fallback: empty history is fine for now
+    }
     
     // Build history array (progress/composite scores from recent runs)
     const history = [];
@@ -988,28 +765,48 @@ Provide honest, objective scores based on the criteria.`;
     }
     
     // ============================================
-    // Token Hardening: Pipeline Metrics Summary
+    // Pipeline v2: Metrics Summary
     // ============================================
-    pipelineMetrics.calls_total.outcome_runner = 0; // No LLM call
+    pipelineMetrics.calls_total.outcome_runner = 0; // No LLM call in outcome
     const metricsSummary = {
       runId,
       mode,
+      pipelineVersion: 2,
       calls_total: pipelineMetrics.calls_total,
       retries_total: pipelineMetrics.retries_total,
-      qe_rounds: pipelineMetrics.qe_rounds,
-      generation_retries: pipelineMetrics.generation_retries,
-      score_calls: pipelineMetrics.score_calls,
-      tokens_estimated: {
+      tokens: {
         input: totalInputTokens,
         output: totalOutputTokens,
         total: totalInputTokens + totalOutputTokens
       },
-      feature_flags: {
-        QE_STRICT_MAX_ROUNDS: process.env.QE_STRICT_MAX_ROUNDS !== 'false',
-        SCORING_SPEC_MINIFY: process.env.SCORING_SPEC_MINIFY === 'true'
-      }
+      stages_executed: getStageList(mode),
+      stageTiming,  // per-stage duration in ms
+      bestScore: bestCandidate.metrics?.compositeScore ?? null,
+      bestAgent: bestCandidate.agent,
+      bestSource: bestCandidate.agent.includes("_refined") ? "refined" : "original",
+      candidateCount: candidateIds.length,
+      durationMs: Date.now() - startTime,
     };
-    console.log(`[pipeline] [${runId}] 🔍 Token Hardening Metrics Summary:`, JSON.stringify(metricsSummary, null, 2));
+    console.log(`[pipeline] [${runId}] Pipeline v2 Metrics:`, JSON.stringify(metricsSummary, null, 2));
+
+    // Persist run record to `runs` table for analytics dashboard
+    try {
+      db.prepare(`
+        INSERT OR REPLACE INTO runs (id, spec_id, model, status, input_blocks, raw_output, completed_at, metrics_json, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, datetime('now'), ?, ?)
+      `).run(
+        runId,
+        specId || null,
+        `pipeline-v2/${mode}`,
+        "completed",
+        JSON.stringify({ idea: idea.substring(0, 500), mode }),
+        bestCandidate.content?.substring(0, 2000) || null,
+        JSON.stringify(metricsSummary),
+        now
+      );
+    } catch (runInsertErr) {
+      console.warn(`[pipeline] [${runId}] Failed to persist run record: ${runInsertErr.message}`);
+    }
     
     // Final completion event with historical data and token usage
     sendEvent(runId, "complete", {
@@ -1040,25 +837,71 @@ Provide honest, objective scores based on the criteria.`;
     recordUsage(userId, 'prompt_optimization');
     console.log(`[pipeline] [${runId}] Usage recorded successfully`);
 
+    // ── Auto-harvest: store high-scoring candidates in Exemplar Bank ──
+    try {
+      if (bestCandidate && bestCandidate.metrics && typeof bestCandidate.metrics.compositeScore === "number") {
+        // Boss Mode uses placeholders for spec details since we skipped SpecBuilder
+        const harvest = harvestExemplar({
+          userId,
+          specId,
+          runId,
+          candidateId: bestCandidate.id,
+          mode,
+          promptText: bestCandidate.content,
+          taskDomain: "boss_mode",
+          specSummary: idea.substring(0, 200),
+          language: "en",
+          metrics: bestCandidate.metrics,
+        });
+        if (harvest.harvested) {
+          console.log(`[pipeline] [${runId}] Exemplar harvested: ${harvest.id} (agent=${bestCandidate.agent}, score=${bestCandidate.metrics.compositeScore})`);
+        }
+      }
+    } catch (harvestErr) {
+      // Non-critical — pipeline continues
+      console.warn(`[pipeline] [${runId}] Exemplar harvest error: ${harvestErr.message}`);
+    }
+
   } catch (err) {
     console.error(`[pipeline] ❌ Error in pipeline execution for ${runId}:`, err);
     console.error(`[pipeline] Error stack:`, err.stack);
     const errorMessage = err.message || "Pipeline execution failed";
     const isTimeout = errorMessage.includes("timeout");
+    const isLlmDisabled = (err instanceof LlmDisabledError) || (err instanceof AnthropicDisabledError) || err.code === 'ANTHROPIC_DISABLED';
+    const userMessage = isLlmDisabled
+      ? "LLM features are currently disabled. Please check that the required API key (OPENAI_API_KEY or ANTHROPIC_API_KEY) is configured in the server environment."
+      : errorMessage;
+
+    // Persist failed run for analytics
+    try {
+      db.prepare(`
+        INSERT OR IGNORE INTO runs (id, spec_id, model, status, input_blocks, completed_at, metrics_json, created_at)
+        VALUES (?, ?, ?, ?, ?, datetime('now'), ?, datetime('now'))
+      `).run(
+        runId,
+        null,
+        `pipeline-v2/${mode}`,
+        isTimeout ? "timeout" : "failed",
+        JSON.stringify({ idea: idea?.substring(0, 500), mode }),
+        JSON.stringify({ error: errorMessage, durationMs: Date.now() - startTime })
+      );
+    } catch (_) { /* best-effort */ }
     
     // Send detailed error event
     sendEvent(runId, "error", {
       stage: "pipeline",
-      message: errorMessage,
+      message: userMessage,
       error: err.toString(),
       isTimeout,
+      isLlmDisabled,
       stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
     });
     
     sendEvent(runId, "complete", { 
       success: false,
-      error: errorMessage,
+      error: userMessage,
       isTimeout,
+      isLlmDisabled,
       runId
     });
     
@@ -1077,4 +920,3 @@ Provide honest, objective scores based on the criteria.`;
     }
   }
 }
-

@@ -148,6 +148,22 @@
   border-color: rgba(148, 163, 184, 0.5);
 }
 
+.result-btn--ghost {
+  background: transparent;
+  color: #94a3b8;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+}
+
+.result-btn--ghost:hover {
+  background: rgba(148, 163, 184, 0.1);
+  color: #eaf0fb;
+  border-color: rgba(148, 163, 184, 0.4);
+}
+
+.result-back-btn {
+  margin-right: 0.75rem;
+}
+
 .result-btn-icon {
   font-size: 1rem;
 }

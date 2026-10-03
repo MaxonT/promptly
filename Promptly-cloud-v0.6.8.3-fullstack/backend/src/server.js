@@ -1,9 +1,12 @@
+import "./lib/env.js";
 import express from "express";
 import cors from "cors";
 import helmet from "helmet";
 import cookieParser from "cookie-parser";
 import rateLimit from "express-rate-limit";
-import dotenv from "dotenv";
+import { nanoid } from "nanoid";
+import path from "path";
+import { fileURLToPath } from "url";
 import { db } from "./lib/db.js";
 import { getResolvedDefaultModel, isLlmEnabled } from "./lib/llmRouter.js";
 import { authRouter } from "./routes/auth.js";
@@ -18,13 +21,13 @@ import { promptsRouter } from "./routes/prompts.js";
 import { pipelineRouter } from "./routes/pipeline.js";
 import { billingRouter, stripeWebhookRouter } from "./routes/billing.js";
 import { analyticsRouter } from "./routes/analytics.js";
+import { analyticsDashboardRouter } from "./routes/analyticsDashboard.js";
+import { adminRouter } from "./routes/admin.js";
 import { oauthRouter } from "./routes/oauth.js";
 import { dailyRefreshJob } from "./lib/dailyRefreshJob.js";
 import dailyCompensationJob from "./lib/dailyCompensationJob.js";
 import { FEATURES } from "./lib/subscriptionConfig.js";
-import { maintenanceMode, getMaintenanceStatus } from "./middleware/maintenance.js";
 
-dotenv.config();
 const app = express();
 
 // Trust proxy when running behind Render/Heroku reverse proxy
@@ -33,8 +36,38 @@ if (process.env.NODE_ENV === 'production') {
   app.set('trust proxy', true);
 }
 
-const CORS_ORIGIN = process.env.CORS_ORIGIN || "*";
-app.use(cors({ origin: CORS_ORIGIN, credentials: true }));
+const rawCorsOrigin = process.env.CORS_ORIGIN || "*";
+const rawExtensionOrigins = process.env.CHROME_EXTENSION_ORIGINS || "";
+
+function parseOriginList(raw) {
+  return String(raw || "")
+    .split(",")
+    .map((value) => value.trim())
+    .filter(Boolean);
+}
+
+const webCorsOrigins = rawCorsOrigin === "*" ? ["*"] : parseOriginList(rawCorsOrigin);
+const extensionCorsOrigins = parseOriginList(rawExtensionOrigins);
+
+function isCorsOriginAllowed(origin) {
+  if (!origin) return true;
+  if (webCorsOrigins.includes("*")) return true;
+  if (webCorsOrigins.includes(origin)) return true;
+  if (extensionCorsOrigins.includes(origin)) return true;
+  return false;
+}
+
+app.use(cors({
+  origin(origin, callback) {
+    if (isCorsOriginAllowed(origin)) {
+      callback(null, true);
+      return;
+    }
+    console.warn(`[promptly] CORS blocked origin: ${origin}`);
+    callback(null, false);
+  },
+  credentials: true
+}));
 app.use(helmet());
 
 // Stripe webhook needs raw body for signature verification
@@ -86,23 +119,9 @@ app.use((req, res, next) => {
   next();
 });
 
-// Maintenance mode middleware (optional - can be enabled via env var)
-// This will return 503 for all requests except whitelisted paths
-// Enable by setting: MAINTENANCE_MODE=true in environment variables
-app.use(maintenanceMode);
-
-// Maintenance status endpoint (always accessible)
-app.get("/api/maintenance/status", getMaintenanceStatus);
-
 // basic health check
 app.get("/api/health", (req, res) => {
-  const maintenanceMode = process.env.MAINTENANCE_MODE === 'true';
-  res.json({ 
-    ok: !maintenanceMode, 
-    status: maintenanceMode ? "maintenance" : "healthy", 
-    time: new Date().toISOString(),
-    maintenance: maintenanceMode
-  });
+  res.json({ ok: true, status: "healthy", time: new Date().toISOString() });
 });
 
 // settings endpoint used by settings.html
@@ -167,6 +186,12 @@ console.log(`[promptly]   ✓ /api/stripe/webhook`);
 app.use("/api/analytics", analyticsRouter);
 console.log(`[promptly]   ✓ /api/analytics`);
 
+app.use("/api/analytics/dashboard", analyticsDashboardRouter);
+console.log(`[promptly]   ✓ /api/analytics/dashboard`);
+
+app.use("/api/admin", adminRouter);
+console.log(`[promptly]   ✓ /api/admin (sync-data)`);
+
 app.use("/api/auth/oauth", oauthRouter);
 console.log(`[promptly]   ✓ /api/auth/oauth`);
 
@@ -196,8 +221,13 @@ if (FEATURES.subscriptionsEnabled) {
   console.log(`[promptly] 🔧 Daily compensation job scheduled`);
 }
 
+// Serve static frontend files
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+app.use(express.static(path.join(__dirname, "../../frontend")));
+
 // Root path handler - useful for checking if backend is alive
-app.get("/", (req, res) => {
+app.get("/api/status", (req, res) => {
   res.json({
     ok: true,
     service: "Promptly Backend API",
@@ -241,7 +271,8 @@ app.get("/", (req, res) => {
     },
     cors: {
       origin: process.env.CORS_ORIGIN || "*",
-      note: "Set CORS_ORIGIN env var to restrict origins"
+      extensionOrigins: process.env.CHROME_EXTENSION_ORIGINS || "",
+      note: "Set CORS_ORIGIN and CHROME_EXTENSION_ORIGINS to restrict allowed web/extension origins"
     },
     documentation: "https://github.com/your-repo/promptly"
   });
@@ -257,6 +288,57 @@ app.use("/api/*", (req, res) => {
     availableEndpoints: "Visit root path (/) for available endpoints"
   });
 });
+
+// =============================================
+// Problem A1: Stale Pending Run Cleanup
+// 清理悬挂的 pending runs（服务崩溃/重启遗留）
+// =============================================
+
+function cleanupStalePendingRuns() {
+  const STALE_THRESHOLD_MS = 30 * 60 * 1000; // 30 分钟
+  const cutoff = new Date(Date.now() - STALE_THRESHOLD_MS).toISOString();
+  const now = new Date().toISOString();
+
+  try {
+    const staleRuns = db.prepare(
+      `SELECT id FROM runs WHERE status = 'pending' AND created_at < ?`
+    ).all(cutoff);
+
+    if (staleRuns.length === 0) return;
+
+    const markFailed = db.transaction(() => {
+      for (const run of staleRuns) {
+        db.prepare(
+          `UPDATE runs SET status = 'failed', completed_at = ? WHERE id = ?`
+        ).run(now, run.id);
+
+        db.prepare(
+          `INSERT INTO run_errors (id, run_id, error_type, details, detected_by, created_at)
+           VALUES (?, ?, ?, ?, ?, ?)`
+        ).run(
+          `err_${nanoid(16)}`,
+          run.id,
+          'stale_pending',
+          'Run exceeded 30-minute pending timeout; likely caused by server restart or crash.',
+          'cleanup_job',
+          now
+        );
+      }
+    });
+
+    markFailed();
+    console.log(`[promptly] 🧹 Cleanup: marked ${staleRuns.length} stale pending run(s) as failed`);
+  } catch (err) {
+    // 清理失败不应阻断服务启动
+    console.error('[promptly] ⚠️ Stale run cleanup failed (non-fatal):', err.message);
+  }
+}
+
+// 启动时立即清理一次
+cleanupStalePendingRuns();
+
+// 之后每小时定期清理
+setInterval(cleanupStalePendingRuns, 60 * 60 * 1000).unref();
 
 const PORT = process.env.PORT || 8080;
 app.listen(PORT, () => {

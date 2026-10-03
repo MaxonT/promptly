@@ -2,7 +2,7 @@
  * Daily Token Refresh Job
  * 
  * Cron job to refresh daily tokens for all active users.
- * Runs at UTC 00:00 daily.
+ * Each user's tokens refresh based on their local timezone midnight, not UTC.
  * 
  * Reference: PRD Section 14 - Daily Refresh Job Definition
  */
@@ -10,21 +10,20 @@
 import { db } from "./db.js";
 import { tokenLedger } from "./tokenLedger.js";
 import { stripeService } from "./stripeService.js";
+import { getLocalDateKey, normalizeTimeZone } from "./timezone.js";
 import {
   DAILY_REFRESH_HOUR_UTC,
   SUBSCRIPTION_STATUS,
 } from "./subscriptionConfig.js";
 
-// Track last run to prevent duplicate runs
-let lastRunDate = null;
-
 /**
  * Get all users who need daily token refresh
+ * Now includes their timezone information
  */
 function getActiveUsers() {
-  // Get users with active subscriptions or active trials
+  // Get users with active subscriptions or active trials, including their timezone
   const users = db.prepare(`
-    SELECT DISTINCT u.id, u.email, s.status, s.plan
+    SELECT DISTINCT u.id, u.email, u.timezone, s.status, s.plan
     FROM users u
     LEFT JOIN subscriptions s ON u.id = s.user_id
     WHERE s.status IN ('active', 'trialing')
@@ -35,12 +34,66 @@ function getActiveUsers() {
 }
 
 /**
+ * Check if a user's local daily refresh should happen now
+ * Returns true if the user's local date has changed since last refresh
+ */
+function shouldRefreshUserToday(userId, userTimezone) {
+  const tz = normalizeTimeZone(userTimezone);
+  const now = new Date();
+  const userLocalDate = getLocalDateKey(tz, now);
+  
+  // Check last refresh date for this user
+  const lastRefresh = db.prepare(`
+    SELECT last_daily_refresh_date FROM user_daily_refresh_tracker
+    WHERE user_id = ?
+  `).get(userId);
+  
+  // If no record or date has changed, user needs refresh
+  if (!lastRefresh || lastRefresh.last_daily_refresh_date !== userLocalDate) {
+    return true;
+  }
+  
+  return false;
+}
+
+/**
+ * Mark a user as refreshed for their local date
+ */
+function markUserRefreshedToday(userId, userTimezone) {
+  const tz = normalizeTimeZone(userTimezone);
+  const now = new Date();
+  const userLocalDate = getLocalDateKey(tz, now);
+  const timestamp = now.toISOString();
+  
+  db.prepare(`
+    INSERT INTO user_daily_refresh_tracker (user_id, last_daily_refresh_date, updated_at)
+    VALUES (?, ?, ?)
+    ON CONFLICT(user_id) DO UPDATE SET
+      last_daily_refresh_date = excluded.last_daily_refresh_date,
+      updated_at = excluded.updated_at
+  `).run(userId, userLocalDate, timestamp);
+}
+
+/**
  * Refresh tokens for a single user
  */
 function refreshUserTokens(user) {
   try {
+    // Check if this user's local day has changed
+    if (!shouldRefreshUserToday(user.id, user.timezone)) {
+      return {
+        userId: user.id,
+        success: true,
+        skipped: true,
+        reason: `Already refreshed for local date in timezone ${user.timezone}`,
+      };
+    }
+    
     const isPaid = user.status === SUBSCRIPTION_STATUS.ACTIVE;
     const result = tokenLedger.refreshDailyTokens(user.id, isPaid);
+    
+    // Mark as refreshed for this user's local date
+    markUserRefreshedToday(user.id, user.timezone);
     
     return {
       userId: user.id,
@@ -59,23 +112,17 @@ function refreshUserTokens(user) {
 
 /**
  * Run the daily refresh job
+ * Checks all users and refreshes those whose local date has changed
  */
 export function runDailyRefresh() {
-  const today = new Date().toISOString().split("T")[0];
-  
-  // Prevent duplicate runs on same day
-  if (lastRunDate === today) {
-    console.log("[dailyRefresh] Already ran today, skipping");
-    return { skipped: true, date: today };
-  }
-  
-  console.log("[dailyRefresh] Starting daily token refresh...");
+  console.log("[dailyRefresh] Starting daily token refresh (checking all users' local timezones)...");
   
   const users = getActiveUsers();
   const results = {
-    date: today,
+    timestamp: new Date().toISOString(),
     totalUsers: users.length,
     successful: 0,
+    skipped: 0,
     failed: 0,
     errors: [],
   };
@@ -84,7 +131,11 @@ export function runDailyRefresh() {
     const result = refreshUserTokens(user);
     
     if (result.success) {
-      results.successful++;
+      if (result.skipped) {
+        results.skipped++;
+      } else {
+        results.successful++;
+      }
     } else {
       results.failed++;
       results.errors.push({
@@ -94,27 +145,23 @@ export function runDailyRefresh() {
     }
   }
   
-  lastRunDate = today;
-  
-  console.log(`[dailyRefresh] Completed: ${results.successful} successful, ${results.failed} failed`);
+  console.log(`[dailyRefresh] Completed: ${results.successful} refreshed, ${results.skipped} skipped, ${results.failed} failed`);
   
   return results;
 }
 
 /**
  * Check if it's time to run the daily refresh
+ * Now runs continuously since users have different timezones
  */
 export function shouldRunRefresh() {
-  const now = new Date();
-  const utcHour = now.getUTCHours();
-  const today = now.toISOString().split("T")[0];
-  
-  // Run at configured hour and only once per day
-  return utcHour === DAILY_REFRESH_HOUR_UTC && lastRunDate !== today;
+  // Always return true - let runDailyRefresh handle timezone logic for each user
+  return true;
 }
 
 /**
- * Start the refresh scheduler (check every hour)
+ * Start the refresh scheduler
+ * Now checks every hour to see if any user's local date has changed
  */
 let schedulerInterval = null;
 
@@ -124,14 +171,14 @@ export function startScheduler() {
     return;
   }
   
-  console.log(`[dailyRefresh] Starting scheduler (runs at UTC ${DAILY_REFRESH_HOUR_UTC}:00)`);
+  console.log("[dailyRefresh] Starting scheduler (checking hourly for users with timezone changes)");
   
   // Check immediately on start
   if (shouldRunRefresh()) {
     runDailyRefresh();
   }
   
-  // Check every hour
+  // Check every hour - since timezones vary, we need frequent checks
   schedulerInterval = setInterval(() => {
     if (shouldRunRefresh()) {
       runDailyRefresh();
@@ -149,9 +196,11 @@ export function stopScheduler() {
 
 /**
  * Manual trigger for testing/admin
+ * Resets all users' refresh trackers to force refresh
  */
 export function forceRefresh() {
-  lastRunDate = null; // Reset to allow immediate run
+  // Clear all refresh trackers to force refresh for all users
+  db.prepare(`DELETE FROM user_daily_refresh_tracker`).run();
   return runDailyRefresh();
 }
 

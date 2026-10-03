@@ -85,14 +85,11 @@
 import express from "express";
 import { chatJson, chatText, LlmDisabledError } from "../lib/llmRouter.js";
 import { checkPromptOptimizationLimit, recordUsage } from "../lib/planLimits.js";
+import { requireAuth } from "./auth.js";
+import { NON_PIPELINE_DEFAULT } from "../lib/modelConfig.js";
 
 const enhanceRouter = express.Router();
-
-// Helper to get user ID from request
-function getUserId(req) {
-  if (req.user && req.user.sub) return req.user.sub;
-  return "demo-user";
-}
+enhanceRouter.use(requireAuth);
 
 /**
  * ATTACHMENT FEATURE - Helper Functions
@@ -277,7 +274,7 @@ enhanceRouter.post("/structure", async (req, res) => {
     console.log(`[promptly] 📝 /enhance/structure: Request received`);
     
     // Check plan limits
-    const userId = getUserId(req);
+    const userId = req.user.sub;
     const limitCheck = checkPromptOptimizationLimit(userId, 'standard'); // Structure enhancement uses standard mode
     if (!limitCheck.allowed) {
       return res.status(403).json({
@@ -338,13 +335,12 @@ Required Format:
     // Optimization: Use temp 0.5 to encourage divergence in the first shot, reducing the need for retries.
     // We KEEP the retry mechanism (maxRetries: 1) as a safety net, but it should trigger less often.
     const { text: enhanced, model: modelUsed, completionId, similarity } = await chatText({ 
-      provider: 'openai',
+      ...NON_PIPELINE_DEFAULT,
       system, 
       user: fullPrompt,
-      provider: 'openai', // STRICT CONTRACT: Explicitly set provider
-      temperature: 0.5,     // Increased from default 0.2 to reduce retry probability
-      minSimilarity: 0.85,  // Keep quality check
-      maxRetries: 1         // Keep safety net
+      temperature: 0.5,
+      minSimilarity: 0.85,
+      maxRetries: 1
     });
     
     console.log(`[promptly] ✅ Received enhanced prompt from LLM, length: ${enhanced?.length || 0} chars`);
@@ -380,7 +376,7 @@ Required Format:
 enhanceRouter.post("/style", async (req, res) => {
   try {
     // Check plan limits
-    const userId = getUserId(req);
+    const userId = req.user.sub;
     const limitCheck = checkPromptOptimizationLimit(userId, 'standard');
     if (!limitCheck.allowed) {
       return res.status(403).json({
@@ -415,11 +411,10 @@ Output: Enhanced prompt only.`;
 
     // Optimization: Use temp 0.5 to encourage divergence in the first shot
     const { text: enhanced, model: modelUsed, completionId, similarity } = await chatText({ 
-      provider: 'openai',
+      ...NON_PIPELINE_DEFAULT,
       system, 
       user: fullPrompt,
-      provider: 'openai', // STRICT CONTRACT: Explicitly set provider
-      temperature: 0.5,     // Increased from default 0.2
+      temperature: 0.5,
       minSimilarity: 0.85,
       maxRetries: 1
     });
@@ -448,7 +443,7 @@ Output: Enhanced prompt only.`;
 enhanceRouter.post("/simplify", async (req, res) => {
   try {
     // Check plan limits
-    const userId = getUserId(req);
+    const userId = req.user.sub;
     const limitCheck = checkPromptOptimizationLimit(userId, 'standard');
     if (!limitCheck.allowed) {
       return res.status(403).json({
@@ -483,11 +478,10 @@ Output: Simplified prompt only.`;
 
     // Optimization: Use temp 0.5 to encourage divergence in the first shot
     const { text: enhanced, model: modelUsed, completionId, similarity } = await chatText({ 
-      provider: 'openai',
+      ...NON_PIPELINE_DEFAULT,
       system, 
       user: fullPrompt,
-      provider: 'openai', // STRICT CONTRACT: Explicitly set provider
-      temperature: 0.5,     // Increased from default 0.2
+      temperature: 0.5,
       minSimilarity: 0.85,
       maxRetries: 1
     });
@@ -551,9 +545,9 @@ Return ONLY a JSON object in this exact format:
 }`;
 
     const { data: result, model: modelUsed, completionId } = await chatJson({ 
+      ...NON_PIPELINE_DEFAULT,
       system, 
       user: fullPrompt,
-      provider: 'openai' // STRICT CONTRACT: Explicitly set provider
     });
     logModelUsage("/enhance/score", modelUsed, completionId);
 
@@ -611,9 +605,9 @@ Return ONLY a JSON object in this exact format:
 If no issues found, return {"issues": []}`;
 
     const { data: result, model: modelUsed, completionId } = await chatJson({ 
+      ...NON_PIPELINE_DEFAULT,
       system, 
       user: fullPrompt,
-      provider: 'openai' // STRICT CONTRACT: Explicitly set provider
     });
     logModelUsage("/enhance/validate", modelUsed, completionId);
 
@@ -631,4 +625,3 @@ If no issues found, return {"issues": []}`;
 });
 
 export { enhanceRouter };
-

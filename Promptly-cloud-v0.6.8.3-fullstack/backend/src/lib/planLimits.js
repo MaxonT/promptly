@@ -6,12 +6,19 @@
  *   - Prompt optimization: 8 times/day
  *   - Question Wizard: 5 times/day
  *   - Only Standard/Fast modes allowed (not deep/ultra)
- * - Pro Plan (monthly/yearly): Unlimited
+ * - Monthly/Yearly/Trial:
+ *   - Prompt optimization: 50 times/day
+ *   - Question Wizard: 30 times/day
  */
 
 import { db } from "./db.js";
 import { stripeService } from "./stripeService.js";
-import { SUBSCRIPTION_STATUS } from "./subscriptionConfig.js";
+import { getLocalDateKey, normalizeTimeZone } from "./timezone.js";
+import {
+  SUBSCRIPTION_STATUS,
+  DAILY_PROMPT_OPTIMIZATIONS_PER_DAY,
+  DAILY_QUESTION_WIZARD_SESSIONS_PER_DAY,
+} from "./subscriptionConfig.js";
 
 // Plan limits configuration
 const PLAN_LIMITS = {
@@ -24,10 +31,30 @@ const PLAN_LIMITS = {
       daily: 5
     }
   },
-  // Pro plans (monthly, yearly, trial) have no limits
-  monthly: null,
-  yearly: null,
-  trial: null // Trial users have same limits as paid plans (unlimited)
+  monthly: {
+    promptOptimization: {
+      daily: DAILY_PROMPT_OPTIMIZATIONS_PER_DAY,
+    },
+    questionWizard: {
+      daily: DAILY_QUESTION_WIZARD_SESSIONS_PER_DAY,
+    },
+  },
+  yearly: {
+    promptOptimization: {
+      daily: DAILY_PROMPT_OPTIMIZATIONS_PER_DAY,
+    },
+    questionWizard: {
+      daily: DAILY_QUESTION_WIZARD_SESSIONS_PER_DAY,
+    },
+  },
+  trial: {
+    promptOptimization: {
+      daily: DAILY_PROMPT_OPTIMIZATIONS_PER_DAY,
+    },
+    questionWizard: {
+      daily: DAILY_QUESTION_WIZARD_SESSIONS_PER_DAY,
+    },
+  }
 };
 
 /**
@@ -35,7 +62,7 @@ const PLAN_LIMITS = {
  * Returns: 'free', 'monthly', 'yearly', or 'trial'
  */
 export function getUserPlan(userId) {
-  if (!userId || userId === 'demo-user') {
+  if (!userId) {
     return 'free';
   }
   
@@ -97,13 +124,12 @@ export function canUseMode(userId, mode) {
  * @param {string} date - Date in YYYY-MM-DD format (defaults to today)
  */
 export function getDailyUsage(userId, featureType, date = null) {
-  if (!userId || userId === 'demo-user') {
-    return 0;
-  }
-  
+  if (!userId) return 0;
+
   if (!date) {
-    const today = new Date();
-    date = today.toISOString().split('T')[0]; // YYYY-MM-DD
+    const row = db.prepare("SELECT timezone FROM users WHERE id = ?").get(userId);
+    const tz = normalizeTimeZone(row?.timezone);
+    date = getLocalDateKey(tz, new Date());
   }
   
   try {
@@ -130,11 +156,11 @@ export function getDailyUsage(userId, featureType, date = null) {
  * @param {string} featureType - 'prompt_optimization' or 'question_wizard'
  */
 export function recordUsage(userId, featureType) {
-  if (!userId || userId === 'demo-user') {
-    return; // Don't record demo usage
-  }
-  
-  const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+  if (!userId) return;
+
+  const row = db.prepare("SELECT timezone FROM users WHERE id = ?").get(userId);
+  const tz = normalizeTimeZone(row?.timezone);
+  const today = getLocalDateKey(tz, new Date());
   const now = new Date().toISOString();
   
   console.log(`[planLimits] Recording usage for user ${userId}, feature: ${featureType}, date: ${today}`);
@@ -165,10 +191,7 @@ export function canUsePromptOptimization(userId) {
   const plan = getUserPlan(userId);
   const limits = PLAN_LIMITS[plan];
   
-  // Pro plans have no limits
-  if (!limits) {
-    return { allowed: true };
-  }
+  if (!limits) return { allowed: true };
   
   const dailyUsage = getDailyUsage(userId, 'prompt_optimization');
   const limit = limits.promptOptimization.daily;
@@ -176,7 +199,7 @@ export function canUsePromptOptimization(userId) {
   if (dailyUsage >= limit) {
     return {
       allowed: false,
-      reason: `Daily limit reached. Free plan allows ${limit} prompt optimizations per day.`,
+      reason: `Daily limit reached. This plan allows ${limit} prompt optimizations per day.`,
       usage: dailyUsage,
       limit: limit
     };
@@ -198,10 +221,7 @@ export function canUseQuestionWizard(userId) {
   const plan = getUserPlan(userId);
   const limits = PLAN_LIMITS[plan];
   
-  // Pro plans have no limits
-  if (!limits) {
-    return { allowed: true };
-  }
+  if (!limits) return { allowed: true };
   
   const dailyUsage = getDailyUsage(userId, 'question_wizard');
   const limit = limits.questionWizard.daily;
@@ -209,7 +229,7 @@ export function canUseQuestionWizard(userId) {
   if (dailyUsage >= limit) {
     return {
       allowed: false,
-      reason: `Daily limit reached. Free plan allows ${limit} Question Wizard sessions per day.`,
+      reason: `Daily limit reached. This plan allows ${limit} Question Wizard sessions per day.`,
       usage: dailyUsage,
       limit: limit
     };
@@ -253,4 +273,3 @@ export function checkQuestionWizardLimit(userId) {
 }
 
 console.log("[promptly] Plan limits module loaded");
-

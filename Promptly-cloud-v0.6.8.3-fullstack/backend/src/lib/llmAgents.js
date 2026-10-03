@@ -34,6 +34,11 @@ YOU MUST GENERATE ALL OUTPUT CONTENT IN ${languageName}.
 This is MANDATORY and OVERRIDES any examples shown below.
 DO NOT use any other language regardless of the user's input language.
 
+⚠️ WARNING: The user's input might be written in a DIFFERENT language (e.g., Chinese, Spanish).
+Do NOT follow the user's input language. ALWAYS output in ${languageName}.
+If the user writes in Chinese but the required output language is English, 
+you MUST write your entire response in English — translate concepts as needed.
+
 REQUIRED LANGUAGE FOR ALL OUTPUT:
 - All questions and their text content
 - All option labels and descriptions
@@ -52,6 +57,16 @@ EXCEPTIONS (keep in original form):
 ⚠️ IMPORTANT: The JSON format examples below are for STRUCTURE ONLY.
 DO NOT copy the language from the examples - use ${languageName} instead!
 If user input is in another language, TRANSLATE the concepts to ${languageName} in your output.`;
+}
+
+/**
+ * Wrap user input with explicit language reminder to combat LLM language-following bias.
+ * LLMs tend to respond in the same language as the user input — this wrapper overrides that.
+ */
+function wrapUserPromptWithLanguage(userJsonStr, language) {
+  const lang = language || 'en';
+  const languageName = LANGUAGE_MAP[lang] || 'English';
+  return `⚠️ MANDATORY OUTPUT LANGUAGE: ${languageName}. Regardless of the language below, ALL your output text MUST be in ${languageName}.\n\n${userJsonStr}`;
 }
 
 const BroadQuestionSchema = z.object({
@@ -181,13 +196,13 @@ export async function generateBroadQuestions({ initialDescription, kind, modePro
     "3. Cover diverse dimensions: users, platform, data, features, constraints, security, performance, etc.",
     "4. Generate 8-12 questions.",
     "5. Keep questions broad and exploratory.",
-    "6. ⚠️ MOST IMPORTANT: All text content MUST be in the required language, NOT English!"
+    "6. ⚠️ MOST IMPORTANT: All text content MUST be in the required language as specified above!"
   ].join("\n");
-  const user = JSON.stringify({
+  const user = wrapUserPromptWithLanguage(JSON.stringify({
     initial_description: initialDescription,
     kind: kind || null,
     mode_profile: modeProfile
-  });
+  }), language);
 
   const usedModel = model || process.env.OPENAI_MODEL;
   const runId = createRun({
@@ -289,7 +304,7 @@ function cleanOptionsArray(options) {
   const hasOther = cleaned.some(opt => opt.is_other === true);
   if (!hasOther) {
     cleaned.push({
-      label: "Other (please specify)",
+      label: "✏️ Fill your own response",
       value: "other",
       is_other: true
     });
@@ -310,11 +325,12 @@ export async function generateChoiceQuestions({ initialDescription, kind, broadQ
       ? `Runtime mode: ${modeProfile.label} (${modeProfile.hierarchy}). Use about ${modeProfile.chainLength} chained thoughts and no more than ${modeProfile.maxSteps} planning hops to balance speed/quality as described: ${modeProfile.description}.`
       : "",
     "⚠️ CRITICAL RULES - MUST FOLLOW:",
-    "1. EVERY question MUST provide multiple-choice options (3-6 options minimum) ⚠️",
-    "2. NO questions without options - this will cause errors! ⚠️",
-    "3. ALWAYS include an 'Other (please specify)' option with 'is_other': true ⚠️",
+    "1. EVERY question MUST be MULTIPLE CHOICE with 3-6 options minimum ⚠️",
+    "2. NEVER generate free-text-only questions — ALL questions need predefined options ⚠️",
+    "3. ALWAYS include a 'Fill your own response' option as the LAST option with 'is_other': true ⚠️",
+    "   Format: {\"label\": \"✏️ Fill your own response\", \"value\": \"other\", \"is_other\": true}",
     "4. If depth_enabled is false: 'options' array is REQUIRED",
-    "5. If depth_enabled is true: all 3 depth levels MUST have options arrays",
+    "5. If depth_enabled is true: all 3 depth levels MUST have options arrays, each ending with the 'Fill your own response' option",
     "",
     "CORE PRINCIPLES:",
     "- Make professional/technical questions accessible with depth levels",
@@ -338,7 +354,7 @@ export async function generateChoiceQuestions({ initialDescription, kind, broadQ
     '        {"label": "Mobile App (iOS/Android)", "value": "mobile"},',
     '        {"label": "Desktop Application", "value": "desktop"},',
     '        {"label": "Cross-platform (Multiple)", "value": "cross_platform"},',
-    '        {"label": "Other (please specify)", "value": "other", "is_other": true}',
+    '        {"label": "✏️ Fill your own response", "value": "other", "is_other": true}',
     '      ]',
     '    },',
     '    {',
@@ -355,7 +371,7 @@ export async function generateChoiceQuestions({ initialDescription, kind, broadQ
     '            {"label": "One-time purchase", "value": "paid"},',
     '            {"label": "Subscription", "value": "subscription"},',
     '            {"label": "Advertising", "value": "ads"},',
-    '            {"label": "Other (please specify)", "value": "other", "is_other": true}',
+    '            {"label": "✏️ Fill your own response", "value": "other", "is_other": true}',
     '          ]',
     '        },',
     '        "standard": {',
@@ -365,7 +381,7 @@ export async function generateChoiceQuestions({ initialDescription, kind, broadQ
 '            {"label": "One-time purchase + DLC/expansions", "value": "paid_dlc"},',
     '            {"label": "Monthly/yearly subscription", "value": "subscription"},',
     '            {"label": "Ads + Option to remove ads", "value": "ads_removable"},',
-    '            {"label": "Other (please specify)", "value": "other", "is_other": true}',
+    '            {"label": "✏️ Fill your own response", "value": "other", "is_other": true}',
     '          ]',
     '        },',
     '        "deep": {',
@@ -376,7 +392,7 @@ export async function generateChoiceQuestions({ initialDescription, kind, broadQ
     '            {"label": "Hybrid (IAP + Subscription + Ads)", "value": "hybrid"},',
     '            {"label": "Marketplace/transaction fees", "value": "marketplace"},',
     '            {"label": "Usage-based pricing", "value": "usage_based"},',
-    '            {"label": "Other (please specify)", "value": "other", "is_other": true}',
+    '            {"label": "✏️ Fill your own response", "value": "other", "is_other": true}',
     '          ]',
     '        }',
     '      }',
@@ -392,7 +408,7 @@ export async function generateChoiceQuestions({ initialDescription, kind, broadQ
     '        {"label": "Data export/import", "value": "data_portability"},',
     '        {"label": "Team collaboration", "value": "collaboration"},',
     '        {"label": "Analytics/reporting", "value": "analytics"},',
-    '        {"label": "Other (please specify)", "value": "other", "is_other": true}',
+    '        {"label": "✏️ Fill your own response", "value": "other", "is_other": true}',
     '      ]',
     '    }',
     '  ]',
@@ -407,8 +423,8 @@ export async function generateChoiceQuestions({ initialDescription, kind, broadQ
     "2. ⚠️ CRITICAL: If depth_enabled is false, 'options' array is MANDATORY (3-6 options + 'Other').",
     "3. ⚠️ CRITICAL: If depth_enabled is true, ALL 3 depth levels MUST have options arrays.",
     "4. depth_levels must have 'instant', 'standard', 'deep' keys, each with 'label' and 'options'.",
-    "5. Each option list must have 3-6 options + mandatory 'Other' option.",
-    "6. 'Other' option format: {\"label\": \"Other (please specify)\", \"value\": \"other\", \"is_other\": true}.",
+    "5. Each option list must have 3-6 concrete options + mandatory 'Fill your own response' option.",
+    "6. 'Fill your own response' option format: {\"label\": \"✏️ Fill your own response\", \"value\": \"other\", \"is_other\": true}.",
     "7. ⚠️ NEVER generate a question without options - system will reject it!",
     "8. Use depth_enabled for: monetization, technical architecture, user segments, compliance, scaling.",
     "9. Use regular options for: platform choice, basic yes/no, feature selection.",
@@ -418,12 +434,12 @@ export async function generateChoiceQuestions({ initialDescription, kind, broadQ
     "13. Use simple, clear language in question content.",
     "14. ⚠️ VALIDATE: Before returning, ensure EVERY question has options!"
   ].join("\n");
-  const user = JSON.stringify({
+  const user = wrapUserPromptWithLanguage(JSON.stringify({
     initial_description: initialDescription,
     kind: kind || null,
     broad_questions: broadQuestions,
     mode_profile: modeProfile
-  });
+  }), language);
 
   // Strict Inference Policy Application
   let usedModel = model || process.env.OPENAI_MODEL;
@@ -596,21 +612,21 @@ export async function generateChoiceQuestions({ initialDescription, kind, broadQ
               options: baseOptions.instant.map((label, i) => ({
                 label,
                 value: `instant_${i + 1}`
-              })).concat([{label: "Other (please specify)", value: "other", is_other: true}])
+              })).concat([{label: "✏️ Fill your own response", value: "other", is_other: true}])
             },
             standard: {
               label: "🔍 Standard (Balanced)",
               options: baseOptions.standard.map((label, i) => ({
                 label,
                 value: `standard_${i + 1}`
-              })).concat([{label: "Other (please specify)", value: "other", is_other: true}])
+              })).concat([{label: "✏️ Fill your own response", value: "other", is_other: true}])
             },
             deep: {
               label: "🧠 Deep Thinking (Advanced)",
               options: baseOptions.deep.map((label, i) => ({
                 label,
                 value: `deep_${i + 1}`
-              })).concat([{label: "Other (please specify)", value: "other", is_other: true}])
+              })).concat([{label: "✏️ Fill your own response", value: "other", is_other: true}])
             }
           };
         } else {
@@ -622,7 +638,7 @@ export async function generateChoiceQuestions({ initialDescription, kind, broadQ
               {label: "Small (1-10)", value: "small"},
               {label: "Medium (10-100)", value: "medium"},
               {label: "Large (100+)", value: "large"},
-              {label: "Other (please specify)", value: "other", is_other: true}
+              {label: "✏️ Fill your own response", value: "other", is_other: true}
             ];
           } else if (contentLower.includes('when') || contentLower.includes('timeline') || contentLower.includes('deadline')) {
             q.options = [
@@ -630,7 +646,7 @@ export async function generateChoiceQuestions({ initialDescription, kind, broadQ
               {label: "Short-term (1-3 months)", value: "short"},
               {label: "Medium-term (3-6 months)", value: "medium"},
               {label: "Long-term (6+ months)", value: "long"},
-              {label: "Other (please specify)", value: "other", is_other: true}
+              {label: "✏️ Fill your own response", value: "other", is_other: true}
             ];
           } else if (q.type === 'yes_no') {
             // Yes/No doesn't need options, skip
@@ -640,7 +656,7 @@ export async function generateChoiceQuestions({ initialDescription, kind, broadQ
               {label: "Yes", value: "yes"},
               {label: "No", value: "no"},
               {label: "Not sure / Need to decide", value: "undecided"},
-              {label: "Other (please specify)", value: "other", is_other: true}
+              {label: "✏️ Fill your own response", value: "other", is_other: true}
             ];
           }
         }
@@ -651,7 +667,7 @@ export async function generateChoiceQuestions({ initialDescription, kind, broadQ
         const hasOther = q.options.some(opt => opt.is_other === true);
         if (!hasOther) {
           q.options.push({
-            label: "Other (please specify)", 
+            label: "✏️ Fill your own response", 
             value: "other", 
             is_other: true
           });
@@ -669,7 +685,7 @@ export async function generateChoiceQuestions({ initialDescription, kind, broadQ
             const hasOther = opts.some(opt => opt.is_other === true);
             if (!hasOther) {
               opts.push({
-                label: "Other (please specify)",
+                label: "✏️ Fill your own response",
                 value: "other",
                 is_other: true
               });
@@ -763,7 +779,7 @@ export async function generateRawSpec({ initialDescription, kind, qaPairs, modeP
     total_questions_count: qaPairs.length
   };
   
-  const user = JSON.stringify(userInput);
+  const user = wrapUserPromptWithLanguage(JSON.stringify(userInput), language);
 
   const usedModel = model || process.env.OPENAI_MODEL;
   const runId = createRun({

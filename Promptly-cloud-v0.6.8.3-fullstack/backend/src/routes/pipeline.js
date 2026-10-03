@@ -14,7 +14,7 @@ import { nanoid } from "nanoid";
 import { z } from "zod";
 import { db, ensureUser } from "../lib/db.js";
 import { chatText, chatJson, LlmDisabledError, AnthropicDisabledError } from "../lib/llmRouter.js";
-import { getStageModel, getStageList, shouldRunStage, computeCompositeScore, EVALUATION_WEIGHTS, PIPELINE_STAGES, PIPELINE_CONFIG } from "../lib/modelConfig.js";
+import { DIRECT_OPTIMIZER_MODELS, getMissingPipelineKeys, getStageModel, getStageList, shouldRunStage, computeCompositeScore, EVALUATION_WEIGHTS, PIPELINE_STAGES, PIPELINE_CONFIG } from "../lib/modelConfig.js";
 import { searchExemplars, formatExemplarBlock, harvestExemplar } from "../lib/exemplarService.js";
 import { spendTokensForRun, getTokenStatus } from "../lib/tokenUsage.js";
 import { FEATURES } from "../lib/subscriptionConfig.js";
@@ -29,11 +29,21 @@ export const pipelineRouter = Router();
 const activeStreams = new Map();
 const streamAuth = new Map();
 
+function releaseStreamToken(runId) {
+  const record = streamAuth.get(runId);
+  if (record?.cleanup) clearTimeout(record.cleanup);
+  streamAuth.delete(runId);
+}
+
 function issueStreamToken(runId, userId) {
+  releaseStreamToken(runId);
   const token = nanoid(32);
+  const cleanup = setTimeout(() => releaseStreamToken(runId), 15 * 60 * 1000);
+  cleanup.unref();
   streamAuth.set(runId, {
     userId,
     token,
+    cleanup,
     expiresAt: Date.now() + 15 * 60 * 1000
   });
   return token;
@@ -44,7 +54,7 @@ function validateStreamToken(runId, token) {
   const record = streamAuth.get(runId);
   if (!record) return false;
   if (record.expiresAt < Date.now()) {
-    streamAuth.delete(runId);
+    releaseStreamToken(runId);
     return false;
   }
   return record.token === token;
@@ -170,6 +180,13 @@ pipelineRouter.post("/run", requireAuth, async (req, res) => {
 
   const { idea, attachments = [], skipQuestions = false, model: modeInput = null, clarificationsProvided = false } = parsed.data;
   const mode = modeInput || 'fast';
+  if (!["fast", "standard", "premium"].includes(mode)) {
+    return res.status(400).json({ ok: false, error: "Use model fast, standard, or premium" });
+  }
+  const missingKeys = getMissingPipelineKeys(mode);
+  if (missingKeys.length) {
+    return res.status(503).json({ ok: false, error: "AI provider configuration is incomplete", missingKeys });
+  }
   
   // Check plan limits
   const limitCheck = checkPromptOptimizationLimit(userId, mode);
@@ -264,6 +281,13 @@ async function executePipelineWithEvents(runId, userId, { idea, attachments, ski
   
   // Resolve Policy based on mode (modeInput param holds the mode: fast, standard, premium)
   const mode = modeInput || 'fast';
+  if (!["fast", "standard", "premium"].includes(mode)) {
+    return res.status(400).json({ ok: false, error: "Use model fast, standard, or premium" });
+  }
+  const missingKeys = getMissingPipelineKeys(mode);
+  if (missingKeys.length) {
+    return res.status(503).json({ ok: false, error: "AI provider configuration is incomplete", missingKeys });
+  }
   
   // Check mode restrictions for free plan (this is a backup check, main check is in /run endpoint)
   if (!canUseMode(userId, mode)) {
@@ -277,7 +301,7 @@ async function executePipelineWithEvents(runId, userId, { idea, attachments, ski
   
   const pipelineConfig = PIPELINE_CONFIG[mode] || PIPELINE_CONFIG.fast;
   console.log(`[pipeline] [${runId}] Pipeline v2 mode=${mode}, stages=[${getStageList(mode).join(",")}]`);
-  console.log(`[pipeline] [${runId}] Models: Spec=${getStageModel(mode, "specBuilder").model}, Gen=${getStageModel(mode, "generation").model}, Eval=${getStageModel(mode, "evaluation").model}`);
+  console.log(`[pipeline] [${runId}] Direct optimizer model: ${DIRECT_OPTIMIZER_MODELS[mode]}`);
   
   // 1. Wait for client to connect (max 10 seconds)
   // This prevents the race condition where events are sent before the client connects
@@ -443,12 +467,7 @@ async function executePipelineWithEvents(runId, userId, { idea, attachments, ski
     }
     
     // Model Selection (Updated for 2026 Models)
-    const MODEL_MAP = {
-      fast:     "claude-haiku-4-5",
-      standard: "claude-haiku-4-5",
-      premium:  "claude-sonnet-4-6",
-    };
-    const targetModel = MODEL_MAP[mode] || MODEL_MAP.fast;
+    const targetModel = DIRECT_OPTIMIZER_MODELS[mode];
 
     console.log(`[pipeline] [${runId}] Mode: ${mode} -> Model: ${targetModel}`);
 
@@ -579,8 +598,8 @@ Output:
       content = text;
       usage = chatUsage || usage;
       
-      totalInputTokens += usage.prompt_tokens || 0;
-      totalOutputTokens += usage.completion_tokens || 0;
+      totalInputTokens += usage.input_tokens ?? usage.prompt_tokens ?? 0;
+      totalOutputTokens += usage.output_tokens ?? usage.completion_tokens ?? 0;
       pipelineMetrics.calls_total.generation = 1;
 
     } catch (genErr) {
@@ -896,10 +915,10 @@ Output:
       runId
     });
     
-    // Clean up stream connection
-    activeStreams.delete(runId);
+    // The finally block closes the stream and releases its credentials.
   } finally {
     // 3. Ensure Cleanup
+    releaseStreamToken(runId);
     if (pingInterval) clearInterval(pingInterval);
     
     // Close the stream gracefully if it's still open

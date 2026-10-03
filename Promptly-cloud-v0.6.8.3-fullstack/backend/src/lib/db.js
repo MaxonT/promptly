@@ -1,3 +1,4 @@
+import "./env.js";
 /**
  * Database Adapter - Supports both SQLite and PostgreSQL
  * Automatically selects based on environment variables:
@@ -446,16 +447,8 @@ CREATE INDEX IF NOT EXISTS idx_coupon_redemptions_coupon ON coupon_redemptions(c
     console.error("[promptly] Failed to ensure demo user:", err);
   }
 
-  // Seed the friends & family coupon
-  try {
-    sqliteDb.prepare(`
-      INSERT OR IGNORE INTO coupons (code, plan, max_redemptions, duration_days, active)
-      VALUES ('PROMPTLY-DEE1636310A6', 'monthly', 10, 30, 1)
-    `).run();
-    console.log("[promptly] Friends & family coupon ensured");
-  } catch (err) {
-    console.error("[promptly] Failed to seed coupon:", err);
-  }
+  // Public sample codes must not grant paid access on an operator's instance.
+  sqliteDb.prepare("UPDATE coupons SET active = 0 WHERE code IN ('PROMPTLY-DEE1636310A6')").run();
 
   // SQLite ensureUser function
   dbModule.ensureUser = function(userId, email = null) {

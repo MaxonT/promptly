@@ -1,9 +1,9 @@
+import "./lib/env.js";
 import express from "express";
 import cors from "cors";
 import helmet from "helmet";
 import cookieParser from "cookie-parser";
 import rateLimit from "express-rate-limit";
-import dotenv from "dotenv";
 import { nanoid } from "nanoid";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -28,7 +28,6 @@ import { dailyRefreshJob } from "./lib/dailyRefreshJob.js";
 import dailyCompensationJob from "./lib/dailyCompensationJob.js";
 import { FEATURES } from "./lib/subscriptionConfig.js";
 
-dotenv.config();
 const app = express();
 
 // Trust proxy when running behind Render/Heroku reverse proxy

@@ -286,3 +286,16 @@ export function getModePolicy(modeId) {
     },
   };
 }
+
+/** Current /api/pipeline/run is the single-pass direct optimizer.
+ * The stage configuration above remains for legacy/experimental callers.
+ */
+export const DIRECT_OPTIMIZER_MODELS = Object.freeze({
+  fast: "claude-haiku-4-5-20251001",
+  standard: "claude-haiku-4-5-20251001",
+  premium: "claude-sonnet-4-6",
+});
+
+export function getMissingPipelineKeys() {
+  return process.env.ANTHROPIC_API_KEY?.trim() ? [] : ["ANTHROPIC_API_KEY"];
+}

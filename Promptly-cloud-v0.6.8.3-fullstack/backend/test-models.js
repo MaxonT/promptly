@@ -1,6 +1,6 @@
 import 'dotenv/config';
 import { chatText, chatJson } from './src/lib/llmRouter.js';
-import { PIPELINE_CONFIG, getStageModel, getStageList, shouldRunStage } from './src/lib/modelConfig.js';
+import { MODE_POLICIES, getModePolicy } from './src/lib/modePolicies.js';
 
 const colors = {
     green: '\x1b[32m',
@@ -16,32 +16,27 @@ function logFail(msg) { console.log(`${colors.red}✗ FAIL${colors.reset}: ${msg
 function logInfo(msg) { console.log(`${colors.yellow}ℹ INFO${colors.reset}: ${msg}`); }
 
 async function runTests() {
-    console.log("Starting System Verification (Pipeline v2)...");
+    console.log("Starting System Verification...");
     
-    // 1. Verify Pipeline v2 Config
-    logHeader("1. Verifying Pipeline v2 Config");
+    // 1. Verify Mode Policies
+    logHeader("1. Verifying Mode Policies");
     try {
-        const fastStages = getStageList('fast');
-        const standardStages = getStageList('standard');
-        const fastGen = getStageModel('fast', 'generation');
-        const stdGen = getStageModel('standard', 'generation');
+        const fast = getModePolicy('fast');
+        const standard = getModePolicy('standard');
         
-        if (fastGen.provider === 'groq' && !shouldRunStage('fast', 'critique')) {
-            logPass("FAST mode: Groq provider, no critique (correct)");
+        if (fast.specBuilder.provider === 'groq' && fast.questionEngine.enabled === false) {
+            logPass("FAST mode policy is correct (Groq-only, No QE)");
         } else {
-            logFail("FAST mode config mismatch");
+            logFail("FAST mode policy mismatch");
         }
         
-        if (stdGen.provider === 'groq' && shouldRunStage('standard', 'critique')) {
-            logPass("STANDARD mode: Groq provider, critique enabled (correct)");
+        if (standard.specBuilder.provider === 'openai' && standard.questionEngine.enabled === true) {
+            logPass("STANDARD mode policy is correct (OpenAI Spec, QE Enabled)");
         } else {
-            logFail("STANDARD mode config mismatch");
+            logFail("STANDARD mode policy mismatch");
         }
-
-        logInfo(`FAST stages: ${fastStages.join(' → ')}`);
-        logInfo(`STANDARD stages: ${standardStages.join(' → ')}`);
     } catch (e) {
-        logFail(`Config check failed: ${e.message}`);
+        logFail(`Policy check failed: ${e.message}`);
     }
 
     // 2. Check Environment Variables
@@ -81,7 +76,7 @@ async function runTests() {
             const res = await chatJson({
                 system: "You are a JSON bot. Output { \"status\": \"ok\" }",
                 user: "Go",
-                model: "openai/gpt-oss-20b",
+                model: "llama-3.1-8b-instant",
                 provider: "groq"
             });
             if (res.data && res.data.status === 'ok') {

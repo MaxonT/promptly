@@ -1,5 +1,11 @@
 {
   "dependencies": {
     "@anthropic-ai/sdk": "^0.78.0"
+  },
+  "private": true,
+  "scripts": {
+    "setup:local": "node scripts/setup-local.mjs",
+    "docker:up": "docker compose up --build",
+    "docker:down": "docker compose down"
   }
 }

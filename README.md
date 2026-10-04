@@ -98,6 +98,9 @@ is passed; this endpoint does not upload the actual attachment contents.
 The old multi-stage configuration (Spec → Generation → Critique → Refine → Evaluation)
 is retained in the source, but it is not executed by the current `/api/pipeline/run`.
 Compatibility result scores/progress events are not an independent quality benchmark.
+Persisted run metadata records `execution_mode: "direct_optimizer"` and the actual
+`stages_executed: ["direct_optimizer"]`. `quality_evaluation.performed` is false;
+the legacy compatibility score is retained for existing UI consumers, not a judge result.
 
 - [`modelConfig.js`](Promptly-cloud-v0.6.8.3-fullstack/backend/src/lib/modelConfig.js): current direct-optimizer model map and retained legacy stage configuration.
 - [`llmRouter.js`](Promptly-cloud-v0.6.8.3-fullstack/backend/src/lib/llmRouter.js): provider routing, retries and timeouts.

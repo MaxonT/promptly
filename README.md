@@ -53,7 +53,15 @@ python3 -m http.server 4173
 ```
 
 The frontend defaults to your backend on port 8080. Local defaults disable payment,
-trials and token metering. Ordinary daily plan/mode limits still apply.
+trials and token metering. This does not remove the application's plan restrictions:
+- A fresh free account can use Fast/Standard, with 8 successful optimizations per local day.
+- The optional Question Wizard allows 5 sessions per local day on the free plan.
+- Premium remains restricted to an eligible paid/trial plan, even with your own Anthropic key.
+
+Those policies live in [`planLimits.js`](Promptly-cloud-v0.6.8.3-fullstack/backend/src/lib/planLimits.js)
+and [`subscriptionConfig.js`](Promptly-cloud-v0.6.8.3-fullstack/backend/src/lib/subscriptionConfig.js).
+A fork's operator can adapt those policies for their own use; disabling Stripe alone does
+not grant Premium or unlimited use. Provider key checks do not test account/plan eligibility.
 From `backend/`, `npm run health` checks the running server;
 `npm run check:config -- --mode fast` checks required AI configuration.
 Config checks inspect presence only; they never print secrets or make paid API calls.
@@ -83,7 +91,7 @@ uses a fresh SQLite database; no maintainer database is needed.
 currently runs:
 
 **User input + attachment metadata → Anthropic direct optimizer → stored result + SSE events.**
-Fast/Standard use Haiku 4.5; Premium uses Sonnet 4.6. It restructures a request while
+Fast/Standard use Haiku 4.5; Premium uses Sonnet 4.6 when the account is eligible. It restructures a request while
 preserving the user's intent. It does not execute the requested task. Attachment metadata
 is passed; this endpoint does not upload the actual attachment contents.
 
@@ -109,7 +117,12 @@ curl -X POST http://localhost:8080/api/pipeline/run   -H "Authorization: Bearer 
 ```
 
 Use the returned run/stream token with `/api/pipeline/stream/:runId?st=...` to
-consume progress events. See the frontend for the full request/SSE contract.
+consume progress events. **The SSE connection is required, not optional:** connect
+within 10 seconds after `/run` returns. The optimizer waits for that connection;
+posting `/run` alone does not launch a durable background job. A successful HTTP
+response means a run was accepted, not that a result was generated. Use the SSE
+`complete` event and its `success` field to check completion. See the frontend for
+the full request/SSE contract.
 Missing required provider keys return HTTP 503 with their variable names before a run starts.
 
 ## Self-host deployment
@@ -140,6 +153,9 @@ remove old Git history. Credential presence checks are not a full historical sec
 Node 22 + SQLite + 邮箱密码登录即可搭建基础应用。自己生成 `JWT_SECRET`；
 当前主入口的全部模式填 Anthropic 密钥；Groq/OpenAI 用于可选的其他流程。支付和社交登录可选。
 源码可以修改和复用，AI 调用使用你自己的账号和额度。
+默认免费账号每天最多成功优化 8 次，可用 Fast/Standard；问题向导每天最多 5 次。
+填自己的 API key、关闭支付或 token 计量都不会自动开放 Premium 或取消次数限制。
+自部署运营者可根据自己的需求修改计划策略；这些限制不是 API key 是否有效的判断。
 
 ## Admin sync and coupons
 

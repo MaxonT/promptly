@@ -2,11 +2,11 @@
  * Best Prompt Pipeline - Real-time Visualization via SSE
  * 
  * This module implements:
- * - POST /api/pipeline/run - Execute full pipeline with SSE events
+ * - POST /api/pipeline/run - Run the direct optimizer with SSE events
  * - GET /api/pipeline/stream/:runId - SSE stream for pipeline events
  * 
- * Pipeline Flow (v2.2 — single candidate, cost-optimized):
- * Spec Builder → Generation (1× fluent) → Critique → Refine → Evaluation → Outcome
+ * Current flow: input + attachment metadata → Anthropic direct optimizer → saved result.
+ * The legacy multi-stage configuration is retained but not executed here.
  */
 
 import { Router } from "express";
@@ -71,7 +71,7 @@ pipelineRouter.get("/health", (req, res) => {
     message: "Pipeline routes are working",
     timestamp: new Date().toISOString(),
     routes: {
-      "POST /api/pipeline/run": "Execute full pipeline with SSE events",
+      "POST /api/pipeline/run": "Run the direct optimizer with SSE events",
       "GET /api/pipeline/stream/:runId": "SSE stream for pipeline events",
       "GET /api/pipeline/health": "Health check (this endpoint)"
     },
@@ -300,7 +300,7 @@ async function executePipelineWithEvents(runId, userId, { idea, attachments, ski
   }
   
   const pipelineConfig = PIPELINE_CONFIG[mode] || PIPELINE_CONFIG.fast;
-  console.log(`[pipeline] [${runId}] Pipeline v2 mode=${mode}, stages=[${getStageList(mode).join(",")}]`);
+  console.log(`[pipeline] [${runId}] Direct optimizer mode=${mode}, stages=[direct_optimizer]`);
   console.log(`[pipeline] [${runId}] Direct optimizer model: ${DIRECT_OPTIMIZER_MODELS[mode]}`);
   
   // 1. Wait for client to connect (max 10 seconds)
@@ -789,7 +789,12 @@ Output:
         output: totalOutputTokens,
         total: totalInputTokens + totalOutputTokens
       },
-      stages_executed: getStageList(mode),
+      execution_mode: "direct_optimizer",
+      stages_executed: ["direct_optimizer"],
+      quality_evaluation: {
+        performed: false,
+        reason: "No independent quality judge runs in the direct optimizer"
+      },
       stageTiming,  // per-stage duration in ms
       bestScore: bestCandidate.metrics?.compositeScore ?? null,
       bestAgent: bestCandidate.agent,
